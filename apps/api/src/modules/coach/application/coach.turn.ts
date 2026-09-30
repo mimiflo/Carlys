@@ -2,8 +2,6 @@ import { type CoachTurn } from '../domain/coach-model.port';
 import { type MessageWithProposal } from '../infrastructure/coach.repository';
 import { volatileContext } from './coach.prompt';
 
-/** Tours renvoyés au modèle. Au-delà, la compaction serait nécessaire. */
-export const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
 
 /**
@@ -12,15 +10,18 @@ const TITLE_MAX_LENGTH = 60;
  */
 
 /**
- * Historique envoyé au modèle. Le rappel de date est collé au DERNIER message
- * — donc après la césure de cache, jamais dans le préfixe stable.
+ * Historique envoyé au modèle : les `limit` derniers messages
+ * (`COACH_HISTORY_MESSAGES`), les plus anciens n'arrivant que par le résumé.
+ * Le rappel de date est collé au DERNIER message — donc après la césure de
+ * cache, jamais dans le préfixe stable.
  */
 export function buildHistory(
   previous: readonly MessageWithProposal[],
   content: string,
+  limit: number,
   now: Date = new Date(),
 ): CoachTurn[] {
-  const turns = previous.slice(-HISTORY_LIMIT).map((message): CoachTurn => ({
+  const turns = previous.slice(-limit).map((message): CoachTurn => ({
     role: message.role === 'USER' ? 'user' : 'assistant',
     content: message.content,
   }));

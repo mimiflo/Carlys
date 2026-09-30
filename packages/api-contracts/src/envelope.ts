@@ -19,6 +19,8 @@ export const apiErrorCodeSchema = z.enum([
   'RATE_LIMITED',
   'INTERNAL_ERROR',
   'SERVICE_UNAVAILABLE',
+  /** Service debout mais saturé (file du coach pleine) : réessayer bientôt. */
+  'SERVICE_BUSY',
 ]);
 
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;

@@ -2,6 +2,10 @@
 
 ## Statut
 
+> **Complétée par l'ADR 0013** (30 septembre 2026) : une connexion fermée
+> ARRÊTE désormais la génération (elle ne continue plus pour s'archiver),
+> et le flux gagne les évènements `queued` et `started`.
+
 Acceptée — 2026-09. Tranche la décision ouverte n° 1 de
 `docs/product/coach-ia.md` (« streaming en v1 ou en v2 ») : maintenant.
 

@@ -2,10 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { AppConfigService } from '../../../config/app-config.service';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
-import {
-  COACH_STREAM_DEADLINE_MS,
-  CoachProviderUnavailableException,
-} from '../domain/coach-model.port';
+import { CoachProviderUnavailableException } from '../domain/coach-model.port';
 
 /**
  * Restitutions sur panne par personne et par jour. Au-delà, une panne garde
@@ -54,7 +51,7 @@ export class CoachQuota {
    * si le plafond est déjà atteint — l'appelant répond alors `RATE_LIMITED`.
    */
   async consume(userId: string, now: Date = new Date()): Promise<number | null> {
-    const limit = this.config.coachDailyMessageLimit;
+    const limit = this.config.coachGateway.dailyMessageLimit;
     const key = CoachQuota.keyFor(userId, now);
     const used = await this.increment(key);
 
@@ -88,15 +85,23 @@ export class CoachQuota {
 
   /**
    * Verrou d'UNE question pendant qu'on y répond : rend de quoi le lever, ou
-   * `null` s'il est déjà tenu. Il expire seul après la plus longue échéance
-   * d'un tour, celle du flux (plus une marge) : une API tuée en plein tour ne bloque pas la question.
+   * `null` s'il est déjà tenu. Il expire seul après la plus longue durée
+   * d'un tour, file et génération en flux comprises (plus une marge) : une API tuée en plein tour ne bloque pas la question.
    * La levée ne supprime que SON verrou, jamais celui d'un tour suivant.
    */
   async holdTurn(messageId: string): Promise<(() => Promise<void>) | null> {
     const client = this.redis.getClient();
     const key = `coach:turn:${messageId}`;
     const token = randomUUID();
-    const held = await client.set(key, token, 'PX', COACH_STREAM_DEADLINE_MS + 20_000, 'NX');
+    // Attente dans la file PUIS génération : le plus long qu'un tour puisse tenir.
+    const { queueTimeoutMs, requestTimeoutMs } = this.config.coachGateway;
+    const held = await client.set(
+      key,
+      token,
+      'PX',
+      queueTimeoutMs + requestTimeoutMs + 20_000,
+      'NX',
+    );
     if (held === null) {
       return null;
     }
@@ -105,6 +110,22 @@ export class CoachQuota {
         await client.del(key);
       }
     };
+  }
+
+  /**
+   * Rythme : `COACH_MESSAGES_PER_MINUTE` par personne, sur l'identité
+   * Carlys — jamais l'adresse IP. Freine un script sans toucher au quota du
+   * jour : un refus ici ne consomme rien.
+   */
+  async withinRate(userId: string, now: Date = new Date()): Promise<boolean> {
+    const minute = Math.floor(now.getTime() / 60_000);
+    const key = `coach:rate:${userId}:${minute}`;
+    const client = this.redis.getClient();
+    const sent = await client.incr(key);
+    if (sent === 1) {
+      await client.expire(key, 120);
+    }
+    return sent <= this.config.coachGateway.messagesPerMinute;
   }
 
   /** INCR, et l'expiration posée à la naissance de la clé. */
@@ -119,7 +140,7 @@ export class CoachQuota {
 
   /** Lecture seule, pour informer l'écran sans rien consommer. */
   async remaining(userId: string, now: Date = new Date()): Promise<number> {
-    const limit = this.config.coachDailyMessageLimit;
+    const limit = this.config.coachGateway.dailyMessageLimit;
     const raw = await this.redis.getClient().get(CoachQuota.keyFor(userId, now));
     const used = raw === null ? 0 : Number.parseInt(raw, 10);
     return Math.max(0, limit - (Number.isFinite(used) ? used : 0));

@@ -33,6 +33,7 @@ export type ProductionSensitiveEnv = {
   NODE_ENV: string;
   COACH_API_BASE_URL?: string;
   COACH_API_KEY?: string;
+  COACH_WORKER_URLS?: string;
 } & Record<ProductionKey, string>;
 
 /** URL que des tiers (téléphone, navigateur, client e-mail) doivent joindre. */
@@ -125,6 +126,19 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
       code: 'custom',
       path: ['COACH_API_BASE_URL'],
       message: 'doit être une URL https:// en production quand COACH_API_KEY est posée',
+    });
+  }
+  // Même règle pour chaque worker de la passerelle (ADR 0013) : la clé et le
+  // contexte partent aussi vers eux.
+  const workers = (env.COACH_WORKER_URLS ?? '')
+    .split(',')
+    .map((url) => url.trim())
+    .filter((url) => url !== '');
+  if (env.COACH_API_KEY !== undefined && workers.some((url) => !url.startsWith('https://'))) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['COACH_WORKER_URLS'],
+      message: 'chaque worker doit être en https:// en production quand COACH_API_KEY est posée',
     });
   }
 }

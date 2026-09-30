@@ -55,7 +55,15 @@ describe('CoachQuota', () => {
     return { redis: { getClient: () => client } as RedisService, store, expiries };
   }
 
-  const config = (limit: number) => ({ coachDailyMessageLimit: limit }) as AppConfigService;
+  const config = (limit: number) =>
+    ({
+      coachGateway: {
+        dailyMessageLimit: limit,
+        messagesPerMinute: 2,
+        queueTimeoutMs: 120_000,
+        requestTimeoutMs: 180_000,
+      },
+    }) as AppConfigService;
 
   it('décompte les messages et renvoie ce qu’il reste', async () => {
     const { redis } = fakeRedis();
@@ -237,5 +245,20 @@ describe('CoachQuota', () => {
 
     await release?.();
     await expect(quota.holdTurn('message-1')).resolves.not.toBeNull();
+  });
+
+  it('rythme : N messages par minute et par personne, puis refus ; la minute suivante repart à zéro', async () => {
+    const { redis, expiries } = fakeRedis();
+    const quota = new CoachQuota(redis, config(30));
+    const t0 = new Date('2026-09-30T10:00:05.000Z');
+
+    await expect(quota.withinRate(USER, t0)).resolves.toBe(true);
+    await expect(quota.withinRate(USER, t0)).resolves.toBe(true);
+    await expect(quota.withinRate(USER, t0)).resolves.toBe(false);
+    // Une autre personne n'est pas freinée par la première.
+    await expect(quota.withinRate('user-2', t0)).resolves.toBe(true);
+    await expect(quota.withinRate(USER, new Date('2026-09-30T10:01:05.000Z'))).resolves.toBe(true);
+    // Chaque compteur de minute expire seul.
+    expect(expiries.filter((key) => key.startsWith('coach:rate:'))).toHaveLength(3);
   });
 });

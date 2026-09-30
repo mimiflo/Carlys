@@ -31,6 +31,19 @@ import {
 } from './dto/coach.dto';
 
 /**
+ * Connexion fermée avant la fin (écran quitté, « Arrêter », réseau coupé) : la
+ * génération s'arrête au lieu de tourner pour personne (ADR 0013).
+ */
+function cancelOnClose(response: Response): { signal: AbortSignal; dispose: () => void } {
+  const controller = new AbortController();
+  const onClose = () => {
+    if (!response.writableFinished) controller.abort();
+  };
+  response.on('close', onClose);
+  return { signal: controller.signal, dispose: () => response.off('close', onClose) };
+}
+
+/**
  * Un battement toutes les 15 s pendant qu'une réponse en flux se tait : bien
  * sous les 60 s de nginx et les 65 s d'attente du mobile.
  */
@@ -76,12 +89,20 @@ export class CoachController {
       'appel au modèle. Le même identifiant avec un autre contenu → 409 ; ' +
       'un identifiant déjà porté par un autre fil, ou un fil d’autrui → 404.',
   })
-  send(
+  async send(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SendCoachMessageDto,
+    @Res({ passthrough: true }) response: Response,
   ): Promise<CoachReply> {
-    return this.coach.sendMessage(user.userId, id, body.id, body.content);
+    const cancel = cancelOnClose(response);
+    try {
+      return await this.coach.sendMessage(user.userId, id, body.id, body.content, {
+        signal: cancel.signal,
+      });
+    } finally {
+      cancel.dispose();
+    }
   }
 
   @Post('conversations/:id/messages/stream')
@@ -90,10 +111,13 @@ export class CoachController {
     summary: 'Envoie un message ; la réponse du coach arrive AU FIL de son écriture',
     description:
       'Mêmes règles que la route sans flux (rejeu, 409, 404). Un refus AVANT ' +
-      'le premier mot garde son statut HTTP. Ensuite, flux SSE : `delta` ' +
-      '({ text }) à chaque morceau, puis `done` (enveloppe de succès, même ' +
-      '`CoachReply`), ou `error` (enveloppe d’erreur). Le texte archivé est ' +
-      'celui de `done`.',
+      'le premier évènement garde son statut HTTP (429, 503 SERVICE_BUSY si la ' +
+      'file est pleine). Ensuite, flux SSE : `queued` ({ ahead }, demandes ' +
+      'devant, à chaque changement), `started` (son tour est venu), `delta` ' +
+      '({ text }) à chaque morceau, ' +
+      'puis `done` (enveloppe de succès, même `CoachReply`), ou `error` ' +
+      '(enveloppe d’erreur). Fermer la connexion annule la génération. Le ' +
+      'texte archivé est celui de `done`.',
   })
   async stream(
     @CurrentUser() user: AuthenticatedPrincipal,
@@ -104,14 +128,19 @@ export class CoachController {
   ): Promise<void> {
     const emit = sseEmitter(response);
     const stopKeepAlive = sseKeepAlive(response, SSE_KEEPALIVE_MS);
+    const cancel = cancelOnClose(response);
     try {
-      const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, (text) =>
-        emit('delta', { text }),
-      );
+      const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, {
+        onText: (text) => emit('delta', { text }),
+        onQueued: (ahead) => emit('queued', { ahead }),
+        onStarted: () => emit('started', {}),
+        signal: cancel.signal,
+      });
       emit('done', enveloped(reply, {}, request));
       response.end();
     } finally {
       stopKeepAlive();
+      cancel.dispose();
     }
   }
 

@@ -5,6 +5,10 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 process.env.ANTHROPIC_API_KEY ??= 'sk-ant-cle-factice-pour-les-tests-e2e';
 process.env.COACH_ENABLED = 'true';
+// Un seul compte envoie ici des dizaines de messages en rafale : le rythme
+// par minute (défaut 6, couvert par les tests unitaires de la passerelle et
+// du quota) gênerait les preuves qui visent autre chose.
+process.env.COACH_MESSAGES_PER_MINUTE = '120';
 
 import {
   type ApiSuccessEnvelope,
@@ -72,6 +76,13 @@ describe('Coach IA (e2e)', () => {
   /** Réglages que le faux passera à `propose_program` au prochain tour. */
   let nextProgram: Record<string, unknown> | undefined;
 
+  /**
+   * Le prochain tour « génère » jusqu'à ce qu'on l'annule, comme Ollama qui
+   * écrit tant que la connexion tient ; `hanging` dit qu'il a commencé.
+   */
+  let nextHang = false;
+  let hanging: (() => void) | undefined;
+
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
     proposal: null,
@@ -84,6 +95,22 @@ describe('Coach IA (e2e)', () => {
       lastInput = input;
       if (nextFailure !== undefined) {
         throw nextFailure;
+      }
+      if (nextHang) {
+        nextHang = false;
+        input.onText?.('Je commence…');
+        hanging?.();
+        await new Promise<void>((resolve) =>
+          input.signal?.addEventListener('abort', () => resolve()),
+        );
+        throw new CoachProviderUnavailableException(
+          'Coach : fournisseur injoignable (AbortError).',
+          {
+            inputTokens: 1,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+          },
+        );
       }
       // Le faux appelle un outil de lecture : on vérifie ainsi que la chaîne
       // complète fonctionne, pas seulement l'écriture en base.
@@ -723,6 +750,36 @@ describe('Coach IA (e2e)', () => {
       ]);
     });
 
+    it('fermer la connexion ARRÊTE la génération : CANCELLED en base, et la place est rendue', async () => {
+      await grantCoaching();
+      await resetQuota();
+      nextHang = true;
+      const started = new Promise<void>((resolve) => (hanging = resolve));
+      const messageId = randomUUID();
+      const conversationId = randomUUID();
+
+      const pending = streamTo(conversationId, 'Une longue question', messageId);
+      pending.then(
+        () => undefined,
+        () => undefined,
+      );
+      await started;
+      pending.abort();
+
+      // La génération se termine CÔTÉ SERVEUR, sans attendre la fin du modèle.
+      let status: string | undefined;
+      for (let i = 0; i < 50 && status !== 'CANCELLED'; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        status = (await prisma.coachGeneration.findFirst({ where: { messageId } }))?.status;
+      }
+      expect(status).toBe('CANCELLED');
+
+      // La place est rendue : un nouveau message passe aussitôt.
+      nextOutput = textOnly('Me revoilà.');
+      const next = await streamTo(conversationId, 'Et maintenant ?').expect(200);
+      expect(events(next.body as string).at(-1)?.event).toBe('done');
+    });
+
     it('un refus AVANT le premier mot garde son statut HTTP (403)', async () => {
       await revokeCoaching();
       await streamTo(randomUUID(), 'Une question').expect(403);
@@ -753,5 +810,24 @@ describe('Coach IA (e2e)', () => {
       );
       expect(fil.messages.map((m) => m.role)).toEqual(['USER']);
     });
+  });
+
+  it('l’état interne de la passerelle se lit hors préfixe, avec les mesures de la dernière heure', async () => {
+    const health = await request(app.getHttpServer()).get('/internal/ai/health').expect(200);
+    const report = health.body as {
+      enabled: boolean;
+      queue: { active: number; queued: number; maxConcurrent: number };
+      lastHour: { completed: number; avgGenerationMs: number | null };
+    };
+    expect(report.enabled).toBe(true);
+    expect(report.queue).toMatchObject({ active: 0, queued: 0, maxConcurrent: 1 });
+    // Les tours des tests précédents ont laissé leurs mesures, sans leur texte.
+    expect(report.lastHour.completed).toBeGreaterThan(0);
+    expect(report.lastHour.avgGenerationMs).toEqual(expect.any(Number));
+
+    const metrics = await request(app.getHttpServer()).get('/internal/ai/metrics').expect(200);
+    expect(metrics.text).toContain('carlys_api_ai_requests_total');
+    expect(metrics.text).toContain('carlys_api_ai_time_to_first_token_seconds');
+    expect(metrics.text).not.toContain('carlys_api_http_requests_total');
   });
 });

@@ -90,7 +90,14 @@ export function configureApp(app: NestExpressApplication): void {
   app.useBodyParser('urlencoded', { extended: true, limit: MAX_JSON_BODY_SIZE });
 
   app.setGlobalPrefix(API_GLOBAL_PREFIX, {
-    exclude: ['health', 'health/live', 'health/ready', 'metrics'],
+    exclude: [
+      'health',
+      'health/live',
+      'health/ready',
+      'metrics',
+      'internal/ai/health',
+      'internal/ai/metrics',
+    ],
   });
   app.enableVersioning({
     type: VersioningType.URI,

@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 29 septembre 2026.
+Dernière mise à jour : 30 septembre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -334,10 +334,13 @@ n’est utilisé que lorsque tu lui écris.
 Pour produire la réponse, les éléments suivants sont traités sur ce serveur,
 et **aucun n’est transmis à un prestataire d’intelligence artificielle** :
 
-- ton message et l’historique de la conversation en cours ;
+- ton message, les derniers messages de la conversation en cours et le
+  résumé des plus anciens (voir plus bas) ;
 - le profil Carlys que tu as choisi (Constructeur, Challenger, Athlète ou
   Stratège) et le style de voix que tu as choisi pour le Mentor, sans ton
   nom ni ton adresse e-mail ;
+- ton profil d’entraînement : objectif, niveau, nombre et durée de séances
+  visés, matériel, et le nom de ton programme actif ;
 - et seulement quand le coach en a besoin pour te répondre, les données qu’il
   lit par ses outils : tes modèles de séance, tes dernières séances
   terminées, tes records personnels, ta progression sur une période, tes
@@ -349,6 +352,15 @@ et **aucun n’est transmis à un prestataire d’intelligence artificielle** :
 Le modèle n’apprend pas de tes échanges : ils ne servent jamais à
 l’entraîner. Seules les conversations enregistrées par Carlys, décrites
 ci-dessous, sont conservées.
+
+Quand une conversation s’allonge, le coach ne relit que ses derniers
+messages ; les plus anciens sont résumés par le même modèle, sur le même
+serveur (ton objectif, tes préférences, ta progression, ce que le coach t’a
+proposé). Ce résumé est rangé avec la conversation et s’efface avec elle.
+Pour chaque réponse, Carlys note aussi des mesures techniques, sans le texte
+de tes messages : l’heure de la demande, le temps d’attente et de génération,
+le volume traité, le serveur qui a répondu, et si la réponse a abouti. Elles
+servent à dimensionner le service et s’effacent avec ton compte.
 
 Le coach ne peut rien écrire dans ton compte : les séances qu’il propose ne
 sont enregistrées que si tu les acceptes. Les conversations sont conservées

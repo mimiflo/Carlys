@@ -50,11 +50,14 @@ OpenAPI : `{id}`.
 | `GET /health/live` | **supervision** | orchestrateur / supervision |
 | `GET /health/ready` | **supervision** | orchestrateur / supervision |
 | `GET /metrics` | **supervision** | Prometheus — exposition protégée par `MetricsAuthGuard`, hors préfixe de version |
+| `GET /internal/ai/health` | **supervision** | exploitation — état de la passerelle du coach (workers, file, temps moyens, erreurs de la dernière heure, ADR 0013) ; même garde que `/metrics` |
+| `GET /internal/ai/metrics` | **supervision** | Prometheus — les seules séries `carlys_api_ai_*` ; même garde que `/metrics` |
 
-Une route manque au test, et elle est ci-dessus : `GET /metrics` porte
-`@ApiExcludeController()`, donc elle ne figure PAS dans le document OpenAPI
-que `route-clients.e2e-spec.ts` compare à ce tableau. Le test ne pouvait ni
-réclamer sa ligne ni la voir disparaître ; elle manquait depuis sa livraison.
+Trois routes manquent au test, et elles sont ci-dessus : `GET /metrics` et
+les deux `GET /internal/ai/*` portent `@ApiExcludeController()`, donc elles ne
+figurent PAS dans le document OpenAPI que `route-clients.e2e-spec.ts` compare à
+ce tableau. Le test ne peut ni réclamer leur ligne ni la voir disparaître ;
+celle de `/metrics` a manqué depuis sa livraison.
 C'est le seul angle mort du mécanisme : une route exclue de Swagger se
 déclare ici à la main.
 

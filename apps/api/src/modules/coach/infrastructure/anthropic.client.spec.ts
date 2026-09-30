@@ -14,6 +14,7 @@ function client(model?: string): AnthropicCoachClient {
   return new AnthropicCoachClient({
     anthropicApiKey: 'sk-ant-cle-factice-de-test',
     coachProvider: { model },
+    coachGateway: { requestTimeoutMs: 180_000, maxOutputTokens: 2048 },
   } as unknown as AppConfigService);
 }
 

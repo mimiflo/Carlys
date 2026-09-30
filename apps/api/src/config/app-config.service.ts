@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hkdfSync } from 'node:crypto';
+import { type CoachGatewaySettings, coachGatewaySettings } from './coach-gateway.env';
 import { type Env } from './env.schema';
 
 /**
@@ -9,6 +10,8 @@ import { type Env } from './env.schema';
  */
 @Injectable()
 export class AppConfigService {
+  private gatewaySettings?: CoachGatewaySettings;
+
   constructor(private readonly config: ConfigService<Env, true>) {}
 
   get nodeEnv(): Env['NODE_ENV'] {
@@ -216,12 +219,13 @@ export class AppConfigService {
     };
   }
 
-  get coachDailyMessageLimit(): number {
-    return this.config.get('COACH_DAILY_MESSAGE_LIMIT', { infer: true });
-  }
-
   get coachEnabled(): boolean {
     return this.config.get('COACH_ENABLED', { infer: true });
+  }
+
+  /** Quota, file, workers et limites par personne (ADR 0013), lus une fois. */
+  get coachGateway(): CoachGatewaySettings {
+    return (this.gatewaySettings ??= coachGatewaySettings(this.config));
   }
 
   // ── Stockage objet ─────────────────────────────────────────────────────

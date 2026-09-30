@@ -391,7 +391,7 @@ simultanés, le second peut recevoir un 503. Le plafond par personne (`COACH_DAI
 désormais la machine, plus une facture.
 
 **Latence.** Une seule échéance couvre le tour entier (tentatives et
-outils) : **3 minutes en flux** (`COACH_STREAM_DEADLINE_MS`), **50 s d'un
+outils) : **3 minutes en flux** (`COACH_REQUEST_TIMEOUT_MS`, réglable), **50 s d'un
 bloc** (`COACH_TURN_DEADLINE_MS`, sous les 60 s de nginx). En flux, les 60 s
 de nginx ne comptent qu'entre deux octets, et il en passe toujours : le texte,
 ou un battement (`: ping`, commentaire SSE que tout client ignore) toutes les
@@ -440,6 +440,68 @@ aussitôt, une bulle « Réfléchit… » attend le premier mot, puis la répons
 s'écrit à mesure qu'Ollama la produit. Un renvoi de la même question pendant
 qu'elle s'écrit est refusé (409) par un verrou Redis, au lieu d'être compté et
 répondu deux fois.
+
+## La passerelle : file, workers, annulation (ADR 0013)
+
+Aucune route ne touche le modèle sans `CoachGateway` (l'« AIService ») :
+
+```
+mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
+                                   └▶ CoachGateway.admit : taille, rythme/min,
+                                      1 génération par personne, file pleine → 503 SERVICE_BUSY
+                                   └▶ CoachTurnRunner : contexte, quota, question écrite
+                                      └▶ CoachGateway.generate : attente du créneau (queued),
+                                         CoachModelPort ─▶ CoachWorkerPool ─▶ Ollama 1…N
+                                      └▶ réponse archivée, mémoire rafraîchie en fond
+```
+
+- **File partagée (Redis, `CoachGate`)** : créneaux en cours (bail de 60 s
+  renouvelé, qui expire seul si un exemplaire meurt), attentes dans l'ordre
+  d'arrivée, attentes muettes depuis 30 s retirées. Tous les exemplaires de
+  l'API voient la même file.
+- **En flux**, l'évènement `queued` (`{ ahead }`) dit combien de demandes
+  passent avant, `started` que son tour est venu ; le mobile affiche « En
+  attente ». Refus propre au-delà : file pleine, ou attente plus longue que
+  `COACH_QUEUE_TIMEOUT_MS`. Sans flux (anciennes versions de l'appli),
+  l'attente est plafonnée à 5 s : le tour doit tenir sous les 60 s de nginx.
+- **Le quota se décompte APRÈS la file**, juste avant le modèle : un « très
+  sollicité » ou une annulation en attente ne coûte rien. Un plafond du jour
+  déjà atteint répond 429 AVANT d'entrer dans la file.
+- **Annulation** : la connexion fermée (écran quitté, « Arrêter », réseau
+  coupé) annule l'attente ou la génération ; le client abandonne l'appel au
+  worker, qui arrête d'écrire. Rien de consommé : le message est rendu (trois
+  fois par jour au plus, comme une panne). Revirement de l'ADR 0012, où le
+  tour continuait pour s'archiver.
+- **Workers (`CoachWorkerPool`)** : le moins occupé sert ; une panne réseau
+  ou un 5xx l'écarte `COACH_WORKER_COOLDOWN_MS` et la tentative suivante part
+  sur un autre. Ajouter une carte graphique : une adresse dans
+  `COACH_WORKER_URLS`, et `COACH_MAX_CONCURRENT_REQUESTS` relevé d'autant. Le
+  mobile n'en sait rien.
+- **Mesures** : une ligne `CoachGeneration` par génération (instants,
+  statut, jetons, worker — jamais le texte) ; les séries Prometheus
+  `carlys_api_ai_*` sur `/metrics` ; l'état sur `/internal/ai/health` et
+  `/internal/ai/metrics`, protégés comme `/metrics`.
+- **Contexte (`CoachContextBuilder`)** : consignes (préfixe commun) → voix
+  du mentor, profil d'entraînement en une ligne, mémoire résumée →
+  `COACH_HISTORY_MESSAGES` derniers messages → question. Le profil en une
+  ligne épargne un tour d'outil aux questions courantes ; le détail (séances,
+  records, repas) reste derrière les outils.
+- **Mémoire (`CoachMemory`)** : dès 6 messages sortis de la fenêtre, un
+  résumé (objectif, préférences, progression, décisions) les fond dans
+  `CoachConversation.summary`, par lots de 30 au plus (600 caractères par
+  message, 6 000 en tout, 300 jetons de sortie, 2 min au plus). Écrit après
+  une réponse, **seulement si personne n'attend**, et il **cède sa place**
+  dès qu'une personne entre dans la file (contrôle toutes les 2 s). Nos
+  workers seulement, jamais le repli cloud. Raté, la conversation est
+  laissée en paix 10 min. Relu comme une DONNÉE entre balises `<memoire>`,
+  jamais comme une consigne.
+- **Cache** : les consignes et les outils sont des constantes, et Ollama garde
+  leur préfixe calculé d'une question à l'autre — c'est le seul cache qui
+  compte ici. Les lectures par personne (profil, voix) coûtent quelques
+  millisecondes contre des dizaines de secondes de génération : les mettre en
+  cache ne se mesurerait pas, et aucune réponse n'est jamais mise en cache.
+- **Capacité** : se mesure, ne s'estime pas — `coach-bench` (voir le guide
+  de mise en route).
 
 ## Droits, quota, garde-fous
 
@@ -497,6 +559,18 @@ démarrage.
 | `ANTHROPIC_API_KEY` | Lue seulement sans `COACH_API_BASE_URL` |
 | `COACH_DAILY_MESSAGE_LIMIT` | Plafond par personne et par jour (30) |
 | `COACH_ENABLED` | Interrupteur global |
+| `COACH_MAX_CONCURRENT_REQUESTS` | Générations simultanées, tous exemplaires de l'API confondus (1). Égale la somme des `OLLAMA_NUM_PARALLEL` des workers |
+| `COACH_QUEUE_MAX_SIZE` | Attentes au-delà desquelles une demande est refusée tout de suite, 503 `SERVICE_BUSY` (20) |
+| `COACH_QUEUE_TIMEOUT_MS` | Attente maximale dans la file (120 000) |
+| `COACH_REQUEST_TIMEOUT_MS` | Échéance d'une génération en flux, file non comprise (180 000) |
+| `COACH_MAX_OUTPUT_TOKENS` | Jetons de sortie par appel au modèle (2 048) |
+| `COACH_MAX_CONCURRENT_PER_USER` | Générations simultanées pour une personne, file comprise (1) |
+| `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
+| `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |
+| `COACH_HISTORY_MESSAGES` | Derniers messages relus tels quels ; les plus anciens passent par la mémoire résumée (20) |
+| `COACH_WORKER_URLS` | Adresses `…/v1` des workers, séparées par des virgules ; absente, le seul worker est `COACH_API_BASE_URL` |
+| `COACH_WORKER_COOLDOWN_MS` | Mise à l'écart d'un worker en panne (30 000) |
+| `COACH_CLOUD_FALLBACK` | Repli sur Anthropic quand aucun worker ne répond, seulement avec `ANTHROPIC_API_KEY` ; **éteint** par défaut (`false`) |
 
 ## État : le socle serveur est construit
 

@@ -2,7 +2,18 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { CoachProviderUnavailableException } from '../domain/coach-model.port';
 import { readChatStream } from './chat-completion-stream';
+import { CoachWorkerPool } from './coach-worker-pool';
 import { OpenAiCompatibleCoachClient } from './openai-compatible.client';
+
+/** Le client du serveur : un Ollama interne, sans clé. */
+const ollama = () =>
+  new OpenAiCompatibleCoachClient(
+    {
+      coachProvider: { model: 'qwen3' },
+      coachGateway: { requestTimeoutMs: 180_000, maxOutputTokens: 2048 },
+    } as unknown as AppConfigService,
+    new CoachWorkerPool(['http://ollama:11434/v1'], 30_000),
+  );
 
 /** Une réponse SSE découpée comme le réseau la découpe : n'importe où. */
 function sse(lines: string[], cutEvery = 7): Response {
@@ -142,9 +153,7 @@ describe('OpenAiCompatibleCoachClient en flux', () => {
     const seen: string[] = [];
     const runTools = jest.fn().mockResolvedValue([{ id: 'c1', content: '{"records":[]}' }]);
 
-    const output = await new OpenAiCompatibleCoachClient({
-      coachProvider: { baseUrl: 'http://ollama:11434/v1', model: 'qwen3' },
-    } as unknown as AppConfigService).reply({
+    const output = await ollama().reply({
       system: 'Tu es le coach.',
       tools: [],
       history: [{ role: 'user', content: 'Mon record ?' }],
@@ -168,9 +177,7 @@ describe('OpenAiCompatibleCoachClient en flux', () => {
   it('un flux coupé après du texte montré n’est pas rendu au quota', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValueOnce(sse([delta('Bon')]));
 
-    const failure = new OpenAiCompatibleCoachClient({
-      coachProvider: { baseUrl: 'http://ollama:11434/v1', model: 'qwen3' },
-    } as unknown as AppConfigService)
+    const failure = ollama()
       .reply({
         system: 'Tu es le coach.',
         tools: [],

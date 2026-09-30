@@ -41,11 +41,12 @@ export class CoachAvailability {
   }
 
   /**
-   * Adresse compatible OpenAI posée : il lui faut un modèle (la clé, elle,
-   * manque légitimement à un Ollama interne). Sinon : la clé Anthropic.
+   * Un worker au moins : il lui faut un modèle (la clé, elle, manque
+   * légitimement à un Ollama interne). Sinon : la clé Anthropic.
    */
   private providerConfigured(): boolean {
-    const { baseUrl, model } = this.config.coachProvider;
-    return baseUrl === undefined ? this.config.anthropicApiKey !== undefined : model !== undefined;
+    return this.config.coachGateway.workerUrls.length === 0
+      ? this.config.anthropicApiKey !== undefined
+      : this.config.coachProvider.model !== undefined;
   }
 }

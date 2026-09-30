@@ -3,16 +3,15 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { type AppConfigService } from '../../../config/app-config.service';
 import {
   COACH_GAVE_UP_TEXT,
-  COACH_MAX_OUTPUT_TOKENS,
   COACH_MAX_TOOL_ROUNDS,
   COACH_REFUSAL_TEXT,
-  turnDeadlineMs,
   CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
   type CoachTurnInput,
   type CoachTurnOutput,
   type CoachTurnUsage,
+  turnSignal,
 } from '../domain/coach-model.port';
 import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 
@@ -25,18 +24,30 @@ import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
  * à un dixième du prix. Rien de volatile ne doit remonter dans ce préfixe.
  */
 /** Le modèle sans `COACH_MODEL` : le défaut vit ici, pas dans le schéma. */
-const DEFAULT_MODEL = 'claude-opus-5-5';
+export const ANTHROPIC_DEFAULT_MODEL = 'claude-opus-5-5';
+const DEFAULT_MODEL = ANTHROPIC_DEFAULT_MODEL;
 
 export class AnthropicCoachClient implements CoachModelPort {
   /** Créé paresseusement : sans clé, le module reste chargeable. */
   private client: Anthropic | null = null;
 
-  constructor(private readonly config: AppConfigService) {}
+  /**
+   * `model` : imposé quand ce client sert de REPLI — `COACH_MODEL` nomme
+   * alors le modèle de nos workers, qu'Anthropic ne connaît pas.
+   */
+  constructor(
+    private readonly config: AppConfigService,
+    private readonly model?: string,
+  ) {}
+
+  private get modelName(): string {
+    return this.model ?? this.config.coachProvider.model ?? DEFAULT_MODEL;
+  }
 
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     const client = this.ensureClient();
     // Une seule échéance pour tout le tour : le SDK, seul, attendrait 10 min.
-    const signal = AbortSignal.timeout(turnDeadlineMs(input));
+    const signal = turnSignal(input, this.config.coachGateway.requestTimeoutMs);
 
     const messages: Anthropic.Beta.BetaMessageParam[] = input.history.map((turn) => ({
       role: turn.role,
@@ -65,8 +76,8 @@ export class AnthropicCoachClient implements CoachModelPort {
       const response = await client.beta.messages
         .create(
           {
-            model: this.config.coachProvider.model ?? DEFAULT_MODEL,
-            max_tokens: COACH_MAX_OUTPUT_TOKENS,
+            model: this.modelName,
+            max_tokens: input.maxOutputTokens ?? this.config.coachGateway.maxOutputTokens,
             // Un refus d'un classifieur de sécurité — un faux positif sur des
             // compléments ou une blessure — est repris par un autre modèle
             // dans le même appel, choisi par l'API selon la catégorie.
@@ -92,7 +103,13 @@ export class AnthropicCoachClient implements CoachModelPort {
       usage.cacheReadTokens += response.usage.cache_read_input_tokens ?? 0;
 
       if (response.stop_reason === 'refusal') {
-        return { text: COACH_REFUSAL_TEXT, proposal: null, usage, refused: true };
+        return {
+          text: COACH_REFUSAL_TEXT,
+          proposal: null,
+          usage,
+          refused: true,
+          model: this.modelName,
+        };
       }
 
       const calls: CoachToolCall[] = [];
@@ -113,7 +130,7 @@ export class AnthropicCoachClient implements CoachModelPort {
       }
 
       if (calls.length === 0 || response.stop_reason !== 'tool_use') {
-        return { text: textOf(response), proposal, usage, refused: false };
+        return { text: textOf(response), proposal, usage, refused: false, model: this.modelName };
       }
 
       const results = await input.runTools(
@@ -142,7 +159,7 @@ export class AnthropicCoachClient implements CoachModelPort {
       messages.push({ role: 'user', content: blocks });
     }
 
-    return { text: COACH_GAVE_UP_TEXT, proposal, usage, refused: false };
+    return { text: COACH_GAVE_UP_TEXT, proposal, usage, refused: false, model: this.modelName };
   }
 
   private ensureClient(): Anthropic {

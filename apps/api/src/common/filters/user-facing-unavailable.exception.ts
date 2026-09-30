@@ -7,4 +7,15 @@ import { ServiceUnavailableException } from '@nestjs/common';
  * interne). Celui-ci ne cite rien : il dit quoi faire, et surtout ce qui n'a
  * PAS eu lieu — ce qu'une erreur générique tairait.
  */
-export class UserFacingUnavailableException extends ServiceUnavailableException {}
+export class UserFacingUnavailableException extends ServiceUnavailableException {
+  /**
+   * `SERVICE_BUSY` : debout mais saturé — le client propose de réessayer
+   * plutôt que d'annoncer une panne.
+   */
+  constructor(
+    message: string,
+    readonly code: 'SERVICE_UNAVAILABLE' | 'SERVICE_BUSY' = 'SERVICE_UNAVAILABLE',
+  ) {
+    super(message);
+  }
+}

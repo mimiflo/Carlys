@@ -21,6 +21,7 @@ describe('buildHistory', () => {
     const history = buildHistory(
       [message('USER', 'q1', 'Bonjour'), message('ASSISTANT', 'r1', 'Salut.')],
       'Et maintenant ?',
+      20,
       now,
     );
 
@@ -32,9 +33,10 @@ describe('buildHistory', () => {
     expect(history[0]?.content).toBe('Bonjour');
   });
 
-  it('ne renvoie que les 20 derniers tours', () => {
+  it('ne renvoie que les N derniers tours (COACH_HISTORY_MESSAGES)', () => {
     const many = Array.from({ length: 30 }, (_, index) => message('USER', `q${index}`));
-    expect(buildHistory(many, 'Fin')).toHaveLength(21);
+    expect(buildHistory(many, 'Fin', 20)).toHaveLength(21);
+    expect(buildHistory(many, 'Fin', 12)).toHaveLength(13);
   });
 
   it('la fenêtre s’OUVRE sur un tour utilisateur, même si la découpe tombe mal', () => {
@@ -49,7 +51,7 @@ describe('buildHistory', () => {
     // Un message utilisateur orphelin en fin de fil : la parité bascule.
     fil.push(message('USER', 'orphelin'));
 
-    const history = buildHistory(fil, 'Nouvelle question');
+    const history = buildHistory(fil, 'Nouvelle question', 20);
 
     expect(history[0]?.role).toBe('user');
     // Au pire UN tour d'historique sacrifié, jamais plus.

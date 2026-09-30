@@ -128,6 +128,7 @@ Le champ `code` est un enum fermé (`apiErrorCodeSchema` dans
 | `RATE_LIMITED` | 429 | Limite de débit dépassée (100 req / 60 s par défaut). |
 | `INTERNAL_ERROR` | 500 | Erreur interne. Message générique : aucun détail technique ne fuite au client ; tout est dans les logs, corrélé par `requestId`. |
 | `SERVICE_UNAVAILABLE` | 503 | Dépendance critique indisponible. |
+| `SERVICE_BUSY` | 503 | Service debout mais saturé (file du coach pleine ou attente trop longue) : le client propose de réessayer dans un instant. Message écrit pour la personne. |
 
 ## Pagination par curseur
 

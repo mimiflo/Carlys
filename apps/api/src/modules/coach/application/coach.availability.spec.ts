@@ -12,7 +12,12 @@ function porte(config: {
   anthropicApiKey?: string;
   coachProvider: { baseUrl?: string; apiKey?: string; model?: string };
 }): CoachAvailability {
-  return new CoachAvailability(ABONNE, { coachEnabled: true, ...config } as AppConfigService);
+  const { baseUrl } = config.coachProvider;
+  return new CoachAvailability(ABONNE, {
+    coachEnabled: true,
+    coachGateway: { workerUrls: baseUrl === undefined ? [] : [baseUrl] },
+    ...config,
+  } as unknown as AppConfigService);
 }
 
 /**

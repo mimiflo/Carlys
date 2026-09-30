@@ -27,7 +27,12 @@ const MANIFEST = join(__dirname, '..', '..', '..', 'docs', 'api', 'route-clients
  * Toute route sortie de Swagger se déclare donc ici, à la main : c'est le
  * seul angle mort du mécanisme, et il est maintenant nommé.
  */
-const HORS_OPENAPI: readonly RouteSignature[] = ['GET /metrics'];
+const HORS_OPENAPI: readonly RouteSignature[] = [
+  'GET /metrics',
+  // État interne de la passerelle du coach (ADR 0013), même garde que /metrics.
+  'GET /internal/ai/health',
+  'GET /internal/ai/metrics',
+];
 
 /**
  * Lit les signatures déclarées par le manifeste : la première colonne des

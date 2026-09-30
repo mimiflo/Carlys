@@ -133,7 +133,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
 
       if (status >= 500) {
-        if (!(exception instanceof UserFacingUnavailableException)) {
+        if (exception instanceof UserFacingUnavailableException) {
+          code = exception.code;
+        } else {
           message = 'Une erreur interne est survenue.';
         }
         details = [];

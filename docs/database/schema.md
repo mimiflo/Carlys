@@ -42,7 +42,7 @@ tombé dans ce cas : [migrations.md](migrations.md).
 | Abonnements | `SubscriptionPlan`, `SubscriptionPlanEntitlement`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migrations `20260807064832_subscriptions`, `20260915140000_plan_entitlements` et `20260927100000_evenement_paiement_compte`) | Étape 6 ✅ |
 | Notifications | `DeviceToken`, `NotificationPreference` — **implémenté** (migrations `20260811210000_device_tokens`, `20260816120000_notification_preferences`, `20260926200000_jetons_push_par_session`) ; `Notification` (historique in-app) différé | ✅ |
 | Administration | `AdminUser`, `AdminRole`, `AdminPermission`, jointures `AdminUserRole` et `AdminRolePermission`, `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
-| Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem`, `CoachProgramProposal` — **implémenté** (migrations `20260809120000_coach_ia`, `20260930145758_coach_programme_propose`) | ✅ |
+| Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem`, `CoachProgramProposal`, `CoachGeneration` — **implémenté** (migrations `20260809120000_coach_ia`, `20260930145758_coach_programme_propose`, `20260930194717_coach_passerelle_generations`) | ✅ |
 | Journal alimentaire | `MealEntry`, `Food`, `MealComponent`, `MealPhoto` — **implémenté**, voir [Journal alimentaire](#journal-alimentaire-et-base-daliments-implémenté) | ✅ |
 | Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport`, `FriendChallenge`, `FriendChallengeMember`, `LeagueMembership` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`, `20260919201000_defis_entre_amis`, `20260919225014_ligues`, `20260924120000_ligues_groupes_de_vingt`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
 
@@ -914,6 +914,8 @@ manuelles d'entitlements.
 ### `CoachConversation`
 Un fil de conversation d'un membre avec le coach.
 - Champs clés : `id` (fourni par l'appareil), `userId`, `title` nullable,
+  `summary` et `summaryThrough` nullables (la mémoire des messages sortis de
+  la fenêtre relue, et le dernier instant qu'elle couvre — ADR 0013),
   `createdAt`, `updatedAt`, `deletedAt`.
 - Index : `(userId, updatedAt DESC)`. Relations : n–1 `User` (`Cascade`) ;
   1–n `CoachMessage`.
@@ -945,6 +947,18 @@ Un programme PROPOSÉ par le coach : ses réglages seulement (`goal`,
 transforme en plan quand la personne l'accepte. `messageId` (unique,
 `Cascade`), `acceptedProgramId` nullable et SANS clé étrangère (une mesure,
 pas un lien). Migration `20260930145758_coach_programme_propose`.
+
+### `CoachGeneration`
+La MESURE d'une génération (ADR 0013), jamais son texte : `id` (identifiant
+de requête de la passerelle), `userId` (`Cascade`), `conversationId` et
+`messageId` SANS clé étrangère (des mesures, pas des liens), `status`
+(`QUEUED` → `PROCESSING` → `STREAMING` → `COMPLETED` | `FAILED` |
+`CANCELLED`), `createdAt` (entrée dans la file), `startedAt` (créneau
+obtenu), `firstTokenAt`, `completedAt`, `inputTokens`, `outputTokens`,
+`model`, `worker` (hôte seul), `errorCode` (raison courte). L'attente, la
+latence et le délai du premier mot se déduisent des instants. Index :
+`createdAt`, `(userId, createdAt)`. Migration
+`20260930194717_coach_passerelle_generations`.
 
 ---
 

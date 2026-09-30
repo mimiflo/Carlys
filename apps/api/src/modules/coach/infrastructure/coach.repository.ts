@@ -316,4 +316,57 @@ export class CoachRepository {
     });
     return result.count > 0;
   }
+
+  /**
+   * Messages sortis de la fenêtre relue (`keepLast` derniers) et pas encore
+   * résumés, du plus ancien au plus récent, `batch` au plus : un long fil se
+   * rattrape en plusieurs passes, sans jamais un prompt démesuré.
+   */
+  async memoryBacklog(
+    conversationId: string,
+    keepLast: number,
+    batch: number,
+  ): Promise<MemoryBacklog | null> {
+    const conversation = await this.prisma.coachConversation.findUnique({
+      where: { id: conversationId },
+      select: { summary: true, summaryThrough: true },
+    });
+    if (conversation === null) return null;
+    const boundary = await this.prisma.coachMessage.findFirst({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      skip: keepLast - 1,
+      select: { createdAt: true },
+    });
+    if (boundary === null) return { summary: conversation.summary, messages: [] };
+    const messages = await this.prisma.coachMessage.findMany({
+      where: {
+        conversationId,
+        createdAt: {
+          lt: boundary.createdAt,
+          ...(conversation.summaryThrough ? { gt: conversation.summaryThrough } : {}),
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: batch,
+      select: { role: true, content: true, createdAt: true },
+    });
+    return { summary: conversation.summary, messages };
+  }
+
+  /** La mémoire réécrite — jamais par-dessus une mémoire plus récente. */
+  async saveSummary(conversationId: string, summary: string, through: Date): Promise<void> {
+    await this.prisma.coachConversation.updateMany({
+      where: {
+        id: conversationId,
+        OR: [{ summaryThrough: null }, { summaryThrough: { lt: through } }],
+      },
+      data: { summary, summaryThrough: through },
+    });
+  }
+}
+
+export interface MemoryBacklog {
+  summary: string | null;
+  messages: { role: 'USER' | 'ASSISTANT'; content: string; createdAt: Date }[];
 }

@@ -4,13 +4,16 @@ import { type AppConfigService } from '../../../config/app-config.service';
 import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_TOOL_ROUNDS,
-  COACH_STREAM_DEADLINE_MS,
   COACH_TURN_DEADLINE_MS,
   CoachProviderUnavailableException,
   type CoachToolCall,
   type CoachTurnInput,
 } from '../domain/coach-model.port';
+import { CoachWorkerPool } from './coach-worker-pool';
 import { OpenAiCompatibleCoachClient } from './openai-compatible.client';
+
+/** L'échéance d'un tour en flux, telle que la passerelle la règle. */
+const STREAM_TIMEOUT_MS = 180_000;
 
 // Les pauses entre deux tentatives sont instantanées ici : on vérifie
 // qu'elles ont lieu, sans attendre de vraies secondes.
@@ -23,9 +26,13 @@ const MISTRAL = {
 };
 
 function client(provider: { baseUrl?: string; apiKey?: string; model?: string } = MISTRAL) {
-  return new OpenAiCompatibleCoachClient({
-    coachProvider: provider,
-  } as unknown as AppConfigService);
+  return new OpenAiCompatibleCoachClient(
+    {
+      coachProvider: provider,
+      coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 2048 },
+    } as unknown as AppConfigService,
+    new CoachWorkerPool(provider.baseUrl === undefined ? [] : [provider.baseUrl], 30_000),
+  );
 }
 
 function input(overrides: Partial<CoachTurnInput> = {}): CoachTurnInput {
@@ -172,7 +179,7 @@ describe('OpenAiCompatibleCoachClient', () => {
       timeout.mockRestore();
     });
 
-    it(`EN FLUX, le tour a ${COACH_STREAM_DEADLINE_MS} ms : sur processeur, relire des séances dépasse à lui seul 50 s`, async () => {
+    it(`EN FLUX, le tour a ${STREAM_TIMEOUT_MS} ms : sur processeur, relire des séances dépasse à lui seul 50 s`, async () => {
       // nginx ne coupe qu'après 60 s SANS octet ; en flux, le texte et les
       // battements de `sseKeepAlive` l'en empêchent. L'échéance courte ne
       // protège que la route sans flux.
@@ -181,7 +188,7 @@ describe('OpenAiCompatibleCoachClient', () => {
 
       await expect(client().reply(input({ onText: jest.fn() }))).rejects.toThrow();
 
-      expect(timeout).toHaveBeenCalledWith(COACH_STREAM_DEADLINE_MS);
+      expect(timeout).toHaveBeenCalledWith(STREAM_TIMEOUT_MS);
       timeout.mockRestore();
     });
 
@@ -212,6 +219,9 @@ describe('OpenAiCompatibleCoachClient', () => {
         proposal: null,
         usage: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0 },
         refused: false,
+        // L'hôte seul : ce qui part en base et aux métriques.
+        worker: 'api.mistral.ai',
+        model: 'mistral-small-latest',
       });
     });
 
@@ -532,5 +542,59 @@ describe('OpenAiCompatibleCoachClient', () => {
         );
       },
     );
+  });
+
+  describe('plusieurs workers (ADR 0013)', () => {
+    const A = 'http://ollama:11434/v1';
+    const B = 'http://gpu-2.interne:11434/v1';
+    const pooled = (pool: CoachWorkerPool) =>
+      new OpenAiCompatibleCoachClient(
+        {
+          coachProvider: { model: 'qwen3' },
+          coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 512 },
+        } as unknown as AppConfigService,
+        pool,
+      );
+
+    it('un worker injoignable : la tentative suivante part sur un autre, qui sert le tour', async () => {
+      const pool = new CoachWorkerPool([A, B], 30_000);
+      const fetchMock = jest
+        .fn()
+        .mockRejectedValueOnce(new TypeError('fetch failed'))
+        .mockResolvedValueOnce(completion({ content: 'Salut.' }));
+      global.fetch = fetchMock;
+
+      const output = await pooled(pool).reply(input());
+
+      expect(output.worker).toBe('gpu-2.interne:11434');
+      expect(sent(fetchMock, 0).url).toBe(`${A}/chat/completions`);
+      expect(sent(fetchMock, 1).url).toBe(`${B}/chat/completions`);
+      expect(sent(fetchMock, 1).body.max_tokens).toBe(512);
+      // Le premier est écarté le temps de sa remise en route ; aucun n'est
+      // resté compté comme occupé.
+      expect(pool.status()).toEqual([
+        expect.objectContaining({ url: A, healthy: false, active: 0 }),
+        expect.objectContaining({ url: B, healthy: true, active: 0 }),
+      ]);
+    });
+
+    it('une ANNULATION arrête tout : pas de nouvelle tentative, et le worker n’est pas mis en cause', async () => {
+      const pool = new CoachWorkerPool([A, B], 30_000);
+      const controller = new AbortController();
+      const fetchMock = jest.fn((_url: string, init: RequestInit) => {
+        controller.abort();
+        return Promise.reject(new DOMException(String(init.signal?.aborted), 'AbortError'));
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await expect(pooled(pool).reply(input({ signal: controller.signal }))).rejects.toBeInstanceOf(
+        CoachProviderUnavailableException,
+      );
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // Le signal transmis au worker est bien celui qui porte l'annulation.
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).signal?.aborted).toBe(true);
+      expect(pool.status().every((worker) => worker.healthy)).toBe(true);
+    });
   });
 });

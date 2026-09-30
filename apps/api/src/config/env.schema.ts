@@ -3,6 +3,7 @@ import {
   DEFAULT_RATE_LIMIT_TTL_SECONDS,
 } from '@carlys/shared-config';
 import { z } from 'zod';
+import { coachGatewayEnv } from './coach-gateway.env';
 import { DEVELOPMENT_DEFAULTS, refineProductionEnv } from './env.production';
 
 /**
@@ -193,6 +194,8 @@ export const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((value) => value === 'true'),
+    // File, workers et limites par personne : `coach-gateway.env.ts`.
+    ...coachGatewayEnv,
 
     // ── Stockage objet (MinIO en développement, S3 compatible en production) ─
     //

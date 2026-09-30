@@ -4,9 +4,7 @@ import { type AppConfigService } from '../../../config/app-config.service';
 import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 import {
   COACH_GAVE_UP_TEXT,
-  COACH_MAX_OUTPUT_TOKENS,
   COACH_MAX_TOOL_ROUNDS,
-  turnDeadlineMs,
   CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
@@ -14,28 +12,36 @@ import {
   type CoachTurnInput,
   type CoachTurnOutput,
   type CoachTurnUsage,
+  turnSignal,
 } from '../domain/coach-model.port';
 import { type ChatCompletion, readChatStream } from './chat-completion-stream';
+import { type CoachWorkerPool } from './coach-worker-pool';
 
-/** Nouvelles tentatives sur un 429 ou un 5xx, comme le SDK Anthropic. */
+/**
+ * Nouvelles tentatives sur un 429, un 5xx ou un worker injoignable, comme le
+ * SDK Anthropic — chacune sur un AUTRE worker quand il y en a un.
+ */
 const RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
 /**
- * Client d'une API **compatible OpenAI** (Chat Completions) : Mistral, mais
- * aussi Ollama (`…/v1`) ou Cloudflare, par simple réglage de
- * `COACH_API_BASE_URL` (voir coach.module.ts). `fetch` natif, sans SDK : un
- * seul `POST`, comme `subscriptions/infrastructure/stripe-form-request.ts`.
+ * Client d'une API **compatible OpenAI** (Chat Completions) : le fournisseur
+ * LOCAL — nos Ollama, un ou plusieurs (`CoachWorkerPool`, ADR 0013) — ou
+ * tout service qui parle la même langue. `fetch` natif, sans SDK : un seul
+ * `POST`, comme `subscriptions/infrastructure/stripe-form-request.ts`.
  *
  * Aucun cache explicite ici : `cacheReadTokens` vaut ce que le fournisseur
  * déclare (souvent 0), ce n'est pas un préfixe cassé.
  */
 export class OpenAiCompatibleCoachClient implements CoachModelPort {
-  constructor(private readonly config: AppConfigService) {}
+  constructor(
+    private readonly config: AppConfigService,
+    private readonly pool: CoachWorkerPool,
+  ) {}
 
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     // UNE échéance pour tout le tour, tentatives et outils compris.
-    const signal = AbortSignal.timeout(turnDeadlineMs(input));
+    const signal = turnSignal(input, this.config.coachGateway.requestTimeoutMs);
     const messages: Record<string, unknown>[] = [
       { role: 'system', content: input.system },
       ...(input.systemPerUser ? [{ role: 'system', content: input.systemPerUser }] : []),
@@ -55,6 +61,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     // paragraphe les sépare, le temps que la réplique archivée les remplace.
     let shown = false;
     let spoke = false;
+    let worker: string | undefined;
     const onText =
       input.onText &&
       ((text: string) => {
@@ -65,9 +72,13 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
 
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
       spoke = false;
-      const completion = await this.complete({ messages, tools }, signal, onText).catch(
-        (error: unknown) => unavailable(error, usage, shown),
-      );
+      const { completion, served } = await this.complete(
+        { messages, tools },
+        signal,
+        onText,
+        input.maxOutputTokens ?? this.config.coachGateway.maxOutputTokens,
+      ).catch((error: unknown) => unavailable(error, usage, shown));
+      worker = served;
       usage.inputTokens += completion.usage?.prompt_tokens ?? 0;
       usage.outputTokens += completion.usage?.completion_tokens ?? 0;
       usage.cacheReadTokens += completion.usage?.prompt_tokens_details?.cached_tokens ?? 0;
@@ -82,7 +93,14 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       // fournisseurs rendent « stop » avec des appels d'outils.
       const toolCalls = choice?.message?.tool_calls ?? [];
       if (toolCalls.length === 0) {
-        return { text: said || COACH_GAVE_UP_TEXT, proposal, usage, refused: false };
+        return {
+          text: said || COACH_GAVE_UP_TEXT,
+          proposal,
+          usage,
+          refused: false,
+          worker,
+          model: this.config.coachProvider.model,
+        };
       }
 
       // Appel sans `function` (passerelle non conforme) : nom vide, que les
@@ -108,49 +126,92 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       }
     }
 
-    return { text: COACH_GAVE_UP_TEXT, proposal, usage, refused: false };
+    return {
+      text: COACH_GAVE_UP_TEXT,
+      proposal,
+      usage,
+      refused: false,
+      worker,
+      model: this.config.coachProvider.model,
+    };
   }
 
   private async complete(
     payload: Record<string, unknown>,
     signal: AbortSignal,
-    onText?: (delta: string) => void,
-  ): Promise<ChatCompletion> {
+    onText: ((delta: string) => void) | undefined,
+    maxOutputTokens: number,
+  ): Promise<{ completion: ChatCompletion; served: string }> {
     // En flux, l'usage n'arrive que si on le demande (dernier morceau).
     const stream = onText ? { stream: true, stream_options: { include_usage: true } } : {};
-    const { baseUrl = '', apiKey, model } = this.config.coachProvider;
+    const { apiKey, model } = this.config.coachProvider;
+    const body = JSON.stringify({
+      model,
+      max_tokens: maxOutputTokens,
+      ...payload,
+      ...stream,
+    });
+    const tried = new Set<string>();
     for (let attempt = 0; ; attempt++) {
-      const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
-        method: 'POST',
-        signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey === undefined ? {} : { Authorization: `Bearer ${apiKey}` }),
-        },
-        body: JSON.stringify({ model, max_tokens: COACH_MAX_OUTPUT_TOKENS, ...payload, ...stream }),
-      });
-      if (response.ok && onText) {
-        return readChatStream(response, onText);
-      }
-      if (response.ok) {
-        const body: unknown = await response.json();
-        if (typeof body !== 'object' || body === null) {
-          throw new ServiceUnavailableException('Coach : réponse illisible.');
+      const worker = this.pool.acquire(tried);
+      // Panne DU WORKER (réseau, 5xx, flux rompu) : il est écarté un temps.
+      // Jamais une annulation ni une échéance, qui ne disent rien de lui.
+      let failed = false;
+      try {
+        const response = await fetch(`${worker.url.replace(/\/+$/, '')}/chat/completions`, {
+          method: 'POST',
+          signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey === undefined ? {} : { Authorization: `Bearer ${apiKey}` }),
+          },
+          body,
+        }).catch((error: unknown) => {
+          failed = !signal.aborted;
+          if (signal.aborted || attempt === RETRIES) throw error;
+          return null;
+        });
+        if (response?.ok) {
+          const completion = await readCompletion(response, onText).catch((error: unknown) => {
+            failed = !signal.aborted;
+            throw error;
+          });
+          return { completion, served: worker.name };
         }
-        return body;
+        if (response !== null) {
+          const retryable = response.status === 429 || response.status >= 500;
+          failed = response.status >= 500;
+          if (!retryable || attempt === RETRIES) {
+            // Jamais relayé tel quel : un 429 du fournisseur (quota GLOBAL)
+            // s'afficherait « limite du jour » sur le téléphone.
+            throw new ServiceUnavailableException(
+              `Coach : le fournisseur a répondu ${response.status}${await refusalReason(response, retryable)}.`,
+            );
+          }
+          await response.body?.cancel();
+        }
+      } finally {
+        this.pool.release(worker, failed);
       }
-      const retryable = response.status === 429 || response.status >= 500;
-      if (!retryable || attempt === RETRIES) {
-        // Jamais relayé tel quel : un 429 du fournisseur (quota GLOBAL)
-        // s'afficherait « limite du jour » sur le téléphone.
-        throw new ServiceUnavailableException(
-          `Coach : le fournisseur a répondu ${response.status}${await refusalReason(response, retryable)}.`,
-        );
-      }
-      await response.body?.cancel();
+      tried.add(worker.url);
       await wait(RETRY_DELAY_MS * (attempt + 1), undefined, { signal });
     }
   }
+}
+
+/** Le flux recomposé, ou le corps JSON d'une réponse d'un bloc. */
+async function readCompletion(
+  response: Response,
+  onText?: (delta: string) => void,
+): Promise<ChatCompletion> {
+  if (onText) {
+    return readChatStream(response, onText);
+  }
+  const body: unknown = await response.json();
+  if (typeof body !== 'object' || body === null) {
+    throw new ServiceUnavailableException('Coach : réponse illisible.');
+  }
+  return body;
 }
 
 /**

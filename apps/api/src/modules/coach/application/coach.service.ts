@@ -3,24 +3,16 @@ import {
   type CoachConversationSummary,
   type CoachReply,
 } from '@carlys/api-contracts';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import {
-  COACH_MODEL_PORT,
-  type CoachModelPort,
-  CoachProviderUnavailableException,
-} from '../domain/coach-model.port';
 import { type ConversationWithMessages, CoachRepository } from '../infrastructure/coach.repository';
+import { CoachContextBuilder } from './coach-context.builder';
+import { CoachAdmissions } from './coach-admissions';
+import { type CoachStream, CoachTurnRunner } from './coach-turn.runner';
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
-import { acceptableSessionProposal, collectProgramProposal } from './coach.proposals';
-import { COACH_TOOLS } from './coach.tool-definitions';
-import { CoachTools } from './coach.tools';
-import { COACH_SYSTEM_PROMPT, mentorVoiceBriefing } from './coach.prompt';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { replay } from './coach.replay';
-import { HISTORY_LIMIT, buildHistory, titleFrom } from './coach.turn';
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -37,10 +29,11 @@ const CONVERSATION_NOT_FOUND = 'Conversation introuvable.';
 export class CoachService {
   constructor(
     private readonly repository: CoachRepository,
-    private readonly tools: CoachTools,
     private readonly quota: CoachQuota,
     private readonly availability: CoachAvailability,
-    @Inject(COACH_MODEL_PORT) private readonly model: CoachModelPort,
+    private readonly admissions: CoachAdmissions,
+    private readonly context: CoachContextBuilder,
+    private readonly turns: CoachTurnRunner,
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -97,7 +90,7 @@ export class CoachService {
     conversationId: string,
     messageId: string,
     content: string,
-    onText?: (delta: string) => void,
+    stream: CoachStream = {},
   ): Promise<CoachReply> {
     await this.availability.assertAvailable(userId);
     await this.repository.ensureConversation(userId, conversationId);
@@ -105,7 +98,11 @@ export class CoachService {
     // toute façon plafonné : inutile de relire tout le passé du fil à chaque
     // phrase. `+ 1` pour que le message de ce tour, s'il y figure déjà,
     // n'évince pas un tour utile.
-    const conversation = await this.requireConversation(userId, conversationId, HISTORY_LIMIT + 1);
+    const conversation = await this.requireConversation(
+      userId,
+      conversationId,
+      this.context.window,
+    );
 
     // UN tour à la fois par question, pris AVANT de chercher le rejeu : un
     // renvoi arrivé pendant que la réponse s'écrit encore (flux coupé, écran
@@ -116,7 +113,7 @@ export class CoachService {
       throw new ConflictException('Le coach répond déjà à ce message.');
     }
     try {
-      return await this.answer(userId, conversation, messageId, content, onText);
+      return await this.answer(userId, conversation, messageId, content, stream);
     } finally {
       // Le verrou expire seul : un Redis qui flanche ici ne doit pas masquer
       // la réponse archivée, ni la panne qui a interrompu le tour.
@@ -132,7 +129,7 @@ export class CoachService {
     conversation: ConversationWithMessages,
     messageId: string,
     content: string,
-    onText: ((delta: string) => void) | undefined,
+    stream: CoachStream,
   ): Promise<CoachReply> {
     const conversationId = conversation.id;
     // Le rejeu se cherche par IDENTIFIANT, pas dans la fenêtre : un message
@@ -151,98 +148,24 @@ export class CoachService {
       }
     }
 
-    // La voix du Mentor (profil Carlys + style choisi) aiguille le ton du
-    // coach. Chargée AVANT le compteur, et dégradée en silence : un incident
-    // sur cette lecture ne doit ni brûler un tour de quota, ni empêcher le
-    // coach de répondre.
-    const voice = await this.repository
-      .voiceOf(userId)
-      .catch(() => ({ carlysProfile: null, mentorStyle: null }));
-
-    // Le compteur passe AVANT l'appel : deux envois simultanés ne franchissent
-    // jamais le plafond. `now` est gardé pour rendre le message au même jour.
-    const now = new Date();
-    const remaining = await this.quota.consume(userId, now);
-    if (remaining === null) {
+    // La passerelle refuse tôt, sans rien consommer : taille, rythme, une
+    // génération par personne, file pleine (ADR 0013). La place se rend
+    // quoi qu'il arrive.
+    // Plafond du jour déjà atteint : 429 tout de suite, plutôt qu'une place
+    // dans la file pour rien. Le décompte, lui, se fait après la file.
+    if ((await this.quota.remaining(userId)) === 0) {
       throw new CoachQuotaExceededError();
     }
-
-    const userMessage = await this.repository.saveUserMessage(conversationId, messageId, content);
-    if (userMessage === null) {
-      // Course entre la vérification et l'écriture : même refus, rien n'a été écrit.
-      throw new NotFoundException(CONVERSATION_NOT_FOUND);
+    const admission = await this.admissions.admit(userId, conversationId, messageId, content);
+    try {
+      return await this.turns.run(userId, conversation, admission, content, stream);
+    } finally {
+      await admission
+        .release()
+        .catch((error: unknown) =>
+          this.logger.warn({ err: error, messageId }, 'Place de la passerelle non rendue'),
+        );
     }
-
-    // Le message de ce tour arrive en dernier, jamais aussi dans l'historique :
-    // s'il y figure déjà (tour interrompu, repris ici), il en est retiré.
-    const history = buildHistory(
-      conversation.messages.filter((message) => message.id !== messageId),
-      content,
-    );
-    const programs = collectProgramProposal((calls) => this.tools.run(userId, calls));
-    const output = await this.model
-      .reply({
-        system: COACH_SYSTEM_PROMPT,
-        // Après la césure de cache : le préfixe partagé reste identique pour
-        // tous les utilisateurs, briefing ou pas.
-        systemPerUser: mentorVoiceBriefing(voice),
-        tools: COACH_TOOLS,
-        history,
-        runTools: programs.runTools,
-        onText,
-      })
-      .catch((error: unknown) => {
-        if (error instanceof CoachProviderUnavailableException) {
-          // « Tour de coach » ne sera pas écrit : les jetons déjà partis le sont ici.
-          this.logger.warn(
-            { userId, conversationId, ...error.usage, reason: error.message },
-            'Tour de coach interrompu',
-          );
-        }
-        // Fournisseur tombé sans rien consommer : le message est rendu.
-        return this.quota.refundIfUnavailable(userId, now, error);
-      });
-
-    const proposal = await acceptableSessionProposal(output.proposal, this.repository, this.logger);
-    const programProposal = programs.proposal();
-
-    this.logger.info(
-      {
-        userId,
-        conversationId,
-        inputTokens: output.usage.inputTokens,
-        outputTokens: output.usage.outputTokens,
-        cacheReadTokens: output.usage.cacheReadTokens,
-        proposed: proposal !== null,
-        programProposed: programProposal !== null,
-        refused: output.refused,
-      },
-      'Tour de coach',
-    );
-
-    const assistantMessage = await this.repository.saveAssistantMessage({
-      conversationId,
-      id: randomUUID(),
-      content: output.text,
-      inputTokens: output.usage.inputTokens,
-      outputTokens: output.usage.outputTokens,
-      proposal:
-        proposal === null
-          ? null
-          : {
-              ...proposal,
-              id: randomUUID(),
-              itemIds: proposal.items.map(() => randomUUID()),
-            },
-      programProposal: programProposal === null ? null : { ...programProposal, id: randomUUID() },
-      title: conversation.title ?? titleFrom(content),
-    });
-
-    return {
-      userMessage: presentMessage(userMessage),
-      assistantMessage: presentMessage(assistantMessage),
-      remainingToday: remaining,
-    };
   }
 
   /**

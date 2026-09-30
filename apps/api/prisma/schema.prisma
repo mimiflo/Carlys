@@ -54,6 +54,7 @@ model User {
   subscriptions      Subscription[]
   entitlements       UserEntitlement[]
   coachConversations CoachConversation[]
+  coachGenerations   CoachGeneration[]
   equipment          UserEquipment[]
 
   mealEntries              MealEntry[]
@@ -1089,16 +1090,61 @@ enum CoachMessageRole {
   ASSISTANT
 }
 
+/// Cycle de vie d'une génération du coach (ADR 0013).
+enum CoachGenerationStatus {
+  QUEUED
+  PROCESSING
+  STREAMING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/// Une génération du coach : sa MESURE, jamais son contenu (ADR 0013). Sert à
+/// savoir combien on attend, combien on génère, sur quel worker, et ce qui
+/// échoue. La latence et le délai du premier mot se déduisent des instants.
+model CoachGeneration {
+  /// L'identifiant de requête de la passerelle.
+  id             String                @id @db.Uuid
+  userId         String                @db.Uuid
+  /// Mesures, pas des liens : un fil supprimé n'efface pas la mesure.
+  conversationId String                @db.Uuid
+  messageId      String                @db.Uuid
+  status         CoachGenerationStatus @default(QUEUED)
+  createdAt      DateTime              @default(now())
+  /// Sortie de la file : un créneau obtenu.
+  startedAt      DateTime?
+  firstTokenAt   DateTime?
+  completedAt    DateTime?
+  inputTokens    Int?
+  outputTokens   Int?
+  model          String?
+  /// Hôte du worker qui a servi (jamais d'identifiant ni de chemin).
+  worker         String?
+  /// Raison courte d'un échec (`timeout`, `worker`, `queue_timeout`…).
+  errorCode      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
 /// Fil de discussion. L'id vient de l'appareil : le premier message peut être
 /// composé avant que le serveur n'ait jamais entendu parler du fil.
 model CoachConversation {
-  id        String    @id @db.Uuid
-  userId    String    @db.Uuid
+  id             String    @id @db.Uuid
+  userId         String    @db.Uuid
   /// Résumé court du fil, écrit par le coach au premier échange.
-  title     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  title          String?
+  /// Mémoire des échanges sortis de la fenêtre relue (objectif, préférences,
+  /// progression, décisions), réécrite par le modèle quand la file est libre.
+  summary        String?
+  /// Instant du dernier message que `summary` couvre.
+  summaryThrough DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages CoachMessage[]

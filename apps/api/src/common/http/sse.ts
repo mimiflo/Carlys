@@ -29,7 +29,8 @@ export function sseKeepAlive(response: Response, everyMs: number): () => void {
 
 function write(response: Response, chunk: string): void {
   if (response.writableEnded || response.destroyed) {
-    // La personne est partie : le tour continue et s'archive quand même.
+    // La personne est partie : plus rien à écrire (le contrôleur, lui, a
+    // déjà annulé la génération — ADR 0013).
     return;
   }
   if (!response.headersSent) {

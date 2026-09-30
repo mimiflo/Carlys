@@ -12,7 +12,17 @@ import {
   type CoachTurnInput,
   type CoachTurnOutput,
 } from '../domain/coach-model.port';
+import { type ProgramsService } from '../../programs/application/programs.service';
+import { type UsersService } from '../../users/application/users.service';
+import { type CoachGate } from '../infrastructure/coach-gate';
+import { type CoachGenerationRepository } from '../infrastructure/coach-generation.repository';
+import { type CoachMetrics } from '../infrastructure/coach-metrics';
 import { type CoachRepository } from '../infrastructure/coach.repository';
+import { CoachContextBuilder } from './coach-context.builder';
+import { CoachAdmissions } from './coach-admissions';
+import { CoachGateway } from './coach-gateway';
+import { type CoachMemory } from './coach-memory';
+import { CoachTurnRunner } from './coach-turn.runner';
 import { type CoachQuota } from './coach.quota';
 import { CoachAvailability } from './coach.availability';
 import { CoachService } from './coach.service';
@@ -40,7 +50,9 @@ interface Stubs {
     remaining: jest.Mock;
     refundIfUnavailable: jest.Mock;
     holdTurn: jest.Mock;
+    withinRate: jest.Mock;
   };
+  gate: { enter: jest.Mock; poll: jest.Mock; leave: jest.Mock; renew: jest.Mock };
   model: { reply: jest.Mock<Promise<CoachTurnOutput>, [CoachTurnInput]> };
   logger: { info: jest.Mock; warn: jest.Mock };
 }
@@ -64,6 +76,8 @@ function conversationWith(messages: ReturnType<typeof storedMessage>[]) {
     id: CONVERSATION,
     userId: USER,
     title: null,
+    summary: null,
+    summaryThrough: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
@@ -92,6 +106,14 @@ function buildStubs(): Stubs {
         Promise.reject(error),
       ),
       holdTurn: jest.fn().mockResolvedValue(jest.fn().mockResolvedValue(undefined)),
+      withinRate: jest.fn().mockResolvedValue(true),
+    },
+    // La file est libre : une place, un créneau tout de suite.
+    gate: {
+      enter: jest.fn().mockResolvedValue('ok'),
+      poll: jest.fn().mockResolvedValue({ acquired: true }),
+      leave: jest.fn().mockResolvedValue(undefined),
+      renew: jest.fn().mockResolvedValue(undefined),
     },
     model: {
       reply: jest.fn<Promise<CoachTurnOutput>, [CoachTurnInput]>().mockResolvedValue({
@@ -118,6 +140,13 @@ function buildService(
     coachEnabled: acces.coachEnabled,
     anthropicApiKey: 'cle-factice-de-test-32-caracteres',
     coachProvider: {},
+    coachGateway: {
+      workerUrls: [],
+      historyMessages: 20,
+      maxMessageChars: 2000,
+      queueTimeoutMs: 120_000,
+      requestTimeoutMs: 180_000,
+    },
   };
   // La porte (configuration + droit) est un collaborateur à part : on lui
   // passe les mêmes doubles qu'avant, la règle testée ne change pas.
@@ -125,14 +154,49 @@ function buildService(
     entitlements as unknown as EntitlementsService,
     config as unknown as AppConfigService,
   );
-  return new CoachService(
-    stubs.repository as unknown as CoachRepository,
-    { run: jest.fn().mockResolvedValue([]) } as unknown as CoachTools,
-    stubs.quota as unknown as CoachQuota,
-    availability,
+  // La passerelle, le contexte et le tour sont les VRAIS : seules leurs
+  // bordures (Redis, métriques, base) sont simulées.
+  const gauge = { inc: jest.fn(), dec: jest.fn(), observe: jest.fn() };
+  const logger = stubs.logger as unknown as PinoLogger;
+  const repository = stubs.repository as unknown as CoachRepository;
+  const quota = stubs.quota as unknown as CoachQuota;
+  const metrics = new Proxy({}, { get: () => gauge }) as unknown as CoachMetrics;
+  const gate = stubs.gate as unknown as CoachGate;
+  const gateway = new CoachGateway(
+    gate,
+    {
+      queued: jest.fn().mockResolvedValue(undefined),
+      started: jest.fn().mockResolvedValue(undefined),
+      streaming: jest.fn().mockResolvedValue(undefined),
+      ended: jest.fn().mockResolvedValue(undefined),
+    } as unknown as CoachGenerationRepository,
+    metrics,
+    config as unknown as AppConfigService,
     stubs.model,
-    stubs.logger as unknown as PinoLogger,
+    logger,
   );
+  const admissions = new CoachAdmissions(
+    gate,
+    quota,
+    metrics,
+    config as unknown as AppConfigService,
+  );
+  const context = new CoachContextBuilder(
+    repository,
+    { training: jest.fn().mockResolvedValue(null) } as unknown as UsersService,
+    { activeProgramName: jest.fn().mockResolvedValue(null) } as unknown as ProgramsService,
+    config as unknown as AppConfigService,
+  );
+  const turns = new CoachTurnRunner(
+    repository,
+    { run: jest.fn().mockResolvedValue([]) } as unknown as CoachTools,
+    quota,
+    gateway,
+    context,
+    { refreshLater: jest.fn() } as unknown as CoachMemory,
+    logger,
+  );
+  return new CoachService(repository, quota, availability, admissions, context, turns, logger);
 }
 
 /**
@@ -419,9 +483,11 @@ describe('CoachService.sendMessage — un tour à la fois, au fil de l’écritu
     const stubs = buildStubs();
     const onText = jest.fn();
 
-    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.', onText);
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.', { onText });
 
-    expect(stubs.model.reply.mock.calls[0]?.[0].onText).toBe(onText);
+    // La passerelle s'interpose (elle date le premier mot) sans rien retenir.
+    stubs.model.reply.mock.calls[0]?.[0].onText?.('Sal');
+    expect(onText).toHaveBeenCalledWith('Sal');
   });
 });
 

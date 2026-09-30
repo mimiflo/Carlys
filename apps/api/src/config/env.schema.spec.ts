@@ -213,6 +213,44 @@ describe('validateEnv en production', () => {
     ).toBe('http://ollama:11434/v1');
   });
 
+  // La passerelle (ADR 0013) envoie la même clé et le même contexte à CHAQUE
+  // worker : la règle vaut pour toute la liste, pas pour sa seule tête.
+  it('exige https:// pour CHAQUE worker de COACH_WORKER_URLS quand une clé est posée', () => {
+    const coach = {
+      COACH_MODEL: 'qwen3:4b',
+      COACH_API_KEY: 'cle-factice-de-test',
+      COACH_API_BASE_URL: 'https://gpu-1.carlys.example/v1',
+    };
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        ...coach,
+        COACH_WORKER_URLS: 'https://gpu-1.carlys.example/v1,http://gpu-2.interne:11434/v1',
+      }),
+    ).toThrow(/COACH_WORKER_URLS.*https/);
+    expect(
+      validateEnv({
+        ...productionEnv,
+        ...coach,
+        COACH_WORKER_URLS: 'https://gpu-1.carlys.example/v1,https://gpu-2.carlys.example/v1',
+      }).COACH_WORKER_URLS,
+    ).toContain('gpu-2');
+    // Sans clé, des Ollama internes au réseau compose restent permis.
+    expect(
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'qwen3:4b',
+        COACH_WORKER_URLS: 'http://ollama:11434/v1,http://ollama-2:11434/v1',
+      }).COACH_WORKER_URLS,
+    ).toContain('ollama-2');
+  });
+
+  it('refuse un worker qui n’est pas en http(s)', () => {
+    expect(() => validateEnv({ ...validEnv, COACH_WORKER_URLS: 'ftp://gpu.interne/v1' })).toThrow(
+      /COACH_WORKER_URLS/,
+    );
+  });
+
   // CORS_ORIGINS est une LISTE : le contrôle doit voir chaque entrée, pas
   // seulement la première. Une garde qui n'inspecte qu'un élément sur trois
   // est pire qu'aucune — elle fait croire que quelqu'un a regardé.
