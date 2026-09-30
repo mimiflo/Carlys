@@ -11,7 +11,8 @@
 #     que nginx recopie la ligne de requête brute ;
 #   - le JSON de l'API part compressé, y compris relayé en HTTP/1.0 par un
 #     proxy (gra6), mais pas les petites réponses ni celles
-#     d'authentification.
+#     d'authentification ;
+#   - le flux SSE du coach passe évènement par évènement, sans être retenu.
 #
 # Aucun droit root n'est requis : nginx tourne sur un port haut de la boucle
 # locale, avec ses fichiers dans un dossier jetable. Sans nginx sur la
@@ -50,7 +51,7 @@ PORT="$(libre)"; APP="$(libre)"
 
 # ── L'application factice : note chaque requête reçue, rend du JSON ─────────
 cat > "$T/app.py" <<'FIN'
-import http.server, json, sys
+import http.server, json, sys, time
 journal = open(sys.argv[2], "a", buffering=1)
 gros = json.dumps({"data": [{"id": i, "nom": "Développé couché", "description": "Allongé sur le banc, descendre la barre jusqu'à la poitrine puis pousser."} for i in range(80)], "meta": {}, "requestId": "r"})
 class Gestion(http.server.BaseHTTPRequestHandler):
@@ -62,6 +63,16 @@ class Gestion(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(corps)))
         self.end_headers()
         self.wfile.write(corps)
+    def do_POST(self):
+        # Un flux SSE comme celui du coach : un évènement, une pause, un autre.
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        self.wfile.write(b"event: delta\ndata: {\"text\":\"Bon\"}\n\n"); self.wfile.flush()
+        time.sleep(1.5)
+        self.wfile.write(b"event: done\ndata: {}\n\n"); self.wfile.flush()
+        self.close_connection = True
     def log_message(self, *a): pass
 http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), Gestion).serve_forever()
 FIN
@@ -168,6 +179,18 @@ echo "  (réponse de l'application factice : $brut octets bruts, $comprime compr
 verifier "le corps compressé se décompresse à l'identique" oui \
   "$(cmp -s <(curl -s -H 'Host: api.carlys.example' "http://127.0.0.1:$PORT/api/v1/exercises?limit=50") \
      <(curl -s -H 'Host: api.carlys.example' -H 'Accept-Encoding: gzip' "http://127.0.0.1:$PORT/api/v1/exercises?limit=50" | gunzip) && echo oui || echo non)"
+
+echo
+echo "flux du coach relayé au fil de l'eau"
+for hote in api.carlys.example api-staging.carlys.example; do
+  debut="$(curl -s -N --max-time 1 -X POST -H "Host: $hote" \
+    "http://127.0.0.1:$PORT/api/v1/coach/conversations/c/messages/stream" || true)"
+  verifier "$hote : le premier évènement arrive avant la fin du flux" oui \
+    "$(grep -q '^event: delta' <<< "$debut" && echo oui || echo non)"
+  e="$(curl -s -D - -o /dev/null -X POST -H "Host: $hote" "http://127.0.0.1:$PORT/api/v1/coach/conversations/c/messages/stream" | tr -d '\r')"
+  verifier "$hote : X-Accel-Buffering transmis à gra6" oui \
+    "$(grep -qi '^x-accel-buffering: no' <<< "$e" && echo oui || echo non)"
+done
 
 echo
 echo "journal d'erreurs sans jeton, amont tombé"
