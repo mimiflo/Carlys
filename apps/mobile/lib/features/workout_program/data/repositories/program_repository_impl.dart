@@ -30,7 +30,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
   /// listes paginées du mobile suivent déjà le curseur ; c'est le même motif.
   @override
   Future<List<ProgramSummary>> list() {
-    return _guard(() async {
+    return guardDio(() async {
       final programmes = <ProgramSummary>[];
       String? cursor;
       var pages = 0;
@@ -54,7 +54,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   @override
   Future<ProgramDetail> byId(String programId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/programs/$programId',
       );
@@ -64,7 +64,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   @override
   Future<ProgramCalendarWeek> calendarWeek(String programId, {int? week}) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/programs/$programId/calendar',
         queryParameters: {if (week != null) 'week': week},
@@ -79,7 +79,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
     required String dayId,
     required String? sessionId,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.put<Map<String, dynamic>>(
         '/programs/$programId/calendar/days/$dayId/session',
         // `null` est une VALEUR, pas une absence : c'est l'état « plus
@@ -92,7 +92,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   @override
   Future<ProgramDetail> save(ProgramDetail program) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.put<Map<String, dynamic>>(
         '/programs/${program.id}',
         data: {
@@ -121,7 +121,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   @override
   Future<GeneratedProgramResult> generate(String programId, {String? name}) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.put<Map<String, dynamic>>(
         '/programs/$programId/generate',
         data: {if (name != null) 'name': name},
@@ -139,7 +139,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   @override
   Future<void> delete(String programId) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<Map<String, dynamic>>('/programs/$programId');
     });
   }
@@ -261,14 +261,6 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
     return response.data?['data'] as Map<String, dynamic>? ?? const {};
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

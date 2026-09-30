@@ -16,7 +16,7 @@ class DeviceTokenRepositoryImpl implements DeviceTokenRepository {
     required String token,
     required DevicePlatform platform,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.post<void>(
         '/notifications/device-tokens',
         data: {'token': token, 'platform': platform.wire},
@@ -26,7 +26,7 @@ class DeviceTokenRepositoryImpl implements DeviceTokenRepository {
 
   @override
   Future<void> unregister(String token) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<void>(
         '/notifications/device-tokens',
         data: {'token': token},
@@ -36,7 +36,7 @@ class DeviceTokenRepositoryImpl implements DeviceTokenRepository {
 
   @override
   Future<Map<NotificationCategory, bool>> preferences() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/notifications/preferences',
       );
@@ -59,20 +59,12 @@ class DeviceTokenRepositoryImpl implements DeviceTokenRepository {
     NotificationCategory category, {
     required bool enabled,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.patch<void>(
         '/notifications/preferences',
         data: {'category': category.wire, 'enabled': enabled},
       );
     });
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

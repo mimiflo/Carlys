@@ -17,7 +17,7 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
     ExercisesFilters filters = const ExercisesFilters(),
     String? cursor,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/exercises',
         queryParameters: {
@@ -49,7 +49,7 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
 
   @override
   Future<ExerciseDetail> byIdOrSlug(String idOrSlug) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/exercises/$idOrSlug',
       );
@@ -61,7 +61,7 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
 
   @override
   Future<List<MuscleGroupRef>> muscleGroups() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>('/muscle-groups');
       return (response.data?['data'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
@@ -72,21 +72,13 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
 
   @override
   Future<List<EquipmentRef>> equipment() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>('/equipment');
       return (response.data?['data'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(equipmentFromJson)
           .toList();
     });
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

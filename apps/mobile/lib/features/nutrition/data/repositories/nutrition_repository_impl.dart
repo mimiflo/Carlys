@@ -18,7 +18,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MetabolismReport> metabolismReport() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/metabolism',
       );
@@ -38,7 +38,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<void> updateProfile(MetabolicProfileUpdate update) {
-    return _guard(() async {
+    return guardDio(() async {
       final payload = <String, dynamic>{
         if (update.sex != null) 'sex': update.sex!.apiValue,
         if (update.birthDate != null)
@@ -57,7 +57,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MealDay> mealsBetween(DateTime from, DateTime to) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/meals',
         queryParameters: {
@@ -80,7 +80,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MealDetail> meal(String id) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/meals/$id',
       );
@@ -93,7 +93,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MealEntry> addMeal(String id, MealWrite write) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/nutrition/meals',
         data: mealCreationBody(id, write),
@@ -104,7 +104,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MealEntry> updateMeal(String id, MealWrite write) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/nutrition/meals/$id',
         data: mealCorrectionBody(write),
@@ -115,14 +115,14 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<void> deleteMeal(String id) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<Map<String, dynamic>>('/nutrition/meals/$id');
     });
   }
 
   @override
   Future<FoodSearchResult> searchFoods(String query, {int limit = 20}) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/foods',
         queryParameters: {'q': query, 'limit': limit},
@@ -140,7 +140,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<FoodDetail> food(int code) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/foods/$code',
       );
@@ -154,7 +154,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
   @override
   Future<Uint8List?> mealPhoto(String id) async {
     try {
-      return await _guard(() async {
+      return await guardDio(() async {
         final response = await _dio.get<List<int>>(
           '/nutrition/meals/$id/photo',
           // La réponse est l'image elle-même, sans enveloppe JSON.
@@ -176,7 +176,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<MealEntry> replaceMealPhoto(String id, Uint8List jpeg) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.put<Map<String, dynamic>>(
         '/nutrition/meals/$id/photo',
         data: _photoForm(jpeg),
@@ -187,7 +187,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
 
   @override
   Future<void> removeMealPhoto(String id) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<void>('/nutrition/meals/$id/photo');
     });
   }
@@ -207,14 +207,6 @@ class NutritionRepositoryImpl implements NutritionRepository {
   /// La charge utile d'une réponse enveloppée (`{ data, meta, requestId }`).
   static Map<String, dynamic> _data(Response<Map<String, dynamic>> response) =>
       response.data?['data'] as Map<String, dynamic>? ?? const {};
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
-  }
 }
 
 final nutritionRepositoryProvider = Provider<NutritionRepository>((ref) {

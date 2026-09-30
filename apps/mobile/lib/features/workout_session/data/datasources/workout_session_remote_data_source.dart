@@ -38,7 +38,7 @@ class DioWorkoutSessionRemoteDataSource
 
   @override
   Future<WorkoutSessionsPage> list({String? cursor, int? limit}) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/workout-sessions',
         queryParameters: {
@@ -62,7 +62,7 @@ class DioWorkoutSessionRemoteDataSource
 
   @override
   Future<RemoteWorkoutSession> detail(String sessionId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/workout-sessions/$sessionId',
       );
@@ -70,14 +70,6 @@ class DioWorkoutSessionRemoteDataSource
         response.data?['data'] as Map<String, dynamic>? ?? const {},
       );
     });
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

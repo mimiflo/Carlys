@@ -13,7 +13,7 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
   @override
   Future<PlanStatus> planStatus() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/subscriptions/me',
       );
@@ -43,7 +43,7 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
   @override
   Future<List<EntitlementEntry>> entitlements() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>('/entitlements');
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
       return (body['entitlements'] as List<dynamic>? ?? const [])
@@ -63,7 +63,7 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
   @override
   Future<OfferCatalog> offers() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/subscriptions/offers',
       );
@@ -92,7 +92,7 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
   @override
   Future<String> startCheckout({required String offerId, required String id}) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/subscriptions/checkout',
         data: {'id': id, 'offerId': offerId},
@@ -104,7 +104,7 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
   @override
   Future<String> startBillingPortal() {
-    return _guard(() async {
+    return guardDio(() async {
       // Contrat : `{ data: { url } }`, comme le paiement.
       final response = await _dio.post<Map<String, dynamic>>(
         '/subscriptions/portal',
@@ -112,14 +112,6 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
       return body['url'] as String;
     });
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

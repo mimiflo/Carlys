@@ -22,7 +22,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<Encouragement>> encouragements() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/feed');
       return rows.map(encouragementFromJson).toList(growable: false);
     });
@@ -30,7 +30,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<CommunityFriend>> friends() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/friends');
       final friends = rows.map(friendFromJson).toList();
       friends.sort(
@@ -42,7 +42,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<FriendRequest>> receivedRequests() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/requests');
       return rows.map(friendRequestFromJson).toList(growable: false);
     });
@@ -50,7 +50,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> sendFriendRequest(String email) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.post<Map<String, dynamic>>(
         '/community/requests',
         data: {'email': email},
@@ -60,7 +60,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<String> myFriendCode() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/community/profile',
       );
@@ -70,7 +70,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<String?> lookupFriendCode(String code) {
-    return _guard(() async {
+    return guardDio(() async {
       try {
         final response = await _dio.get<Map<String, dynamic>>(
           '/community/friend-codes/${Uri.encodeComponent(code)}',
@@ -89,7 +89,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> sendFriendRequestByCode(String code) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.post<Map<String, dynamic>>(
         '/community/requests',
         data: {'friendCode': code},
@@ -99,7 +99,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> respondToRequest(String requestId, {required bool accept}) {
-    return _guard(() async {
+    return guardDio(() async {
       final action = accept ? 'accept' : 'decline';
       await _dio.post<Map<String, dynamic>>(
         '/community/requests/$requestId/$action',
@@ -109,7 +109,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> removeFriend(String userId) {
-    return _guard(() async {
+    return guardDio(() async {
       // 204 sans corps, rejouable : un ami déjà retiré aboutit pareil.
       await _dio.delete<void>('/community/friends/$userId');
     });
@@ -117,7 +117,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<CommunityChallenge>> challenges() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/challenges');
       return rows.map(challengeFromJson).toList(growable: false);
     });
@@ -125,7 +125,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<CommunityChallenge> joinChallenge(String challengeId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/community/challenges/$challengeId/join',
       );
@@ -135,7 +135,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<CommunityChallenge> leaveChallenge(String challengeId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.delete<Map<String, dynamic>>(
         '/community/challenges/$challengeId/join',
       );
@@ -145,7 +145,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> encourage(String friendId, String message) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.post<Map<String, dynamic>>(
         '/community/encouragements',
         data: {'recipientUserId': friendId, 'message': message},
@@ -160,7 +160,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required bool correct,
     required int choiceIndex,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.post<Map<String, dynamic>>(
         '/community/quiz-answers',
         data: {
@@ -175,7 +175,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<Map<String, int?>> fetchQuizAnswers() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/quiz-answers');
       return {
         for (final row in rows)
@@ -186,7 +186,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<bool> sharesProgress() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/community/profile',
       );
@@ -196,7 +196,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> setSharesProgress({required bool value}) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.patch<Map<String, dynamic>>(
         '/community/profile',
         data: {'sharesProgress': value},
@@ -208,7 +208,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> blockUser(String userId) {
-    return _guard(() async {
+    return guardDio(() async {
       // 204, idempotent : bloquer deux fois ne change rien.
       await _dio.post<void>('/community/blocks/$userId');
     });
@@ -216,14 +216,14 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> unblockUser(String userId) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<void>('/community/blocks/$userId');
     });
   }
 
   @override
   Future<List<BlockedUser>> listBlocked() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/blocks');
       final blocked = rows.map(blockedUserFromJson).toList();
       blocked.sort((a, b) => b.blockedAt.compareTo(a.blockedAt));
@@ -233,7 +233,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> deleteEncouragement(String encouragementId) {
-    return _guard(() async {
+    return guardDio(() async {
       // 204 rejouable et opaque : un identifiant inconnu aboutit pareil.
       await _dio.delete<void>('/community/encouragements/$encouragementId');
     });
@@ -282,7 +282,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
     String? encouragementId,
     String? friendChallengeId,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       // L'accusé de réception (201) n'est pas relu : un signalement ouvert
       // identique rend le même, et l'écran n'a rien à en montrer.
       await _dio.post<Map<String, dynamic>>(
@@ -302,7 +302,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<FriendChallenge>> friendChallenges() {
-    return _guard(() async {
+    return guardDio(() async {
       final rows = await _list('/community/friend-challenges');
       return rows.map(friendChallengeFromJson).toList(growable: false);
     });
@@ -310,7 +310,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<FriendChallenge> friendChallenge(String challengeId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/community/friend-challenges/$challengeId',
       );
@@ -323,7 +323,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
     String id,
     NewFriendChallenge challenge,
   ) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/community/friend-challenges',
         data: {
@@ -345,7 +345,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<FriendChallenge> acceptFriendChallenge(String challengeId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/community/friend-challenges/$challengeId/accept',
       );
@@ -355,7 +355,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<void> declineFriendChallenge(String challengeId) {
-    return _guard(() async {
+    return guardDio(() async {
       await _dio.delete<Map<String, dynamic>>(
         '/community/friend-challenges/$challengeId/join',
       );
@@ -364,7 +364,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<League> league() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/community/league',
       );
@@ -374,7 +374,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<League> setLeagueJoined(bool joined) {
-    return _guard(() async {
+    return guardDio(() async {
       // Entrer et sortir sont deux VERBES, pas un drapeau posté : le serveur
       // n'a pas de route « régler », et une bascule idempotente se relit
       // mieux dans un journal d'accès.
@@ -393,14 +393,6 @@ class CommunityRepositoryImpl implements CommunityRepository {
     final response = await _dio.get<Map<String, dynamic>>(path);
     final data = response.data?['data'] as List<dynamic>? ?? const [];
     return data.cast<Map<String, dynamic>>();
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

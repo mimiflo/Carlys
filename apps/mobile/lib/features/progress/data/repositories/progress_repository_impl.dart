@@ -16,7 +16,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<ProgressOverviewEntity> overview(ProgressPeriod period) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/progress/overview',
         queryParameters: {'period': period.apiValue},
@@ -29,7 +29,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<List<PersonalRecordEntry>> records() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/progress/records',
       );
@@ -45,7 +45,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     BodyMetricKind kind = BodyMetricKind.weightKg,
     int limit = 90,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/body-metrics',
         queryParameters: {'metricType': kind.apiValue, 'limit': limit},
@@ -63,7 +63,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     required double value,
     required DateTime measuredAt,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.post<Map<String, dynamic>>(
         '/body-metrics',
         data: {
@@ -92,7 +92,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     double? value,
     DateTime? measuredAt,
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/body-metrics/$id',
         // Seuls les champs RÉELLEMENT corrigés partent : le serveur laisse
@@ -111,12 +111,12 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<void> deleteBodyMetric(String id) {
-    return _guard(() => _dio.delete<void>('/body-metrics/$id'));
+    return guardDio(() => _dio.delete<void>('/body-metrics/$id'));
   }
 
   @override
   Future<ExerciseProgressionEntity> exerciseProgression(String exerciseId) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/progress/exercises/$exerciseId',
       );
@@ -128,7 +128,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<LifetimeStats> lifetimeStats() {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/progress/lifetime',
       );
@@ -144,7 +144,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     String? cursor,
     List<ProgressEventKind> kinds = const [],
   }) {
-    return _guard(() async {
+    return guardDio(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/progress/timeline',
         queryParameters: {
@@ -162,7 +162,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<void> pushMilestones(Map<String, DateTime> rewards) {
-    return _guard(() async {
+    return guardDio(() async {
       if (rewards.isEmpty) {
         return;
       }
@@ -183,14 +183,6 @@ class ProgressRepositoryImpl implements ProgressRepository {
         },
       );
     });
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
-    }
   }
 }
 

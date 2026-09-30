@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_error_mapper.dart';
@@ -77,7 +76,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUser?> signInWithProvider(SocialProvider provider) async {
-    // Le SDK d'abord (hors de `_guard` : ses erreurs ne sont pas des erreurs
+    // Le SDK d'abord (hors de `guardDio` : ses erreurs ne sont pas des erreurs
     // Dio), le serveur ensuite. La personne peut renoncer devant la feuille :
     // c'est un `null`, pas un échec.
     final credential = await _socialSignIn.obtain(provider);
@@ -116,22 +115,24 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> forgotPassword(String email) {
-    return _guard(() => _api.forgotPassword(email.trim()));
+    return guardDio(() => _api.forgotPassword(email.trim()));
   }
 
   @override
   Future<AuthUser> me() {
-    return _guard(() async => (await _api.me()).toEntity());
+    return guardDio(() async => (await _api.me()).toEntity());
   }
 
   @override
   Future<AuthUser> updateTimezone(String timezone) {
-    return _guard(() async => (await _api.updateTimezone(timezone)).toEntity());
+    return guardDio(
+      () async => (await _api.updateTimezone(timezone)).toEntity(),
+    );
   }
 
   @override
   Future<List<AuthSessionDevice>> sessions() {
-    return _guard(() async {
+    return guardDio(() async {
       final sessions = await _api.sessions();
       return sessions.map((dto) => dto.toEntity()).toList();
     });
@@ -139,12 +140,12 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> revokeSession(String sessionId) {
-    return _guard(() => _api.revokeSession(sessionId));
+    return guardDio(() => _api.revokeSession(sessionId));
   }
 
   @override
   Future<void> revokeOtherSessions() {
-    return _guard(() => _api.revokeOtherSessions());
+    return guardDio(() => _api.revokeOtherSessions());
   }
 
   @override
@@ -155,7 +156,7 @@ class AuthRepositoryImpl implements AuthRepository {
     // Les mots de passe ne sont NI trimés NI normalisés : un espace final
     // fait partie du secret, le retirer changerait ce que l'utilisateur a
     // tapé et ferait échouer la vérification côté serveur.
-    return _guard(
+    return guardDio(
       () => _api.changePassword(
         currentPassword: currentPassword,
         newPassword: newPassword,
@@ -165,7 +166,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> deleteAccount(String password) {
-    return _guard(() => _api.deleteAccount(password));
+    return guardDio(() => _api.deleteAccount(password));
   }
 
   @override
@@ -184,7 +185,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> resendEmailVerification() {
-    return _guard(() => _api.resendEmailVerification());
+    return guardDio(() => _api.resendEmailVerification());
   }
 
   /// Ouvre une session : l'appel, la LECTURE de la réponse, puis
@@ -193,7 +194,7 @@ class AuthRepositoryImpl implements AuthRepository {
   /// trousseau traversaient jusqu'ici l'écran sous une forme anonyme, et
   /// rien ne disait lequel des deux avait joué.
   ///
-  /// L'appel échoue en [AppException] par `_guard` ; une réponse 2xx
+  /// L'appel échoue en [AppException] par `guardDio` ; une réponse 2xx
   /// illisible, en [MalformedResponseException], nommée par `AuthApi`, là où
   /// la réponse et son identifiant de requête sont encore sous la main — y
   /// compris quand Dio lui-même n'a pas pu la décoder (`mapDioException`) ;
@@ -201,7 +202,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthUser> _openSession(
     Future<AuthResultDto> Function() request,
   ) async {
-    final result = await _guard(request);
+    final result = await guardDio(request);
     final user = result.user.toEntity();
     await _keep(result.tokens);
     return user;
@@ -241,14 +242,6 @@ class AuthRepositoryImpl implements AuthRepository {
       await logout();
     } catch (error) {
       _logger.warning('Session abandonnée incomplètement', error: error);
-    }
-  }
-
-  Future<T> _guard<T>(Future<T> Function() action) async {
-    try {
-      return await action();
-    } on DioException catch (exception) {
-      throw mapDioException(exception);
     }
   }
 }

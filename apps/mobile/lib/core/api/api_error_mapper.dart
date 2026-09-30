@@ -16,6 +16,16 @@ const String requestIdHeader = 'x-request-id';
 /// libre venu du réseau n'arrive jusqu'à l'écran.
 final RegExp _requestIdShape = RegExp(r'^[\w-]{1,64}$');
 
+/// Exécute un appel réseau et traduit son échec Dio en [AppException] du
+/// domaine — la couture que partagent tous les repositories distants.
+Future<T> guardDio<T>(Future<T> Function() action) async {
+  try {
+    return await action();
+  } on DioException catch (exception) {
+    throw mapDioException(exception);
+  }
+}
+
 /// Convertit les erreurs Dio (et l'enveloppe d'erreur de l'API Carlys)
 /// vers la hiérarchie AppException du domaine.
 AppException mapDioException(DioException exception) {
