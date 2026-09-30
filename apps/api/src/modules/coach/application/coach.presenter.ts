@@ -1,4 +1,8 @@
-import { type CoachMessage, type CoachSessionProposal } from '@carlys/api-contracts';
+import {
+  type CoachMessage,
+  type CoachProgramProposal,
+  type CoachSessionProposal,
+} from '@carlys/api-contracts';
 import { type MessageWithProposal } from '../infrastructure/coach.repository';
 
 /** Des lignes Prisma aux contrats d'API — jamais de compteur de jetons ni de champ interne. */
@@ -8,6 +12,8 @@ export function presentMessage(message: MessageWithProposal): CoachMessage {
     role: message.role,
     content: message.content,
     proposal: message.proposal === null ? null : presentProposal(message.proposal),
+    programProposal:
+      message.programProposal === null ? null : presentProgramProposal(message.programProposal),
     createdAt: message.createdAt.toISOString(),
   };
 }
@@ -32,5 +38,17 @@ export function presentProposal(
       targetWeightKg: item.targetWeightKg === null ? null : Number(item.targetWeightKg),
       restSeconds: item.restSeconds,
     })),
+  };
+}
+
+export function presentProgramProposal(
+  proposal: NonNullable<MessageWithProposal['programProposal']>,
+): CoachProgramProposal {
+  return {
+    id: proposal.id,
+    goal: proposal.goal,
+    weeklySessions: proposal.weeklySessions,
+    sessionMinutes: proposal.sessionMinutes,
+    acceptedProgramId: proposal.acceptedProgramId,
   };
 }

@@ -229,6 +229,15 @@ export class ProgramsRepository {
     });
   }
 
+  /** Le programme « en cours » du compte — il n'y en a qu'un (voir `save`). */
+  async findActiveName(userId: string): Promise<string | null> {
+    const row = await this.prisma.program.findFirst({
+      where: { userId, isActive: true, deletedAt: null },
+      select: { name: true },
+    });
+    return row?.name ?? null;
+  }
+
   /** Suppression logique. Rend `false` si rien n'a changé. */
   async softDelete(id: string, userId: string): Promise<boolean> {
     const result = await this.prisma.program.updateMany({

@@ -55,6 +55,7 @@ function storedMessage(role: 'USER' | 'ASSISTANT', content: string, id = `${role
     outputTokens: null,
     createdAt: new Date('2026-08-09T10:00:00.000Z'),
     proposal: null,
+    programProposal: null,
   };
 }
 
@@ -219,6 +220,41 @@ describe('CoachService.sendMessage', () => {
     expect(input?.history.map((turn) => turn.role)).toEqual(['user', 'assistant', 'user']);
     expect(input?.history.filter((turn) => turn.content.includes('Salut coach.'))).toHaveLength(1);
     expect(stubs.repository.saveAssistantMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('un programme proposé pendant le tour s’archive avec la réponse', async () => {
+    const stubs = buildStubs();
+    stubs.model.reply.mockImplementation(async (input: CoachTurnInput) => {
+      // Un premier essai hors bornes, corrigé dans le même tour.
+      await input.runTools([
+        { id: 'a', name: 'propose_program', input: { goal: 'STRENGTH', weeklySessions: 9 } },
+      ]);
+      await input.runTools([
+        {
+          id: 'b',
+          name: 'propose_program',
+          input: { goal: 'STRENGTH', weeklySessions: 3, sessionMinutes: 45 },
+        },
+      ]);
+      return {
+        text: 'Trois séances de force.',
+        proposal: null,
+        usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0 },
+        refused: false,
+      };
+    });
+
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Un programme ?');
+
+    const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [
+      { programProposal: { id: string; goal: string; weeklySessions: number } | null },
+    ];
+    expect(saved.programProposal?.id).toEqual(expect.any(String));
+    expect(saved.programProposal).toMatchObject({
+      goal: 'STRENGTH',
+      weeklySessions: 3,
+      sessionMinutes: 45,
+    });
   });
 
   it('le fil n’est relu que sur une FENÊTRE, jamais en entier', async () => {

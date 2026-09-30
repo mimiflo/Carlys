@@ -50,17 +50,52 @@ L'alimentation en est sortie : le journal de repas existe, et le coach le lit
 par `get_nutrition_targets` et `get_recent_meals` — il connaît donc les
 objectifs caloriques et ce qui a été noté, et rien de plus, ce que le prompt
 dit désormais à sa place (« un journal vide veut dire qu'il n'a rien noté,
-pas qu'il n'a rien mangé »). Le programme hebdomadaire, lui, reste hors
-périmètre, mais plus pour la raison écrite ici : le module `programs` est
-livré (`PUT /programs/:id`, calendrier daté) ; c'est le coach qui n'a aucun
-outil dessus, et sa seule écriture reste `propose_session`, une séance à la
-fois.
+pas qu'il n'a rien mangé »). Le programme hebdomadaire est
+entré à son tour le 30 septembre 2026 : le coach en propose les réglages,
+le générateur du module `programs` le construit (section « Programme proposé
+par le coach »).
 
-**Ce qui n'est pas dans la tranche :** la génération de programme PAR LE
-COACH, la voix, les notifications proactives. Générer un programme est
-possible — `PUT /programs/:id/generate`, règles déterministes du module
-`programs`, sans modèle de langage — mais c'est une autre porte, et le coach
-n'y touche pas.
+**Ce qui n'est pas dans la tranche :** la voix, les notifications
+proactives. Le programme, lui, y est entré le 30 septembre 2026 — voir
+« Programme proposé par le coach » ci-dessous.
+
+### Programme proposé par le coach
+
+**Le besoin** (demande du propriétaire, 30 septembre 2026) : le coach doit
+pouvoir proposer un PROGRAMME, pas seulement une séance.
+
+**Le partage des rôles, et pourquoi.** Le coach ne compose pas le programme :
+il en choisit les RÉGLAGES — objectif, séances par semaine, durée d'une
+séance — et c'est le générateur déterministe du module `programs`
+(`PUT /programs/:id/generate`) qui le construit, avec les mêmes règles que
+l'écran « Préparer mon programme ». Un modèle de 4 milliards de paramètres
+qui écrirait trente séances inventerait des exercices et des volumes ; le
+générateur, lui, est testé, respecte le matériel et le niveau, et explique
+ses choix. L'IA propose, l'application exécute — ici plus que jamais.
+
+**Côté serveur.**
+
+- `get_training_profile` (lecture) : objectif, niveau, rythme, durée,
+  matériel, et le programme actif s'il y en a un. Le coach le lit avant de
+  proposer, pour ne pas proposer ce qui est déjà en place.
+- `propose_program` : `{ goal, weeklySessions, sessionMinutes }`, bornes
+  du contrat (`TRAINING_WEEKLY_SESSIONS_MIN/MAX`, `TRAINING_SESSION_MINUTES_MIN/MAX`).
+  Contrairement à `propose_session`, c'est un outil ORDINAIRE, intercepté par
+  le service pendant le tour : un réglage hors bornes revient au modèle comme
+  une erreur qu'il corrige lui-même, au lieu de faire tomber la proposition
+  en silence. La dernière proposition valide du tour est gardée.
+- Elle s'archive avec la réplique (`CoachProgramProposal`, une par message),
+  et `POST /coach/program-proposals/:id/accepted { programId }` note le
+  programme qui en est né — la même mesure que pour les séances.
+
+**Côté appli.** Une carte « Programme proposé » sous la réplique : objectif,
+rythme, durée, et « Créer ce programme ». L'appui applique les trois réglages
+au profil d'entraînement (les mêmes actions que l'écran de préparation),
+engendre le programme, note l'acceptation, et ouvre le programme — qui naît
+INACTIF, comme toujours : on le relit, puis on l'active. Un profil incomplet
+(niveau ou matériel jamais renseignés) : le message du serveur s'affiche et
+l'écran de préparation s'ouvre. Déjà acceptée, la carte dit « Voir le
+programme » et y ramène, sans en créer un second.
 
 ## Modèle de données (Prisma)
 
@@ -99,10 +134,25 @@ model CoachMessage {
   outputTokens   Int?
   createdAt      DateTime         @default(now())
 
-  conversation CoachConversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  proposal     CoachSessionProposal?
+  conversation    CoachConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  proposal        CoachSessionProposal?
+  programProposal CoachProgramProposal?
 
   @@index([conversationId, createdAt])
+}
+
+/// Programme proposé : ses RÉGLAGES, pas son contenu (voir « Programme
+/// proposé par le coach »). Migration `20260930145758_coach_programme_propose`.
+model CoachProgramProposal {
+  id                String       @id @db.Uuid
+  messageId         String       @unique @db.Uuid
+  goal              TrainingGoal
+  weeklySessions    Int
+  sessionMinutes    Int
+  acceptedProgramId String?      @db.Uuid
+  createdAt         DateTime     @default(now())
+
+  message CoachMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 /// Séance proposée par le coach. Tant qu'elle n'est pas acceptée, ce n'est
@@ -226,6 +276,7 @@ sont exportées par le port, jamais recopiées.
 | `POST` | `/api/v1/coach/conversations/:id/messages` | Envoi, renvoie la réponse ; rejouable (même identifiant, même contenu → même réponse, sans tour ni appel au modèle). Gardée pour les versions de l'appli d'avant le flux |
 | `POST` | `/api/v1/coach/conversations/:id/messages/stream` | Même envoi, réponse en flux SSE : `delta` à chaque morceau, puis `done` (même `CoachReply`) ou `error` — voir l'ADR 0012 |
 | `POST` | `/api/v1/coach/proposals/:id/accepted` | Marque la proposition acceptée |
+| `POST` | `/api/v1/coach/program-proposals/:id/accepted` | Note le programme engendré depuis un programme proposé (204, n'écrit aucun programme) |
 
 L'acceptation **ne crée pas** la séance : l'app la crée par la route de séance
 existante, puis signale l'acceptation. Un seul chemin d'écriture pour les

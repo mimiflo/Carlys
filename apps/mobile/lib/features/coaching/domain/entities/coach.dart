@@ -1,6 +1,7 @@
 /// Entités du domaine coach (immuables, écrites à la main).
 library;
 
+import '../../../workout_program/domain/entities/training_goal.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 
 enum CoachRole {
@@ -99,12 +100,36 @@ class CoachSessionProposal {
   bool get isAccepted => acceptedSessionId != null;
 }
 
+/// Programme proposé par le coach : ses RÉGLAGES, jamais son contenu. Le
+/// générateur de Carlys le construit quand l'utilisateur l'accepte, depuis
+/// le profil d'entraînement que ces réglages mettent à jour.
+class CoachProgramProposal {
+  const CoachProgramProposal({
+    required this.id,
+    required this.goal,
+    required this.weeklySessions,
+    required this.sessionMinutes,
+    this.acceptedProgramId,
+  });
+
+  final String id;
+  final TrainingGoal goal;
+  final int weeklySessions;
+  final int sessionMinutes;
+
+  /// Programme déjà engendré depuis cette proposition, le cas échéant.
+  final String? acceptedProgramId;
+
+  bool get isAccepted => acceptedProgramId != null;
+}
+
 class CoachMessage {
   const CoachMessage({
     required this.id,
     required this.role,
     required this.content,
     this.proposal,
+    this.programProposal,
     this.createdAt,
   });
 
@@ -114,6 +139,9 @@ class CoachMessage {
 
   /// Proposition rattachée au message, quand le coach en a formulé une.
   final CoachSessionProposal? proposal;
+
+  /// Programme proposé, quand le coach en a formulé un.
+  final CoachProgramProposal? programProposal;
 
   /// Instant d'écriture, tel que le serveur l'a daté (UTC). `null` pour un
   /// message qui n'en porte pas (données de démonstration, anciens tests) :

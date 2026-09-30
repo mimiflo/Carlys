@@ -42,4 +42,11 @@ abstract interface class CoachRepository {
     required String proposalId,
     required String sessionId,
   });
+
+  /// Signale qu'un programme proposé a été engendré. N'écrit **aucun**
+  /// programme : il naît par la génération existante.
+  Future<void> markProgramProposalAccepted({
+    required String proposalId,
+    required String programId,
+  });
 }

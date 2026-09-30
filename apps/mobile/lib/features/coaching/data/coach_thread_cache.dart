@@ -75,20 +75,27 @@ class CoachThreadCache {
   /// Note qu'une proposition gardée a été lancée. SANS quoi, hors ligne, la
   /// copie la montrerait encore à lancer, et l'appui suivant fabriquerait
   /// une seconde séance (`CoachProposalActions.start`).
-  Future<void> markAccepted(String proposalId, String sessionId) => _guard(
-    () async {
-      final raw = await _readRaw();
-      if (raw == null) return;
-      for (final message in _messagesOf(raw)) {
-        final proposal = (message as Map<String, dynamic>)['proposal'];
-        if (proposal is Map<String, dynamic> && proposal['id'] == proposalId) {
-          proposal['acceptedSessionId'] = sessionId;
-          await _write(raw);
-          return;
+  Future<void> markAccepted(String proposalId, String sessionId) =>
+      _mark('proposal', 'acceptedSessionId', proposalId, sessionId);
+
+  /// Même règle pour un programme proposé : un second appui ne doit pas en
+  /// engendrer un second.
+  Future<void> markProgramAccepted(String proposalId, String programId) =>
+      _mark('programProposal', 'acceptedProgramId', proposalId, programId);
+
+  Future<void> _mark(String field, String key, String id, String value) =>
+      _guard(() async {
+        final raw = await _readRaw();
+        if (raw == null) return;
+        for (final message in _messagesOf(raw)) {
+          final proposal = (message as Map<String, dynamic>)[field];
+          if (proposal is Map<String, dynamic> && proposal['id'] == id) {
+            proposal[key] = value;
+            await _write(raw);
+            return;
+          }
         }
-      }
-    },
-  );
+      });
 
   List<Object?> _messagesOf(Map<String, dynamic> raw) =>
       raw['messages'] as List<dynamic>;

@@ -1117,10 +1117,29 @@ model CoachMessage {
   outputTokens   Int?
   createdAt      DateTime         @default(now())
 
-  conversation CoachConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  proposal     CoachSessionProposal?
+  conversation    CoachConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  proposal        CoachSessionProposal?
+  programProposal CoachProgramProposal?
 
   @@index([conversationId, createdAt])
+}
+
+/// Programme proposé par le coach : ses RÉGLAGES, pas son contenu. Le
+/// générateur déterministe du module `programs` le construit à l'acceptation,
+/// depuis le profil d'entraînement que ces réglages mettent à jour.
+model CoachProgramProposal {
+  id                String       @id @db.Uuid
+  messageId         String       @unique @db.Uuid
+  goal              TrainingGoal
+  weeklySessions    Int
+  sessionMinutes    Int
+  /// Programme engendré depuis cette proposition. Posé par l'application à
+  /// l'acceptation ; VOLONTAIREMENT sans clé étrangère, comme la séance
+  /// d'une proposition de séance : c'est une mesure, pas un lien.
+  acceptedProgramId String?      @db.Uuid
+  createdAt         DateTime     @default(now())
+
+  message CoachMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 /// Séance proposée par le coach. Tant qu'elle n'est pas acceptée, ce n'est

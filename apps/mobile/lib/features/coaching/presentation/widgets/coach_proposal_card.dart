@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
+import 'coach_card_frame.dart';
 
 /// Séance proposée par le coach, avec sa seule sortie : la lancer.
 ///
@@ -23,103 +24,56 @@ class CoachProposalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: const BoxDecoration(
-            color: AppColors.darkSurfaceAlt,
-            borderRadius: AppRadius.cardSecondaryAll,
-            border: Border.fromBorderSide(
-              BorderSide(color: AppColors.darkBorderStrong),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const _ProposalHeader(),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                proposal.name,
-                style: AppTypography.subheading.copyWith(
-                  color: AppColors.darkTextPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                _summary,
-                style: AppTypography.label.copyWith(
-                  color: AppColors.darkTextSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              for (final (index, exercise) in proposal.exercises.indexed) ...[
-                if (index > 0) const SizedBox(height: AppSpacing.xs),
-                _ExerciseRow(exercise: exercise),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              // Une proposition acceptée a déjà SA séance : le dire, et
-              // proposer d'y retourner plutôt qu'un lancement qui ressemble
-              // à un premier.
-              if (proposal.isAccepted) ...[
-                Text(
-                  'Séance déjà lancée',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-              ],
-              AppButton(
-                label: proposal.isAccepted
-                    ? 'Reprendre la séance'
-                    : 'Voir la séance',
-                onPressed: onOpen,
-                isExpanded: true,
-                icon: AppIcons.play,
-              ),
-            ],
+    return CoachCardFrame(
+      maxWidth: maxWidth,
+      children: [
+        const CoachCardHeader(icon: AppIcons.coach, label: 'SÉANCE ADAPTÉE'),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          proposal.name,
+          style: AppTypography.subheading.copyWith(
+            color: AppColors.darkTextPrimary,
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          _summary,
+          style: AppTypography.label.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (final (index, exercise) in proposal.exercises.indexed) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.xs),
+          _ExerciseRow(exercise: exercise),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        // Une proposition acceptée a déjà SA séance : le dire, et
+        // proposer d'y retourner plutôt qu'un lancement qui ressemble
+        // à un premier.
+        if (proposal.isAccepted) ...[
+          Text(
+            'Séance déjà lancée',
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        AppButton(
+          label: proposal.isAccepted ? 'Reprendre la séance' : 'Voir la séance',
+          onPressed: onOpen,
+          isExpanded: true,
+          icon: AppIcons.play,
+        ),
+      ],
     );
   }
 
-  /// « 4 exercices · 25 min » — ce que l'utilisateur veut savoir avant même de
-  /// lire le détail.
   String get _summary {
     final count = proposal.exercises.length;
     final exercises = count > 1 ? '$count exercices' : '$count exercice';
     return '$exercises · ${proposal.estimatedMinutes} min';
-  }
-}
-
-class _ProposalHeader extends StatelessWidget {
-  const _ProposalHeader();
-
-  static const double _iconSize = 14;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(
-          AppIcons.coach,
-          size: _iconSize,
-          color: AppColors.primaryLight,
-        ),
-        const SizedBox(width: AppSpacing.xxs + 2),
-        Text(
-          'SÉANCE ADAPTÉE',
-          style: AppTypography.labelMono.copyWith(
-            color: AppColors.primaryLight,
-          ),
-        ),
-      ],
-    );
   }
 }
 

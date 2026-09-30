@@ -8,7 +8,7 @@ import {
   volatileContext,
 } from './coach.prompt';
 import { TARGET_KCAL_FLOOR } from '../../nutrition/application/metabolism.calculator';
-import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tools';
+import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tool-definitions';
 
 /**
  * Préfixe mis en cache et périmètre du coach.

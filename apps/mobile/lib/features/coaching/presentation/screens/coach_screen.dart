@@ -22,7 +22,9 @@ class CoachScreen extends StatelessWidget {
     required this.composerController,
     required this.onSend,
     required this.onOpenProposal,
+    required this.onOpenProgram,
     required this.onRetry,
+    this.busyProgramId,
     this.isOffline = false,
     this.live,
     this.notice,
@@ -35,6 +37,12 @@ class CoachScreen extends StatelessWidget {
   final TextEditingController composerController;
   final ValueChanged<String> onSend;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
+
+  /// Créer (ou revoir) le programme qu'a proposé le coach.
+  final ValueChanged<CoachProgramProposal> onOpenProgram;
+
+  /// Programme proposé en cours de création, s'il y en a un.
+  final String? busyProgramId;
 
   /// Sortie de l'état hors ligne : l'encart qui remplace le composeur
   /// l'offre, faute de quoi l'écran resterait muet le réseau revenu.
@@ -87,6 +95,8 @@ class CoachScreen extends StatelessWidget {
                         maxBubbleWidth:
                             constraints.maxWidth * _bubbleWidthFactor,
                         onOpenProposal: onOpenProposal,
+                        onOpenProgram: onOpenProgram,
+                        busyProgramId: busyProgramId,
                       ),
                     ),
             ),

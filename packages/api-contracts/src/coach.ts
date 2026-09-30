@@ -1,12 +1,14 @@
 import { z } from 'zod';
+import { trainingGoalSchema } from './auth';
 import { workoutSetKindSchema } from './workouts';
 
 /**
  * Contrats du coach IA (/api/v1/coach).
  *
- * **L'IA propose, l'application exécute.** Le coach n'écrit rien : sa seule
- * sortie structurée est une proposition de séance, que l'utilisateur accepte
- * explicitement. La création passe ensuite par le chemin de séance existant.
+ * **L'IA propose, l'application exécute.** Le coach n'écrit rien : ses
+ * seules sorties structurées sont une proposition de séance et une
+ * proposition de programme, que l'utilisateur accepte explicitement. La
+ * création passe ensuite par le chemin existant (séance, génération).
  *
  * Les identifiants de fil et de message sont des UUID générés SUR L'APPAREIL :
  * un message peut être composé avant que le serveur n'ait jamais entendu
@@ -47,12 +49,29 @@ export const coachSessionProposalSchema = z.object({
 });
 export type CoachSessionProposal = z.infer<typeof coachSessionProposalSchema>;
 
+/**
+ * Programme proposé : ses RÉGLAGES, jamais son contenu. Le générateur du
+ * module `programs` le construit quand l'utilisateur l'accepte, depuis le
+ * profil d'entraînement que ces réglages mettent à jour.
+ */
+export const coachProgramProposalSchema = z.object({
+  id: z.string(),
+  goal: trainingGoalSchema,
+  weeklySessions: z.number().int(),
+  sessionMinutes: z.number().int(),
+  /** Programme engendré depuis cette proposition, le cas échéant. */
+  acceptedProgramId: z.string().nullable(),
+});
+export type CoachProgramProposal = z.infer<typeof coachProgramProposalSchema>;
+
 export const coachMessageSchema = z.object({
   id: z.string(),
   role: coachMessageRoleSchema,
   content: z.string(),
   /** Proposition rattachée au message, quand le coach en a formulé une. */
   proposal: coachSessionProposalSchema.nullable(),
+  /** Programme proposé dans ce message, quand le coach en a formulé un. */
+  programProposal: coachProgramProposalSchema.nullable(),
   createdAt: z.string(),
 });
 export type CoachMessage = z.infer<typeof coachMessageSchema>;

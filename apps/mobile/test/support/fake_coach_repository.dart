@@ -45,6 +45,10 @@ class FakeCoachRepository implements CoachRepository {
   final List<String> sentIds = [];
   final List<String> createdConversations = [];
   final List<({String proposalId, String sessionId})> accepted = [];
+  final List<({String proposalId, String programId})> acceptedPrograms = [];
+
+  /// Erreur levée en notant un programme accepté (réseau tombé juste après).
+  AppException? programAcceptError;
 
   @override
   Future<List<CoachConversationSummary>> conversations() async {
@@ -110,5 +114,15 @@ class FakeCoachRepository implements CoachRepository {
     required String sessionId,
   }) async {
     accepted.add((proposalId: proposalId, sessionId: sessionId));
+  }
+
+  @override
+  Future<void> markProgramProposalAccepted({
+    required String proposalId,
+    required String programId,
+  }) async {
+    final error = programAcceptError;
+    if (error != null) throw error;
+    acceptedPrograms.add((proposalId: proposalId, programId: programId));
   }
 }

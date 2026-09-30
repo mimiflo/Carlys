@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../controllers/coach_controllers.dart';
+import '../providers/coach_program_actions.dart';
 import '../widgets/coach_header.dart';
 import 'coach_screen.dart';
 
@@ -24,6 +26,10 @@ class CoachPage extends ConsumerStatefulWidget {
 
 class _CoachPageState extends ConsumerState<CoachPage> {
   final TextEditingController _composer = TextEditingController();
+
+  /// Programme proposé en cours de création : un second appui n'en engendre
+  /// pas un second, et sa carte patiente.
+  String? _busyProgramId;
 
   @override
   void dispose() {
@@ -59,6 +65,35 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     }
   }
 
+  Future<void> _openProgram(CoachProgramProposal proposal) async {
+    if (_busyProgramId != null) return;
+    final router = GoRouter.of(context);
+    final notices = AppNotices.of(context);
+
+    setState(() => _busyProgramId = proposal.id);
+    try {
+      final programId = await ref
+          .read(coachProgramActionsProvider)
+          .start(proposal);
+      // Le fil se relit : la carte dira « Voir le programme » au retour.
+      if (!proposal.isAccepted) ref.invalidate(coachThreadProvider);
+      router.go(AppRoutes.programDetail(programId));
+    } on ValidationException catch (exception) {
+      // Niveau ou matériel manquants, ou objectif impossible avec ce
+      // matériel (400, 409) : le serveur nomme la cause, et l'écran de
+      // préparation est celui qui la corrige.
+      notices.show(serverFailureMessage(exception), tone: AppNoticeTone.error);
+      router.go(AppRoutes.programSetup);
+    } on AppException catch (exception) {
+      // Plafond du plan gratuit, hors ligne… : la phrase de celui qui
+      // refuse, jamais un « ça n'a pas marché » qui inviterait à réessayer
+      // un geste voué à échouer.
+      notices.show(serverFailureMessage(exception), tone: AppNoticeTone.error);
+    } finally {
+      if (mounted) setState(() => _busyProgramId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final thread = ref.watch(coachThreadProvider);
@@ -74,6 +109,8 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         composerController: _composer,
         onSend: _send,
         onOpenProposal: _openProposal,
+        onOpenProgram: _openProgram,
+        busyProgramId: _busyProgramId,
         onRetry: () => ref.read(coachThreadProvider.notifier).clearOffline(),
         isOffline: state.isOffline,
         live: state.live,

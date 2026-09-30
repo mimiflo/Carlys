@@ -69,6 +69,11 @@ export class ProgramsService {
     };
   }
 
+  /** Nom du programme en cours, ou `null` s'il n'y en a pas. */
+  activeProgramName(userId: string): Promise<string | null> {
+    return this.programs.findActiveName(userId);
+  }
+
   async detail(id: string, userId: string): Promise<ProgramDetail> {
     const program = await this.programs.findById(id);
     // Inconnu, supprimé ou à autrui : 404 dans les TROIS cas — répondre 403

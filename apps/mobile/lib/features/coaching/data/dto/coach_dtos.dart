@@ -6,6 +6,7 @@
 library;
 
 import '../../../../core/utilities/formatting.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../domain/entities/coach.dart';
 
@@ -83,6 +84,21 @@ String _detailOf(CoachProposalSet set) {
   return parts.join(' · ');
 }
 
+/// `null` pour une absence ou un objectif que cette version ne connaît pas :
+/// une carte qu'on ne saurait pas appliquer ne s'affiche pas.
+CoachProgramProposal? coachProgramProposalFromJson(Object? json) {
+  if (json is! Map<String, dynamic>) return null;
+  final goal = TrainingGoal.fromWire(json['goal'] as String?);
+  if (goal == null) return null;
+  return CoachProgramProposal(
+    id: json['id'] as String,
+    goal: goal,
+    weeklySessions: (json['weeklySessions'] as num).toInt(),
+    sessionMinutes: (json['sessionMinutes'] as num).toInt(),
+    acceptedProgramId: json['acceptedProgramId'] as String?,
+  );
+}
+
 CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
   final proposal = json['proposal'];
   return CoachMessage(
@@ -92,6 +108,7 @@ CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
     proposal: proposal is Map<String, dynamic>
         ? coachProposalFromJson(proposal)
         : null,
+    programProposal: coachProgramProposalFromJson(json['programProposal']),
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
 }

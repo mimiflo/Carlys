@@ -11,6 +11,7 @@ function message(role: 'USER' | 'ASSISTANT', id: string, content = id): MessageW
     outputTokens: null,
     createdAt: new Date('2026-08-09T10:00:00.000Z'),
     proposal: null,
+    programProposal: null,
   };
 }
 

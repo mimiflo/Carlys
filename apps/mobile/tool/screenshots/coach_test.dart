@@ -8,6 +8,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -97,6 +98,7 @@ void main() {
           composerController: controller,
           onSend: (_) {},
           onOpenProposal: (_) {},
+          onOpenProgram: (_) {},
           onRetry: () {},
           isOffline: isOffline,
           live: live,
@@ -153,5 +155,36 @@ void main() {
   testWidgets('coach — hors ligne', (tester) async {
     await pumpCoach(tester, messages: _conversation, isOffline: true);
     await capture(tester, 'coach-04-hors-ligne');
+  });
+
+  // Un programme proposé : le coach choisit les réglages, Carlys construit.
+  testWidgets('coach — programme proposé', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: [
+        ..._conversation,
+        CoachMessage(
+          id: 'm4',
+          role: CoachRole.user,
+          content: 'Tu peux me faire un programme pour gagner en force ?',
+          createdAt: _today.add(const Duration(minutes: 5)),
+        ),
+        CoachMessage(
+          id: 'm5',
+          role: CoachRole.assistant,
+          content:
+              'Trois séances de 45 minutes : assez pour progresser sur tes '
+              'mouvements lourds, et tenable avec tes soirées.',
+          createdAt: _today.add(const Duration(minutes: 6)),
+          programProposal: const CoachProgramProposal(
+            id: 'pp1',
+            goal: TrainingGoal.strength,
+            weeklySessions: 3,
+            sessionMinutes: 45,
+          ),
+        ),
+      ],
+    );
+    await capture(tester, 'coach-06-programme');
   });
 }

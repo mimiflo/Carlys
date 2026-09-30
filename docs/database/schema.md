@@ -42,7 +42,7 @@ tombé dans ce cas : [migrations.md](migrations.md).
 | Abonnements | `SubscriptionPlan`, `SubscriptionPlanEntitlement`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migrations `20260807064832_subscriptions`, `20260915140000_plan_entitlements` et `20260927100000_evenement_paiement_compte`) | Étape 6 ✅ |
 | Notifications | `DeviceToken`, `NotificationPreference` — **implémenté** (migrations `20260811210000_device_tokens`, `20260816120000_notification_preferences`, `20260926200000_jetons_push_par_session`) ; `Notification` (historique in-app) différé | ✅ |
 | Administration | `AdminUser`, `AdminRole`, `AdminPermission`, jointures `AdminUserRole` et `AdminRolePermission`, `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
-| Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem` — **implémenté** (migration `20260809120000_coach_ia`) | ✅ |
+| Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem`, `CoachProgramProposal` — **implémenté** (migrations `20260809120000_coach_ia`, `20260930145758_coach_programme_propose`) | ✅ |
 | Journal alimentaire | `MealEntry`, `Food`, `MealComponent`, `MealPhoto` — **implémenté**, voir [Journal alimentaire](#journal-alimentaire-et-base-daliments-implémenté) | ✅ |
 | Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport`, `FriendChallenge`, `FriendChallengeMember`, `LeagueMembership` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`, `20260919201000_defis_entre_amis`, `20260919225014_ligues`, `20260924120000_ligues_groupes_de_vingt`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
 
@@ -925,7 +925,8 @@ Un fil de conversation d'un membre avec le coach.
 - Champs clés : `id`, `conversationId`, `role`, `content`, `inputTokens` et
   `outputTokens` nullables (volume traité par le modèle), `createdAt`.
 - Index : `(conversationId, createdAt)`. Relations : n–1
-  `CoachConversation` (`Cascade`) ; 0–1 `CoachSessionProposal`.
+  `CoachConversation` (`Cascade`) ; 0–1 `CoachSessionProposal` ;
+  0–1 `CoachProgramProposal`.
 
 ### `CoachSessionProposal` et `CoachSessionProposalItem`
 Une séance PROPOSÉE par le coach, jamais écrite dans le compte tant que la
@@ -937,6 +938,13 @@ personne ne l'accepte pas.
   `exerciseId`, `exerciseName`, `setPosition`, `kind`, `targetReps`,
   `targetWeightKg`, `restSeconds`), unique
   `(proposalId, exercisePosition, setPosition)`.
+
+### `CoachProgramProposal`
+Un programme PROPOSÉ par le coach : ses réglages seulement (`goal`,
+`weeklySessions`, `sessionMinutes`), que le générateur du module `programs`
+transforme en plan quand la personne l'accepte. `messageId` (unique,
+`Cascade`), `acceptedProgramId` nullable et SANS clé étrangère (une mesure,
+pas un lien). Migration `20260930145758_coach_programme_propose`.
 
 ---
 

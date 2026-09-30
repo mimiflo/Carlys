@@ -1,7 +1,7 @@
 import { HttpException, ServiceUnavailableException } from '@nestjs/common';
 import { setTimeout as wait } from 'node:timers/promises';
 import { type AppConfigService } from '../../../config/app-config.service';
-import { PROPOSE_SESSION_TOOL } from '../application/coach.tools';
+import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_OUTPUT_TOKENS,

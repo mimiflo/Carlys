@@ -3,10 +3,13 @@ import { type ExercisesService } from '../../exercises/application/exercises.ser
 import { type MealsService } from '../../nutrition/application/meals.service';
 import { type NutritionService } from '../../nutrition/application/nutrition.service';
 import { type BodyMetricsService } from '../../progress/application/body-metrics.service';
+import { type ProgramsService } from '../../programs/application/programs.service';
 import { type ProgressService } from '../../progress/application/progress.service';
+import { type UsersService } from '../../users/application/users.service';
 import { type WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
-import { COACH_TOOLS, CoachTools } from './coach.tools';
+import { COACH_TOOLS } from './coach.tool-definitions';
+import { CoachTools } from './coach.tools';
 
 const USER = 'utilisateur-1';
 const NOW = new Date('2026-08-09T10:00:00.000Z');
@@ -15,6 +18,8 @@ const DAY_MS = 86_400_000;
 interface Stubs {
   meals: { list: jest.Mock };
   nutrition: { metabolismReport: jest.Mock };
+  users: { training: jest.Mock };
+  programs: { activeProgramName: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -55,6 +60,16 @@ function buildStubs(): Stubs {
       ]),
     },
     nutrition: { metabolismReport: jest.fn().mockResolvedValue({ missing: [] }) },
+    users: {
+      training: jest.fn().mockResolvedValue({
+        trainingGoal: 'STRENGTH',
+        trainingExperience: 'INTERMEDIATE',
+        weeklySessionsTarget: 3,
+        sessionMinutesTarget: 45,
+        equipmentSlugs: ['halteres'],
+      }),
+    },
+    programs: { activeProgramName: jest.fn().mockResolvedValue('Force 3 jours') },
   };
 }
 
@@ -67,6 +82,8 @@ function buildTools(stubs: Stubs): CoachTools {
     {} as unknown as BodyMetricsService,
     stubs.nutrition as unknown as NutritionService,
     stubs.meals as unknown as MealsService,
+    stubs.users as unknown as UsersService,
+    stubs.programs as unknown as ProgramsService,
   );
 }
 
@@ -82,6 +99,21 @@ describe('CoachTools', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('get_training_profile rend le profil et le programme en cours', async () => {
+    const stubs = buildStubs();
+
+    const [result] = await buildTools(stubs).run(USER, [
+      { id: 'appel-1', name: 'get_training_profile', input: {} },
+    ]);
+
+    expect(stubs.users.training).toHaveBeenCalledWith(USER);
+    expect(JSON.parse(result?.content ?? '{}')).toMatchObject({
+      trainingGoal: 'STRENGTH',
+      weeklySessionsTarget: 3,
+      activeProgram: { name: 'Force 3 jours' },
+    });
   });
 
   it('get_recent_meals lit le journal sur une fenêtre de N jours qui se termine maintenant', async () => {

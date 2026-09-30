@@ -7,6 +7,7 @@ import '../../domain/entities/coach_thread_state.dart';
 import 'coach_live_bubble.dart';
 import 'coach_message_bubble.dart';
 import 'coach_notices.dart';
+import 'coach_program_card.dart';
 import 'coach_proposal_card.dart';
 
 /// Le fil du coach, du plus ancien au plus récent, ancré en bas.
@@ -26,6 +27,8 @@ class CoachThreadView extends StatelessWidget {
     required this.live,
     required this.maxBubbleWidth,
     required this.onOpenProposal,
+    required this.onOpenProgram,
+    this.busyProgramId,
     super.key,
   });
 
@@ -33,6 +36,10 @@ class CoachThreadView extends StatelessWidget {
   final CoachLiveTurn? live;
   final double maxBubbleWidth;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
+  final ValueChanged<CoachProgramProposal> onOpenProgram;
+
+  /// Programme proposé en cours de création : sa carte patiente.
+  final String? busyProgramId;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +73,7 @@ class CoachThreadView extends StatelessWidget {
         final position = messages.length - 1 - (index - pending);
         final message = messages[position];
         final proposal = message.proposal;
+        final program = message.programProposal;
         final day = _newDay(position);
 
         return Column(
@@ -80,6 +88,15 @@ class CoachThreadView extends StatelessWidget {
                 proposal: proposal,
                 maxWidth: maxBubbleWidth,
                 onOpen: () => onOpenProposal(proposal),
+              ),
+            ],
+            if (program != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              CoachProgramCard(
+                proposal: program,
+                maxWidth: maxBubbleWidth,
+                isBusy: busyProgramId == program.id,
+                onOpen: () => onOpenProgram(program),
               ),
             ],
           ],

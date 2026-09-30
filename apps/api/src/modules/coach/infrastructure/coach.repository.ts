@@ -6,23 +6,13 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { type ValidatedProgramProposal } from '../application/program-proposal.validator';
 import { type ValidatedProposal } from '../application/proposal.validator';
 
-/** Fil avec ses messages et les propositions rattachées. */
-export type ConversationWithMessages = Prisma.CoachConversationGetPayload<{
-  include: {
-    messages: {
-      include: { proposal: { include: { items: true } } };
-    };
-  };
-}>;
-
-export type MessageWithProposal = Prisma.CoachMessageGetPayload<{
-  include: { proposal: { include: { items: true } } };
-}>;
-
 /**
- * La proposition d'un message, séries dans l'ordre de l'écran.
+ * Les propositions d'un message — séance (séries dans l'ordre de l'écran) et
+ * programme. UNE définition pour toutes les lectures : un ajout ici ne peut
+ * plus manquer à l'une d'elles.
  * `satisfies` plutôt qu'une annotation : l'annotation effacerait le type
  * littéral, et Prisma ne saurait plus que `items` est chargé.
  */
@@ -30,7 +20,17 @@ const PROPOSITION_ORDONNEE = {
   proposal: {
     include: { items: { orderBy: [{ exercisePosition: 'asc' }, { setPosition: 'asc' }] } },
   },
+  programProposal: true,
 } satisfies Prisma.CoachMessageInclude;
+
+/** Fil avec ses messages et les propositions rattachées. */
+export type ConversationWithMessages = Prisma.CoachConversationGetPayload<{
+  include: { messages: { include: typeof PROPOSITION_ORDONNEE } };
+}>;
+
+export type MessageWithProposal = Prisma.CoachMessageGetPayload<{
+  include: typeof PROPOSITION_ORDONNEE;
+}>;
 
 /** Accès Prisma du coach — et de lui seul. */
 @Injectable()
@@ -76,13 +76,7 @@ export class CoachRepository {
           // N premiers, c'est-à-dire le début du fil.
           orderBy: { createdAt: messageLimit === undefined ? 'asc' : 'desc' },
           ...(messageLimit === undefined ? {} : { take: messageLimit }),
-          include: {
-            proposal: {
-              include: {
-                items: { orderBy: [{ exercisePosition: 'asc' }, { setPosition: 'asc' }] },
-              },
-            },
-          },
+          include: PROPOSITION_ORDONNEE,
         },
       },
     });
@@ -176,13 +170,13 @@ export class CoachRepository {
       where: { id },
       create: { id, conversationId, role: CoachMessageRole.USER, content },
       update: {},
-      include: { proposal: { include: { items: true } } },
+      include: PROPOSITION_ORDONNEE,
     });
     return message.conversationId === conversationId ? message : null;
   }
 
   /**
-   * Réponse du coach, et sa proposition s'il en a formulé une. Écrites dans
+   * Réponse du coach, et ses propositions s'il en a formulé. Écrites dans
    * une seule transaction : une proposition orpheline n'aurait aucun sens.
    */
   async saveAssistantMessage(input: {
@@ -192,6 +186,7 @@ export class CoachRepository {
     inputTokens: number;
     outputTokens: number;
     proposal: (ValidatedProposal & { id: string; itemIds: string[] }) | null;
+    programProposal: (ValidatedProgramProposal & { id: string }) | null;
     title: string | null;
   }): Promise<MessageWithProposal> {
     return this.prisma.$transaction(async (tx) => {
@@ -230,6 +225,12 @@ export class CoachRepository {
         });
       }
 
+      if (input.programProposal !== null) {
+        await tx.coachProgramProposal.create({
+          data: { ...input.programProposal, messageId: message.id },
+        });
+      }
+
       // `updatedAt` du fil remonte : la liste est ordonnée par activité.
       await tx.coachConversation.update({
         where: { id: input.conversationId },
@@ -238,7 +239,7 @@ export class CoachRepository {
 
       return tx.coachMessage.findUniqueOrThrow({
         where: { id: message.id },
-        include: { proposal: { include: { items: true } } },
+        include: PROPOSITION_ORDONNEE,
       });
     });
   }
@@ -296,6 +297,22 @@ export class CoachRepository {
         message: { conversation: { userId, deletedAt: null } },
       },
       data: { acceptedSessionId: sessionId },
+    });
+    return result.count > 0;
+  }
+
+  /** Marque le programme proposé comme accepté, et par quel programme. */
+  async markProgramProposalAccepted(
+    userId: string,
+    proposalId: string,
+    programId: string,
+  ): Promise<boolean> {
+    const result = await this.prisma.coachProgramProposal.updateMany({
+      where: {
+        id: proposalId,
+        message: { conversation: { userId, deletedAt: null } },
+      },
+      data: { acceptedProgramId: programId },
     });
     return result.count > 0;
   }

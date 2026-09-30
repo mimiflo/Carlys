@@ -14,12 +14,13 @@ import {
 import { type ConversationWithMessages, CoachRepository } from '../infrastructure/coach.repository';
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
-import { COACH_TOOLS, CoachTools } from './coach.tools';
+import { acceptableSessionProposal, collectProgramProposal } from './coach.proposals';
+import { COACH_TOOLS } from './coach.tool-definitions';
+import { CoachTools } from './coach.tools';
 import { COACH_SYSTEM_PROMPT, mentorVoiceBriefing } from './coach.prompt';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { replay } from './coach.replay';
-import { HISTORY_LIMIT, buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
-import { validateProposal } from './proposal.validator';
+import { HISTORY_LIMIT, buildHistory, titleFrom } from './coach.turn';
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -178,6 +179,7 @@ export class CoachService {
       conversation.messages.filter((message) => message.id !== messageId),
       content,
     );
+    const programs = collectProgramProposal((calls) => this.tools.run(userId, calls));
     const output = await this.model
       .reply({
         system: COACH_SYSTEM_PROMPT,
@@ -186,7 +188,7 @@ export class CoachService {
         systemPerUser: mentorVoiceBriefing(voice),
         tools: COACH_TOOLS,
         history,
-        runTools: (calls) => this.tools.run(userId, calls),
+        runTools: programs.runTools,
         onText,
       })
       .catch((error: unknown) => {
@@ -201,7 +203,8 @@ export class CoachService {
         return this.quota.refundIfUnavailable(userId, now, error);
       });
 
-    const proposal = await this.acceptableProposal(output.proposal);
+    const proposal = await acceptableSessionProposal(output.proposal, this.repository, this.logger);
+    const programProposal = programs.proposal();
 
     this.logger.info(
       {
@@ -211,6 +214,7 @@ export class CoachService {
         outputTokens: output.usage.outputTokens,
         cacheReadTokens: output.usage.cacheReadTokens,
         proposed: proposal !== null,
+        programProposed: programProposal !== null,
         refused: output.refused,
       },
       'Tour de coach',
@@ -230,6 +234,7 @@ export class CoachService {
               id: randomUUID(),
               itemIds: proposal.items.map(() => randomUUID()),
             },
+      programProposal: programProposal === null ? null : { ...programProposal, id: randomUUID() },
       title: conversation.title ?? titleFrom(content),
     });
 
@@ -253,28 +258,16 @@ export class CoachService {
     }
   }
 
+  /** Même règle que pour une séance : le programme proposé appartient à son auteur. */
+  async acceptProgramProposal(userId: string, proposalId: string, programId: string) {
+    if (!(await this.repository.markProgramProposalAccepted(userId, proposalId, programId))) {
+      throw new NotFoundException('Proposition introuvable.');
+    }
+  }
+
   async remainingToday(userId: string): Promise<number> {
     await this.availability.assertAvailable(userId);
     return this.quota.remaining(userId);
-  }
-
-  /**
-   * Rejette tout ce qui n'est pas une proposition valide. Un exercice inconnu
-   * fait tomber la proposition entière : mieux vaut une réponse sans séance
-   * qu'une séance inventée.
-   */
-  private async acceptableProposal(raw: Record<string, unknown> | null) {
-    if (raw === null) {
-      return null;
-    }
-    const ids = extractExerciseIds(raw);
-    const catalogue = await this.repository.catalogueNames(ids);
-    const validation = validateProposal(raw, catalogue);
-    if (!validation.ok) {
-      this.logger.warn({ reason: validation.reason }, 'Proposition du coach rejetée');
-      return null;
-    }
-    return validation.proposal;
   }
 
   private async requireConversation(

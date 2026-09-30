@@ -31,6 +31,7 @@ void main() {
             live: null,
             maxBubbleWidth: 300,
             onOpenProposal: (_) {},
+            onOpenProgram: (_) {},
           ),
         ),
       ),

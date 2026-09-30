@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { AppConfigService } from '../../config/app-config.service';
 import { ExercisesModule } from '../exercises/exercises.module';
 import { NutritionModule } from '../nutrition/nutrition.module';
+import { ProgramsModule } from '../programs/programs.module';
 import { ProgressModule } from '../progress/progress.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { UsersModule } from '../users/users.module';
 import { WorkoutsModule } from '../workout_sessions/workouts.module';
 import { WorkoutTemplatesModule } from '../workout_templates/workout-templates.module';
 import { CoachQuota } from './application/coach.quota';
@@ -44,7 +46,9 @@ export function coachModelFor(config: AppConfigService): CoachModelPort {
     WorkoutsModule,
     ProgressModule,
     NutritionModule,
+    ProgramsModule,
     SubscriptionsModule,
+    UsersModule,
   ],
   controllers: [CoachController],
   providers: [

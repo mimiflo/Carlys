@@ -118,6 +118,22 @@ class CoachRepositoryImpl implements CoachRepository {
     );
   }
 
+  @override
+  Future<void> markProgramProposalAccepted({
+    required String proposalId,
+    required String programId,
+  }) async {
+    // La copie d'abord, comme pour une séance : hors ligne, elle doit déjà
+    // savoir que le programme existe.
+    await _cache.markProgramAccepted(proposalId, programId);
+    return _guard(
+      () => _dio.post<void>(
+        '/coach/program-proposals/$proposalId/accepted',
+        data: {'programId': programId},
+      ),
+    );
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

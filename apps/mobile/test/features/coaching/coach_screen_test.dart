@@ -63,6 +63,7 @@ void main() {
           composerController: controller,
           onSend: onSend ?? (_) {},
           onOpenProposal: onOpenProposal ?? (_) {},
+          onOpenProgram: (_) {},
           onRetry: () {},
           isOffline: isOffline,
           live: live,

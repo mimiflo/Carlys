@@ -16,8 +16,8 @@ export interface CoachTurn {
 
 /**
  * Outil de LECTURE mis à disposition du modèle. Le coach n'en a aucun qui
- * écrive : `propose_session` lui-même ne fait que produire un document, que
- * le serveur valide avant de le stocker.
+ * écrive : `propose_session` et `propose_program` ne font que produire un
+ * document, que le serveur valide avant de le stocker.
  */
 export interface CoachToolDefinition {
   name: string;

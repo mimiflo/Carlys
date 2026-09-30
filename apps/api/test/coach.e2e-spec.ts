@@ -69,6 +69,9 @@ describe('Coach IA (e2e)', () => {
   /** Panne APRÈS le premier morceau de texte : le flux est déjà parti. */
   let nextStreamFailure: Error | undefined;
 
+  /** Réglages que le faux passera à `propose_program` au prochain tour. */
+  let nextProgram: Record<string, unknown> | undefined;
+
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
     proposal: null,
@@ -85,6 +88,10 @@ describe('Coach IA (e2e)', () => {
       // Le faux appelle un outil de lecture : on vérifie ainsi que la chaîne
       // complète fonctionne, pas seulement l'écriture en base.
       await input.runTools([{ id: 'call-1', name: 'get_personal_records', input: {} }]);
+      if (nextProgram !== undefined) {
+        await input.runTools([{ id: 'call-2', name: 'propose_program', input: nextProgram }]);
+        nextProgram = undefined;
+      }
       // En flux, le texte part en deux morceaux, comme un vrai modèle.
       const half = Math.ceil(nextOutput.text.length / 2);
       input.onText?.(nextOutput.text.slice(0, half));
@@ -357,6 +364,54 @@ describe('Coach IA (e2e)', () => {
       .post(`/api/v1/coach/proposals/${proposal!.id}/accepted`)
       .send({ sessionId: randomUUID() })
       .expect(204);
+  });
+
+  it('un programme proposé s’archive, se relit, et son acceptation n’appartient qu’à son auteur', async () => {
+    await grantCoaching();
+    await resetQuota();
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+
+    nextOutput = textOnly('Trois séances de force de 45 minutes, pour tenir sur la durée.');
+    nextProgram = { goal: 'STRENGTH', weeklySessions: 3, sessionMinutes: 45 };
+
+    const reply = data<CoachReply>(
+      (
+        await authed(accessToken)
+          .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+          .send({ id: randomUUID(), content: 'Tu me fais un programme ?' })
+          .expect(201)
+      ).body,
+    );
+
+    const program = reply.assistantMessage.programProposal;
+    expect(program).toMatchObject({
+      goal: 'STRENGTH',
+      weeklySessions: 3,
+      sessionMinutes: 45,
+      acceptedProgramId: null,
+    });
+    expect(reply.assistantMessage.proposal).toBeNull();
+
+    // Accepter n'écrit AUCUN programme ; celui d'autrui reste introuvable.
+    const programId = randomUUID();
+    await authed(otherAccessToken)
+      .post(`/api/v1/coach/program-proposals/${program!.id}/accepted`)
+      .send({ programId })
+      .expect(404);
+    await authed(accessToken)
+      .post(`/api/v1/coach/program-proposals/${program!.id}/accepted`)
+      .send({ programId })
+      .expect(204);
+
+    const relu = data<CoachConversation>(
+      (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(200))
+        .body,
+    );
+    expect(relu.messages.at(-1)?.programProposal?.acceptedProgramId).toBe(programId);
   });
 
   it('un exercice inventé fait tomber la proposition, pas la réponse', async () => {

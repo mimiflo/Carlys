@@ -43,6 +43,14 @@ class TrainingProfileActions {
   Future<void> setSessionMinutes(int minutes) =>
       _patch(sessionMinutesTarget: minutes);
 
+  /// Rythme ET durée en UNE écriture : les poser un par un laissait, sur une
+  /// panne entre les deux, un rythme à moitié appliqué.
+  Future<void> setRhythm({required int weeklySessions, required int minutes}) =>
+      _patch(
+        weeklySessionsTarget: weeklySessions,
+        sessionMinutesTarget: minutes,
+      );
+
   /// Coche ou décoche UN équipement.
   ///
   /// SÉRIALISÉ : deux coches rapides s'enchaînent au lieu de se courir

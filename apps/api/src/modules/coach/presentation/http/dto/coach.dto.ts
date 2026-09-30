@@ -30,3 +30,9 @@ export class AcceptCoachProposalDto {
   @IsUUID()
   sessionId!: string;
 }
+
+export class AcceptCoachProgramProposalDto {
+  @ApiProperty({ description: 'Programme engendré sur l’appareil depuis cette proposition.' })
+  @IsUUID()
+  programId!: string;
+}

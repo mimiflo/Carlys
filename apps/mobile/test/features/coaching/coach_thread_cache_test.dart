@@ -179,6 +179,29 @@ void main() {
     expect(fil?.messages.single.proposal?.acceptedSessionId, 'seance-1');
   });
 
+  test('un programme créé est noté dans la copie', () async {
+    await cache.save({
+      'id': 'fil-1',
+      'messages': [
+        {
+          ..._message('m1', 'ASSISTANT', 'Trois séances.'),
+          'programProposal': {
+            'id': 'pp-1',
+            'goal': 'STRENGTH',
+            'weeklySessions': 3,
+            'sessionMinutes': 45,
+            'acceptedProgramId': null,
+          },
+        },
+      ],
+    });
+
+    await cache.markProgramAccepted('pp-1', 'prog-1');
+
+    final fil = await cache.read();
+    expect(fil?.messages.single.programProposal?.acceptedProgramId, 'prog-1');
+  });
+
   test('seuls les derniers messages sont gardés, sans doublon', () async {
     final beaucoup = [
       for (var i = 0; i < CoachThreadCache.maxMessages + 5; i++)

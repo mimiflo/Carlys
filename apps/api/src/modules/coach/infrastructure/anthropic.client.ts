@@ -14,7 +14,7 @@ import {
   type CoachTurnOutput,
   type CoachTurnUsage,
 } from '../domain/coach-model.port';
-import { PROPOSE_SESSION_TOOL } from '../application/coach.tools';
+import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 
 /**
  * Client Anthropic : choisi quand `COACH_API_BASE_URL` est absente (voir

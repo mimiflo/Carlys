@@ -24,6 +24,7 @@ import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
 import { CoachService } from '../../application/coach.service';
 import {
+  AcceptCoachProgramProposalDto,
   AcceptCoachProposalDto,
   CreateCoachConversationDto,
   SendCoachMessageDto,
@@ -117,5 +118,21 @@ export class CoachController {
     @Body() body: AcceptCoachProposalDto,
   ): Promise<void> {
     return this.coach.acceptProposal(user.userId, id, body.sessionId);
+  }
+
+  @Post('program-proposals/:id/accepted')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Signale qu’un programme proposé a été créé',
+    description:
+      'N’écrit AUCUN programme : il est engendré par la route de génération ' +
+      'existante. Cette route ne fait que noter l’acceptation.',
+  })
+  acceptProgram(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: AcceptCoachProgramProposalDto,
+  ): Promise<void> {
+    return this.coach.acceptProgramProposal(user.userId, id, body.programId);
   }
 }
