@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app/restore/app_restore.dart';
 import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/providers/academy_providers.dart';
+import '../../features/coaching/data/coach_thread_cache.dart';
 import '../../features/community/presentation/providers/community_providers.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/mentor/data/mentor_prefs_store.dart';
@@ -71,6 +72,9 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // parce que le précédent l'avait déjà entendue. La voix, la visite et
     // les interventions, elles, décrivent l'appareil et restent.
     MentorPrefsStore.celebrationsDitesKey,
+    // Le dernier fil du coach, gardé pour la lecture hors ligne : poids,
+    // repas, douleurs — ce qu'on a de plus personnel à laisser derrière soi.
+    CoachThreadCache.key,
     LocalAccountOwner.key,
   ];
 

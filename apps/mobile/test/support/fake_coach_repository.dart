@@ -11,13 +11,20 @@ class FakeCoachRepository implements CoachRepository {
     this.listError,
     this.sendError,
     this.reply,
+    this.cached,
   });
 
   final List<CoachConversationSummary> threads;
   final List<CoachMessage> messages;
 
   /// Erreur levée à l'ouverture (droit absent, hors ligne, coach coupé).
-  final AppException? listError;
+  ///
+  /// MUTABLE, comme [sendError] : le réseau qui revient se rejoue en la
+  /// remettant à `null`.
+  AppException? listError;
+
+  /// Le fil gardé sur l'appareil pour la relecture hors ligne.
+  final CoachConversation? cached;
 
   /// Erreur levée à l'envoi (plafond atteint, réseau perdu en route).
   ///
@@ -62,6 +69,9 @@ class FakeCoachRepository implements CoachRepository {
     if (error != null) throw error;
     return CoachConversation(id: id, messages: messages);
   }
+
+  @override
+  Future<CoachConversation?> offlineConversation() async => cached;
 
   @override
   Future<CoachReply> sendMessage({

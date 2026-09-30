@@ -17,6 +17,11 @@ abstract interface class CoachRepository {
   /// Un fil avec ses messages et les séances proposées.
   Future<CoachConversation> conversation(String id);
 
+  /// Le dernier fil relu SUR CET APPAREIL, échanges suivants compris, pour
+  /// le relire hors ligne ; `null` si rien n'est gardé. Relire n'attend pas
+  /// le réseau — écrire, si.
+  Future<CoachConversation?> offlineConversation();
+
   /// Envoie un message et rend la réplique du coach, telle qu'archivée.
   ///
   /// [onText] reçoit la réponse AU FIL de son écriture, morceau par morceau :

@@ -357,8 +357,13 @@ les relire et les reprendre. L’application te montre tes 30 conversations
 les plus récentes, que tu peux toujours relire, même sans abonnement ou
 quand le coach est momentanément coupé ; les plus anciennes restent
 conservées sans y être listées, et nous t’en donnons une copie si tu la
-demandes (voir « Tes droits »). Écrire au coach demande un abonnement qui
-l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
+demandes (voir « Tes droits »). Une copie des derniers messages de ta
+dernière conversation reste aussi sur ton téléphone, pour que tu puisses la
+relire sans connexion. Elle s’efface quand tu te déconnectes de
+l’application, quand tu y supprimes ton compte, ou quand un autre compte s’y
+connecte ; si ta session expire ou est fermée à distance, elle reste sur ton
+téléphone jusqu’à l’un de ces moments, et elle peut figurer dans ses
+sauvegardes. Écrire au coach demande un abonnement qui l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
 
 Si Carlys confiait un jour le coach à un prestataire extérieur, cette
 politique serait mise à jour, en le nommant, avant que tes messages ne lui

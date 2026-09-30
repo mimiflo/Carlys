@@ -12,6 +12,7 @@ import '../../../subscription/data/repositories/subscription_repository_impl.dar
 import '../../data/repositories/coach_repository_impl.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
+import '../../domain/repositories/coach_repository.dart';
 
 // L'état du fil vit dans le domaine, les amorces dans `providers/` (elles ne
 // portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
@@ -45,6 +46,9 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   /// la question précédente.
   ({String id, String content})? _pending;
 
+  /// Le fil affiché est la copie gardée sur l'appareil, lue hors ligne.
+  bool _fromCache = false;
+
   /// La LECTURE de ses conversations reste ouverte à qui les a écrites,
   /// abonné ou non : les CGU promettent que ce qui a été créé avec le Premium
   /// reste consultable. Seules la création d'un fil et l'envoi d'un message
@@ -52,6 +56,21 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   @override
   Future<CoachThreadState> build() async {
     final repository = ref.watch(coachRepositoryProvider);
+    _fromCache = false;
+    try {
+      return await _load(repository);
+    } on NetworkException {
+      // Hors ligne : le dernier fil relu sur cet appareil. Le composeur dit
+      // « hors ligne », et « Réessayer » relira le serveur.
+      final cached = await repository.offlineConversation();
+      if (cached == null) rethrow;
+      _created = true;
+      _fromCache = true;
+      return CoachThreadState(conversation: cached, isOffline: true);
+    }
+  }
+
+  Future<CoachThreadState> _load(CoachRepository repository) async {
     final threads = await repository.conversations();
     final mayWrite = await _mayWrite();
 
@@ -186,6 +205,11 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   void clearOffline() {
     final current = state.valueOrNull;
     if (current == null || !current.isOffline) {
+      return;
+    }
+    // La copie gardée peut dater : réseau revenu, le serveur fait foi.
+    if (_fromCache) {
+      ref.invalidateSelf();
       return;
     }
     state = AsyncData(current.copyWith(isOffline: false, clearNotice: true));

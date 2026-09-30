@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:carlys_mobile/core/errors/app_exception.dart';
+import 'package:carlys_mobile/features/coaching/data/coach_thread_cache.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Le coach met jusqu'à 50 s à répondre (échéance du tour côté serveur,
 /// `COACH_TURN_DEADLINE_MS`) : avec les 20 s de réception du client
@@ -91,10 +93,13 @@ void main() {
   late CoachRepositoryImpl repository;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues(
+      {},
+    ); // aucun propriétaire : rien de gardé
     adapter = _RecordingAdapter();
     final dio = Dio(BaseOptions(receiveTimeout: const Duration(seconds: 20)))
       ..httpClientAdapter = adapter;
-    repository = CoachRepositoryImpl(dio);
+    repository = CoachRepositoryImpl(dio, const CoachThreadCache());
   });
 
   test('l’envoi d’un message attend la réponse du coach 65 s', () async {

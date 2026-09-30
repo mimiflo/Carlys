@@ -143,6 +143,52 @@ void main() {
     });
   });
 
+  // Relire n'a pas besoin du réseau : l'écriture, si (voir `CoachRepository`).
+  group('hors ligne : le dernier fil gardé reste à relire', () {
+    const coupure = NetworkException('hors ligne');
+    const garde = CoachConversation(id: 'fil-garde', messages: echange);
+
+    test('le fil gardé s’affiche, composeur hors ligne', () async {
+      final container = containerWith(
+        FakeCoachRepository(listError: coupure, cached: garde),
+      );
+
+      final etat = await container.read(coachThreadProvider.future);
+
+      expect(etat.conversation.id, 'fil-garde');
+      expect(etat.conversation.messages, hasLength(2));
+      expect(etat.isOffline, isTrue);
+    });
+
+    test('rien de gardé : l’état hors ligne, comme avant', () async {
+      final container = containerWith(FakeCoachRepository(listError: coupure));
+
+      await expectLater(
+        container.read(coachThreadProvider.future),
+        throwsA(isA<NetworkException>()),
+      );
+    });
+
+    test('« Réessayer » relit le serveur, réseau revenu', () async {
+      final repository = FakeCoachRepository(
+        threads: [ancien],
+        messages: [...echange, echange.first],
+        listError: coupure,
+        cached: garde,
+      );
+      final container = containerWith(repository);
+      await container.read(coachThreadProvider.future);
+
+      repository.listError = null;
+      container.read(coachThreadProvider.notifier).clearOffline();
+      final etat = await container.read(coachThreadProvider.future);
+
+      expect(etat.conversation.id, ancien.id);
+      expect(etat.conversation.messages, hasLength(3));
+      expect(etat.isOffline, isFalse);
+    });
+  });
+
   test('une même question rejouée garde SON identifiant', () async {
     final repository = FakeCoachRepository(
       sendError: const NetworkException('coupure'),

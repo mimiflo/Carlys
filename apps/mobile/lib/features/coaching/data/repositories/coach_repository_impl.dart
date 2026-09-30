@@ -5,6 +5,7 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/repositories/coach_repository.dart';
+import '../coach_thread_cache.dart';
 import '../dto/coach_dtos.dart';
 import 'coach_reply_stream.dart';
 
@@ -17,16 +18,18 @@ import 'coach_reply_stream.dart';
 const coachReplyTimeout = Duration(seconds: 65);
 
 /// Dépôt coach — **direct sur l'API**, sans base locale ni file de
-/// synchronisation.
+/// synchronisation. Seule une copie du dernier fil reste sur l'appareil, pour
+/// le RELIRE hors ligne ([CoachThreadCache]).
 ///
 /// C'est la seule exception de l'application à la règle offline-first, et elle
 /// est assumée : rejouer plus tard une question posée hors ligne rendrait une
 /// réponse sans rapport avec le moment où elle a été posée. Le composeur se
 /// désactive alors au lieu de faire semblant.
 class CoachRepositoryImpl implements CoachRepository {
-  const CoachRepositoryImpl(this._dio);
+  const CoachRepositoryImpl(this._dio, this._cache);
 
   final Dio _dio;
+  final CoachThreadCache _cache;
 
   @override
   Future<List<CoachConversationSummary>> conversations() {
@@ -60,11 +63,15 @@ class CoachRepositoryImpl implements CoachRepository {
       final response = await _dio.get<Map<String, dynamic>>(
         '/coach/conversations/$id',
       );
-      return coachConversationFromJson(
-        response.data?['data'] as Map<String, dynamic>? ?? const {},
-      );
+      final json = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      final conversation = coachConversationFromJson(json);
+      await _cache.save(json);
+      return conversation;
     });
   }
+
+  @override
+  Future<CoachConversation?> offlineConversation() => _cache.read();
 
   @override
   Future<CoachReply> sendMessage({
@@ -84,7 +91,14 @@ class CoachRepositoryImpl implements CoachRepository {
           receiveTimeout: coachReplyTimeout,
         ),
       );
-      return readCoachReplyStream(response, onText);
+      return readCoachReplyStream(
+        response,
+        onText,
+        onDone: (json) => _cache.append(conversationId, [
+          json['userMessage'] as Map<String, dynamic>,
+          json['assistantMessage'] as Map<String, dynamic>,
+        ]),
+      );
     });
   }
 
@@ -92,7 +106,10 @@ class CoachRepositoryImpl implements CoachRepository {
   Future<void> markProposalAccepted({
     required String proposalId,
     required String sessionId,
-  }) {
+  }) async {
+    // La copie d'abord : c'est hors ligne, quand la note au serveur échoue,
+    // qu'elle doit déjà savoir que la séance existe.
+    await _cache.markAccepted(proposalId, sessionId);
     return _guard(
       () => _dio.post<void>(
         '/coach/proposals/$proposalId/accepted',
@@ -111,5 +128,8 @@ class CoachRepositoryImpl implements CoachRepository {
 }
 
 final coachRepositoryProvider = Provider<CoachRepository>((ref) {
-  return CoachRepositoryImpl(ref.watch(dioProvider));
+  return CoachRepositoryImpl(
+    ref.watch(dioProvider),
+    ref.watch(coachThreadCacheProvider),
+  );
 });

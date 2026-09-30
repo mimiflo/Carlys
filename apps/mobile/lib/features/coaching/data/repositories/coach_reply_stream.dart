@@ -10,15 +10,16 @@ import '../../domain/entities/coach.dart';
 import '../dto/coach_dtos.dart';
 
 /// Lit la réponse EN FLUX du coach (`…/messages/stream`) : chaque `delta`
-/// part à [onText], `done` rend la réplique archivée, `error` lève la même
-/// exception qu'un refus ordinaire.
+/// part à [onText], `done` rend la réplique archivée (son JSON passe d'abord
+/// par [onDone]), `error` lève la même exception qu'un refus ordinaire.
 ///
 /// Un flux qui s'arrête SANS `done` est une coupure : le serveur, lui, finit
 /// son tour et l'archive — renvoyer la même question la rendra.
 Future<CoachReply> readCoachReplyStream(
   Response<ResponseBody> response,
-  void Function(String text)? onText,
-) async {
+  void Function(String text)? onText, {
+  Future<void> Function(Map<String, dynamic> json)? onDone,
+}) async {
   final requestId = requestIdOf(response.headers);
   final body = response.data;
   if (body == null) {
@@ -34,9 +35,10 @@ Future<CoachReply> readCoachReplyStream(
         case 'delta':
           onText?.call(data['text'] as String? ?? '');
         case 'done':
-          return coachReplyFromJson(
-            data['data'] as Map<String, dynamic>? ?? const {},
-          );
+          final json = data['data'] as Map<String, dynamic>? ?? const {};
+          final reply = coachReplyFromJson(json);
+          await onDone?.call(json);
+          return reply;
         case 'error':
           throw _streamError(data, requestId);
       }

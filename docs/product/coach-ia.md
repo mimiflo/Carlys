@@ -531,12 +531,21 @@ explicite : une question posée hors ligne recevrait sa réponse des heures plus
 tard, ce qui n'est pas une conversation. C'est le seul écran de l'app qui
 n'écrit pas hors ligne, et c'est délibéré. Le dépôt du coach est donc, seul de
 toute l'application, **direct sur l'API** : ni Drift, ni file de
-synchronisation.
+synchronisation — une copie de lecture mise à part (ci-dessous).
 
-**Ce qui n'est PAS fait :** l'historique ne se lit pas encore hors connexion.
-Ouvrir l'onglet sans réseau montre l'état hors ligne, pas la conversation
-passée. Il faudra pour cela une table Drift de messages en cache — c'est du
-travail de finition (étape 3 du découpage), pas une correction.
+**L'historique se relit hors connexion** (30 septembre 2026). Le dépôt garde
+le dernier fil relu, tel que l'API l'a rendu, puis chaque échange terminé
+(`data/coach_thread_cache.dart`). Sans réseau à l'ouverture, le contrôleur
+affiche cette copie, composeur hors ligne ; « Réessayer » relit alors le
+serveur, qui fait foi. Rien de gardé : l'état hors ligne d'avant.
+
+Une clé de préférences et non une table Drift : un seul fil, relu en bloc,
+jamais interrogé — une table aurait coûté une migration de schéma pour rien.
+Elle appartient au compte (`LocalAccountPurge.accountOwnedPreferenceKeys`) :
+poids, repas et douleurs ne survivent pas à la déconnexion, et la
+politique de confidentialité le dit. Une copie illisible, ou qu'on n'a pas
+pu écrire, se journalise et ne fait jamais échouer la conversation en
+ligne.
 
 **Les quatre états** sont obligatoires : chargement (`AppLoadingIndicator`),
 erreur (`AppErrorState`), vide (`AppEmptyState` avec les suggestions de
