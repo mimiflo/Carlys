@@ -141,20 +141,6 @@ class SessionPlanLocalDataSource {
     );
   }
 
-  Future<void> markStatus(List<String> planItemIds, String syncStatus) {
-    return (_db.update(_db.localSessionPlanItems)
-          ..where((item) => item.id.isIn(planItemIds)))
-        .write(LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus)));
-  }
-
-  /// Acquitte tout le plan d'une séance — utilisé quand `session.create`,
-  /// qui le transporte en bloc, aboutit.
-  Future<void> markSessionStatus(String sessionId, String syncStatus) {
-    return (_db.update(_db.localSessionPlanItems)
-          ..where((item) => item.sessionId.equals(sessionId)))
-        .write(LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus)));
-  }
-
   /// Vrai si une modification locale du plan n'a pas encore été acquittée.
   Future<bool> hasUnacknowledgedItems(String sessionId) async {
     final rows =

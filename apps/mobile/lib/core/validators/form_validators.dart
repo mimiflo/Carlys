@@ -32,13 +32,6 @@ String? validatePassword(String? value) {
   return null;
 }
 
-String? validateRequired(String? value, {String label = 'Ce champ'}) {
-  if (value == null || value.trim().isEmpty) {
-    return '$label est requis.';
-  }
-  return null;
-}
-
 String? validateDisplayName(String? value) {
   final name = value?.trim() ?? '';
   if (name.isEmpty) {

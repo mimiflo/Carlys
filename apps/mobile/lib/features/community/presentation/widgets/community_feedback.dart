@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 
 /// Exécute un geste communautaire et en rend compte dans une popup centrée
@@ -17,7 +16,3 @@ Future<void> runCommunityGesture(
 ) {
   return runServerGesture(context, gesture, scope: 'CommunityFeedback');
 }
-
-/// Le mot juste pour un geste qui n'a pas abouti, hors ligne ou pas.
-String communityFailureMessage(AppException? exception) =>
-    serverFailureMessage(exception);

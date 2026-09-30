@@ -46,9 +46,6 @@ class GenerationVolume {
   final int weeklySets;
   final int targetMin;
   final int targetMax;
-
-  /// Sous la cible : l'écran le signale plutôt que de laisser croire.
-  bool get isShort => weeklySets < targetMin;
 }
 
 class GenerationReport {

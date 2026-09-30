@@ -143,9 +143,6 @@ class AppEnvironment {
   /// qu'une feuille qui lève.
   final String? googleIosClientId;
 
-  bool get isDevelopment => flavor == AppFlavor.development;
-  bool get isProduction => flavor == AppFlavor.production;
-
   /// Préfixe complet des routes métier.
   String get apiV1Url => '$apiBaseUrl/api/v1';
 

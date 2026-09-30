@@ -10,7 +10,6 @@ abstract final class AppIcons {
   static const IconData workout = Icons.fitness_center_rounded;
   static const IconData programs = Icons.event_note_rounded;
   static const IconData progress = Icons.insights_rounded;
-  static const IconData profile = Icons.person_rounded;
 
   // Champs et entrées de compte
   static const IconData mail = Icons.mail_outline_rounded;
@@ -30,7 +29,6 @@ abstract final class AppIcons {
   /// L'entrée des réglages, en tête du profil : le rouage au trait, qui se
   /// pose sur un disque sans l'alourdir.
   static const IconData settingsOutline = Icons.settings_outlined;
-  static const IconData edit = Icons.edit_rounded;
   static const IconData delete = Icons.delete_outline_rounded;
 
   // Métier
@@ -50,7 +48,6 @@ abstract final class AppIcons {
   static const IconData checkCircle = Icons.check_circle_rounded;
   static const IconData lock = Icons.lock_outline_rounded;
   static const IconData play = Icons.play_arrow_rounded;
-  static const IconData pause = Icons.pause_rounded;
   static const IconData trendingUp = Icons.trending_up_rounded;
   static const IconData calendar = Icons.calendar_month_rounded;
   static const IconData filter = Icons.tune_rounded;
@@ -93,10 +90,9 @@ abstract final class AppIcons {
   /// Jour tenu dans la série de constance.
   static const IconData streak = Icons.local_fire_department_rounded;
 
-  // Récompenses du profil de progression — une forme par famille : le badge
-  // marque un premier pas, la médaille un cap tenu, le certificat un
-  // engagement long, la couronne un titre.
-  static const IconData badge = Icons.military_tech_rounded;
+  // Récompenses du profil de progression — une forme par famille : la
+  // médaille un cap tenu, le certificat un engagement long, la couronne un
+  // titre (le premier pas porte le sceau de l'académie, `brandAcademy`).
   static const IconData medal = Icons.emoji_events_rounded;
   static const IconData certificate = Icons.workspace_premium_rounded;
   static const IconData crown = Icons.auto_awesome_rounded;
@@ -108,8 +104,7 @@ abstract final class AppIcons {
   /// L'évolution chiffrée, ouverte depuis le profil.
   static const IconData statistics = Icons.bar_chart_rounded;
 
-  /// La COLLECTION des récompenses, toutes familles confondues : le trophée,
-  /// quand `badge` ne dessine qu'une famille.
+  /// La COLLECTION des récompenses, toutes familles confondues : le trophée.
   static const IconData rewards = Icons.emoji_events_rounded;
 
   // Ligue : ce qui rapporte des points, et le classement.
@@ -152,11 +147,9 @@ abstract final class AppIcons {
   /// Adresse e-mail pas encore vérifiée.
   static const IconData emailUnverified = Icons.mark_email_unread_outlined;
 
-  // Textes légaux, servis sur le web : on SORT de l'application pour les
-  // lire, d'où le renvoi externe plutôt qu'un chevron.
+  // Textes légaux.
   static const IconData privacy = Icons.privacy_tip_outlined;
   static const IconData terms = Icons.description_outlined;
-  static const IconData externalLink = Icons.open_in_new_rounded;
 
   // Mentor Carlys : le guide, sa parole, ses voix.
   /// L'emblème du Mentor : la boussole du guide — pas l'étincelle du coach.
@@ -179,7 +172,6 @@ abstract final class AppIcons {
 
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
-  static const IconData coachOutline = Icons.auto_awesome_outlined;
   static const IconData send = Icons.arrow_upward_rounded;
 
   /// Précision neutre — jamais une erreur, jamais une alerte.
@@ -193,8 +185,7 @@ abstract final class AppIcons {
   static const IconData profileAthlete = Icons.fitness_center_rounded;
   static const IconData profileStratege = Icons.psychology_rounded;
 
-  // Code ami : le QR que l'on montre, la caméra qui le lit
-  static const IconData qrCode = Icons.qr_code_2_rounded;
+  // Code ami : la caméra qui lit le QR d'un ami
   static const IconData qrScan = Icons.qr_code_scanner_rounded;
 
   // États
@@ -251,7 +242,6 @@ abstract final class AppIcons {
   static const IconData encouragementHeart = Icons.favorite_rounded;
   static const IconData encourage = Icons.volunteer_activism_outlined;
   static const IconData challengeOutline = Icons.emoji_events_outlined;
-  static const IconData leagueOutline = Icons.military_tech_outlined;
   static const IconData academyOutline = Icons.school_outlined;
   static const IconData overflow = Icons.more_vert_rounded;
 

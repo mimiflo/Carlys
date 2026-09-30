@@ -84,10 +84,6 @@ class CommunityScreenState {
   /// l'erreur et au chargement ; le vide, lui, ne regarde que les listes
   /// dont l'absence veut dire « personne ici ».
   final bool isEmpty;
-
-  /// Vrai quand l'écran peut afficher l'état VIDE : plus rien en vol, aucune
-  /// erreur, et rien à montrer.
-  bool get showsEmpty => loaded && error == null && isEmpty;
 }
 
 /// Déduit l'état de l'écran de ses sources.
