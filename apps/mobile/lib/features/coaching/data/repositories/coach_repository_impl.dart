@@ -6,11 +6,14 @@ import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/repositories/coach_repository.dart';
 import '../dto/coach_dtos.dart';
+import 'coach_reply_stream.dart';
 
 /// Délai de réception de l'envoi d'un message : le serveur laisse 50 s au
 /// fournisseur d'IA pour tout le tour (`COACH_TURN_DEADLINE_MS`), plus que
-/// les 20 s du client partagé. Sans ce délai propre, une réponse lente
-/// s'afficherait « hors ligne » alors qu'elle arrive.
+/// les 20 s du client partagé. En flux, c'est surtout l'attente du PREMIER
+/// mot (le coach consulte tes séances, réfléchit) qu'il couvre. Sans ce délai
+/// propre, une réponse lente s'afficherait « hors ligne » alors qu'elle
+/// arrive.
 const coachReplyTimeout = Duration(seconds: 65);
 
 /// Dépôt coach — **direct sur l'API**, sans base locale ni file de
@@ -68,18 +71,20 @@ class CoachRepositoryImpl implements CoachRepository {
     required String conversationId,
     required String messageId,
     required String content,
+    void Function(String text)? onText,
   }) {
     return _guard(() async {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/coach/conversations/$conversationId/messages',
+      final response = await _dio.post<ResponseBody>(
+        '/coach/conversations/$conversationId/messages/stream',
         // L'identifiant vient de l'appareil : un renvoi ne crée pas un
         // second message, et ne consomme pas un second message de quota.
         data: {'id': messageId, 'content': content},
-        options: Options(receiveTimeout: coachReplyTimeout),
+        options: Options(
+          responseType: ResponseType.stream,
+          receiveTimeout: coachReplyTimeout,
+        ),
       );
-      return coachReplyFromJson(
-        response.data?['data'] as Map<String, dynamic>? ?? const {},
-      );
+      return readCoachReplyStream(response, onText);
     });
   }
 
@@ -100,7 +105,7 @@ class CoachRepositoryImpl implements CoachRepository {
     try {
       return await action();
     } on DioException catch (exception) {
-      throw mapDioException(exception);
+      throw mapDioException(await withReadableBody(exception));
     }
   }
 }

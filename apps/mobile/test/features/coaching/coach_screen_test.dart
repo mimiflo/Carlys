@@ -1,7 +1,9 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_live_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +47,7 @@ void main() {
     List<CoachMessage> messages = conversation,
     List<String> suggestions = const ['Ajuster ma séance'],
     bool isOffline = false,
-    bool isSending = false,
+    CoachLiveTurn? live,
     ValueChanged<String>? onSend,
     ValueChanged<CoachSessionProposal>? onOpenProposal,
   }) async {
@@ -63,7 +65,7 @@ void main() {
           onOpenProposal: onOpenProposal ?? (_) {},
           onRetry: () {},
           isOffline: isOffline,
-          isSending: isSending,
+          live: live,
         ),
       ),
     );
@@ -128,9 +130,13 @@ void main() {
     tester,
   ) async {
     var sent = 0;
-    await pumpCoach(tester, isSending: true, onSend: (_) => sent++);
+    await pumpCoach(
+      tester,
+      live: const CoachLiveTurn(question: 'Et demain ?'),
+      onSend: (_) => sent++,
+    );
 
-    expect(find.byType(CoachTypingBubble), findsOneWidget);
+    expect(find.byType(CoachLiveBubble), findsOneWidget);
 
     await tester.tap(find.byIcon(AppIcons.send));
     await tester.pump();
@@ -200,7 +206,7 @@ void main() {
     // Réessayer dans le vide pendant qu'une question part est le pire des
     // silences : l'état doit être ANNONCÉ, pas seulement grisé.
     final handle = tester.ensureSemantics();
-    await pumpCoach(tester, isSending: true);
+    await pumpCoach(tester, live: const CoachLiveTurn(question: 'Et demain ?'));
 
     expect(
       tester.getSemantics(find.bySemanticsLabel('Envoyer')),
@@ -258,5 +264,49 @@ void main() {
         .x;
     final height = tester.getSize(find.byType(TextField)).height;
     expect(radius, greaterThan(height / 2));
+  });
+
+  testWidgets('la question s’affiche aussitôt, et le coach « réfléchit »', (
+    tester,
+  ) async {
+    await pumpCoach(
+      tester,
+      messages: const [],
+      live: const CoachLiveTurn(question: 'Séance jambes 30 min ?'),
+    );
+
+    // Même sur un fil vide : le tour en cours remplace l'invitation.
+    expect(find.text('Séance jambes 30 min ?'), findsOneWidget);
+    expect(find.text('Réfléchit…'), findsOneWidget);
+    expect(find.bySemanticsLabel('Le coach réfléchit'), findsOneWidget);
+  });
+
+  testWidgets('la réponse s’écrit sous la question, au fil de son arrivée', (
+    tester,
+  ) async {
+    await pumpCoach(
+      tester,
+      live: const CoachLiveTurn(
+        question: 'Et demain ?',
+        text: 'Demain, repos actif :',
+      ),
+    );
+
+    expect(find.text('Demain, repos actif :'), findsOneWidget);
+    expect(find.text('Réfléchit…'), findsNothing);
+    final question = tester.getRect(find.text('Et demain ?'));
+    final reponse = tester.getRect(find.text('Demain, repos actif :'));
+    expect(reponse.top, greaterThan(question.bottom));
+  });
+
+  testWidgets('animations réduites : les points ne bougent pas', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpCoach(tester, live: const CoachLiveTurn(question: 'Et demain ?'));
+
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

@@ -17,7 +17,10 @@ abstract interface class CoachRepository {
   /// Un fil avec ses messages et les séances proposées.
   Future<CoachConversation> conversation(String id);
 
-  /// Envoie un message et rend la réplique du coach.
+  /// Envoie un message et rend la réplique du coach, telle qu'archivée.
+  ///
+  /// [onText] reçoit la réponse AU FIL de son écriture, morceau par morceau :
+  /// de quoi l'afficher en direct. La réplique rendue à la fin fait foi.
   ///
   /// [messageId] vient de l'appareil : renvoyer la même requête ne crée aucun
   /// doublon.
@@ -25,6 +28,7 @@ abstract interface class CoachRepository {
     required String conversationId,
     required String messageId,
     required String content,
+    void Function(String text)? onText,
   });
 
   /// Signale qu'une proposition a été lancée. N'écrit **aucune** séance : la

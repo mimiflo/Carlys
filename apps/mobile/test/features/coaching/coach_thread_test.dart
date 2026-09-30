@@ -201,6 +201,53 @@ void main() {
     expect(container.read(coachThreadProvider).valueOrNull?.notice, isNull);
   });
 
+  test(
+    'la question s’affiche aussitôt, la réponse s’écrit, puis s’archive',
+    () async {
+      final repository = FakeCoachRepository()..streamed = ['Repos ', 'actif.'];
+      final container = containerWith(repository);
+      await container.read(coachThreadProvider.future);
+      final lives = <CoachLiveTurn?>[];
+      container.listen(
+        coachThreadProvider,
+        (_, next) => lives.add(next.valueOrNull?.live),
+      );
+
+      expect(
+        await container.read(coachThreadProvider.notifier).send(' Demain ? '),
+        isTrue,
+      );
+
+      expect(lives.map((live) => live?.text), [
+        '',
+        'Repos ',
+        'Repos actif.',
+        null,
+      ]);
+      expect(lives.first?.question, 'Demain ?');
+      final etat = container.read(coachThreadProvider).valueOrNull;
+      expect(etat?.isSending, isFalse);
+      expect(etat?.conversation.messages.map((m) => m.content), [
+        'Demain ?',
+        'Bien reçu.',
+      ]);
+    },
+  );
+
+  test('un échec en cours de route efface le tour en direct', () async {
+    final repository = FakeCoachRepository(
+      sendError: const ServerException('panne', statusCode: 503),
+    );
+    final container = containerWith(repository);
+    await container.read(coachThreadProvider.future);
+
+    await container.read(coachThreadProvider.notifier).send('Demain ?');
+
+    final etat = container.read(coachThreadProvider).valueOrNull;
+    expect(etat?.live, isNull);
+    expect(etat?.notice, 'Le coach est momentanément indisponible.');
+  });
+
   group('proposition déjà acceptée', () {
     const proposition = CoachSessionProposal(
       id: 'proposition-1',

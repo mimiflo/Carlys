@@ -11,7 +11,7 @@ import 'coach.dart';
 class CoachThreadState {
   const CoachThreadState({
     required this.conversation,
-    this.isSending = false,
+    this.live,
     this.isOffline = false,
     this.isReadOnly = false,
     this.notice,
@@ -19,8 +19,12 @@ class CoachThreadState {
 
   final CoachConversation conversation;
 
+  /// Le tour EN COURS : la question partie, et la réponse telle qu'elle
+  /// s'écrit. `null` quand rien n'est en route.
+  final CoachLiveTurn? live;
+
   /// Un envoi est parti, la réponse n'est pas revenue.
-  final bool isSending;
+  bool get isSending => live != null;
 
   /// Le dernier envoi n'a pas atteint le serveur : le composeur se remplace
   /// par son état hors ligne plutôt que d'accepter une question qui partirait
@@ -38,7 +42,9 @@ class CoachThreadState {
 
   CoachThreadState copyWith({
     CoachConversation? conversation,
-    bool? isSending,
+    CoachLiveTurn? live,
+    // Même raison que `clearNotice` : `null` voudrait dire « inchangé ».
+    bool clearLive = false,
     bool? isOffline,
     bool? isReadOnly,
     // `notice` se remet à zéro à chaque envoi : un drapeau explicite évite
@@ -48,10 +54,25 @@ class CoachThreadState {
   }) {
     return CoachThreadState(
       conversation: conversation ?? this.conversation,
-      isSending: isSending ?? this.isSending,
+      live: clearLive ? null : (live ?? this.live),
       isOffline: isOffline ?? this.isOffline,
       isReadOnly: isReadOnly ?? this.isReadOnly,
       notice: clearNotice ? null : (notice ?? this.notice),
     );
   }
+}
+
+/// Un tour de conversation pendant qu'il s'écrit.
+class CoachLiveTurn {
+  const CoachLiveTurn({required this.question, this.text = ''});
+
+  /// La question envoyée, affichée tout de suite sans attendre le serveur.
+  final String question;
+
+  /// La réponse reçue jusqu'ici. Vide : le coach réfléchit encore (il lit
+  /// tes séances, tes records) avant d'écrire son premier mot.
+  final String text;
+
+  CoachLiveTurn append(String more) =>
+      CoachLiveTurn(question: question, text: text + more);
 }

@@ -32,10 +32,12 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   }
 
   Future<void> _send(String content) async {
-    // Le champ ne se vide qu'une fois le message parti : sur un refus, la
-    // question reste là, prête à repartir.
+    // La question quitte le champ tout de suite : elle s'affiche dans le fil,
+    // au-dessus de la réponse qui s'écrit. Sur un refus, elle y revient,
+    // prête à repartir — rien n'est perdu.
+    _composer.clear();
     final sent = await ref.read(coachThreadProvider.notifier).send(content);
-    if (sent) _composer.clear();
+    if (!sent && _composer.text.isEmpty) _composer.text = content;
   }
 
   Future<void> _openProposal(CoachSessionProposal proposal) async {
@@ -74,7 +76,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         onOpenProposal: _openProposal,
         onRetry: () => ref.read(coachThreadProvider.notifier).clearOffline(),
         isOffline: state.isOffline,
-        isSending: state.isSending,
+        live: state.live,
         notice: state.notice,
         onUnlock: state.isReadOnly
             ? () => GoRouter.of(context).go(AppRoutes.subscription)

@@ -28,6 +28,9 @@ class FakeCoachRepository implements CoachRepository {
 
   final CoachReply? reply;
 
+  /// Morceaux rendus au fil de l'écriture, avant la réplique.
+  List<String> streamed = const [];
+
   final List<String> sent = [];
 
   /// Les identifiants reçus, dans l'ordre : c'est la clé d'idempotence du
@@ -65,11 +68,15 @@ class FakeCoachRepository implements CoachRepository {
     required String conversationId,
     required String messageId,
     required String content,
+    void Function(String text)? onText,
   }) async {
     sent.add(content);
     sentIds.add(messageId);
     final error = sendError;
     if (error != null) throw error;
+    for (final part in streamed) {
+      onText?.call(part);
+    }
 
     return reply ??
         CoachReply(

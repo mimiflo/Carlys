@@ -22,13 +22,36 @@ class CoachMessageBubble extends StatelessWidget {
   /// à l'écran — sinon elle déborde dès qu'on la place ailleurs.
   final double maxWidth;
 
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == CoachRole.user;
+    return CoachBubble(
+      isUser: isUser,
+      maxWidth: maxWidth,
+      child: CoachBubbleText(message.content, isUser: isUser),
+    );
+  }
+}
+
+/// Le cadre d'une bulle, partagé par les répliques archivées et par celle qui
+/// s'écrit en direct : une seule forme, qu'on ne recopie pas.
+class CoachBubble extends StatelessWidget {
+  const CoachBubble({
+    required this.isUser,
+    required this.child,
+    this.maxWidth = double.infinity,
+    super.key,
+  });
+
+  final bool isUser;
+  final double maxWidth;
+  final Widget child;
+
   /// Rayon du coin rabattu, côté locuteur.
   static const double _spokenCorner = AppRadius.sm;
 
   @override
   Widget build(BuildContext context) {
-    final isUser = message.role == CoachRole.user;
-
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -58,73 +81,27 @@ class CoachMessageBubble extends StatelessWidget {
                     BorderSide(color: AppColors.darkBorder),
                   ),
           ),
-          child: Text(
-            message.content,
-            style: AppTypography.body.copyWith(
-              color: isUser ? AppColors.neutral0 : AppColors.darkTextPrimary,
-              height: 1.45,
-            ),
-          ),
+          child: child,
         ),
       ),
     );
   }
 }
 
-/// Point de suspension pendant que le coach compose sa réponse.
-///
-/// Sans streaming, c'est le SEUL signe de vie entre la question et la
-/// réponse : il n'est pas décoratif, il empêche l'écran de paraître figé.
-class CoachTypingBubble extends StatelessWidget {
-  const CoachTypingBubble({super.key});
+/// Le texte d'une bulle, dans la couleur de celui qui parle.
+class CoachBubbleText extends StatelessWidget {
+  const CoachBubbleText(this.text, {required this.isUser, super.key});
 
-  static const double _dotSize = 6;
-  static const int _dotCount = 3;
+  final String text;
+  final bool isUser;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 2,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.lg),
-            topRight: Radius.circular(AppRadius.lg),
-            bottomLeft: Radius.circular(AppRadius.sm),
-            bottomRight: Radius.circular(AppRadius.lg),
-          ),
-          border: Border.fromBorderSide(
-            BorderSide(color: AppColors.darkBorder),
-          ),
-        ),
-        child: Semantics(
-          label: 'Le coach rédige sa réponse',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _dotCount; i++) ...[
-                if (i > 0) const SizedBox(width: AppSpacing.xxs),
-                Container(
-                  width: _dotSize,
-                  height: _dotSize,
-                  decoration: BoxDecoration(
-                    // Les points s'éteignent vers la droite : la lecture suit
-                    // le sens de l'écriture.
-                    color: AppColors.darkTextSecondary.withValues(
-                      alpha: 1 - i * 0.28,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+    return Text(
+      text,
+      style: AppTypography.body.copyWith(
+        color: isUser ? AppColors.neutral0 : AppColors.darkTextPrimary,
+        height: 1.45,
       ),
     );
   }

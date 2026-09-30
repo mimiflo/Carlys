@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 class _RecordingAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
+  /// Ce que la route en flux répondra : (statut, corps brut).
+  (int, String) responses = (200, _sse(['delta', 'done']));
+
   @override
   Future<ResponseBody> fetch(
     RequestOptions options,
@@ -18,15 +23,13 @@ class _RecordingAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
-    final Object data = options.method == 'GET'
-        ? const <Object>[]
-        : {
-            'userMessage': _message('m1', 'user'),
-            'assistantMessage': _message('m2', 'assistant'),
-            'remainingToday': 29,
-          };
+    if (options.method != 'GET') return _stream(responses);
     return ResponseBody.fromString(
-      jsonEncode({'data': data, 'meta': <String, Object?>{}, 'requestId': 't'}),
+      jsonEncode({
+        'data': const <Object>[],
+        'meta': <String, Object?>{},
+        'requestId': 't',
+      }),
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
@@ -37,6 +40,45 @@ class _RecordingAdapter implements HttpClientAdapter {
   @override
   void close({bool force = false}) {}
 }
+
+/// Un flux SSE comme l'API l'écrit, découpé octet par octet pour que le
+/// lecteur prouve qu'il recolle les morceaux.
+ResponseBody _stream((int, String) response) {
+  final (status, body) = response;
+  return ResponseBody(
+    Stream.fromIterable(utf8.encode(body).map((b) => Uint8List.fromList([b]))),
+    status,
+    headers: {
+      Headers.contentTypeHeader: [
+        status == 200 ? 'text/event-stream' : Headers.jsonContentType,
+      ],
+    },
+  );
+}
+
+String _sse(List<String> events) => events.map((event) {
+  final data = switch (event) {
+    'delta' => {'text': 'Répon'},
+    'done' => {
+      'data': {
+        'userMessage': _message('m1', 'user'),
+        'assistantMessage': _message('m2', 'assistant'),
+        'remainingToday': 29,
+      },
+      'meta': <String, Object?>{},
+      'requestId': 't',
+    },
+    _ => {
+      'error': {
+        'code': 'SERVICE_UNAVAILABLE',
+        'message': 'Une erreur interne est survenue.',
+        'details': <Object>[],
+        'requestId': 'r-1',
+      },
+    },
+  };
+  return 'event: $event\ndata: ${jsonEncode(data)}\n\n';
+}).join();
 
 Map<String, Object?> _message(String id, String role) => {
   'id': id,
@@ -70,5 +112,93 @@ void main() {
     await repository.conversations();
 
     expect(adapter.requests.single.receiveTimeout, const Duration(seconds: 20));
+  });
+
+  group('réponse en flux', () {
+    test(
+      'chaque morceau part à l’écran, la réplique archivée fait foi',
+      () async {
+        final seen = <String>[];
+        final reply = await repository.sendMessage(
+          conversationId: 'c1',
+          messageId: 'm1',
+          content: 'Séance jambes 30 min ?',
+          onText: seen.add,
+        );
+
+        expect(
+          adapter.requests.single.path,
+          '/coach/conversations/c1/messages/stream',
+        );
+        expect(seen, ['Répon']);
+        expect(reply.assistantMessage.content, 'Réponse');
+        expect(reply.remainingToday, 29);
+      },
+    );
+
+    test(
+      'une panne en cours de route rend un 503, avec son identifiant',
+      () async {
+        adapter.responses = (200, _sse(['delta', 'error']));
+
+        await expectLater(
+          repository.sendMessage(
+            conversationId: 'c1',
+            messageId: 'm1',
+            content: 'Q',
+          ),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statut', 503)
+                .having((e) => e.requestId, 'requestId', 'r-1'),
+          ),
+        );
+      },
+    );
+
+    test('un flux coupé avant la fin est une coupure réseau', () async {
+      adapter.responses = (200, _sse(['delta']));
+
+      await expectLater(
+        repository.sendMessage(
+          conversationId: 'c1',
+          messageId: 'm1',
+          content: 'Q',
+        ),
+        throwsA(isA<NetworkException>()),
+      );
+    });
+
+    test(
+      'un refus AVANT le flux garde son statut et son message (429)',
+      () async {
+        adapter.responses = (
+          429,
+          jsonEncode({
+            'error': {
+              'code': 'RATE_LIMITED',
+              'message':
+                  'Tu as atteint ta limite de messages pour aujourd’hui.',
+              'details': <Object>[],
+              'requestId': 'r-2',
+            },
+          }),
+        );
+
+        await expectLater(
+          repository.sendMessage(
+            conversationId: 'c1',
+            messageId: 'm1',
+            content: 'Q',
+          ),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statut', 429)
+                .having((e) => e.message, 'message', contains('limite'))
+                .having((e) => e.requestId, 'requestId', 'r-2'),
+          ),
+        );
+      },
+    );
   });
 }

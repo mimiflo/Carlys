@@ -10,7 +10,6 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../subscription/data/repositories/subscription_repository_impl.dart';
 import '../../data/repositories/coach_repository_impl.dart';
-import '../../data/repositories/coach_session_launcher.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
 
@@ -18,6 +17,7 @@ import '../../domain/entities/coach_thread_state.dart';
 // portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
 // pour que l'écran et ses tests n'aient pas à changer d'import.
 export '../../domain/entities/coach_thread_state.dart';
+export '../providers/coach_proposal_actions.dart';
 export '../providers/coach_suggestion_providers.dart';
 
 /// Le fil de discussion courant.
@@ -101,8 +101,13 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     final current = state.valueOrNull;
     if (trimmed.isEmpty || current == null || current.isSending) return false;
 
+    // La question s'affiche aussitôt ; la réponse viendra s'écrire dessous.
     state = AsyncData(
-      current.copyWith(isSending: true, isOffline: false, clearNotice: true),
+      current.copyWith(
+        live: CoachLiveTurn(question: trimmed),
+        isOffline: false,
+        clearNotice: true,
+      ),
     );
 
     final repository = ref.read(coachRepositoryProvider);
@@ -122,6 +127,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         conversationId: current.conversation.id,
         messageId: messageId,
         content: trimmed,
+        onText: _appendLive,
       );
 
       _pending = null;
@@ -136,19 +142,19 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
               reply.assistantMessage,
             ],
           ),
-          isSending: false,
           // `current` est l'état d'AVANT l'envoi : il porte encore le refus
           // précédent, que l'affichage optimiste venait justement d'effacer.
           // Sans ce drapeau, « Tu as atteint le nombre de messages du jour »
           // réapparaissait sous la réponse qu'on venait de recevoir.
           clearNotice: true,
+          clearLive: true,
         ),
       );
       return true;
     } on AppException catch (exception) {
       state = AsyncData(
         current.copyWith(
-          isSending: false,
+          clearLive: true,
           isOffline: exception is NetworkException,
           // 403 : le droit au coach est parti. Le fil reste à relire.
           isReadOnly: exception is ForbiddenException,
@@ -159,6 +165,14 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
       );
       return false;
     }
+  }
+
+  /// Un morceau de la réponse vient d'arriver : il s'ajoute au tour en cours.
+  void _appendLive(String text) {
+    final now = state.valueOrNull;
+    final live = now?.live;
+    if (now == null || live == null) return;
+    state = AsyncData(now.copyWith(live: live.append(text)));
   }
 
   /// Rouvre le composeur après une coupure.
@@ -186,6 +200,9 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         429 =>
           'Tu as atteint le nombre de messages du jour. '
               'Le coach revient demain.',
+        // La même question part encore : sa réponse s'écrit toujours côté
+        // serveur (flux coupé puis renvoyé). Elle sera là au prochain envoi.
+        409 => 'Le coach termine sa réponse. Réessaie dans un instant.',
         503 => 'Le coach est momentanément indisponible.',
         _ => 'Le coach n’a pas pu répondre. Réessaie dans un instant.',
       };
@@ -198,46 +215,3 @@ final coachThreadProvider =
     AsyncNotifierProvider.autoDispose<CoachThread, CoachThreadState>(
       CoachThread.new,
     );
-
-/// Lance la séance proposée et signale l'acceptation au serveur.
-///
-/// L'ordre compte : la séance est écrite en local **d'abord**. Si la note au
-/// serveur échoue, l'utilisateur s'entraîne quand même — c'est une statistique
-/// qui manque, pas une séance perdue.
-class CoachProposalActions {
-  const CoachProposalActions(this._ref);
-
-  final Ref _ref;
-
-  Future<String> start(CoachSessionProposal proposal) async {
-    // Une proposition DÉJÀ acceptée a déjà sa séance : le serveur nous dit
-    // laquelle (`acceptedSessionId`), et l'appui suivant doit y ramener, pas
-    // en créer une seconde. Sans ce garde-fou, rouvrir le fil et réappuyer
-    // fabriquait une séance de plus à chaque fois — sitôt la précédente
-    // terminée, puisque la règle « au plus une séance en cours » ne bloque
-    // que pendant. L'historique se remplissait de séances jamais faites.
-    final already = proposal.acceptedSessionId;
-    if (already != null) {
-      return already;
-    }
-
-    final sessionId = await _ref
-        .read(coachSessionLauncherProvider)
-        .start(proposal);
-
-    try {
-      await _ref
-          .read(coachRepositoryProvider)
-          .markProposalAccepted(proposalId: proposal.id, sessionId: sessionId);
-    } on AppException {
-      // Volontairement avalé : la séance existe, elle est en file de
-      // synchronisation, et l'écran de séance s'ouvre. Rien à dire ici.
-    }
-
-    return sessionId;
-  }
-}
-
-final coachProposalActionsProvider = Provider<CoachProposalActions>(
-  CoachProposalActions.new,
-);

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
+import '../../domain/entities/coach_thread_state.dart';
 import '../widgets/coach_composer.dart';
 import '../widgets/coach_header.dart';
+import '../widgets/coach_live_bubble.dart';
 import '../widgets/coach_message_bubble.dart';
 import '../widgets/coach_notices.dart';
 import '../widgets/coach_proposal_card.dart';
@@ -24,7 +26,7 @@ class CoachScreen extends StatelessWidget {
     required this.onOpenProposal,
     required this.onRetry,
     this.isOffline = false,
-    this.isSending = false,
+    this.live,
     this.notice,
     this.onUnlock,
     super.key,
@@ -40,7 +42,9 @@ class CoachScreen extends StatelessWidget {
   /// l'offre, faute de quoi l'écran resterait muet le réseau revenu.
   final VoidCallback onRetry;
   final bool isOffline;
-  final bool isSending;
+
+  /// Le tour en cours d'écriture, s'il y en a un.
+  final CoachLiveTurn? live;
 
   /// Refus explicite du serveur (plafond du jour, coach coupé). Jamais un
   /// message d'ambiance : s'il est là, c'est qu'un envoi a été refusé.
@@ -76,12 +80,12 @@ class CoachScreen extends StatelessWidget {
           children: [
             const CoachHeader(),
             Expanded(
-              child: messages.isEmpty
+              child: messages.isEmpty && live == null
                   ? const _CoachIntro()
                   : LayoutBuilder(
                       builder: (context, constraints) => _Conversation(
                         messages: messages,
-                        isSending: isSending,
+                        live: live,
                         maxBubbleWidth:
                             constraints.maxWidth * _bubbleWidthFactor,
                         onOpenProposal: onOpenProposal,
@@ -126,7 +130,7 @@ class CoachScreen extends StatelessWidget {
                   onSend: onSend,
                   onRetry: onRetry,
                   isOffline: isOffline,
-                  isSending: isSending,
+                  isSending: live != null,
                 ),
               ),
             ],
@@ -140,13 +144,13 @@ class CoachScreen extends StatelessWidget {
 class _Conversation extends StatelessWidget {
   const _Conversation({
     required this.messages,
-    required this.isSending,
+    required this.live,
     required this.maxBubbleWidth,
     required this.onOpenProposal,
   });
 
   final List<CoachMessage> messages;
-  final bool isSending;
+  final CoachLiveTurn? live;
   final double maxBubbleWidth;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
 
@@ -155,7 +159,10 @@ class _Conversation extends StatelessWidget {
     // `reverse` ancre la conversation EN BAS : c'est là qu'on lit, c'est là
     // qu'arrive la réponse, et une histoire courte ne flotte pas en haut d'un
     // écran vide. Le défilement remonte alors vers le passé, comme partout.
-    final pending = isSending ? 1 : 0;
+    // Le tour en cours tient deux rangs : la question, et la réponse qui
+    // s'écrit dessous.
+    final live = this.live;
+    final pending = live == null ? 0 : 2;
 
     return ListView.separated(
       reverse: true,
@@ -172,8 +179,14 @@ class _Conversation extends StatelessWidget {
         if (index == messages.length + pending) {
           return const CoachDataNotice();
         }
-        if (isSending && index == 0) {
-          return const CoachTypingBubble();
+        if (live != null && index < pending) {
+          return index == 0
+              ? CoachLiveBubble(text: live.text, maxWidth: maxBubbleWidth)
+              : CoachBubble(
+                  isUser: true,
+                  maxWidth: maxBubbleWidth,
+                  child: CoachBubbleText(live.question, isUser: true),
+                );
         }
 
         // La liste est inversée : l'index 0 est le bas de l'écran.

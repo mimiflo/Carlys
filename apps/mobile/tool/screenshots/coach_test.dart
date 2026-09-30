@@ -6,6 +6,7 @@
 // dépôt : les mocks n'existent que dans les tests, isolés et remplaçables.
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,7 +67,7 @@ void main() {
     required List<CoachMessage> messages,
     List<String> suggestions = _suggestions,
     bool isOffline = false,
-    bool isSending = false,
+    CoachLiveTurn? live,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -87,7 +88,7 @@ void main() {
           onOpenProposal: (_) {},
           onRetry: () {},
           isOffline: isOffline,
-          isSending: isSending,
+          live: live,
         ),
       ),
     );
@@ -111,13 +112,31 @@ void main() {
     await capture(tester, 'coach-02-vide');
   });
 
-  testWidgets('coach — le coach rédige', (tester) async {
+  // Le tour en direct s'écrit SOUS l'échange précédent : un fil plein,
+  // comme à l'usage, plutôt qu'une question seule sur un écran vide.
+  const question = 'Et demain, je fais quoi pour récupérer ?';
+
+  testWidgets('coach — le coach réfléchit', (tester) async {
     await pumpCoach(
       tester,
-      messages: _conversation.sublist(0, 2),
-      isSending: true,
+      messages: _conversation,
+      live: const CoachLiveTurn(question: question),
     );
-    await capture(tester, 'coach-03-redaction');
+    await capture(tester, 'coach-03-reflexion');
+  });
+
+  testWidgets('coach — la réponse s’écrit en direct', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      live: const CoachLiveTurn(
+        question: question,
+        text:
+            'Demain, place à la récupération active : 20 minutes de vélo '
+            'tranquille, puis des étirements pour les pectoraux et',
+      ),
+    );
+    await capture(tester, 'coach-05-direct');
   });
 
   testWidgets('coach — hors ligne', (tester) async {
