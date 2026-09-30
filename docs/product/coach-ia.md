@@ -392,6 +392,20 @@ la réponse 65 s (`coachReplyTimeout`, `coach_repository_impl.dart`), au-delà
 de l'échéance de 50 s du serveur ; les autres appels gardent les 20 s du
 client partagé (`dio_client.dart`).
 
+**Ce qui accélère une réponse sur processeur** (30 septembre 2026). Le
+préfixe commun — consignes (≈ 1 080 jetons) et outils (≈ 1 660) — est gardé
+en mémoire par Ollama d'une question à l'autre : il ne se paie qu'au
+chargement du modèle. Ce qui se paie à CHAQUE tour d'outil, c'est ce que les
+outils rendent. Les lectures passent donc par des vues
+(`application/coach-views.ts`, comme `coach-meal-view.ts`) qui retirent les
+identifiants de ligne, révisions et champs vides que le modèle ne fait que
+relire : mesuré sur un jeu réaliste, 10 séances passent de ≈ 1 140 à ≈ 470
+jetons, un modèle de 6 exercices × 4 séries de ≈ 1 730 à ≈ 710, 15 records de
+≈ 1 040 à ≈ 780 (on y garde `exerciseId`, réutilisable dans une
+proposition). Le modèle est aussi PRÉCHARGÉ au démarrage du service `ollama`
+(`compose.yml`) : la première question après un redémarrage n'attend plus
+le chargement des 2,5 Go.
+
 **Ordre de grandeur, si Anthropic est réglé** : un tour avec préfixe caché
 coûte environ **un à deux centimes**, l'essentiel part dans la sortie. Un
 quota de 30 messages par jour plafonne donc un utilisateur intensif autour de

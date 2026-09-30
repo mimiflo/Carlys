@@ -306,6 +306,11 @@ services:
   # notre dos. Un téléchargement raté arrête le conteneur (sortie 1) : Docker
   # le relance, la supervision le voit et le compte, au lieu d'une boucle
   # silencieuse.
+  #
+  # Le modèle est PRÉCHARGÉ dès le démarrage (`ollama run <modèle> ""`, la
+  # méthode de la FAQ d'Ollama), en arrière-plan : sans cela, la première
+  # question après un redémarrage attendait en plus le chargement des 2,5 Go
+  # en mémoire, dans les 50 s du tour. OLLAMA_KEEP_ALIVE=-1 l'y garde ensuite.
   ollama:
     <<: *service
     profiles: ['ollama']
@@ -342,6 +347,8 @@ services:
         ollama show "$$CARLYS_OLLAMA_MODEL" >/dev/null 2>&1
         || ollama pull "$$CARLYS_OLLAMA_MODEL"
         || { echo "Modèle $$CARLYS_OLLAMA_MODEL introuvable ou non téléchargé"; kill $$pid; exit 1; };
+        { ollama run "$$CARLYS_OLLAMA_MODEL" "" </dev/null >/dev/null 2>&1
+        || echo "Préchargement manqué : le modèle se chargera à la première question"; } &
         wait $$pid
     volumes:
       - ollama-data:/root/.ollama

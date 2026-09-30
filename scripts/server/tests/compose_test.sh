@@ -67,6 +67,8 @@ production_coach="$(rendu production ollama)"
 for json in "$recette_coach" "$production_coach"; do
   verifier "ollama allumé : aucun port publié" 0 "$(champ "$json" '(.services.ollama.ports // []) | length')"
   verifier "ollama allumé : priorité processeur sous l'API" 256 "$(champ "$json" '.services.ollama.cpu_shares')"
+  verifier "ollama allumé : le modèle est préchargé au démarrage" true \
+    "$(champ "$json" '.services.ollama.command | join(" ") | contains("ollama run \"$$CARLYS_OLLAMA_MODEL\" \"\"")')"
 done
 verifier "recette : ollama a un plafond mémoire" oui \
   "$(champ "$recette_coach" '.services.ollama.mem_limit // ""' | grep -qE '^[1-9][0-9]*$' && echo oui || echo non)"

@@ -11,6 +11,12 @@ import { UsersService } from '../../users/application/users.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { coachMealView } from './coach-meal-view';
+import {
+  coachRecordView,
+  coachSessionView,
+  coachTemplateSummaryView,
+  coachTemplateView,
+} from './coach-views';
 import { type CoachToolCall, type CoachToolResult } from '../domain/coach-model.port';
 
 /**
@@ -75,20 +81,26 @@ export class CoachTools {
           DEFAULT_LIMIT,
         );
 
+      // Les lectures passent par les vues du coach (coach-views.ts) : les
+      // contrats d'écran, relus tels quels à chaque tour, coûtaient des
+      // secondes de réponse en identifiants que le modèle n'utilise pas.
       case 'list_workout_templates':
-        return this.templates.listTemplates(userId, DEFAULT_LIMIT);
-
-      case 'get_workout_template':
-        return this.templates.templateDetail(userId, asString(input.templateId) ?? '');
-
-      case 'get_recent_sessions':
-        return this.workouts.listSessions(
-          userId,
-          asBoundedInteger(input.limit, DEFAULT_LIMIT, MAX_LIMIT),
+        return (await this.templates.listTemplates(userId, DEFAULT_LIMIT)).items.map(
+          coachTemplateSummaryView,
         );
 
+      case 'get_workout_template':
+        return coachTemplateView(
+          await this.templates.templateDetail(userId, asString(input.templateId) ?? ''),
+        );
+
+      case 'get_recent_sessions': {
+        const limit = asBoundedInteger(input.limit, DEFAULT_LIMIT, MAX_LIMIT);
+        return (await this.workouts.listSessions(userId, limit)).items.map(coachSessionView);
+      }
+
       case 'get_personal_records':
-        return this.progress.records(userId);
+        return (await this.progress.records(userId)).map(coachRecordView);
 
       case 'get_progress_overview':
         return this.progress.overview(userId, asPeriod(input.period));
