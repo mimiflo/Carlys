@@ -7,6 +7,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_greeting.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:flutter/material.dart';
@@ -80,6 +81,7 @@ void main() {
     List<String> suggestions = _suggestions,
     bool isOffline = false,
     CoachLiveTurn? live,
+    CoachGreeting? greeting,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -104,6 +106,7 @@ void main() {
           onStop: () {},
           isOffline: isOffline,
           live: live,
+          greeting: greeting,
         ),
       ),
     );
@@ -122,9 +125,44 @@ void main() {
     await capture(tester, 'coach-01-conversation');
   });
 
+  // Le bonjour de l'ouverture, tel que la page l'écrit : après son court
+  // « Réfléchit… », d'où l'attente avant la capture.
+  CoachGreeting greet({required bool returning, required int after}) =>
+      CoachGreeting(
+        text: coachGreeting(
+          displayName: 'Clarisse',
+          style: null,
+          returning: returning,
+          now: _today,
+        ),
+        after: after,
+        at: DateTime.now(),
+      );
+
   testWidgets('coach — première ouverture', (tester) async {
-    await pumpCoach(tester, messages: const []);
+    await pumpCoach(
+      tester,
+      messages: const [],
+      greeting: greet(returning: false, after: 0),
+    );
+    // L'arrivée, puis le fondu vers le texte.
+    await tester.pump(AppMotion.reveal);
+    await tester.pump(AppMotion.normal);
+    await tester.pump(AppMotion.normal);
     await capture(tester, 'coach-02-vide');
+  });
+
+  testWidgets('coach — retour : il dit bonjour sous le fil', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      greeting: greet(returning: true, after: _conversation.length),
+    );
+    // L'arrivée, puis le fondu vers le texte.
+    await tester.pump(AppMotion.reveal);
+    await tester.pump(AppMotion.normal);
+    await tester.pump(AppMotion.normal);
+    await capture(tester, 'coach-08-bonjour');
   });
 
   // Le tour en direct s'écrit SOUS l'échange précédent : un fil plein,

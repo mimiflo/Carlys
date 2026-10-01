@@ -7,6 +7,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
+import '../../domain/services/coach_greeting.dart';
 import '../controllers/coach_controllers.dart';
 import '../providers/coach_program_actions.dart';
 import '../widgets/coach_header.dart';
@@ -30,6 +31,29 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   /// Programme proposé en cours de création : un second appui n'en engendre
   /// pas un second, et sa carte patiente.
   String? _busyProgramId;
+
+  /// Le bonjour de CETTE ouverture : écrit une fois, à sa place dans le
+  /// fil, et qui y reste pendant la visite.
+  CoachGreeting? _greeting;
+
+  /// Pas de bonjour à qui ne peut pas écrire (fil en lecture seule, hors
+  /// ligne) : le coach n'inviterait qu'à une question qu'il ne recevra pas.
+  CoachGreeting? _greet(CoachThreadState state) {
+    if (state.isReadOnly || state.isOffline) return null;
+    final voice = ref.read(coachVoiceProvider);
+    final messages = state.conversation.messages;
+    final now = DateTime.now();
+    return CoachGreeting(
+      text: coachGreeting(
+        displayName: voice.displayName,
+        style: voice.style,
+        returning: messages.isNotEmpty,
+        now: now,
+      ),
+      after: messages.length,
+      at: now,
+    );
+  }
 
   @override
   void dispose() {
@@ -104,6 +128,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
       ),
       error: (error, _) => _CoachShell(child: _errorState(error)),
       data: (state) => CoachScreen(
+        greeting: _greeting ??= _greet(state),
         messages: state.conversation.messages,
         suggestions: ref.watch(coachSuggestionsProvider),
         composerController: _composer,

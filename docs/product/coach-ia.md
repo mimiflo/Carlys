@@ -688,6 +688,22 @@ Widgets : `CoachHeader`, `CoachMessageBubble`, `CoachSuggestions`,
 deux lignes discrètes du coach ont quitté `coach_screen.dart` le jour où
 l'ajout de la mention de traitement l'a poussé au-delà de la limite.
 
+**Le coach dit bonjour à chaque ouverture** (1er octobre 2026). Un court
+« Réfléchit… », puis une bulle au prénom (« Bonjour » de 5 h à 18 h,
+« Bonsoir » ensuite), à la voix du Mentor choisie : à la première visite il
+se présente et dit ce qu'il sait faire, au retour il reprend
+(« On reprend où on s'était arrêtés ? »). Le texte est **écrit par
+l'appli** (`domain/services/coach_greeting.dart`, fonction pure), jamais par
+le modèle : sur le processeur du serveur, un bonjour généré coûterait de 20
+à 90 s à chaque ouverture et prendrait la place de vraies questions dans la
+file. Il n'est ni archivé ni envoyé au modèle. Il se pose à son rang dans le
+fil (après les messages présents à l'ouverture) et y reste pendant la
+visite ; un fil vide garde l'encart « Ton coach est là » au centre, avec le
+bonjour dessous. Pas de bonjour en lecture seule ni hors ligne : il
+inviterait à une question que le coach ne recevrait pas. Moins
+d'animations : le bonjour est là tout de suite. Captures `coach-02-vide` et
+`coach-08-bonjour`.
+
 **L'en-tête et la barre de saisie tiennent les deux bords de l'écran.**
 L'en-tête porte `AppBackButton`, la flèche commune du design system : elle
 dépile la branche Training et s'efface seule s'il n'y a rien derrière. Les

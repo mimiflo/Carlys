@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
+import '../../domain/services/coach_greeting.dart';
 import '../widgets/coach_composer.dart';
+import '../widgets/coach_greeting_bubble.dart';
 import '../widgets/coach_header.dart';
 import '../widgets/coach_notices.dart';
 import '../widgets/coach_read_only_panel.dart';
@@ -30,6 +32,7 @@ class CoachScreen extends StatelessWidget {
     this.live,
     this.notice,
     this.onUnlock,
+    this.greeting,
     super.key,
   });
 
@@ -64,6 +67,9 @@ class CoachScreen extends StatelessWidget {
   /// abonnés) : le composeur cède la place à l'invitation qui y mène.
   final VoidCallback? onUnlock;
 
+  /// Le bonjour du coach à l'ouverture : il remplace l'encart d'un fil vide.
+  final CoachGreeting? greeting;
+
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
   /// face pour comprendre qui parle.
@@ -91,7 +97,10 @@ class CoachScreen extends StatelessWidget {
             const CoachHeader(),
             Expanded(
               child: messages.isEmpty && live == null
-                  ? const _CoachIntro()
+                  ? _CoachIntro(
+                      greeting: greeting,
+                      bubbleWidthFactor: _bubbleWidthFactor,
+                    )
                   : LayoutBuilder(
                       builder: (context, constraints) => CoachThreadView(
                         messages: messages,
@@ -101,6 +110,7 @@ class CoachScreen extends StatelessWidget {
                         onOpenProposal: onOpenProposal,
                         onOpenProgram: onOpenProgram,
                         busyProgramId: busyProgramId,
+                        greeting: greeting,
                       ),
                     ),
             ),
@@ -154,26 +164,50 @@ class CoachScreen extends StatelessWidget {
   }
 }
 
+/// Un fil vide : qui est le coach, au centre ; puis, au premier rang du fil
+/// à venir, son bonjour ([greeting]) quand la page en a écrit un.
 class _CoachIntro extends StatelessWidget {
-  const _CoachIntro();
+  const _CoachIntro({required this.greeting, required this.bubbleWidthFactor});
+
+  final CoachGreeting? greeting;
+  final double bubbleWidthFactor;
 
   @override
   Widget build(BuildContext context) {
+    final greeting = this.greeting;
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-              child: AppEmptyState(
+          // Taille naturelle, jamais rognée (clavier ouvert, texte
+          // agrandi) : l'encart se centre quand il y a de la place, et le
+          // tout défile quand il n'y en a plus.
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox.shrink(),
+              AppEmptyState(
                 icon: AppIcons.coach,
                 title: 'Ton coach est là',
-                message:
-                    'Pose-lui une question sur ta progression, ou demande-lui '
-                    'd’adapter ta séance à ton temps du jour.',
+                message: greeting == null
+                    ? 'Pose-lui une question sur ta progression, ou '
+                          'demande-lui d’adapter ta séance à ton temps '
+                          'du jour.'
+                    : 'Il lit tes séances, tes records et tes mesures '
+                          'avant de te répondre.',
               ),
-            ),
+              if (greeting != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: CoachGreetingBubble(
+                    text: greeting.text,
+                    since: greeting.at,
+                    maxWidth: constraints.maxWidth * bubbleWidthFactor,
+                  ),
+                ),
+            ],
           ),
         ),
       ),

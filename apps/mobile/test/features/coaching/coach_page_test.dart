@@ -42,6 +42,10 @@ void main() {
           // Les puces se calculent depuis les modèles, les records et le
           // poids : trois dépôts qui n'ont rien à faire dans ce test.
           coachSuggestionsProvider.overrideWithValue(suggestions),
+          coachVoiceProvider.overrideWithValue((
+            displayName: 'Florian Mottet',
+            style: null,
+          )),
         ],
         child: MaterialApp(theme: AppTheme.dark(), home: const CoachPage()),
       ),
@@ -89,6 +93,46 @@ void main() {
     expect(find.text('Par où je commence ?'), findsNothing);
   });
 
+  testWidgets('à l’ouverture d’un fil commencé, le coach dit bonjour en bas', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakeCoachRepository(
+        threads: [thread],
+        messages: const [
+          CoachMessage(
+            id: 'm-1',
+            role: CoachRole.assistant,
+            content: 'Ajoute une série à tes squats.',
+          ),
+        ],
+      ),
+    );
+
+    // Un retour : il reprend, il ne se présente pas une seconde fois.
+    final hello = find.textContaining('Florian !');
+    expect(hello, findsOneWidget);
+    expect(find.textContaining('Je suis ton coach'), findsNothing);
+    final previous = find.text('Ajoute une série à tes squats.');
+    expect(
+      tester.getTopLeft(previous).dy,
+      lessThan(tester.getTopLeft(hello).dy),
+    );
+  });
+
+  testWidgets('en lecture seule, pas de bonjour qui inviterait à écrire', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakeCoachRepository(threads: [thread], messages: const []),
+      abonne: false,
+    );
+
+    expect(find.textContaining('Florian'), findsNothing);
+  });
+
   testWidgets('hors ligne, l’écran le dit et propose de réessayer', (
     tester,
   ) async {
@@ -123,7 +167,9 @@ void main() {
     await pumpPage(tester, repository);
 
     expect(repository.createdConversations, isEmpty);
-    expect(find.text('Ton coach est là'), findsOneWidget);
+    // Le coach dit bonjour, mais rien n'est créé ni envoyé pour autant.
+    expect(find.textContaining('Florian !'), findsOneWidget);
+    expect(repository.sent, isEmpty);
 
     await tester.enterText(find.byType(TextField), 'Par où je commence ?');
     await tester.tap(find.bySemanticsLabel('Envoyer'));

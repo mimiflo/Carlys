@@ -21,6 +21,7 @@ import '../utils/coach_notice.dart';
 // portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
 // pour que l'écran et ses tests n'aient pas à changer d'import.
 export '../../domain/entities/coach_thread_state.dart';
+export '../providers/coach_greeting_providers.dart';
 export '../providers/coach_proposal_actions.dart';
 export '../providers/coach_suggestion_providers.dart';
 
