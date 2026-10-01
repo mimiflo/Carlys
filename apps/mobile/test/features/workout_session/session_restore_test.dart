@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
 import 'package:carlys_mobile/features/workout_session/data/datasources/workout_session_remote_data_source.dart';
@@ -25,7 +27,15 @@ import '../../support/fake_sync_api.dart';
 /// rendre la séance, ses séries **et son plan** — sans quoi le second appareil
 /// affiche des séries sans objectif.
 class _FakeRemote implements WorkoutSessionRemoteDataSource {
-  _FakeRemote(this.sessions, {this.listedRevisions = const {}});
+  _FakeRemote(
+    this.sessions, {
+    this.listedRevisions = const {},
+    this.paged = false,
+    this.failingDetail,
+  });
+
+  /// Détail que le serveur refuse de servir (500, DTO illisible).
+  final String? failingDetail;
 
   final List<RemoteWorkoutSession> sessions;
 
@@ -35,9 +45,34 @@ class _FakeRemote implements WorkoutSessionRemoteDataSource {
   final List<String> detailCalls = [];
   int listCalls = 0;
 
+  /// Pages bornées par `limit`, comme le serveur ; sinon tout d'un coup.
+  final bool paged;
+  final List<int?> limits = [];
+
+  /// Détails en vol en même temps, au plus fort.
+  int inFlight = 0;
+  int maxInFlight = 0;
+
   @override
   Future<WorkoutSessionsPage> list({String? cursor, int? limit}) async {
     listCalls++;
+    limits.add(limit);
+    if (paged) {
+      final from = int.parse(cursor ?? '0');
+      final to = from + limit!;
+      return WorkoutSessionsPage(
+        items: [
+          for (final session in sessions.skip(from).take(limit))
+            RemoteWorkoutSessionRef(
+              id: session.id,
+              startedAt: session.startedAt,
+              revision: session.revision,
+            ),
+        ],
+        hasMore: to < sessions.length,
+        nextCursor: '$to',
+      );
+    }
     return WorkoutSessionsPage(
       items: sessions
           .map(
@@ -55,6 +90,10 @@ class _FakeRemote implements WorkoutSessionRemoteDataSource {
   @override
   Future<RemoteWorkoutSession> detail(String sessionId) async {
     detailCalls.add(sessionId);
+    maxInFlight = max(maxInFlight, ++inFlight);
+    await Future<void>.delayed(Duration.zero);
+    inFlight--;
+    if (sessionId == failingDetail) throw StateError('détail illisible');
     return sessions.firstWhere((session) => session.id == sessionId);
   }
 }
@@ -452,6 +491,47 @@ void main() {
         expect(second.listCalls, 1);
       },
     );
+
+    test('pas une séance de trop demandée, et les détails par lots', () async {
+      final remote = _FakeRemote([
+        for (var i = 0; i < 100; i++) _closedSession(i),
+      ], paged: true);
+      await repositoryOn(remote).restoreSessions();
+
+      // 50 puis les 10 qui manquent au plafond, pas 50 puis 50.
+      expect(remote.limits, [50, 10]);
+      expect(remote.detailCalls, hasLength(60));
+      expect(remote.maxInFlight, inInclusiveRange(2, 6));
+      expect(await db.select(db.localWorkoutSessions).get(), hasLength(60));
+    });
+
+    test(
+      'une purge en vol arrête tout : ni lot téléchargé, ni écriture',
+      () async {
+        var answers = 0;
+        final remote = _FakeRemote(soixante);
+        // Vrai au premier lot, faux dès la première écriture.
+        await repositoryOn(
+          remote,
+        ).restoreSessions(shouldContinue: () => answers++ == 0);
+
+        expect(remote.detailCalls, hasLength(6));
+        expect(await db.select(db.localWorkoutSessions).get(), isEmpty);
+      },
+    );
+
+    test('un détail en échec n’empêche pas d’écrire ceux d’avant', () async {
+      final remote = _FakeRemote(soixante, failingDetail: 'seance-2');
+
+      await expectLater(
+        repositoryOn(remote).restoreSessions(),
+        throwsA(isA<StateError>()),
+      );
+      final ids = (await db.select(db.localWorkoutSessions).get()).map(
+        (row) => row.id,
+      );
+      expect(ids, unorderedEquals(['seance-0', 'seance-1']));
+    });
 
     test('une séance modifiée ailleurs est reprise, et elle seule', () async {
       await repositoryOn(_FakeRemote(soixante)).restoreSessions();

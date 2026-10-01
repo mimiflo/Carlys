@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -44,6 +46,10 @@ class WorkoutSessionDownloader {
   final WorkoutSessionRemoteDataSource _remote;
   final SessionPlanLocalDataSource _plans;
 
+  /// Détails demandés ensemble : sur un téléphone neuf, 60 allers-retours
+  /// en file faisaient attendre l'historique plusieurs secondes.
+  static const _parallelDetails = 6;
+
   /// Renvoie le nombre de séances effectivement réécrites en local.
   ///
   /// Seule la liste se relit à chaque fois : une séance dont la révision n'a
@@ -51,41 +57,55 @@ class WorkoutSessionDownloader {
   /// réécrite (60 séances inchangées : 0 détail et 0 écriture Drift, contre
   /// 60 et 360 avant la révision).
   ///
-  /// [shouldContinue], consulté avant chaque séance, arrête la boucle dès
-  /// qu'il rend faux : la purge de compte annule ainsi un rapatriement en
-  /// vol, puis ATTEND sa fin — aucune écriture ne retombe dans la base
-  /// qu'elle vient de vider.
+  /// Les détails se téléchargent par lots de [_parallelDetails] ; les
+  /// écritures, elles, restent une à une, dans l'ordre de la liste (la règle
+  /// de la séance en cours unique lit la base que la précédente a écrite).
+  ///
+  /// [shouldContinue], consulté avant chaque lot et chaque écriture, arrête
+  /// la boucle dès qu'il rend faux : la purge de compte annule ainsi un
+  /// rapatriement en vol, puis ATTEND sa fin — aucune écriture ne retombe
+  /// dans la base qu'elle vient de vider.
   Future<int> run({bool Function()? shouldContinue}) async {
     final refs = await _collectRefs();
     var restored = 0;
+    bool stopped() {
+      if (shouldContinue == null || shouldContinue()) return false;
+      _logger.info('Rapatriement interrompu ($restored séances réécrites)');
+      return true;
+    }
 
-    for (final ref in refs) {
-      if (shouldContinue != null && !shouldContinue()) {
-        _logger.info('Rapatriement interrompu ($restored séances réécrites)');
-        return restored;
+    for (var start = 0; start < refs.length; start += _parallelDetails) {
+      if (stopped()) return restored;
+      final stale = [
+        for (final ref in refs.skip(start).take(_parallelDetails))
+          if (await _needsDownload(ref)) ref.id,
+      ];
+      // Lancés ensemble, attendus dans l'ordre : un détail en échec n'empêche
+      // pas d'écrire ceux qui le précèdent. `ignore` : un échec laissé en vol
+      // par une annulation ne remonte pas en erreur non traitée.
+      final details = [for (final id in stale) _remote.detail(id)..ignore()];
+      for (final pending in details) {
+        if (stopped()) return restored;
+        final detail = await pending;
+        if (await _wouldBreakSingleActiveRule(detail)) continue;
+        await write(detail);
+        restored++;
       }
-      final local = await (_db.select(
-        _db.localWorkoutSessions,
-      )..where((row) => row.id.equals(ref.id))).getSingleOrNull();
-      // Même révision que la copie locale : rien n'a changé là-bas depuis le
-      // dernier rapatriement, ni relue ni réécrite. Une révision absente
-      // (serveur plus ancien, séance jamais rapatriée) ne prouve rien.
-      if (ref.revision != null && local?.revision == ref.revision) {
-        continue;
-      }
-      // Une saisie locale non acquittée gagne TOUJOURS : l'appareil ne perd
-      // jamais ce qu'il a enregistré au profit d'un état serveur plus ancien.
-      if (local != null && await _hasLocalChanges(local)) {
-        continue;
-      }
-      final detail = await _remote.detail(ref.id);
-      if (await _wouldBreakSingleActiveRule(detail)) {
-        continue;
-      }
-      await write(detail);
-      restored++;
     }
     return restored;
+  }
+
+  Future<bool> _needsDownload(RemoteWorkoutSessionRef ref) async {
+    final local = await (_db.select(
+      _db.localWorkoutSessions,
+    )..where((row) => row.id.equals(ref.id))).getSingleOrNull();
+    // Même révision que la copie locale : rien n'a changé là-bas depuis le
+    // dernier rapatriement, ni relue ni réécrite. Une révision absente
+    // (serveur plus ancien, séance jamais rapatriée) ne prouve rien.
+    if (ref.revision != null && local?.revision == ref.revision) return false;
+    // Une saisie locale non acquittée gagne TOUJOURS : l'appareil ne perd
+    // jamais ce qu'il a enregistré au profit d'un état serveur plus ancien.
+    return local == null || !await _hasLocalChanges(local);
   }
 
   /// Le domaine impose **au plus une séance en cours**. Si l'appareil en a
@@ -115,17 +135,23 @@ class WorkoutSessionDownloader {
     return true;
   }
 
-  /// Parcourt les pages jusqu'au plafond. Le dépassement est JOURNALISÉ :
-  /// une troncature silencieuse se lirait comme un rapatriement complet.
+  /// Parcourt les pages jusqu'au plafond, sans demander une séance de plus
+  /// que ce qu'il reste à prendre (50 puis 10, pas 50 puis 50). Le
+  /// dépassement est JOURNALISÉ : une troncature silencieuse se lirait comme
+  /// un rapatriement complet.
   Future<List<RemoteWorkoutSessionRef>> _collectRefs() async {
     final refs = <RemoteWorkoutSessionRef>[];
     String? cursor;
 
     do {
-      final page = await _remote.list(cursor: cursor, limit: _pageSize);
+      final page = await _remote.list(
+        cursor: cursor,
+        limit: min(_pageSize, restoredSessionsMax - refs.length),
+      );
       refs.addAll(page.items);
+      cursor = page.hasMore ? page.nextCursor : null;
       if (refs.length >= restoredSessionsMax) {
-        if (page.hasMore || refs.length > restoredSessionsMax) {
+        if (cursor != null || refs.length > restoredSessionsMax) {
           _logger.info(
             'Rapatriement borné aux $restoredSessionsMax séances les plus '
             'récentes ; les plus anciennes restent sur le serveur',
@@ -133,7 +159,6 @@ class WorkoutSessionDownloader {
         }
         return refs.take(restoredSessionsMax).toList();
       }
-      cursor = page.hasMore ? page.nextCursor : null;
     } while (cursor != null);
 
     return refs;

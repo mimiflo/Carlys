@@ -13,6 +13,13 @@ abstract interface class WorkoutRepository {
 
   Future<WorkoutWithSets?> workoutDetail(String sessionId);
 
+  /// La dernière série chargée (répétitions ET charge) de [exerciseName]
+  /// dans les [lookback] séances closes les plus récentes, ou `null`.
+  Future<WorkoutSetEntry?> previousPerformance(
+    String exerciseName, {
+    required int lookback,
+  });
+
   /// L'identifiant de la séance en cours, lu dans la BASE, ou `null`.
   ///
   /// Distinct de [watchActiveWorkout] et de son provider, qui sont un CACHE :
@@ -87,7 +94,7 @@ abstract interface class WorkoutRepository {
   /// modifications locales n'ont pas encore été acquittées : l'appareil ne
   /// perd jamais sa propre saisie.
   ///
-  /// [shouldContinue], consulté entre deux séances, permet d'ARRÊTER un
+  /// [shouldContinue], consulté avant chaque écriture, permet d'ARRÊTER un
   /// rapatriement en vol : la purge de compte s'en sert pour qu'aucune
   /// écriture ne retombe dans la base après son vidage.
   Future<void> restoreSessions({bool Function()? shouldContinue});
