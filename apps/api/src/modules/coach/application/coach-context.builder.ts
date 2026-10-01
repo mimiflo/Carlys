@@ -65,6 +65,7 @@ export class CoachContextBuilder {
       conversation.messages.filter((message) => message.id !== messageId),
       content,
       this.config.coachGateway.historyMessages,
+      conversation.summaryThrough,
     );
     return { systemPerUser, history };
   }

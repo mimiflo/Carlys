@@ -63,11 +63,15 @@ processeur, ≈ 8 jetons/s en écriture (mesuré le 30 septembre 2026).
    du mentor (bloc par utilisateur), résumé des anciens échanges, derniers
    messages, question. Les données détaillées restent derrière les outils de
    lecture, consultées à la demande.
-8. **Mémoire résumée en arrière-plan** : quand des messages sortent de la
-   fenêtre, un résumé (objectif, préférences, progression, décisions) est
-   écrit par le modèle **seulement si la file est vide**, et il cède sa
-   place dès qu'une personne y entre. Borné (taille, durée), local
-   seulement, relu comme une donnée et non comme une consigne.
+8. **Mémoire résumée en arrière-plan** : quand les messages non résumés
+   dépassent la fenêtre, un résumé (objectif, préférences, progression,
+   décisions) en absorbe la moitié la plus ancienne. Il est écrit par le
+   modèle **seulement si la file est vide**, et il cède sa place dès
+   qu'une personne y entre. Borné (taille, durée), local seulement, relu
+   comme une donnée et non comme une consigne. L'historique part de la fin
+   du résumé : il avance par paliers au lieu de glisser, et Ollama ne relit
+   que la fin de chaque tour (29 s → 7 s de lecture par tour, mesuré le
+   1er octobre 2026).
 9. **Le quota se décompte après la file** : refusé par la file ou annulé en
    attente, un message n'a rien coûté.
 10. **Chaque génération laisse une ligne** (`CoachGeneration`) : identifiants,

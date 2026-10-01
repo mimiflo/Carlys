@@ -12,6 +12,7 @@ import { WorkoutsService } from '../../workout_sessions/application/workouts.ser
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { coachMealView } from './coach-meal-view';
 import {
+  coachBodyMetricView,
   coachRecordView,
   coachSessionView,
   coachTemplateSummaryView,
@@ -106,7 +107,9 @@ export class CoachTools {
         return this.progress.overview(userId, asPeriod(input.period));
 
       case 'get_body_weight_trend':
-        return this.metrics.listBodyMetrics(userId, BodyMetricType.WEIGHT_KG, DEFAULT_LIMIT);
+        return (
+          await this.metrics.listBodyMetrics(userId, BodyMetricType.WEIGHT_KG, DEFAULT_LIMIT)
+        ).map(coachBodyMetricView);
 
       case 'get_nutrition_targets':
         return this.nutrition.metabolismReport(userId);

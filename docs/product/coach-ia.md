@@ -482,22 +482,41 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   `carlys_api_ai_*` sur `/metrics` ; l'état sur `/internal/ai/health` et
   `/internal/ai/metrics`, protégés comme `/metrics`.
 - **Contexte (`CoachContextBuilder`)** : consignes (préfixe commun) → voix
-  du mentor, profil d'entraînement en une ligne, mémoire résumée →
-  `COACH_HISTORY_MESSAGES` derniers messages → question. Le profil en une
+  du mentor, profil d'entraînement en une ligne, mémoire résumée → messages
+  pas encore résumés (`COACH_HISTORY_MESSAGES` au plus) → question. Le profil en une
   ligne épargne un tour d'outil aux questions courantes ; le détail (séances,
   records, repas) reste derrière les outils.
-- **Mémoire (`CoachMemory`)** : dès 6 messages sortis de la fenêtre, un
-  résumé (objectif, préférences, progression, décisions) les fond dans
-  `CoachConversation.summary`, par lots de 30 au plus (600 caractères par
+- **Mémoire (`CoachMemory`)** : quand les messages pas encore résumés
+  dépassent la fenêtre (`COACH_HISTORY_MESSAGES`), un résumé (objectif,
+  préférences, progression, décisions) fond les plus anciens dans
+  `CoachConversation.summary` et n'en laisse que la moitié la plus récente
+  (`memoryKeep`), par lots de 30 au plus (600 caractères par
   message, 6 000 en tout, 300 jetons de sortie, 2 min au plus). Écrit après
   une réponse, **seulement si personne n'attend**, et il **cède sa place**
   dès qu'une personne entre dans la file (contrôle toutes les 2 s). Nos
   workers seulement, jamais le repli cloud. Raté, la conversation est
   laissée en paix 10 min. Relu comme une DONNÉE entre balises `<memoire>`,
   jamais comme une consigne.
-- **Cache** : les consignes et les outils sont des constantes, et Ollama garde
-  leur préfixe calculé d'une question à l'autre — c'est le seul cache qui
-  compte ici. Les lectures par personne (profil, voix) coûtent quelques
+- **Cache** : Ollama ne relit pas le début d'un texte qu'il a déjà calculé
+  (il le garde, et le restaure même après d'autres questions). Les consignes
+  et les outils (≈ 2 560 jetons) sont des constantes, donc lus une fois pour
+  tout le monde. L'historique **avance par paliers** au lieu de glisser : il
+  part de la fin du résumé, et ce début ne bouge qu'avec lui, une fois tous
+  les 5 tours. D'un tour à l'autre, le texte envoyé prolonge donc le
+  précédent et seule la fin est relue. Mesuré le 1er octobre 2026 (4 cœurs,
+  tours 12 à 20 d'une conversation) : 29 s de lecture par tour avec une
+  fenêtre glissante, **7 s en moyenne** par paliers (5 s, et 15 s au tour
+  où le résumé avance). Limite connue : le résumé cède sa place à toute
+  personne qui entre dans la file ; dans une conversation où l'on répond
+  plus vite qu'il ne s'écrit (jusqu'à 2 min sur processeur), il est remis
+  au tour suivant, et la fenêtre glisse en attendant, comme avant. Et il ne
+  coupe jamais entre une question et sa réponse.
+  Piste écartée, mesurée le même jour : le résumé, avec ses propres
+  consignes, ne chasse PAS le préfixe commun (la personne suivante a
+  retrouvé 2 654 jetons sur 2 661 en cache) ; lui faire réutiliser les
+  consignes du coach n'apportait rien.
+  Les résultats d'outils passent par des vues allégées (`coach-views.ts`,
+  `coach-meal-view.ts`) : 10 pesées, 783 jetons complètes, 223 allégées. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en
   cache ne se mesurerait pas, et aucune réponse n'est jamais mise en cache.
 - **Capacité** : se mesure, ne s'estime pas. `carlysctl coach-bench <env>`
@@ -602,7 +621,7 @@ démarrage.
 | `COACH_MAX_CONCURRENT_PER_USER` | Générations simultanées pour une personne, file comprise (1) |
 | `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
 | `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |
-| `COACH_HISTORY_MESSAGES` | Derniers messages relus tels quels ; les plus anciens passent par la mémoire résumée (20) |
+| `COACH_HISTORY_MESSAGES` | Messages relus tels quels, au plus ; au-delà, la mémoire résumée absorbe les plus anciens et en garde la moitié (20) |
 | `COACH_WORKER_URLS` | Adresses `…/v1` des workers, séparées par des virgules ; absente, le seul worker est `COACH_API_BASE_URL` |
 | `COACH_WORKER_COOLDOWN_MS` | Mise à l'écart d'un worker en panne (30 000) |
 | `COACH_CLOUD_FALLBACK` | Repli sur Anthropic quand aucun worker ne répond, seulement avec `ANTHROPIC_API_KEY` ; **éteint** par défaut (`false`) |

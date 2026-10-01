@@ -10,8 +10,11 @@ const TITLE_MAX_LENGTH = 60;
  */
 
 /**
- * Historique envoyé au modèle : les `limit` derniers messages
- * (`COACH_HISTORY_MESSAGES`), les plus anciens n'arrivant que par le résumé.
+ * Historique envoyé au modèle : les messages que la mémoire n'a pas encore
+ * résumés (`summarizedThrough`), `limit` au plus (`COACH_HISTORY_MESSAGES`).
+ * Ce début ne bouge qu'avec le résumé (voir `memoryKeep`) : d'un tour à
+ * l'autre, le texte envoyé PROLONGE le précédent, et Ollama ne relit que la
+ * fin. Le plafond reprend la main si la mémoire prend du retard.
  * Le rappel de date est collé au DERNIER message — donc après la césure de
  * cache, jamais dans le préfixe stable.
  */
@@ -19,9 +22,14 @@ export function buildHistory(
   previous: readonly MessageWithProposal[],
   content: string,
   limit: number,
+  summarizedThrough: Date | null = null,
   now: Date = new Date(),
 ): CoachTurn[] {
-  const turns = previous.slice(-limit).map((message): CoachTurn => ({
+  const unsummarized =
+    summarizedThrough === null
+      ? previous
+      : previous.filter((message) => message.createdAt > summarizedThrough);
+  const turns = unsummarized.slice(-limit).map((message): CoachTurn => ({
     role: message.role === 'USER' ? 'user' : 'assistant',
     content: message.content,
   }));

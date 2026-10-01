@@ -8,8 +8,19 @@ import { CoachRepository } from '../infrastructure/coach.repository';
 import { COACH_SUMMARY_PROMPT, summaryRequest } from './coach-context.prompt';
 import { CoachGateway } from './coach-gateway';
 
-/** Messages sortis de la fenêtre avant qu'un résumé vaille son appel au modèle. */
-export const MEMORY_BATCH_MIN = 6;
+/**
+ * Messages que le résumé laisse à l'historique : la moitié la plus récente
+ * de la fenêtre. Le résumé n'est réécrit que quand les messages non résumés
+ * DÉPASSENT la fenêtre, et il en absorbe alors la moitié la plus ancienne :
+ * l'historique avance par paliers, une fois tous les `limit / 2` messages,
+ * au lieu de glisser de deux messages à chaque tour (`buildHistory`). Une
+ * fenêtre qui glisse change le début du texte envoyé, et Ollama relisait
+ * tout l'historique à chaque tour : ≈ 1 470 jetons, ≈ 45 s sur processeur,
+ * contre ≈ 350 en moyenne par paliers (mesuré le 1er octobre 2026).
+ */
+export function memoryKeep(limit: number): number {
+  return Math.ceil(limit / 2);
+}
 /** Messages fondus dans la mémoire par passe : un prompt borné. */
 const MEMORY_BATCH_MAX = 30;
 /** Une mémoire reste courte : elle est relue à chaque tour. */
@@ -65,13 +76,16 @@ export class CoachMemory implements OnModuleDestroy {
   }
 
   private async summarize(conversationId: string): Promise<boolean> {
-    const backlog = await this.repository.memoryBacklog(
-      conversationId,
-      this.config.coachGateway.historyMessages,
-      MEMORY_BATCH_MAX,
-    );
+    const limit = this.config.coachGateway.historyMessages;
+    const keep = memoryKeep(limit);
+    const backlog = await this.repository.memoryBacklog(conversationId, keep, MEMORY_BATCH_MAX);
+    // Jamais une question fondue sans sa réponse : l'historique s'ouvre
+    // forcément sur une question, et écarterait la réponse orpheline.
+    while (backlog?.messages.at(-1)?.role === 'USER') backlog.messages.pop();
     const last = backlog?.messages.at(-1);
-    if (backlog === null || last === undefined || backlog.messages.length < MEMORY_BATCH_MIN) {
+    // Non résumés = `backlog` + `keep` : tant qu'ils tiennent dans la fenêtre,
+    // le résumé ne changerait rien à ce que le modèle lit.
+    if (backlog === null || last === undefined || backlog.messages.length + keep <= limit) {
       return false;
     }
     const output = await this.gateway.background(

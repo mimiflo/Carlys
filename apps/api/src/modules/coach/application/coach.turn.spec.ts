@@ -1,7 +1,12 @@
 import { type MessageWithProposal } from '../infrastructure/coach.repository';
 import { buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
 
-function message(role: 'USER' | 'ASSISTANT', id: string, content = id): MessageWithProposal {
+function message(
+  role: 'USER' | 'ASSISTANT',
+  id: string,
+  content = id,
+  createdAt = new Date('2026-08-09T10:00:00.000Z'),
+): MessageWithProposal {
   return {
     id,
     conversationId: 'fil-1',
@@ -9,7 +14,7 @@ function message(role: 'USER' | 'ASSISTANT', id: string, content = id): MessageW
     content,
     inputTokens: null,
     outputTokens: null,
-    createdAt: new Date('2026-08-09T10:00:00.000Z'),
+    createdAt,
     proposal: null,
     programProposal: null,
   };
@@ -22,6 +27,7 @@ describe('buildHistory', () => {
       [message('USER', 'q1', 'Bonjour'), message('ASSISTANT', 'r1', 'Salut.')],
       'Et maintenant ?',
       20,
+      null,
       now,
     );
 
@@ -37,6 +43,40 @@ describe('buildHistory', () => {
     const many = Array.from({ length: 30 }, (_, index) => message('USER', `q${index}`));
     expect(buildHistory(many, 'Fin', 20)).toHaveLength(21);
     expect(buildHistory(many, 'Fin', 12)).toHaveLength(13);
+  });
+
+  it('ne reprend que ce que la mémoire n’a pas résumé : le début ne bouge qu’avec elle', () => {
+    const minute = (m: number) => new Date(Date.UTC(2026, 8, 1, 10, m));
+    const fil = Array.from({ length: 16 }, (_, i) =>
+      message(i % 2 === 0 ? 'USER' : 'ASSISTANT', `m${i}`, `m${i}`, minute(i)),
+    );
+
+    // Résumé jusqu'à m9 : l'historique repart de m10, pas des 12 derniers.
+    const history = buildHistory(fil, 'Suite', 12, minute(9));
+    expect(history.map((turn) => turn.content).slice(0, -1)).toEqual([
+      'm10',
+      'm11',
+      'm12',
+      'm13',
+      'm14',
+      'm15',
+    ]);
+
+    // Le tour suivant PROLONGE le précédent : même début, Ollama ne relit que la fin.
+    const next = buildHistory(
+      [
+        ...fil,
+        message('USER', 'm16', 'm16', minute(16)),
+        message('ASSISTANT', 'm17', 'm17', minute(17)),
+      ],
+      'Encore',
+      12,
+      minute(9),
+    );
+    expect(next.slice(0, 6)).toEqual(history.slice(0, 6));
+
+    // Mémoire en retard : le plafond de la fenêtre reprend la main.
+    expect(buildHistory(fil, 'Suite', 4, minute(1))).toHaveLength(5);
   });
 
   it('la fenêtre s’OUVRE sur un tour utilisateur, même si la découpe tombe mal', () => {

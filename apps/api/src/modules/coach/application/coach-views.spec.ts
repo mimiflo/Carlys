@@ -3,7 +3,12 @@ import {
   type WorkoutSessionSummary,
   type WorkoutTemplateDetail,
 } from '@carlys/api-contracts';
-import { coachRecordView, coachSessionView, coachTemplateView } from './coach-views';
+import {
+  coachBodyMetricView,
+  coachRecordView,
+  coachSessionView,
+  coachTemplateView,
+} from './coach-views';
 
 /**
  * Ce que le coach relit à chaque tour d'outil. Sur un processeur, chaque
@@ -61,6 +66,17 @@ describe('vues du coach', () => {
       weightKg: 100,
       achievedAt: '2026-09-20',
     });
+  });
+
+  it('une pesée : la valeur et le jour, rien d’autre', () => {
+    expect(
+      coachBodyMetricView({
+        id: uuid(9),
+        metricType: 'WEIGHT_KG',
+        value: 82.4,
+        measuredAt: '2026-09-28T07:12:43.512Z',
+      }),
+    ).toEqual({ value: 82.4, measuredAt: '2026-09-28' });
   });
 
   it('un modèle : ses exercices et séries, sans identifiants ni champs vides', () => {

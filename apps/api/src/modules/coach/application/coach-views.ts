@@ -1,4 +1,5 @@
 import {
+  type BodyMetric,
   type PersonalRecord,
   type WorkoutSessionSummary,
   type WorkoutTemplateDetail,
@@ -46,6 +47,15 @@ export function coachRecordView(record: PersonalRecord) {
     weightKg: record.weightKg,
     achievedAt: toDay(record.achievedAt),
   };
+}
+
+/**
+ * Une pesée : la valeur et le jour. L'identifiant, le type (toujours le
+ * poids ici) et l'heure à la milliseconde triplaient la lecture : 10 pesées,
+ * 783 jetons complètes contre 223 (mesuré le 1er octobre 2026).
+ */
+export function coachBodyMetricView(metric: BodyMetric) {
+  return { value: metric.value, measuredAt: toDay(metric.measuredAt) };
 }
 
 /** Un modèle de la liste : de quoi choisir, et l'`id` pour le lire en détail. */
