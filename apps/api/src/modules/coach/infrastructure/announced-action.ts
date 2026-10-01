@@ -1,5 +1,6 @@
 /**
- * L'annonce sans l'action.
+ * L'annonce sans l'action : une recherche, une séance ou un programme
+ * promis, et rien derrière.
  *
  * Un petit modèle (Qwen3-4B sur processeur) écrit parfois « Je cherche des
  * exercices pour les pecs. Une minute. » et rend la main SANS appeler
@@ -24,6 +25,10 @@ const PROMISE = [
   /^(d['’]abord,?\s*)?je (cherche|vérifie|consulte)\b/i,
   /^je vais (chercher|regarder|vérifier|consulter|lire|voir|trouver)\b/i,
   /^laisse-moi (chercher|regarder|vérifier|consulter|voir)\b/i,
+  // Une séance ou un programme promis, sans la carte qui le propose
+  // (« Je vais t’adapter une séance à partir de ton profil. »). L'objet est
+  // exigé : « Je te propose de commencer par 3 séries » est une réponse.
+  /^(je vais |je |laisse-moi )(te |t['’])?(préparer?|proposer?|adapter?|construire?|construis|créer?|composer?|concocter?|monter?|élaborer?|planifier?)\b.*\b(séance|programme|plan|entraînement)s?\b/i,
 ];
 
 export function announcesAction(text: string): boolean {
@@ -37,6 +42,6 @@ export function announcesAction(text: string): boolean {
 
 /** La relance, envoyée comme un message de la personne. */
 export const ANNOUNCED_ACTION_NUDGE =
-  'Tu viens d’annoncer une recherche sans la faire. Appelle maintenant l’outil ' +
-  'nécessaire, puis réponds avec ce que tu as trouvé. Si tu as déjà tout ce ' +
-  'qu’il faut, réponds directement.';
+  'Tu viens d’annoncer une action sans la faire. Fais-la maintenant : appelle ' +
+  'l’outil nécessaire (recherche, proposition de séance ou de programme), puis ' +
+  'réponds avec le résultat. Si tu as déjà tout ce qu’il faut, réponds directement.';

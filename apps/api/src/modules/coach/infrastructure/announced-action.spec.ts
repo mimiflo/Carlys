@@ -25,6 +25,27 @@ describe('announcesAction', () => {
     expect(announcesAction('Voici ce que je te propose :')).toBe(true);
   });
 
+  it('reconnaît une séance ou un programme promis et jamais proposé', () => {
+    // Constaté le 1er octobre 2026 : « Par où je commence ? », trois
+    // paragraphes, puis cette promesse — et plus rien.
+    expect(
+      announcesAction(
+        'On commence par des mouvements de fond, comme le squat ou le deadlift. ' +
+          'Je vais t’adapter une séance à partir de ton profil.',
+      ),
+    ).toBe(true);
+    for (const promise of [
+      'Je vais te préparer une séance pour demain.',
+      'Je vais te proposer un programme sur quatre semaines.',
+      'Je te prépare une séance tout de suite.',
+      'Je t’adapte un programme à partir de tes séances.',
+      'Je vais construire ta séance du jour.',
+      'Laisse-moi te préparer un programme.',
+    ]) {
+      expect(announcesAction(promise)).toBe(true);
+    }
+  });
+
   it('laisse passer une vraie réponse, même quand elle parle d’avenir', () => {
     expect(
       announcesAction(
@@ -45,6 +66,8 @@ describe('announcesAction', () => {
       'Laisse-moi savoir comment ça se passe !',
       'Je regarde ça avec toi la semaine prochaine.',
       'Un instant de pause entre les séries suffit.',
+      'Je te propose de commencer par trois séries de 10.',
+      'Je vais te laisser souffler, tu as bien bossé.',
     ]) {
       expect(announcesAction(ordinary)).toBe(false);
     }

@@ -539,9 +539,10 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   sans leurs accents.
 - **L'annonce sans l'action.** Il écrivait parfois « Je cherche… Une
   minute. » et rendait la main sans appeler d'outil : la suite promise ne
-  venait jamais. Les consignes l'interdisent, et le client relance UNE fois
-  un tour qui se termine sur une recherche promise
-  (`infrastructure/announced-action.ts`). Sur l'appli, « Réfléchit… » reste
+  venait jamais ; même chose pour « Je vais t'adapter une séance à partir de
+  ton profil. », sans la carte de séance. Les consignes l'interdisent, et le
+  client relance UNE fois un tour qui se termine sur une recherche, une
+  séance ou un programme promis (`infrastructure/announced-action.ts`). Sur l'appli, « Réfléchit… » reste
   sous le texte jusqu'à la fin du tour : entre deux recherches, la bulle ne
   semble plus finie. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en

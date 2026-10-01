@@ -371,7 +371,7 @@ describe('OpenAiCompatibleCoachClient', () => {
         content: 'Je cherche tes records. Une minute.',
       });
       expect(relance[1]?.role).toBe('user');
-      expect(String(relance[1]?.content)).toContain('Appelle maintenant');
+      expect(String(relance[1]?.content)).toContain('Fais-la maintenant');
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
