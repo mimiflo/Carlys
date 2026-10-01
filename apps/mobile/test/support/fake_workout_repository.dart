@@ -45,6 +45,15 @@ class FakeWorkoutRepository implements WorkoutRepository {
   @override
   Future<WorkoutWithSets?> workoutDetail(String sessionId) async => active;
 
+  /// Ce que « PRÉCÉDENT » affiche, quel que soit l'exercice.
+  WorkoutSetEntry? previous;
+
+  @override
+  Future<WorkoutSetEntry?> previousPerformance(
+    String exerciseName, {
+    required int lookback,
+  }) async => previous;
+
   /// L'état RÉEL de la doublure, pas le dernier émis sur le flux : c'est la
   /// distinction que `activeWorkoutId` existe pour porter, et un test qui
   /// coupe le flux doit pouvoir la mettre en scène.

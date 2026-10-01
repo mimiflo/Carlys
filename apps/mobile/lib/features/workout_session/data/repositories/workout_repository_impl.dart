@@ -209,6 +209,44 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     return workouts.isEmpty ? null : workouts.first;
   }
 
+  /// Une requête, au lieu d'une relecture complète par séance inspectée
+  /// (jusqu'à 8 par exercice affiché).
+  @override
+  Future<WorkoutSetEntry?> previousPerformance(
+    String exerciseName, {
+    required int lookback,
+  }) async {
+    final sessions = _db.localWorkoutSessions;
+    final sets = _db.localWorkoutSets;
+    final recent = sessions.selectOnly()
+      ..addColumns([sessions.id])
+      ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
+      ..orderBy([OrderingTerm.desc(sessions.startedAt)])
+      ..limit(lookback);
+    final row =
+        await (sets.select().join([
+                innerJoin(
+                  sessions,
+                  sessions.id.equalsExp(sets.sessionId),
+                  useColumns: false,
+                ),
+              ])
+              ..where(
+                sets.sessionId.isInQuery(recent) &
+                    sets.exerciseName.equals(exerciseName) &
+                    sets.deleted.equals(false) &
+                    sets.reps.isNotNull() &
+                    sets.weightKg.isNotNull(),
+              )
+              ..orderBy([
+                OrderingTerm.desc(sessions.startedAt),
+                OrderingTerm.desc(sets.position),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
+    return row == null ? null : _rows.mapSet(row.readTable(sets));
+  }
+
   // ── Écritures ────────────────────────────────────────────────────────────
 
   @override

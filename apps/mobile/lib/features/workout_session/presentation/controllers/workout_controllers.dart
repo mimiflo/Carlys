@@ -31,29 +31,14 @@ const int _inspectedPastSessions = 8;
 
 /// Dernière performance enregistrée pour un exercice, séances passées
 /// comprises. `null` quand l'exercice n'a jamais été chargé/répété.
+///
+/// L'historique n'est lu que pour se recalculer quand une séance se clôt.
 final previousPerformanceProvider = FutureProvider.autoDispose
     .family<WorkoutSetEntry?, String>((ref, exerciseName) async {
-      final repository = ref.watch(workoutRepositoryProvider);
-      final history = await ref.watch(workoutHistoryProvider.future);
-
-      for (final entry in history.take(_inspectedPastSessions)) {
-        final detail = await repository.workoutDetail(entry.session.id);
-        if (detail == null) {
-          continue;
-        }
-        final matches = detail.sets
-            .where(
-              (set) =>
-                  set.exerciseName == exerciseName &&
-                  set.reps != null &&
-                  set.weightKg != null,
-            )
-            .toList();
-        if (matches.isNotEmpty) {
-          return matches.last;
-        }
-      }
-      return null;
+      await ref.watch(workoutHistoryProvider.future);
+      return ref
+          .watch(workoutRepositoryProvider)
+          .previousPerformance(exerciseName, lookback: _inspectedPastSessions);
     });
 
 /// Actions de séance — unique point d'entrée des écrans vers le domaine.
