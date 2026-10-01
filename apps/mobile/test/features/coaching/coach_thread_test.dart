@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_session_launcher.dart';
@@ -78,6 +80,27 @@ void main() {
 
       expect(etat.conversation.messages, hasLength(2));
       expect(etat.isReadOnly, isTrue);
+    });
+
+    test('les droits se lisent PENDANT la liste des fils, pas après', () async {
+      final repository = FakeCoachRepository(threads: [ancien])
+        ..listGate = Completer<void>();
+      final droits = FakeSubscriptionRepository(coaching: true);
+      final container = ProviderContainer(
+        overrides: [
+          coachRepositoryProvider.overrideWithValue(repository),
+          subscriptionRepositoryProvider.overrideWithValue(droits),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final etat = container.read(coachThreadProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      expect(droits.entitlementsReads, 1);
+
+      repository.listGate!.complete();
+      expect((await etat).isReadOnly, isFalse);
+      expect(droits.entitlementsReads, 1);
     });
 
     test('sans historique ni droit : l’invitation à l’abonnement', () async {

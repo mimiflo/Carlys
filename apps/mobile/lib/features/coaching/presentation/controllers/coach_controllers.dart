@@ -78,13 +78,16 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   }
 
   Future<CoachThreadState> _load(CoachRepository repository) async {
+    // Le droit se lit PENDANT la liste et le fil (deux allers-retours au
+    // lieu de trois) ; `_mayWrite` ne lève jamais, rien ne fuit.
+    final mayWrite = _mayWrite();
     final threads = await repository.conversations();
-    final mayWrite = await _mayWrite();
 
     if (threads.isEmpty) {
-      // Rien à relire, et rien à écrire : l'invitation à l'abonnement, plutôt
-      // qu'un fil vide qui refuserait la première question.
-      if (!mayWrite) throw const ForbiddenException(_reserved, statusCode: 403);
+      // Rien à relire ni à écrire : l'invitation, pas un fil qui refuserait.
+      if (!await mayWrite) {
+        throw const ForbiddenException(_reserved, statusCode: 403);
+      }
       _created = false;
       return CoachThreadState(
         conversation: CoachConversation(id: _uuid.v4(), messages: const []),
@@ -92,9 +95,10 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     }
 
     _created = true;
+    final conversation = await repository.conversation(threads.first.id);
     return CoachThreadState(
-      conversation: await repository.conversation(threads.first.id),
-      isReadOnly: !mayWrite,
+      conversation: conversation,
+      isReadOnly: !await mayWrite,
     );
   }
 

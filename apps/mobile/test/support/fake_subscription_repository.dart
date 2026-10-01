@@ -77,6 +77,9 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   /// L'échec que `GET /entitlements` oppose (délai, 5xx), s'il y en a un.
   final Object? entitlementsError;
 
+  /// Combien de fois les droits ont été lus.
+  int entitlementsReads = 0;
+
   @override
   Future<PlanStatus> planStatus() async {
     planStatusReads += 1;
@@ -96,6 +99,7 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
 
   @override
   Future<List<EntitlementEntry>> entitlements() async {
+    entitlementsReads += 1;
     final error = entitlementsError;
     if (error != null) throw error;
     return [

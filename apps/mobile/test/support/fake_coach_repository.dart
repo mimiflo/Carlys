@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/domain/repositories/coach_repository.dart';
@@ -56,8 +58,12 @@ class FakeCoachRepository implements CoachRepository {
   /// Erreur levée en notant un programme accepté (réseau tombé juste après).
   AppException? programAcceptError;
 
+  /// Retient la liste des fils tant qu'un test ne la libère pas.
+  Completer<void>? listGate;
+
   @override
   Future<List<CoachConversationSummary>> conversations() async {
+    await listGate?.future;
     final error = listError;
     if (error != null) throw error;
     return threads;
