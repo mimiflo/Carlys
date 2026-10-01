@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { findRepoRoot } from '../testing/repo-root';
 
 /**
  * `globals.css` RECOPIE la palette : l'admin ne dépend pas de
@@ -30,25 +31,6 @@ import { describe, expect, it } from 'vitest';
  * découpé par appariement d'accolades plutôt que par index, et `@theme
  * inline` doit se borner à republier les variables de `:root`.
  */
-
-/**
- * Racine du dépôt, trouvée en remontant jusqu'au marqueur de l'espace de
- * travail : `import.meta.url` n'est pas une URL `file:` sous jsdom, et le
- * répertoire courant dépend de l'endroit d'où la suite est lancée.
- */
-function findRepoRoot(): string {
-  let directory = process.cwd();
-  for (;;) {
-    if (existsSync(join(directory, 'pnpm-workspace.yaml'))) {
-      return directory;
-    }
-    const parent = dirname(directory);
-    if (parent === directory) {
-      throw new Error(`Racine du dépôt introuvable au-dessus de ${process.cwd()}`);
-    }
-    directory = parent;
-  }
-}
 
 const repoRoot = findRepoRoot();
 

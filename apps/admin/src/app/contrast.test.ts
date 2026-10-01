@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { globSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { findRepoRoot } from '../testing/repo-root';
 
 /**
  * LES PAIRES TEXTE / FOND DE L'ADMIN TIENNENT AA, dans les deux thèmes.
@@ -17,20 +18,6 @@ import { describe, expect, it } from 'vitest';
  * balai refuse les classes qui la contourneraient (une encre qui ne suit
  * pas le thème, un orange écrit comme du texte).
  */
-
-function findRepoRoot(): string {
-  let directory = process.cwd();
-  for (;;) {
-    if (existsSync(join(directory, 'pnpm-workspace.yaml'))) {
-      return directory;
-    }
-    const parent = dirname(directory);
-    if (parent === directory) {
-      throw new Error(`Racine du dépôt introuvable au-dessus de ${process.cwd()}`);
-    }
-    directory = parent;
-  }
-}
 
 const adminRoot = join(findRepoRoot(), 'apps/admin');
 const css = readFileSync(join(adminRoot, 'src/app/globals.css'), 'utf8').replace(
@@ -136,13 +123,9 @@ describe.each([
 
 /** Les sources des écrans, tests exclus. */
 function sources(directory: string): string[] {
-  return readdirSync(directory).flatMap((entry) => {
-    const path = join(directory, entry);
-    if (statSync(path).isDirectory()) {
-      return sources(path);
-    }
-    return path.endsWith('.tsx') && !path.includes('.test.') ? [path] : [];
-  });
+  return globSync('**/*.tsx', { cwd: directory })
+    .filter((path) => !path.includes('.test.'))
+    .map((path) => join(directory, path));
 }
 
 /**

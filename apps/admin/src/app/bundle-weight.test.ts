@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -96,14 +96,9 @@ function packagesReachedFrom(entry: string): Map<string, string> {
   return reached;
 }
 
-function publicEntries(directory = join(srcRoot, 'app/(public)')): string[] {
-  return readdirSync(directory).flatMap((entry) => {
-    const path = join(directory, entry);
-    if (statSync(path).isDirectory()) {
-      return publicEntries(path);
-    }
-    return /^(page|layout)\.tsx$/.test(entry) ? [path] : [];
-  });
+function publicEntries(): string[] {
+  const directory = join(srcRoot, 'app/(public)');
+  return globSync('**/{page,layout}.tsx', { cwd: directory }).map((path) => join(directory, path));
 }
 
 describe('les pages publiques ne chargent ni Zod classique ni les contrats', () => {

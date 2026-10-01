@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -18,13 +18,9 @@ const srcRoot = join(__dirname, '..');
 
 /** Les sources de l'application : ni les tests, ni leurs jeux d'essai. */
 function sources(directory: string): string[] {
-  return readdirSync(directory).flatMap((entry) => {
-    const path = join(directory, entry);
-    if (statSync(path).isDirectory()) {
-      return entry === 'testing' ? [] : sources(path);
-    }
-    return /\.tsx?$/.test(path) && !path.includes('.test.') ? [path] : [];
-  });
+  return globSync('**/*.{ts,tsx}', { cwd: directory })
+    .filter((path) => !path.startsWith('testing/') && !path.includes('.test.'))
+    .map((path) => join(directory, path));
 }
 
 /**
