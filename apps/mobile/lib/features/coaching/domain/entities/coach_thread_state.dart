@@ -77,8 +77,6 @@ class CoachLiveTurn {
   /// tour est venu (ou n'a jamais attendu).
   final int? ahead;
 
-  bool get isQueued => ahead != null;
-
   CoachLiveTurn append(String more) =>
       CoachLiveTurn(question: question, text: text + more);
 

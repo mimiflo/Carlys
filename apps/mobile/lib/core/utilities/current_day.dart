@@ -11,9 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// l'année suivante tout seul, et rend l'instant local correspondant quel
 /// que soit le changement d'heure au milieu.
 ///
-/// La leçon vient de l'hydratation (`LocalWaterStore.prochainMinuit`), qui
-/// l'avait apprise seule : elle vit ici pour que le journal alimentaire et
-/// l'Academy en héritent au lieu de la réapprendre.
+/// La leçon vient de l'hydratation, qui l'avait apprise seule : elle vit ici
+/// pour que l'hydratation, le journal alimentaire et l'Academy la partagent.
 DateTime nextMidnight(DateTime moment) =>
     DateTime(moment.year, moment.month, moment.day + 1);
 

@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/utilities/formatting.dart';
 
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../mentor/domain/entities/mentor_style.dart';
@@ -24,10 +25,7 @@ import 'coach_suggestion_providers.dart';
 typedef CoachVoice = ({String? displayName, MentorStyle? style});
 
 final coachVoiceProvider = Provider<CoachVoice>((ref) {
-  final user = switch (ref.watch(authControllerProvider)) {
-    AuthAuthenticated(:final user) => user,
-    _ => null,
-  };
+  final user = ref.watch(authControllerProvider).user;
   return (displayName: user?.displayName, style: user?.mentorStyle);
 });
 
@@ -84,7 +82,7 @@ List<String> coachVisibleSuggestions(WidgetRef ref, CoachThreadState state) {
   unawaited(
     ref
         .read(coachGreetingStoreProvider)
-        .greeted(greetingDay(now))
+        .greeted(formatDayKey(now))
         .catchError(
           (Object error) => _logger.warning(
             'Bonjour du coach non retenu : il pourra se redire',

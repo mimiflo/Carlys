@@ -146,7 +146,7 @@ class _Initial extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Text(
-          name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+          AppInitialAvatar.initialOf(name),
           style: AppTypography.resized(
             AppTypography.display,
             34,

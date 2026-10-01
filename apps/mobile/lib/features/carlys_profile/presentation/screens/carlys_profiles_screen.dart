@@ -19,11 +19,7 @@ class CarlysProfilesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final current = switch (authState) {
-      AuthAuthenticated(:final user) => user?.carlysProfile,
-      _ => null,
-    };
+    final current = ref.watch(authControllerProvider).user?.carlysProfile;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(

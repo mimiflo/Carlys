@@ -11,6 +11,7 @@
 library;
 
 import 'package:carlys_mobile/core/database/app_database.dart';
+import 'package:carlys_mobile/core/utilities/current_day.dart';
 import 'package:carlys_mobile/features/nutrition/data/datasources/water_local_data_source.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/local_water_store.dart';
 import 'package:drift/native.dart';
@@ -93,18 +94,15 @@ void main() {
     );
   });
 
-  group('prochainMinuit', () {
+  group('nextMidnight', () {
     test('rend le minuit civil suivant, mois et année compris', () {
       expect(
-        LocalWaterStore.prochainMinuit(DateTime(2026, 9, 15, 23, 50)),
+        nextMidnight(DateTime(2026, 9, 15, 23, 50)),
         DateTime(2026, 9, 16),
       );
+      expect(nextMidnight(DateTime(2026, 9, 30, 12, 0)), DateTime(2026, 10, 1));
       expect(
-        LocalWaterStore.prochainMinuit(DateTime(2026, 9, 30, 12, 0)),
-        DateTime(2026, 10, 1),
-      );
-      expect(
-        LocalWaterStore.prochainMinuit(DateTime(2026, 12, 31, 23, 59)),
+        nextMidnight(DateTime(2026, 12, 31, 23, 59)),
         DateTime(2027, 1, 1),
       );
     });
@@ -115,7 +113,7 @@ void main() {
       // rendrait 23 h le même jour — la bascule se ferait une heure trop
       // tôt, et le compteur afficherait la veille pendant soixante minutes.
       final debut = DateTime(2026, 10, 25);
-      final suivant = LocalWaterStore.prochainMinuit(debut);
+      final suivant = nextMidnight(debut);
       expect(suivant, DateTime(2026, 10, 26));
       expect(suivant.hour, 0, reason: 'minuit, pas 23 h ni 1 h');
 
@@ -139,7 +137,7 @@ void main() {
         debut.add(const Duration(days: 1)),
         isNot(suivant),
         reason:
-            'c’est précisément le calcul naïf que prochainMinuit remplace : '
+            'c’est précisément le calcul naïf que nextMidnight remplace : '
             'une DURÉE de 24 h ne fait pas un jour civil',
       );
     });

@@ -56,11 +56,7 @@ class HomeScreen extends ConsumerWidget {
     // Notifications push : no-op sans configuration Firebase (démo, tests).
     ref.watch(pushRegistrationProvider).ensureStarted();
 
-    final authState = ref.watch(authControllerProvider);
-    final user = switch (authState) {
-      AuthAuthenticated(:final user) => user,
-      _ => null,
-    };
+    final user = ref.watch(authControllerProvider).user;
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     final dailyLesson = ref.watch(dailyLessonProvider);
     final bottomInset =

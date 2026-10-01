@@ -80,9 +80,7 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firstName = displayName?.split(' ').first;
-    final initial = firstName == null || firstName.isEmpty
-        ? '?'
-        : firstName.characters.first.toUpperCase();
+    final initial = AppInitialAvatar.initialOf(firstName ?? '');
 
     return ConstrainedBox(
       constraints: BoxConstraints(

@@ -7,6 +7,10 @@ import 'auth_user.dart';
 sealed class AuthState {
   const AuthState();
 
+  /// Le profil de la session ouverte ; `null` sans session, ou avant que
+  /// le profil ne soit chargé.
+  AuthUser? get user => null;
+
   /// Vrai si un profil revenu du serveur appartient À CETTE session.
   ///
   /// La réponse revient LONGTEMPS après le départ, et l'appareil a pu
@@ -38,5 +42,6 @@ final class AuthAuthenticated extends AuthState {
   const AuthAuthenticated({this.user});
 
   /// Renseigné après le chargement du profil ; null juste après restauration.
+  @override
   final AuthUser? user;
 }

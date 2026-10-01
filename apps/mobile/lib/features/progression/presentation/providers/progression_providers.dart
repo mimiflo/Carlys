@@ -41,10 +41,7 @@ final progressionUnreadableProvider = Provider<bool>((ref) {
 /// Une lettre par défaut plutôt qu'un trou : un avatar vide se lirait comme
 /// un chargement qui n'aboutit pas.
 final progressionInitialProvider = Provider<String>((ref) {
-  final user = switch (ref.watch(authControllerProvider)) {
-    AuthAuthenticated(:final user) => user,
-    _ => null,
-  };
+  final user = ref.watch(authControllerProvider).user;
   final name = user?.displayName.trim() ?? '';
   return name.isEmpty
       ? 'C'

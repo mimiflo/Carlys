@@ -31,10 +31,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = switch (ref.watch(authControllerProvider)) {
-      AuthAuthenticated(:final user) => user,
-      _ => null,
-    };
+    final user = ref.watch(authControllerProvider).user;
     // Le plan nutrition ne s'affiche que sur une ligne de réglage, où
     // l'absence de valeur n'affirme rien : le `valueOrNull` y est juste.
     final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;

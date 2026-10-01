@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/features/coaching/domain/services/coach_greeting.dart';
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_style.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,7 +63,7 @@ void main() {
     'une fois par jour au plus, et jamais à qui a déjà écrit aujourd’hui',
     () {
       final matin = DateTime(2026, 10, 1, 9);
-      expect(greetingDay(matin), '2026-10-01');
+      expect(formatDayKey(matin), '2026-10-01');
       expect(
         shouldGreet(lastGreetedDay: null, wroteToday: false, now: matin),
         isTrue,

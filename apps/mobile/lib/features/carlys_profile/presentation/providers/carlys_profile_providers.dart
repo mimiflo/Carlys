@@ -29,9 +29,5 @@ final carlysProfileActionsProvider = Provider<CarlysProfileActions>(
 /// pas choisie (ou que la session n'est pas restaurée) : `null` signifie
 /// « pas de personnalisation », jamais un profil par défaut.
 final currentCarlysProfileProvider = Provider<CarlysProfile?>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  return switch (auth) {
-    AuthAuthenticated(:final user) => user?.carlysProfile,
-    _ => null,
-  };
+  return ref.watch(authControllerProvider).user?.carlysProfile;
 });

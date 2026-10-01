@@ -121,9 +121,5 @@ final mentorWordProvider = Provider<MentorWord?>((ref) {
 /// pas choisie : `null` signifie « la voix neutre du coach », jamais un
 /// style deviné.
 final currentMentorStyleProvider = Provider<MentorStyle?>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  return switch (auth) {
-    AuthAuthenticated(:final user) => user?.mentorStyle,
-    _ => null,
-  };
+  return ref.watch(authControllerProvider).user?.mentorStyle;
 });

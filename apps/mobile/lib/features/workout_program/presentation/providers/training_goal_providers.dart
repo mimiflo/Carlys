@@ -39,9 +39,5 @@ final trainingGoalActionsProvider = Provider<TrainingGoalActions>(
 /// n'est pas choisi : `null` signifie « pas encore décidé », jamais un
 /// objectif par défaut.
 final currentTrainingGoalProvider = Provider<TrainingGoal?>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  return switch (auth) {
-    AuthAuthenticated(:final user) => user?.trainingGoal,
-    _ => null,
-  };
+  return ref.watch(authControllerProvider).user?.trainingGoal;
 });

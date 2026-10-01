@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../../core/utilities/current_day.dart';
 import '../../domain/repositories/water_store.dart';
 import '../datasources/water_local_data_source.dart';
 
@@ -35,18 +36,6 @@ class LocalWaterStore implements WaterStore {
   /// Horloge injectable — le déterminisme des tests de bascule en dépend.
   final DateTime Function() _now;
 
-  /// Minuit LOCAL du lendemain de [moment].
-  ///
-  /// `dayOf(moment).add(const Duration(days: 1))` serait faux : `Duration`
-  /// est une durée ABSOLUE, donc « plus un jour » rend 1 h du matin le
-  /// dimanche où l'on recule d'une heure, et 23 h la veille quand on avance —
-  /// la bascule se ferait alors une heure trop tôt ou trop tard, deux nuits
-  /// par an. Le constructeur `DateTime` raisonne en jour CIVIL : `day + 1`
-  /// passe au mois puis à l'année suivante tout seul, et rend l'instant local
-  /// correspondant quel que soit le changement d'heure au milieu.
-  static DateTime prochainMinuit(DateTime moment) =>
-      DateTime(moment.year, moment.month, moment.day + 1);
-
   @override
   Stream<int> watchToday() {
     late final StreamController<int> sortie;
@@ -67,7 +56,7 @@ class LocalWaterStore implements WaterStore {
             },
           );
       minuit?.cancel();
-      minuit = Timer(prochainMinuit(maintenant).difference(maintenant), () {
+      minuit = Timer(nextMidnight(maintenant).difference(maintenant), () {
         suivreLeJourCourant();
       });
     }

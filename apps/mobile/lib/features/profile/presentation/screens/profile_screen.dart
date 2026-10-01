@@ -42,10 +42,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = switch (ref.watch(authControllerProvider)) {
-      AuthAuthenticated(:final user) => user,
-      _ => null,
-    };
+    final user = ref.watch(authControllerProvider).user;
     final badges = ref.watch(profileBadgeCountProvider);
     final friends = ref.watch(profileFriendsCountProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
