@@ -86,3 +86,18 @@ String coachGreeting({
       : '$_intro ${_firstVisit[style]!}';
   return '$hello$name ! $body';
 }
+
+/// Le jour LOCAL tel que le bonjour le retient : « 2026-10-01 ».
+String greetingDay(DateTime now) {
+  final day = now.toLocal();
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${day.year}-${two(day.month)}-${two(day.day)}';
+}
+
+/// Un bonjour par jour AU PLUS : pas une seconde fois en rouvrant l'écran,
+/// et pas du tout quand la conversation du jour est déjà lancée.
+bool shouldGreet({
+  required String? lastGreetedDay,
+  required bool wroteToday,
+  required DateTime now,
+}) => !wroteToday && lastGreetedDay != greetingDay(now);

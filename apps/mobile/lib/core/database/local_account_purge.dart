@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app/restore/app_restore.dart';
 import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/providers/academy_providers.dart';
+import '../../features/coaching/data/coach_greeting_store.dart';
 import '../../features/coaching/data/coach_thread_cache.dart';
 import '../../features/community/presentation/providers/community_providers.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
@@ -75,6 +76,8 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // Le dernier fil du coach, gardé pour la lecture hors ligne : poids,
     // repas, douleurs — ce qu'on a de plus personnel à laisser derrière soi.
     CoachThreadCache.key,
+    // Le jour du dernier bonjour du coach : le compte suivant a droit au sien.
+    CoachGreetingStore.key,
     LocalAccountOwner.key,
   ];
 

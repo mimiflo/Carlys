@@ -57,4 +57,35 @@ void main() {
       }
     }
   });
+
+  test(
+    'une fois par jour au plus, et jamais à qui a déjà écrit aujourd’hui',
+    () {
+      final matin = DateTime(2026, 10, 1, 9);
+      expect(greetingDay(matin), '2026-10-01');
+      expect(
+        shouldGreet(lastGreetedDay: null, wroteToday: false, now: matin),
+        isTrue,
+      );
+      // Déjà dit ce matin : pas une seconde fois, même en rouvrant l'écran.
+      expect(
+        shouldGreet(lastGreetedDay: '2026-10-01', wroteToday: false, now: soir),
+        isFalse,
+      );
+      // Dit hier : aujourd'hui, de nouveau.
+      expect(
+        shouldGreet(
+          lastGreetedDay: '2026-09-30',
+          wroteToday: false,
+          now: matin,
+        ),
+        isTrue,
+      );
+      // La conversation du jour est déjà lancée : pas de bonjour par-dessus.
+      expect(
+        shouldGreet(lastGreetedDay: null, wroteToday: true, now: matin),
+        isFalse,
+      );
+    },
+  );
 }

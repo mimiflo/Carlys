@@ -10,6 +10,7 @@ import 'package:carlys_mobile/features/subscription/data/repositories/subscripti
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_coach_repository.dart';
 import '../../support/fake_subscription_repository.dart';
@@ -21,6 +22,9 @@ import '../../support/fake_subscription_repository.dart';
 /// serveur : le droit d'accès, le plafond quotidien, la perte de réseau. Aucun
 /// de ces trois cas ne doit ressembler à une panne.
 void main() {
+  // Aucun bonjour retenu : chaque test commence par une première ouverture.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   final thread = CoachConversationSummary(
     id: '11111111-1111-4111-8111-111111111111',
     messagesCount: 2,
@@ -120,6 +124,18 @@ void main() {
       tester.getTopLeft(previous).dy,
       lessThan(tester.getTopLeft(hello).dy),
     );
+  });
+
+  testWidgets('un bonjour par jour : rouvrir l’écran ne le redit pas', (
+    tester,
+  ) async {
+    await pumpPage(tester, FakeCoachRepository(threads: [thread]));
+    expect(find.textContaining('Florian !'), findsOneWidget);
+
+    // On ferme, on rouvre le même jour.
+    await tester.pumpWidget(const SizedBox());
+    await pumpPage(tester, FakeCoachRepository(threads: [thread]));
+    expect(find.textContaining('Florian !'), findsNothing);
   });
 
   testWidgets('en lecture seule, pas de bonjour qui inviterait à écrire', (
