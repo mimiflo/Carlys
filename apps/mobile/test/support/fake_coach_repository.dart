@@ -112,10 +112,13 @@ class FakeCoachRepository implements CoachRepository {
 
     return reply ??
         CoachReply(
+          // Daté comme le serveur le date : c'est ce qui dit « écrit
+          // aujourd'hui » à l'écran.
           userMessage: CoachMessage(
             id: messageId,
             role: CoachRole.user,
             content: content,
+            createdAt: DateTime.now().toUtc(),
           ),
           assistantMessage: const CoachMessage(
             id: 'answer',

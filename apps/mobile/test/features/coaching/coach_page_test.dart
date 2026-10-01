@@ -4,6 +4,7 @@ import 'package:carlys_mobile/features/coaching/data/repositories/coach_reposito
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_greeting_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -196,6 +197,72 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller?.text,
       isEmpty,
     );
+  });
+
+  testWidgets('une fois la première question du jour posée, les amorces '
+      's’effacent', (tester) async {
+    await pumpPage(tester, FakeCoachRepository(threads: [thread]));
+    expect(find.text('Par où je commence ?'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Où j’en suis ?');
+    await tester.tap(find.bySemanticsLabel('Envoyer'));
+    await tester.pump();
+    // Dès l'appui, pas seulement à la réponse.
+    expect(find.text('Par où je commence ?'), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.text('Par où je commence ?'), findsNothing);
+  });
+
+  testWidgets('déjà écrit aujourd’hui : pas d’amorces ; écrit hier : si', (
+    tester,
+  ) async {
+    CoachMessage question(DateTime at) => CoachMessage(
+      id: 'q-$at',
+      role: CoachRole.user,
+      content: 'Une question',
+      createdAt: at,
+    );
+    final now = DateTime.now();
+
+    await pumpPage(
+      tester,
+      FakeCoachRepository(threads: [thread], messages: [question(now)]),
+    );
+    expect(find.text('Par où je commence ?'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpPage(
+      tester,
+      FakeCoachRepository(
+        threads: [thread],
+        messages: [question(now.subtract(const Duration(days: 1)))],
+      ),
+    );
+    expect(find.text('Par où je commence ?'), findsOneWidget);
+  });
+
+  testWidgets('la question est dans le fil dès l’appui, avant toute réponse', (
+    tester,
+  ) async {
+    final repository = FakeCoachRepository(threads: [thread])
+      ..hangUntilCancelled = true;
+    await pumpPage(tester, repository);
+
+    await tester.enterText(find.byType(TextField), 'Où j’en suis ?');
+    await tester.tap(find.bySemanticsLabel('Envoyer'));
+    await tester.pump();
+
+    expect(find.text('Où j’en suis ?'), findsOneWidget);
+    // Le serveur n'a rien rendu : seule la question est là, sous le bonjour
+    // (sa bulle, quel que soit son état : l'attente se compte en temps réel).
+    final hello = find.byType(CoachGreetingBubble);
+    expect(
+      tester.getTopLeft(hello).dy,
+      lessThan(tester.getTopLeft(find.text('Où j’en suis ?')).dy),
+    );
+    await tester.tap(find.bySemanticsLabel('Arrêter'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets(

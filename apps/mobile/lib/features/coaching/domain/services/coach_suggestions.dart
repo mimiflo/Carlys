@@ -7,7 +7,9 @@
 /// données, il n'en reste qu'une, générique et honnête.
 library;
 
+import '../../../../core/utilities/civil_days.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
+import '../entities/coach.dart';
 
 /// Ce que l'application sait de l'utilisateur au moment d'ouvrir le coach.
 ///
@@ -104,3 +106,16 @@ List<String> coachSuggestions(CoachContext context) {
 
   return suggestions.take(maxCoachSuggestions).toList();
 }
+
+/// La personne a-t-elle déjà écrit au coach AUJOURD'HUI (jour local) ?
+///
+/// Les amorces servent à lancer la conversation du jour : une fois lancée,
+/// elles s'effacent jusqu'au lendemain. Un message sans date ne compte pas :
+/// on n'invente pas de jour.
+bool coachWroteToday(Iterable<CoachMessage> messages, DateTime now) =>
+    messages.any((message) {
+      final at = message.createdAt;
+      return message.role == CoachRole.user &&
+          at != null &&
+          joursCivilsEntre(at, now) == 0;
+    });

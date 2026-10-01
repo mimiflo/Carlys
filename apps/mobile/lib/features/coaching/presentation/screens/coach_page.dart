@@ -8,6 +8,7 @@ import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/services/coach_greeting.dart';
+import '../../domain/services/coach_suggestions.dart';
 import '../controllers/coach_controllers.dart';
 import '../providers/coach_program_actions.dart';
 import '../widgets/coach_header.dart';
@@ -35,6 +36,16 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   /// Le bonjour de CETTE ouverture : écrit une fois, à sa place dans le
   /// fil, et qui y reste pendant la visite.
   CoachGreeting? _greeting;
+
+  /// Les amorces lancent la conversation du JOUR : dès la première question
+  /// partie (ou déjà posée aujourd'hui), elles s'effacent jusqu'au lendemain.
+  List<String> _suggestionsFor(CoachThreadState state) {
+    final suggestions = ref.watch(coachSuggestionsProvider);
+    final started =
+        state.live != null ||
+        coachWroteToday(state.conversation.messages, DateTime.now());
+    return started ? const [] : suggestions;
+  }
 
   /// Pas de bonjour à qui ne peut pas écrire (fil en lecture seule, hors
   /// ligne) : le coach n'inviterait qu'à une question qu'il ne recevra pas.
@@ -130,7 +141,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
       data: (state) => CoachScreen(
         greeting: _greeting ??= _greet(state),
         messages: state.conversation.messages,
-        suggestions: ref.watch(coachSuggestionsProvider),
+        suggestions: _suggestionsFor(state),
         composerController: _composer,
         onSend: _send,
         onOpenProposal: _openProposal,

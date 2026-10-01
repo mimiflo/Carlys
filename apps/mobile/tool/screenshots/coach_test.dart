@@ -8,6 +8,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/domain/services/coach_greeting.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:flutter/material.dart';
@@ -78,7 +79,6 @@ void main() {
   Future<void> pumpCoach(
     WidgetTester tester, {
     required List<CoachMessage> messages,
-    List<String> suggestions = _suggestions,
     bool isOffline = false,
     CoachLiveTurn? live,
     CoachGreeting? greeting,
@@ -96,7 +96,11 @@ void main() {
         theme: AppTheme.dark(),
         home: CoachScreen(
           messages: messages,
-          suggestions: suggestions,
+          // La règle de la page : les amorces s'effacent dès la première
+          // question du jour.
+          suggestions: live != null || coachWroteToday(messages, DateTime.now())
+              ? const []
+              : _suggestions,
           composerController: controller,
           onSend: (_) {},
           onOpenProposal: (_) {},

@@ -704,6 +704,13 @@ inviterait à une question que le coach ne recevrait pas. Moins
 d'animations : le bonjour est là tout de suite. Captures `coach-02-vide` et
 `coach-08-bonjour`.
 
+**Les amorces lancent la conversation du jour, puis s'effacent**
+(1er octobre 2026). Dès que la première question du jour part, et tant
+qu'une question posée aujourd'hui (jour local) est dans le fil, la bande de
+puces disparaît : elle revient le lendemain (`coachWroteToday`). La question
+envoyée, elle, entre dans le fil dès l'appui, au-dessus de la réponse qui
+s'écrit (depuis le 30 septembre 2026).
+
 **L'en-tête et la barre de saisie tiennent les deux bords de l'écran.**
 L'en-tête porte `AppBackButton`, la flèche commune du design system : elle
 dépile la branche Training et s'efface seule s'il n'y a rien derrière. Les
