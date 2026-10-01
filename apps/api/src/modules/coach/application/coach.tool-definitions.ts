@@ -30,9 +30,22 @@ export const COACH_TOOLS: CoachToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        search: { type: 'string', description: 'Mots du nom recherché.' },
-        muscleGroupSlug: { type: 'string', description: 'Ex. pectoraux, dos, jambes.' },
-        equipmentSlug: { type: 'string', description: 'Ex. barre, halteres, poids-du-corps.' },
+        search: {
+          type: 'string',
+          description:
+            'Mots du NOM de l’exercice (« développé », « squat »). Pour un muscle ' +
+            'ou un matériel, utilise plutôt les deux champs suivants.',
+        },
+        muscleGroupSlug: {
+          type: 'string',
+          description:
+            'pectoraux, dos, epaules, biceps, triceps, avant-bras, abdominaux, ' +
+            'lombaires, quadriceps, ischio-jambiers, fessiers ou mollets.',
+        },
+        equipmentSlug: {
+          type: 'string',
+          description: 'Ex. barre, halteres, poids-du-corps, machine, poulie, kettlebell.',
+        },
       },
     },
   },

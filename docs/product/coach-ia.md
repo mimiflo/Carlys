@@ -516,7 +516,24 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   retrouvé 2 654 jetons sur 2 661 en cache) ; lui faire réutiliser les
   consignes du coach n'apportait rien.
   Les résultats d'outils passent par des vues allégées (`coach-views.ts`,
-  `coach-meal-view.ts`) : 10 pesées, 783 jetons complètes, 223 allégées. Les lectures par personne (profil, voix) coûtent quelques
+  `coach-meal-view.ts`) : 10 pesées, 783 jetons complètes, 223 allégées ;
+  10 exercices du catalogue, 1 962 contre 582.
+- **Ce que le modèle écrit n'est pas ce que le catalogue range** (constaté le
+  1er octobre 2026 sur Qwen3-4B). Il cherchait « pecs », « pectoral », ou
+  glissait le muscle dans les mots du nom : la recherche revenait vide, et
+  le coach concluait « aucun exercice pour les pectoraux ».
+  `coach-exercise-search.ts` traduit : slug, nom, accents, début de mot non
+  ambigu, mots de salle (pecs, abdos, ischios) ; un mot de la recherche qui
+  nomme un groupe ou un matériel en devient le filtre ; sans résultat, les
+  mots du nom sont relâchés. Un nom inconnu revient au modèle AVEC la liste
+  des valeurs, et il corrige au tour suivant.
+- **L'annonce sans l'action.** Il écrivait parfois « Je cherche… Une
+  minute. » et rendait la main sans appeler d'outil : la suite promise ne
+  venait jamais. Les consignes l'interdisent, et le client relance UNE fois
+  un tour qui se termine sur une recherche promise
+  (`infrastructure/announced-action.ts`). Sur l'appli, « Réfléchit… » reste
+  sous le texte jusqu'à la fin du tour : entre deux recherches, la bulle ne
+  semble plus finie. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en
   cache ne se mesurerait pas, et aucune réponse n'est jamais mise en cache.
 - **Capacité** : se mesure, ne s'estime pas. `carlysctl coach-bench <env>`

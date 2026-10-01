@@ -345,6 +345,66 @@ describe('OpenAiCompatibleCoachClient', () => {
       });
     });
 
+    it('« Une minute. » sans appel d’outil : relancé UNE fois, la vraie réponse arrive', async () => {
+      // Constaté sur Qwen3-4B : l'annonce rendait la main, et la personne
+      // attendait une suite qui ne venait jamais.
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je cherche tes records. Une minute.' }))
+        .mockResolvedValueOnce(
+          completion({
+            content: '',
+            tool_calls: [toolCall('call00001', 'get_personal_records', '{}')],
+          }),
+        )
+        .mockResolvedValueOnce(completion({ content: 'Ton record au squat : 100 kg.' }))
+        .mockResolvedValueOnce(completion({ content: 'Je vérifie encore une fois.' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Ton record au squat : 100 kg.',
+      });
+      // La relance suit l'annonce, comme un message de la personne.
+      const relance = sent(fetchMock, 1).body.messages.slice(-2);
+      expect(relance[0]).toMatchObject({
+        role: 'assistant',
+        content: 'Je cherche tes records. Une minute.',
+      });
+      expect(relance[1]?.role).toBe('user');
+      expect(String(relance[1]?.content)).toContain('Appelle maintenant');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('après une proposition retenue, « Voici la séance : » n’est pas une annonce à relancer', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(
+          completion({
+            content: '',
+            tool_calls: [toolCall('call00001', 'propose_session', '{"name":"Pecs"}')],
+          }),
+        )
+        .mockResolvedValueOnce(completion({ content: 'Voici la séance que je te propose :' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Voici la séance que je te propose :',
+        proposal: { name: 'Pecs' },
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('une seule relance par tour : une seconde annonce est rendue telle quelle', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Une minute.' }))
+        .mockResolvedValueOnce(completion({ content: 'Je regarde encore, un instant.' }));
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Je regarde encore, un instant.',
+      });
+    });
+
     it('un appel d’outil sans `function` (passerelle non conforme) : outil inconnu, pas un 500', async () => {
       global.fetch = jest
         .fn()

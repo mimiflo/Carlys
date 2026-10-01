@@ -10,9 +10,11 @@ import { ProgressService } from '../../progress/application/progress.service';
 import { UsersService } from '../../users/application/users.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
+import { exerciseSearchFilters, filtersFromSearch } from './coach-exercise-search';
 import { coachMealView } from './coach-meal-view';
 import {
   coachBodyMetricView,
+  coachExerciseView,
   coachRecordView,
   coachSessionView,
   coachTemplateSummaryView,
@@ -73,14 +75,7 @@ export class CoachTools {
 
     switch (call.name) {
       case 'search_exercises':
-        return this.exercises.list(
-          {
-            search: asString(input.search),
-            muscleGroupSlug: asString(input.muscleGroupSlug),
-            equipmentSlug: asString(input.equipmentSlug),
-          },
-          DEFAULT_LIMIT,
-        );
+        return this.searchExercises(input);
 
       // Les lectures passent par les vues du coach (coach-views.ts) : les
       // contrats d'écran, relus tels quels à chaque tour, coûtaient des
@@ -134,6 +129,34 @@ export class CoachTools {
       default:
         throw new Error(`Outil inconnu : ${call.name}`);
     }
+  }
+
+  /**
+   * Ce que le modèle écrit, traduit vers le catalogue
+   * (`coach-exercise-search.ts`). Des mots du nom qui ne figurent dans aucun
+   * exercice (« exercices de », « muscler ») ne doivent pas vider un filtre
+   * de groupe ou de matériel valable : sans résultat, on les relâche.
+   */
+  private async searchExercises(input: Record<string, unknown>) {
+    const [muscleGroups, equipment] = await Promise.all([
+      this.exercises.muscleGroups(),
+      this.exercises.equipment(),
+    ]);
+    const catalog = { muscleGroups, equipment };
+    const exact = exerciseSearchFilters(input, catalog);
+    // Le nom tel quel, puis le muscle ou le matériel tirés des mots, puis le
+    // filtre seul : on s'arrête au premier essai qui trouve.
+    const pulled = filtersFromSearch(exact, catalog);
+    const last = pulled ?? exact;
+    const tries = [exact, ...(pulled === null ? [] : [pulled])];
+    if (last.search !== undefined && (last.muscleGroupSlug ?? last.equipmentSlug) !== undefined) {
+      tries.push({ ...last, search: undefined });
+    }
+    for (const filters of tries) {
+      const page = await this.exercises.list(filters, DEFAULT_LIMIT);
+      if (page.items.length > 0) return page.items.map(coachExerciseView);
+    }
+    return [];
   }
 }
 

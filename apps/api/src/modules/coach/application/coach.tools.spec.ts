@@ -73,9 +73,9 @@ function buildStubs(): Stubs {
   };
 }
 
-function buildTools(stubs: Stubs): CoachTools {
+function buildTools(stubs: Stubs, exercises: object = {}): CoachTools {
   return new CoachTools(
-    {} as unknown as ExercisesService,
+    exercises as unknown as ExercisesService,
     {} as unknown as WorkoutTemplatesService,
     {} as unknown as WorkoutsService,
     {} as unknown as ProgressService,
@@ -99,6 +99,80 @@ describe('CoachTools', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('search_exercises : le muscle glissé dans les mots du nom trouve quand même', async () => {
+    // Constaté sur Qwen3-4B : « pectoraux » en mots du nom, et des mots
+    // qu'aucun nom ne contient. La liste vide faisait conclure au coach
+    // qu'il n'existait aucun exercice pour les pectoraux.
+    const pushUp = {
+      id: 'ex-pompes',
+      slug: 'pompes',
+      name: 'Pompes',
+      difficulty: 'BEGINNER',
+      type: 'STRENGTH',
+      isPremium: false,
+      primaryMuscleGroup: { id: 'g-1', slug: 'pectoraux', name: 'Pectoraux' },
+      equipment: [{ id: 'e-1', slug: 'poids-du-corps', name: 'Poids du corps' }],
+      imageUrl: 'https://cdn.example/pompes.webp',
+    };
+    const exercises = {
+      muscleGroups: jest.fn().mockResolvedValue([{ slug: 'pectoraux', name: 'Pectoraux' }]),
+      equipment: jest.fn().mockResolvedValue([{ slug: 'poids-du-corps', name: 'Poids du corps' }]),
+      list: jest
+        .fn()
+        .mockResolvedValueOnce({ items: [], hasMore: false, total: 0, nextCursor: null })
+        .mockResolvedValueOnce({ items: [], hasMore: false, total: 0, nextCursor: null })
+        .mockResolvedValueOnce({ items: [pushUp], hasMore: false, total: 1, nextCursor: null }),
+    };
+    const tools = buildTools(buildStubs(), exercises);
+
+    const [result] = await tools.run(USER, [
+      { id: 'c1', name: 'search_exercises', input: { search: 'exercices pectoraux' } },
+    ]);
+
+    // D'abord le nom tel quel : un nom exact se trouve d'un seul tenant.
+    expect(exercises.list).toHaveBeenNthCalledWith(
+      1,
+      { search: 'exercices pectoraux' },
+      expect.any(Number),
+    );
+    // Puis le muscle tiré des mots ; enfin le filtre de groupe seul.
+    expect(exercises.list).toHaveBeenNthCalledWith(
+      2,
+      { search: 'exercices', muscleGroupSlug: 'pectoraux' },
+      expect.any(Number),
+    );
+    expect(exercises.list).toHaveBeenNthCalledWith(
+      3,
+      { muscleGroupSlug: 'pectoraux' },
+      expect.any(Number),
+    );
+    // La vue du coach : de quoi citer et proposer, sans image ni slug.
+    expect(JSON.parse(result?.content ?? '')).toEqual([
+      {
+        id: 'ex-pompes',
+        name: 'Pompes',
+        difficulty: 'BEGINNER',
+        muscle: 'pectoraux',
+        equipment: ['poids-du-corps'],
+      },
+    ]);
+  });
+
+  it('search_exercises : un groupe inconnu revient au modèle avec les valeurs possibles', async () => {
+    const exercises = {
+      muscleGroups: jest.fn().mockResolvedValue([{ slug: 'pectoraux', name: 'Pectoraux' }]),
+      equipment: jest.fn().mockResolvedValue([]),
+      list: jest.fn(),
+    };
+    const [result] = await buildTools(buildStubs(), exercises).run(USER, [
+      { id: 'c1', name: 'search_exercises', input: { muscleGroupSlug: 'jambes' } },
+    ]);
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content).toContain('Valeurs possibles : pectoraux');
+    expect(exercises.list).not.toHaveBeenCalled();
   });
 
   it('get_training_profile rend le profil et le programme en cours', async () => {

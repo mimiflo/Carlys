@@ -1,5 +1,6 @@
 import {
   type BodyMetric,
+  type ExerciseSummary,
   type PersonalRecord,
   type WorkoutSessionSummary,
   type WorkoutTemplateDetail,
@@ -46,6 +47,22 @@ export function coachRecordView(record: PersonalRecord) {
     reps: record.reps,
     weightKg: record.weightKg,
     achievedAt: toDay(record.achievedAt),
+  };
+}
+
+/**
+ * Un exercice du catalogue : de quoi le citer et le proposer (son `id`).
+ * Le résumé d'écran portait le slug, l'image, les identifiants du groupe et
+ * du matériel : 10 exercices, 1 962 jetons, contre 582 ici (mesuré le
+ * 1er octobre 2026), relus à chaque tour d'outil.
+ */
+export function coachExerciseView(exercise: ExerciseSummary) {
+  return {
+    id: exercise.id,
+    name: exercise.name,
+    difficulty: exercise.difficulty,
+    muscle: exercise.primaryMuscleGroup?.slug ?? null,
+    equipment: exercise.equipment.map((item) => item.slug),
   };
 }
 

@@ -16,6 +16,7 @@ import {
 } from '../domain/coach-model.port';
 import { type ChatCompletion, readChatStream } from './chat-completion-stream';
 import { type CoachWorkerPool } from './coach-worker-pool';
+import { ANNOUNCED_ACTION_NUDGE, announcesAction } from './announced-action';
 
 /**
  * Nouvelles tentatives sur un 429, un 5xx ou un worker injoignable, comme le
@@ -70,6 +71,8 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         input.onText?.(text);
       });
 
+    // Une relance au plus par tour quand le modèle annonce sans agir.
+    let nudged = false;
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
       spoke = false;
       const { completion, served } = await this.complete(
@@ -92,6 +95,20 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       // Sur la PRÉSENCE d'appels, jamais sur `finish_reason` : certains
       // fournisseurs rendent « stop » avec des appels d'outils.
       const toolCalls = choice?.message?.tool_calls ?? [];
+      // Une proposition retenue est la suite promise : « Voici la séance : »
+      // précède sa carte, il n'y a rien à relancer.
+      const promised =
+        !nudged && proposal === null && round < COACH_MAX_TOOL_ROUNDS - 1 && input.tools.length > 0;
+      if (toolCalls.length === 0 && promised && announcesAction(textOf(choice?.message?.content))) {
+        // « Une minute. » et la main rendue : sans relance, la suite promise
+        // ne viendrait jamais (announced-action.ts).
+        nudged = true;
+        messages.push(
+          { role: 'assistant', content: choice?.message?.content ?? '' },
+          { role: 'user', content: ANNOUNCED_ACTION_NUDGE },
+        );
+        continue;
+      }
       if (toolCalls.length === 0) {
         return {
           text: said || COACH_GAVE_UP_TEXT,
