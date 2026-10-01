@@ -294,10 +294,12 @@ void main() {
     );
 
     expect(find.text('Demain, repos actif :'), findsOneWidget);
-    expect(find.text('Réfléchit…'), findsNothing);
     final question = tester.getRect(find.text('Et demain ?'));
     final reponse = tester.getRect(find.text('Demain, repos actif :'));
     expect(reponse.top, greaterThan(question.bottom));
+    // Tant que le tour n'est pas fini, la réflexion se dit SOUS le texte.
+    final status = tester.getRect(find.text('Réfléchit…'));
+    expect(status.top, greaterThan(reponse.bottom));
   });
 
   testWidgets('animations réduites : les points ne bougent pas', (

@@ -31,6 +31,23 @@ void main() {
       await pump(tester, const CoachLiveBubble(text: ''));
       expect(find.text('Réfléchit…'), findsOneWidget);
     });
+
+    testWidgets('le texte commencé, il réfléchit ENCORE jusqu’à la fin', (
+      tester,
+    ) async {
+      // « Je cherche des exercices… » puis rien : entre deux recherches, la
+      // bulle doit dire que le coach travaille, pas sembler finie.
+      await pump(
+        tester,
+        const CoachLiveBubble(text: 'Je cherche des exercices pour les pecs.'),
+      );
+      expect(
+        find.text('Je cherche des exercices pour les pecs.'),
+        findsOneWidget,
+      );
+      expect(find.text('Réfléchit…'), findsOneWidget);
+      expect(find.byType(CoachThinkingDots), findsOneWidget);
+    });
   });
 
   group('le composeur pendant une réponse', () {

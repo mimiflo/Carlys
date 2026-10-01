@@ -36,35 +36,41 @@ class CoachLiveBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (text.isEmpty) {
-      return CoachBubble(
-        isUser: false,
-        maxWidth: maxWidth,
-        child: Semantics(
-          label: ahead == null
-              ? 'Le coach réfléchit'
-              : 'Le coach est sollicité : $_waiting',
-          excludeSemantics: true,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CoachThinkingDots(),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                _waiting,
-                style: AppTypography.label.copyWith(
-                  color: AppColors.darkTextSecondary,
-                ),
-              ),
-            ],
+    final status = Semantics(
+      label: ahead == null
+          ? 'Le coach réfléchit'
+          : 'Le coach est sollicité : $_waiting',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CoachThinkingDots(),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            _waiting,
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
-        ),
-      );
-    }
+        ],
+      ),
+    );
     return CoachBubble(
       isUser: false,
       maxWidth: maxWidth,
-      child: CoachBubbleText(text, isUser: false),
+      // Le texte commencé, la réflexion continue dessous jusqu'à la fin du
+      // tour : entre deux recherches, rien ne s'écrit, et la bulle ne doit
+      // pas sembler finie.
+      child: text.isEmpty
+          ? status
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CoachBubbleText(text, isUser: false),
+                const SizedBox(height: AppSpacing.sm),
+                status,
+              ],
+            ),
     );
   }
 }
