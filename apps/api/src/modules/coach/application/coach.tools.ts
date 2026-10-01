@@ -1,4 +1,8 @@
-import { type ExerciseSummary, type ProgressPeriod } from '@carlys/api-contracts';
+import {
+  type ExerciseSummary,
+  type ProgressPeriod,
+  progressPeriodSchema,
+} from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { BodyMetricType } from '@prisma/client';
@@ -212,10 +216,6 @@ function asBoundedInteger(value: unknown, fallback: number, max: number): number
   return Math.min(Math.max(value, 1), max);
 }
 
-const PERIODS = ['week', 'month', 'year'] as const;
-
 function asPeriod(value: unknown): ProgressPeriod {
-  return typeof value === 'string' && (PERIODS as readonly string[]).includes(value)
-    ? (value as ProgressPeriod)
-    : 'month';
+  return progressPeriodSchema.catch('month').parse(value);
 }

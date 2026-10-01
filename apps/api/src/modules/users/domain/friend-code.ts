@@ -36,18 +36,9 @@ export function normalizeFriendCode(raw: string): string | null {
   return CANONICAL.test(stripped) ? stripped : null;
 }
 
-/** Forme affichée : `XXXX-XXXX`, plus lisible et plus facile à dicter. */
-export function formatFriendCode(code: string): string {
-  return `${code.slice(0, 4)}-${code.slice(4)}`;
-}
-
 /**
  * Charge utile des QR de profil. Le préfixe distingue un QR Carlys de
  * n'importe quel autre code scanné par erreur — le scanner mobile refuse
  * tout ce qui ne le porte pas.
  */
 export const FRIEND_CODE_QR_PREFIX = 'carlys:friend:';
-
-export function friendCodeQrPayload(code: string): string {
-  return `${FRIEND_CODE_QR_PREFIX}${code}`;
-}

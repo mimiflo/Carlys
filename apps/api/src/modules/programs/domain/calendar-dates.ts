@@ -1,4 +1,4 @@
-import { addDays, daysBetween, isoWeekday, mondayOf } from '../../../common/utilities/civil-day';
+import { addDays, daysBetween, mondayOf } from '../../../common/utilities/civil-day';
 import { type ProgramDayStatus } from '@carlys/api-contracts';
 
 /**
@@ -86,4 +86,3 @@ export function statusOfSlot(input: {
  * d'entrée : la grille et les jours civils se parlent à cet endroit, et
  * nulle part ailleurs.
  */
-export { isoWeekday };

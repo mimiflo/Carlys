@@ -98,11 +98,6 @@ export class TravauxEnVol {
     this.enVol.add(suivi);
   }
 
-  /** Y a-t-il encore quelque chose en vol ? (Diagnostic et tests.) */
-  get enCours(): number {
-    return this.enVol.size;
-  }
-
   /**
    * Attend ce qui est en vol, et rend ce qu'il en est.
    *

@@ -36,13 +36,13 @@ const SLANG: Record<string, string> = {
   quadris: 'quadriceps',
 };
 
-const normalize = (text: string) =>
+const fold = (text: string) =>
   text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-');
+    .toLowerCase();
+
+const normalize = (text: string) => fold(text).trim().replace(/\s+/g, '-');
 
 /** Le slug désigné par [term] ; `null` s'il n'y en a pas, ou plusieurs. */
 function resolve(term: string, entries: readonly CatalogEntry[]): string | null {
@@ -136,12 +136,6 @@ interface Named {
   name: string;
   primaryMuscleGroup: { slug: string } | null;
 }
-
-const fold = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
 
 /**
  * Les exercices dont le nom contient CHAQUE mot cherché, sans accents ni

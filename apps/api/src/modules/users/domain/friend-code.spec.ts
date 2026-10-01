@@ -1,8 +1,6 @@
 import {
   FRIEND_CODE_ALPHABET,
   FRIEND_CODE_LENGTH,
-  formatFriendCode,
-  friendCodeQrPayload,
   generateFriendCode,
   normalizeFriendCode,
 } from './friend-code';
@@ -40,13 +38,11 @@ describe('friend-code', () => {
 
   it('affiche en XXXX-XXXX et re-normalise à l’identique', () => {
     const code = generateFriendCode();
-    expect(formatFriendCode(code)).toBe(`${code.slice(0, 4)}-${code.slice(4)}`);
-    expect(normalizeFriendCode(formatFriendCode(code))).toBe(code);
+    expect(normalizeFriendCode(`${code.slice(0, 4)}-${code.slice(4)}`)).toBe(code);
   });
 
   it('le QR porte le préfixe Carlys et se re-normalise', () => {
     const code = generateFriendCode();
-    expect(friendCodeQrPayload(code)).toBe(`carlys:friend:${code}`);
-    expect(normalizeFriendCode(friendCodeQrPayload(code))).toBe(code);
+    expect(normalizeFriendCode(`carlys:friend:${code}`)).toBe(code);
   });
 });
