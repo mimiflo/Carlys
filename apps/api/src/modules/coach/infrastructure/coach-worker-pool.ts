@@ -30,6 +30,11 @@ export interface CoachWorkerStatus {
  * revient seul. Si tous sont écartés, on tente celui qui revient le plus tôt :
  * mieux vaut un essai qu'un refus certain.
  *
+ * Exception : la suite d'un MÊME tour (outils, occasion d'agir) retourne au
+ * worker qui a servi le début (`prefer`), s'il est sain. Lui seul garde la
+ * conversation dans son cache : ailleurs, elle se relirait en entier, des
+ * dizaines de secondes à 32 jetons/s sur processeur.
+ *
  * ponytail: les compteurs sont PAR EXEMPLAIRE de l'API. La file Redis borne
  * déjà le total ; une répartition exacte entre exemplaires ne servira que le
  * jour où plusieurs API partageront plusieurs workers inégaux.
@@ -45,8 +50,11 @@ export class CoachWorkerPool {
     this.workers = urls.map((url) => ({ url, name: hostOf(url), active: 0, downUntil: 0 }));
   }
 
-  /** Réserve un worker ; `exclude` : ceux qui viennent d'échouer pour ce tour. */
-  acquire(exclude: ReadonlySet<string> = new Set()): CoachWorker {
+  /**
+   * Réserve un worker ; `exclude` : ceux qui viennent d'échouer pour ce tour ;
+   * `prefer` : le nom de celui qui a servi le début du tour.
+   */
+  acquire(exclude: ReadonlySet<string> = new Set(), prefer?: string): CoachWorker {
     if (this.workers.length === 0) {
       throw new ServiceUnavailableException('Aucun worker IA configuré.');
     }
@@ -55,9 +63,10 @@ export class CoachWorkerPool {
     const pool = candidates.length > 0 ? candidates : this.workers;
     const healthy = pool.filter((w) => w.downUntil <= now);
     const chosen =
-      healthy.length > 0
+      healthy.find((w) => w.name === prefer) ??
+      (healthy.length > 0
         ? healthy.reduce((best, w) => (w.active < best.active ? w : best))
-        : pool.reduce((best, w) => (w.downUntil < best.downUntil ? w : best));
+        : pool.reduce((best, w) => (w.downUntil < best.downUntil ? w : best)));
     chosen.active += 1;
     return chosen;
   }

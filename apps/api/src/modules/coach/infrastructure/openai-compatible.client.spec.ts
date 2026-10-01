@@ -9,6 +9,7 @@ import {
   type CoachToolCall,
   type CoachTurnInput,
 } from '../domain/coach-model.port';
+import { probeFor } from './announced-action';
 import { CoachWorkerPool } from './coach-worker-pool';
 import { OpenAiCompatibleCoachClient } from './openai-compatible.client';
 
@@ -90,6 +91,54 @@ function failure(
 function toolCall(id: string, name: string, args: string) {
   return { id, type: 'function', function: { name, arguments: args } };
 }
+
+/** Un flux qui n'en finit pas de rédiger, et s'interrompt quand sa requête est annulée. */
+function endless(text: string, signal: AbortSignal | null | undefined): Response {
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      pull(controller) {
+        if (signal?.aborted === true) {
+          controller.error(new DOMException('annulé', 'AbortError'));
+          return;
+        }
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(textDelta(`${text} `))}\n\n`));
+      },
+    }),
+    { headers: { 'Content-Type': 'text/event-stream' } },
+  );
+}
+
+function clientWith(pool: CoachWorkerPool) {
+  return new OpenAiCompatibleCoachClient(
+    {
+      coachProvider: MISTRAL,
+      coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 2048 },
+    } as unknown as AppConfigService,
+    pool,
+  );
+}
+
+/** Une réponse en flux (SSE), comme l'occasion d'agir la lit. */
+function streamed(chunks: unknown[]): Response {
+  const text = [...chunks.map((chunk) => `data: ${JSON.stringify(chunk)}`), 'data: [DONE]']
+    .map((line) => `${line}\n\n`)
+    .join('');
+  return new Response(text, { headers: { 'Content-Type': 'text/event-stream' } });
+}
+
+const textDelta = (content: string) => ({ choices: [{ delta: { content }, finish_reason: null }] });
+
+const toolCallDelta = (id: string, name: string, args: string) => ({
+  choices: [
+    {
+      delta: {
+        tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: args } }],
+      },
+      finish_reason: 'tool_calls',
+    },
+  ],
+});
 
 function sent(fetchMock: jest.Mock, call = 0) {
   const [url, init] = fetchMock.mock.calls[call] as [string, RequestInit];
@@ -345,34 +394,191 @@ describe('OpenAiCompatibleCoachClient', () => {
       });
     });
 
-    it('« Une minute. » sans appel d’outil : relancé UNE fois, la vraie réponse arrive', async () => {
-      // Constaté sur Qwen3-4B : l'annonce rendait la main, et la personne
-      // attendait une suite qui ne venait jamais.
+    it('« Je vais t’adapter une séance. » sans outil : l’occasion d’agir, et la séance arrive', async () => {
+      // Constaté sur Qwen3-4B (1er octobre 2026) : la promesse rendait la
+      // main, et la personne attendait une suite qui ne venait jamais.
       const fetchMock = jest
         .fn()
-        .mockResolvedValueOnce(completion({ content: 'Je cherche tes records. Une minute.' }))
+        .mockResolvedValueOnce(
+          completion({ content: 'Commence par le squat. Je vais t’adapter une séance.' }),
+        )
+        // L'occasion d'agir est lue en flux : le modèle appelle l'outil.
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00001', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(completion({ content: 'Ton record au squat : 100 kg.' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        // Ce qui était déjà écrit reste en tête : la personne l'a lu.
+        text: 'Commence par le squat. Je vais t’adapter une séance.\n\nTon record au squat : 100 kg.',
+      });
+      const probe = sent(fetchMock, 1).body.messages.slice(-2);
+      expect(probe[0]).toMatchObject({
+        role: 'assistant',
+        content: 'Commence par le squat. Je vais t’adapter une séance.',
+      });
+      expect(probe[1]).toMatchObject({
+        role: 'user',
+        content: probeFor('Commence par le squat. Je vais t’adapter une séance.', 'Mes records ?'),
+      });
+      expect(String(probe[1]?.content)).toContain(
+        '« Commence par le squat. Je vais t’adapter une séance. »',
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('une séance demandée et décrite en texte : l’ordre de la proposer, et la carte arrive', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: '1. Pompes 3×10. L’adaptation est faite.' }))
+        .mockResolvedValueOnce(
+          streamed([toolCallDelta('call00001', 'propose_session', '{"name":"Haut du corps"}')]),
+        )
+        .mockResolvedValueOnce(completion({ content: '' }));
+      global.fetch = fetchMock;
+
+      await expect(
+        client().reply(
+          input({ history: [{ role: 'user', content: 'Je veux une séance haut du corps' }] }),
+        ),
+      ).resolves.toMatchObject({
+        text: '1. Pompes 3×10. L’adaptation est faite.',
+        proposal: { name: 'Haut du corps' },
+      });
+    });
+
+    it('un programme déjà proposé : plus d’occasion d’agir, même sur « j’ai préparé »', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(
+          completion({ content: '', tool_calls: [toolCall('call00001', 'propose_program', '{}')] }),
+        )
+        .mockResolvedValueOnce(
+          completion({ content: 'J’ai préparé un programme de trois séances.' }),
+        );
+      global.fetch = fetchMock;
+
+      await client().reply(
+        input({ history: [{ role: 'user', content: 'Fais-moi un programme' }] }),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('l’occasion d’agir répond « FIN » : la réponse reste telle quelle', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je te propose de garder cette routine.' }))
+        .mockResolvedValueOnce(streamed([textDelta('FIN')]));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Je te propose de garder cette routine.',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('l’occasion d’agir qui se met à rédiger est coupée net : rien ne s’ajoute, rien n’est retenté', async () => {
+      // Un flux qui, comme le vrai, s'interrompt quand sa requête est annulée.
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je te prépare la suite tout de suite.' }))
+        .mockImplementationOnce((_url: string, init: RequestInit) =>
+          Promise.resolve(endless('Bien sûr ! Voici un plan complet', init.signal)),
+        );
+      global.fetch = fetchMock;
+      const pool = new CoachWorkerPool([MISTRAL.baseUrl], 30_000);
+
+      await expect(clientWith(pool).reply(input())).resolves.toMatchObject({
+        text: 'Je te prépare la suite tout de suite.',
+      });
+      expect(sent(fetchMock, 1).init.signal?.aborted).toBe(true);
+      // Une coupure VOULUE : ni nouvel essai, ni worker mis de côté.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(pool.status()[0]?.healthy).toBe(true);
+    });
+
+    it('les jetons de l’occasion d’agir comptent, même pour un simple « FIN »', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je te propose cet échauffement.' }))
+        .mockResolvedValueOnce(
+          streamed([
+            textDelta('FIN'),
+            { choices: [], usage: { prompt_tokens: 40, completion_tokens: 2 } },
+          ]),
+        );
+
+      const out = await client().reply(input());
+      expect(out.usage).toMatchObject({ inputTokens: 140, outputTokens: 22 });
+    });
+
+    it('annulée par la personne pendant l’occasion d’agir : le tour s’arrête, jetons comptés', async () => {
+      const controller = new AbortController();
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je vais te préparer une séance.' }))
+        .mockImplementationOnce(() => {
+          controller.abort();
+          return Promise.reject(new DOMException('annulé', 'AbortError'));
+        });
+
+      await expect(client().reply(input({ signal: controller.signal }))).rejects.toMatchObject({
+        usage: { inputTokens: 100, outputTokens: 20 },
+      });
+    });
+
+    it('une panne APRÈS que le modèle a agi rend la réponse déjà affichée', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          completion({ content: 'Commence doucement. Je vais regarder tes records.' }),
+        )
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00001', 'get_personal_records', '{}')]))
+        .mockResolvedValue(failure(500));
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Commence doucement. Je vais regarder tes records.',
+      });
+    });
+
+    it('une panne pendant l’occasion d’agir ne coûte pas la réponse déjà écrite', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Je te propose trois séries de dix.' }))
+        .mockRejectedValue(new TypeError('fetch failed'));
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Je te propose trois séries de dix.',
+      });
+    });
+
+    it('une réponse complète, ou une question posée, ne reçoit pas l’occasion d’agir', async () => {
+      for (const content of [
+        'Échauffe-toi dix minutes, puis augmente la charge.',
+        'Tu veux que je te prépare une séance ?',
+      ]) {
+        const fetchMock = jest.fn().mockResolvedValueOnce(completion({ content }));
+        global.fetch = fetchMock;
+        await expect(client().reply(input())).resolves.toMatchObject({ text: content });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('après des outils, seule une fin qui parle d’une suite reçoit l’occasion d’agir', async () => {
+      const fetchMock = jest
+        .fn()
         .mockResolvedValueOnce(
           completion({
             content: '',
             tool_calls: [toolCall('call00001', 'get_personal_records', '{}')],
           }),
         )
-        .mockResolvedValueOnce(completion({ content: 'Ton record au squat : 100 kg.' }))
-        .mockResolvedValueOnce(completion({ content: 'Je vérifie encore une fois.' }));
+        .mockResolvedValueOnce(completion({ content: 'Ton record au squat : 100 kg. Bravo.' }));
       global.fetch = fetchMock;
 
       await expect(client().reply(input())).resolves.toMatchObject({
-        text: 'Ton record au squat : 100 kg.',
+        text: 'Ton record au squat : 100 kg. Bravo.',
       });
-      // La relance suit l'annonce, comme un message de la personne.
-      const relance = sent(fetchMock, 1).body.messages.slice(-2);
-      expect(relance[0]).toMatchObject({
-        role: 'assistant',
-        content: 'Je cherche tes records. Une minute.',
-      });
-      expect(relance[1]?.role).toBe('user');
-      expect(String(relance[1]?.content)).toContain('Fais-la maintenant');
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('après une proposition retenue, « Voici la séance : » n’est pas une annonce à relancer', async () => {
@@ -394,15 +600,41 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    it('une seule relance par tour : une seconde annonce est rendue telle quelle', async () => {
-      global.fetch = jest
+    it('après avoir lu, il promet encore : une seconde occasion, puis la séance arrive', async () => {
+      // Constaté : il lisait les séances annoncées, puis promettait la séance.
+      const fetchMock = jest
         .fn()
-        .mockResolvedValueOnce(completion({ content: 'Une minute.' }))
-        .mockResolvedValueOnce(completion({ content: 'Je regarde encore, un instant.' }));
+        .mockResolvedValueOnce(completion({ content: 'Je vais regarder tes séances.' }))
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00001', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(
+          completion({ content: 'Rien encore. Je te propose une séance d’ouverture.' }),
+        )
+        .mockResolvedValueOnce(
+          streamed([toolCallDelta('call00002', 'propose_session', '{"name":"Ouverture"}')]),
+        )
+        .mockResolvedValueOnce(completion({ content: '' }));
+      global.fetch = fetchMock;
 
       await expect(client().reply(input())).resolves.toMatchObject({
-        text: 'Je regarde encore, un instant.',
+        text: 'Je vais regarder tes séances.\n\nRien encore. Je te propose une séance d’ouverture.',
+        proposal: { name: 'Ouverture' },
       });
+    });
+
+    it('deux occasions par tour au plus : une troisième annonce est rendue telle quelle', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Une minute.' }))
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00001', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(completion({ content: 'Je regarde encore, un instant.' }))
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00002', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(completion({ content: 'Je vérifie une dernière fois.' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Une minute.\n\nJe regarde encore, un instant.\n\nJe vérifie une dernière fois.',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(5);
     });
 
     it('un appel d’outil sans `function` (passerelle non conforme) : outil inconnu, pas un 500', async () => {

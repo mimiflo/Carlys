@@ -1,75 +1,119 @@
-import { announcesAction } from './announced-action';
+import { asksForPlan, mayAnnounceAction, probeFor } from './announced-action';
 
 /**
- * Un petit modèle annonce parfois une recherche et rend la main sans la
- * faire : la personne attend une suite qui ne vient jamais. Les phrases
- * ci-dessous sont celles constatées le 1er octobre 2026 (Qwen3-4B).
+ * Le premier étage, large : la fin du message parle-t-elle d'une suite ?
+ * Les phrases ci-dessous viennent de Qwen3-4B (1er octobre 2026). Le second
+ * étage (l'occasion d'agir, dans le client) tranche ensuite par un FAIT :
+ * le modèle appelle un outil, ou répond « FIN ».
  */
-describe('announcesAction', () => {
-  it('reconnaît une fin qui promet une suite', () => {
-    expect(
-      announcesAction(
-        'Je cherche des exercices pour les pecs. C’est un groupe musculaire clair. ' +
-          'J’essaie de les trouver dans le catalogue. Une minute.',
-      ),
-    ).toBe(true);
-    expect(
-      announcesAction(
-        'Améliorer les pectoraux, c’est bien. Vérifions d’abord ce que tu as déjà enregistré récemment.',
-      ),
-    ).toBe(true);
-    expect(
-      announcesAction('D’abord, je vérifie les modèles de séance que tu as déjà choisis.'),
-    ).toBe(true);
-    expect(announcesAction('Je vais chercher les exercices adaptés, un instant…')).toBe(true);
-    expect(announcesAction('Voici ce que je te propose :')).toBe(true);
-  });
-
-  it('reconnaît une séance ou un programme promis et jamais proposé', () => {
-    // Constaté le 1er octobre 2026 : « Par où je commence ? », trois
-    // paragraphes, puis cette promesse — et plus rien.
-    expect(
-      announcesAction(
-        'On commence par des mouvements de fond, comme le squat ou le deadlift. ' +
-          'Je vais t’adapter une séance à partir de ton profil.',
-      ),
-    ).toBe(true);
+describe('mayAnnounceAction', () => {
+  it('reconnaît les promesses constatées, où qu’elles se cachent dans la fin', () => {
     for (const promise of [
-      'Je vais te préparer une séance pour demain.',
-      'Je vais te proposer un programme sur quatre semaines.',
+      // La capture du propriétaire : trois paragraphes, puis cette promesse.
+      'On commence par des mouvements de fond. Je vais t’adapter une séance à partir de ton profil.',
+      // Une dernière phrase anodine cache la promesse : les DEUX dernières comptent.
+      'T’as déjà un profil d’entraînement, je vais te le montrer. C’est là que je commence.',
+      'Je cherche des exercices pour les pecs dans le catalogue. Une minute.',
+      'Vérifions d’abord ce que tu as déjà enregistré récemment.',
+      'Je regarde ça tout de suite et je reviens vers toi avec les chiffres.',
+      'Un programme de trois séances te correspondra bien. Je m’occupe de le mettre en place.',
       'Je te prépare une séance tout de suite.',
       'Je t’adapte un programme à partir de tes séances.',
-      'Je vais construire ta séance du jour.',
       'Laisse-moi te préparer un programme.',
+      'Voici ce que je te propose :',
+      'On va regarder tes dernières séances ensemble.',
+      // Constaté : un émoji final masquait la promesse.
+      'Je t’explique tout ça dans une séance que je t’envoie. Tu pourras la suivre pas à pas. ✅',
     ]) {
-      expect(announcesAction(promise)).toBe(true);
+      expect(mayAnnounceAction(promise)).toBe(true);
     }
   });
 
-  it('laisse passer une vraie réponse, même quand elle parle d’avenir', () => {
-    expect(
-      announcesAction(
-        'Garde tes trois séries de 8 à 70 kg cette semaine. Si elles passent proprement, monte à 72,5 kg.',
-      ),
-    ).toBe(false);
-    expect(
-      announcesAction(
-        'Je vais te laisser essayer ça cette semaine, dis-moi comment ça s’est passé.',
-      ),
-    ).toBe(false);
-    expect(announcesAction('')).toBe(false);
-    // Relecture : des fins de réponse ordinaires, qui ne promettent rien.
+  it('laisse passer les fins ordinaires, sans même une occasion d’agir', () => {
     for (const ordinary of [
-      'Attends-toi à des courbatures.',
+      'Garde tes trois séries de 8 à 70 kg. Si elles passent proprement, monte à 72,5 kg.',
+      'Bois bien, dors suffisamment. Si la douleur dure, consulte un médecin.',
+      'Avec plaisir ! Bonne séance, et dis-moi comment ça s’est passé.',
+      'Prépare-toi à des courbatures les premiers jours.',
       'D’abord, échauffe-toi 10 minutes.',
-      'Un moment de repos de 2 min suffit.',
-      'Laisse-moi savoir comment ça se passe !',
-      'Je regarde ça avec toi la semaine prochaine.',
-      'Un instant de pause entre les séries suffit.',
-      'Je te propose de commencer par trois séries de 10.',
-      'Je vais te laisser souffler, tu as bien bossé.',
+      'Repose-toi 2 à 3 minutes entre les séries.',
+      // Une question rend la main à la personne : ce n'est pas une promesse.
+      'Tu veux que je t’ajoute une séance complète avec ces exercices ?',
+      'Il me faut ton objectif. Tu veux que je consulte ton profil ?',
+      '',
     ]) {
-      expect(announcesAction(ordinary)).toBe(false);
+      expect(mayAnnounceAction(ordinary)).toBe(false);
+    }
+  });
+});
+
+describe('probeFor', () => {
+  // Constaté : la séance écrite en texte, puis « j'ai fait une séance de
+  // base » — aucune carte, rien à lancer.
+  const claimed =
+    'Voici une séance haut du corps :\n\n1. Développé couché haltères\n2. Pompes\n\n' +
+    "Je t'explique pourquoi : j'ai fait une séance de base avec des haltères. Ce choix est concret.";
+
+  it('une séance donnée pour faite reçoit un ORDRE : lire les identifiants, puis proposer', () => {
+    for (const answer of [
+      claimed,
+      "J'ai préparé un programme de trois séances par semaine. Bon courage !",
+    ]) {
+      const probe = probeFor(answer, 'Salut');
+      expect(probe).toContain('propose_session');
+      expect(probe).toContain('search_exercises');
+      expect(probe).not.toContain('FIN');
+    }
+  });
+
+  it('une séance DEMANDÉE et pas proposée reçoit l’ordre, quoi que dise la réponse', () => {
+    // Constaté : « L'adaptation est faite pour t'offrir une séance réaliste »,
+    // sans carte — aucune tournure à reconnaître, la demande suffit.
+    const answer = 'L’adaptation est faite pour t’offrir une séance réaliste, sans excès.';
+    expect(probeFor(answer, 'Je veux une séance haut du corps avec haltères')).toContain(
+      'propose_session',
+    );
+    // Une question posée en retour rend la main : pas d'ordre.
+    expect(probeFor('Combien de temps as-tu ?', 'Fais-moi une séance')).toBeNull();
+  });
+
+  it('une fin qui parle d’une suite reçoit une question qui CITE cette fin', () => {
+    const probe = probeFor(
+      'Premier paragraphe. Deuxième. On commence par le squat. Je vais t’adapter les charges.',
+      'Comment progresser ?',
+    );
+    expect(probe).toContain('« On commence par le squat. Je vais t’adapter les charges. »');
+    expect(probe).not.toContain('Premier paragraphe');
+    expect(probe).toContain('FIN');
+  });
+
+  it('une réponse complète, sans demande de séance : rien', () => {
+    expect(probeFor('Bois de l’eau et dors bien.', 'Des conseils de récup ?')).toBeNull();
+  });
+});
+
+describe('asksForPlan', () => {
+  it('reconnaît une demande de séance ou de programme', () => {
+    for (const request of [
+      'Je veux une séance haut du corps avec haltères',
+      'Fais-moi une séance pour ce soir, j’ai 30 minutes',
+      'Propose-moi un programme pour prendre du muscle',
+      'Quelle séance je fais demain ?',
+      'Une séance pour les jambes ?',
+      'J’aimerais un programme de remise en forme',
+    ]) {
+      expect(asksForPlan(request)).toBe(true);
+    }
+  });
+
+  it('pas une question sur les séances : « combien de séries », « mes records »', () => {
+    for (const request of [
+      'Combien de séries par muscle et par semaine ?',
+      'Quel est mon record au squat ?',
+      'Explique-moi la surcharge progressive',
+      'Merci beaucoup !',
+    ]) {
+      expect(asksForPlan(request)).toBe(false);
     }
   });
 });

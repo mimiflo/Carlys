@@ -1,47 +1,195 @@
+import { type CoachTurnUsage } from '../domain/coach-model.port';
+import { type ChatCompletion } from './chat-completion-stream';
+import { addUsage } from './openai-compatible.helpers';
+
 /**
  * L'annonce sans l'action : une recherche, une séance ou un programme
  * promis, et rien derrière.
  *
  * Un petit modèle (Qwen3-4B sur processeur) écrit parfois « Je cherche des
- * exercices pour les pecs. Une minute. » et rend la main SANS appeler
- * l'outil : le tour est fini, la personne attend une suite qui ne viendra
- * jamais (constaté le 1er octobre 2026). Le client le reconnaît à la
- * DERNIÈRE phrase, et relance une fois avec [ANNOUNCED_ACTION_NUDGE].
+ * exercices pour les pecs. Une minute. » ou « Je vais t'adapter une séance à
+ * partir de ton profil. » et rend la main SANS appeler l'outil : la personne
+ * attend une suite qui ne viendra jamais (constaté le 1er octobre 2026).
  *
- * Seule la dernière phrase compte : une réponse complète peut annoncer la
- * suite de l'entraînement (« je vais te laisser essayer »), elle ne se
- * termine pas sur une recherche promise.
+ * Deux étages, parce qu'aucune liste de phrases ne tient seule :
+ *
+ * 1. [mayAnnounceAction], LARGE et gratuit : la fin du message parle-t-elle
+ *    d'une suite (« je vais », « je m'occupe », « un instant »…) ? Il lit les
+ *    DEUX dernières phrases : « …je vais te le montrer. C'est là que je
+ *    commence. » cache sa promesse sous une dernière phrase anodine.
+ * 2. [probeFor], qui tranche : le modèle reçoit l'occasion de faire ce
+ *    qu'il a annoncé. Il appelle un outil, et le tour reprend ; il répond
+ *    « FIN », et la réponse reste telle quelle. C'est le FAIT (un appel
+ *    d'outil) qui décide, pas le texte.
+ *
+ * Mesuré sur Qwen3-4B (1er octobre 2026), sept promesses réelles contre neuf
+ * réponses complètes : le premier étage reconnaît les sept et ne retient
+ * aucune des neuf ; le second fait agir le modèle sur les sept. Chacun seul
+ * échouait : le second seul faisait fouiller les données après quatre
+ * réponses complètes sur neuf, et la formulation prudente ratait trois
+ * promesses sur sept. Deux pistes écartées : demander au modèle de JUGER sa
+ * réponse (il répondait « non » à sa propre promesse), et offrir l'occasion
+ * à toute réponse rendue sans outil (il fouillait ses données après une
+ * explication complète et la gâchait).
  */
 
-/**
- * Dernières phrases qui promettent une recherche, pas une réponse. Étroites
- * à dessein : « Un moment de repos suffit », « D'abord, échauffe-toi » ou
- * « Laisse-moi savoir » terminent de vraies réponses, et chaque fausse
- * alerte coûte un tour de calcul entier.
- */
-const PROMISE = [
-  /^(une minute|un instant|un moment)\s*[.!…]*$/i,
-  /^(vérifions|regardons|cherchons)\b/i,
-  /^(d['’]abord,?\s*)?je (cherche|vérifie|consulte)\b/i,
-  /^je vais (chercher|regarder|vérifier|consulter|lire|voir|trouver)\b/i,
-  /^laisse-moi (chercher|regarder|vérifier|consulter|voir)\b/i,
-  // Une séance ou un programme promis, sans la carte qui le propose
-  // (« Je vais t’adapter une séance à partir de ton profil. »). L'objet est
-  // exigé : « Je te propose de commencer par 3 séries » est une réponse.
-  /^(je vais |je |laisse-moi )(te |t['’])?(préparer?|proposer?|adapter?|construire?|construis|créer?|composer?|concocter?|monter?|élaborer?|planifier?)\b.*\b(séance|programme|plan|entraînement)s?\b/i,
+/** Ce qui, dans une fin de message, parle d'une suite. Large à dessein. */
+const SUITE = [
+  // « Voici ce que je te propose : » et rien derrière.
+  /:\s*$/,
+  /\bje vais\b/i,
+  /\bon va\b/i,
+  /\b(laisse-moi|attends|patiente)\b/i,
+  /\b(voyons|regardons|cherchons|vérifions|lançons)\b/i,
+  /\b(une minute|un instant|une seconde|un moment|tout de suite|dans la foulée)\b/i,
+  /\bje m['’](en )?occupe\b/i,
+  /\bje (te |t['’]|vous )?(cherche|regarde|vérifie|consulte|lis|prépare|propose|adapte|construis|crée|compose|calcule|analyse|récupère|planifie|organise|monte|concocte|reviens|lance|montre|envoie|génère|mets en place|ajoute|ajuste|rédige|écris|fais|sors|trouve|programme|note|enregistre)\b/i,
+  /\b(arrive|arrivent|suit|suivra|suivent)\b/i,
+  // L'élision : « j'ajuste le volume », « j'envoie la séance ».
+  /\bj['’](ajoute|ajuste|adapte|analyse|envoie|enregistre|organise|établis|élabore|écris|explique|attends)(?!\p{L})/iu,
 ];
 
-export function announcesAction(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed === '') return false;
-  // « Voici ce que je te propose : » et rien derrière.
-  if (trimmed.endsWith(':')) return true;
-  const last = trimmed.split(/(?<=[.!?…])\s+/).at(-1) ?? trimmed;
-  return PROMISE.some((promise) => promise.test(last));
+/**
+ * Une séance ou un programme DONNÉ pour fait, n'importe où dans le message.
+ * Le client ne le demande qu'en l'absence de proposition : alors, c'est
+ * faux (« …j'ai fait une séance de base » après l'avoir écrite en texte,
+ * sans la carte qui la rend jouable — constaté).
+ */
+const CLAIMED = [
+  // `(?!\p{L})` et non `\b`, qui ignore les lettres accentuées (« préparé »).
+  /\bj['’]ai (fait|préparé|adapté|créé|construit|composé|monté|conçu|élaboré|ajusté|mis en place)(?!\p{L})[^.!?]*\b(séance|programme|plan)s?\b/iu,
+  /\bvoici (ta|une|la|ton|un|tes) (séance|programme|plan)s?\b/iu,
+];
+
+function claimsUnproposed(text: string): boolean {
+  return CLAIMED.some((pattern) => pattern.test(text));
 }
 
-/** La relance, envoyée comme un message de la personne. */
-export const ANNOUNCED_ACTION_NUDGE =
-  'Tu viens d’annoncer une action sans la faire. Fais-la maintenant : appelle ' +
-  'l’outil nécessaire (recherche, proposition de séance ou de programme), puis ' +
-  'réponds avec le résultat. Si tu as déjà tout ce qu’il faut, réponds directement.';
+/**
+ * La fin du message (ses deux dernières phrases) parle-t-elle d'une suite,
+ * ou le message donne-t-il pour faite une séance qui n'a pas été proposée ?
+ */
+export function mayAnnounceAction(text: string): boolean {
+  const ending = endingOf(text);
+  // Une question à la personne (« Tu veux que je te prépare une séance ? »)
+  // lui rend la main : c'est une fin, pas une promesse.
+  if (ending === '' || ending.endsWith('?')) return false;
+  return SUITE.some((pattern) => pattern.test(ending));
+}
+
+/** Les deux dernières phrases : là où se cache une promesse. */
+export function endingOf(text: string): string {
+  return (
+    text
+      .trim()
+      .split(/(?<=[.!?…:])\s+/)
+      // « Tu pourras la suivre pas à pas. ✅ » : un émoji n'est pas une phrase.
+      .filter((sentence) => /\p{L}/u.test(sentence))
+      .slice(-2)
+      .join(' ')
+  );
+}
+
+/**
+ * Une DEMANDE de séance ou de programme, lue dans le message de la personne
+ * — plus simple à reconnaître que les mille façons qu'a le modèle de ne pas
+ * la faire (« l'adaptation est faite pour t'offrir une séance réaliste »,
+ * constaté, sans carte).
+ */
+const ASKED = [
+  /\b(veux|voudrais|aimerais|fais|fais-moi|donne|donne-moi|propose|propose-moi|prépare|prépare-moi|crée|construis|monte|besoin|quelle|quel)\b[^?.!]*\b(séance|programme|entraînement|plan)s?\b/iu,
+  /\b(une|ma|la) (séance|programme)\b[^?.!]*\bpour\b/iu,
+];
+
+export function asksForPlan(request: string): boolean {
+  return ASKED.some((pattern) => pattern.test(request));
+}
+
+/**
+ * Le message de l'occasion d'agir pour cette réponse, ou `null` s'il n'y a
+ * pas lieu. Jamais montré, jamais archivé. Le client ne le demande que si
+ * aucune séance ni aucun programme n'a été proposé dans le tour.
+ *
+ * - Séance DEMANDÉE (et la réponse ne pose pas de question) ou donnée pour
+ *   FAITE : un ordre. Le signal est sûr ; mesuré, à la question le modèle
+ *   répondait « FIN », à l'ordre il lit les identifiants puis propose, six
+ *   fois sur six.
+ * - Fin qui parle d'une suite : une question qui CITE cette fin. Mesuré sur
+ *   Qwen3-4B, la formulation générale (« si ton message annonce une
+ *   action… ») faisait fouiller les données après six réponses complètes sur
+ *   neuf ; citée, la fin ne laisse agir que sur ce qui y est promis. « FIN »
+ *   vaut réponse complète ; tout autre texte aussi (le client l'interrompt
+ *   dès qu'il dépasse « FIN »).
+ */
+export function probeFor(answer: string, request: string): string | null {
+  const asks = !endingOf(answer).endsWith('?') && asksForPlan(request);
+  if (asks || claimsUnproposed(answer)) return PROPOSAL_PROBE;
+  if (!mayAnnounceAction(answer)) return null;
+  return (
+    `(Message automatique, pas de l'utilisateur.) Ton message se termine ainsi : « ${endingOf(answer)} ». ` +
+    "Si cette fin annonce une action que tu n'as pas faite, fais-la maintenant avec l'outil. " +
+    "Sinon — réponse complète, ou question posée à l'utilisateur —, réponds seulement : FIN. " +
+    "N'ajoute aucune recherche que tu n'as pas annoncée."
+  );
+}
+
+const PROPOSAL_PROBE =
+  "(Message automatique, pas de l'utilisateur.) Aucune séance ni aucun programme n'a été " +
+  "proposé avec l'outil : l'utilisateur ne peut ni le voir ni le lancer. Propose-le " +
+  'maintenant : une séance avec propose_session, après avoir lu les identifiants de ses ' +
+  'exercices avec search_exercises ; un programme avec propose_program, après avoir lu ' +
+  'get_training_profile.';
+
+/** Au-delà, ce n'est plus « FIN » : le modèle rédige, l'occasion est close. */
+const PROBE_TEXT_LIMIT = 4;
+
+/** La requête au modèle du client : charge utile, signal, flux, plafond, worker, essais. */
+type Complete = (
+  payload: Record<string, unknown>,
+  signal: AbortSignal,
+  onText: (delta: string) => void,
+  maxOutputTokens: number,
+  prefer: string | undefined,
+  retries: number,
+) => Promise<{ completion: ChatCompletion }>;
+
+/**
+ * L'occasion d'agir, `messages` finissant par elle : la complétion si le
+ * modèle appelle un outil ; `null` s'il répond « FIN », se met à rédiger
+ * (coupé net, rien n'est montré) ou si l'essai, unique, échoue — la réponse
+ * déjà à l'écran reste la réponse. Seule l'annulation par la personne
+ * remonte. Ses jetons comptent, « FIN » compris.
+ */
+export async function probeForAction(
+  complete: Complete,
+  messages: Record<string, unknown>[],
+  turn: {
+    tools: unknown[];
+    signal: AbortSignal;
+    cancelled: AbortSignal | undefined;
+    maxTokens: number;
+    worker: string | undefined;
+    usage: CoachTurnUsage;
+  },
+): Promise<ChatCompletion | null> {
+  const stop = new AbortController();
+  let text = '';
+  try {
+    const { completion } = await complete(
+      { messages, tools: turn.tools },
+      AbortSignal.any([turn.signal, stop.signal]),
+      (delta) => {
+        text += delta;
+        if (text.trim().length > PROBE_TEXT_LIMIT) stop.abort();
+      },
+      turn.maxTokens,
+      turn.worker,
+      0,
+    );
+    addUsage(turn.usage, completion);
+    return (completion.choices?.[0]?.message?.tool_calls?.length ?? 0) > 0 ? completion : null;
+  } catch (error) {
+    if (turn.cancelled?.aborted === true) throw error;
+    return null;
+  }
+}

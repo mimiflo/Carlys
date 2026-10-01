@@ -537,12 +537,39 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   principal avec chacun de ses matériels, chaque groupe et matériel nommé
   comme on le dit. Avant correctif, 93 noms sur 190 étaient introuvables
   sans leurs accents.
-- **L'annonce sans l'action.** Il écrivait parfois « Je cherche… Une
-  minute. » et rendait la main sans appeler d'outil : la suite promise ne
-  venait jamais ; même chose pour « Je vais t'adapter une séance à partir de
-  ton profil. », sans la carte de séance. Les consignes l'interdisent, et le
-  client relance UNE fois un tour qui se termine sur une recherche, une
-  séance ou un programme promis (`infrastructure/announced-action.ts`). Sur l'appli, « Réfléchit… » reste
+- **L'annonce sans l'action.** Un petit modèle rend parfois la main sur une
+  promesse : « Je cherche… Une minute. », « Je vais t'adapter une séance à
+  partir de ton profil. », ou une séance écrite en texte, « j'ai fait une
+  séance de base », sans la carte qui la rend jouable. Aucune liste de
+  phrases ne tient seule (chaque essai réel en trouvait une nouvelle) ;
+  deux étages, mesurés sur Qwen3-4B le 1er octobre 2026
+  (`infrastructure/announced-action.ts`) :
+  1. **Quand demander.** Une séance ou un programme DEMANDÉ par la personne
+     (« Je veux une séance haut du corps ») et pas proposé, une séance
+     donnée pour faite sans carte, ou une fin de message qui parle d'une
+     suite (« je vais », « je m'occupe », « un instant »…, sur les deux
+     dernières phrases). Jamais après une proposition, jamais sur une
+     question posée en retour.
+  2. **L'occasion d'agir.** Un message automatique, jamais montré ni
+     archivé : un ORDRE de proposer (lire les identifiants, puis
+     `propose_session` ou `propose_program`) dans les deux premiers cas,
+     une question qui CITE la fin du message dans le troisième (« FIN » si
+     la réponse est complète). C'est l'appel d'outil qui tranche, pas le
+     texte. Deux fois par tour au plus ; la réponse déjà écrite reste en
+     tête de la réplique.
+  Sur sept promesses réelles et neuf réponses complètes, le premier étage
+  retient les sept et aucune des neuf ; les trois demandes de séance du banc
+  final finissent toutes sur une carte. Écartés après mesure : demander au
+  modèle de juger sa propre réponse (il répondait « non » à sa promesse), et
+  offrir l'occasion à toute réponse sans outil (il fouillait ses données et
+  gâchait une explication complète). Elle part au worker qui a servi le
+  début du tour : lui seul garde la conversation en cache.
+- **Les noms du catalogue.** « Le deadlift », « le press de poitrine » : la
+  consigne demande les noms du catalogue, et `coach-exercise-names.ts` les
+  garantit pour les termes connus (« soulevé de terre », « développé
+  couché »…), dans le flux comme dans la réponse archivée, sans jamais
+  toucher un nom du catalogue (« Hip thrust », « Push Press »).
+Sur l'appli, « Réfléchit… » reste
   sous le texte jusqu'à la fin du tour : entre deux recherches, la bulle ne
   semble plus finie. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en

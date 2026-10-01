@@ -1,29 +1,41 @@
-import { HttpException, ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { setTimeout as wait } from 'node:timers/promises';
 import { type AppConfigService } from '../../../config/app-config.service';
-import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
+import { PROPOSE_PROGRAM_TOOL, PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_TOOL_ROUNDS,
   CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
-  type CoachToolResult,
   type CoachTurnInput,
   type CoachTurnOutput,
   type CoachTurnUsage,
   turnSignal,
 } from '../domain/coach-model.port';
-import { type ChatCompletion, readChatStream } from './chat-completion-stream';
+import { type ChatCompletion } from './chat-completion-stream';
 import { type CoachWorkerPool } from './coach-worker-pool';
-import { ANNOUNCED_ACTION_NUDGE, announcesAction } from './announced-action';
+import { probeFor, probeForAction } from './announced-action';
+import {
+  addUsage,
+  parseArguments,
+  readCompletion,
+  refusalReason,
+  textOf,
+  toolReply,
+  unavailable,
+} from './openai-compatible.helpers';
 
-/**
- * Nouvelles tentatives sur un 429, un 5xx ou un worker injoignable, comme le
- * SDK Anthropic — chacune sur un AUTRE worker quand il y en a un.
- */
+/** Nouvelles tentatives (429, 5xx, worker injoignable), chacune sur un AUTRE worker s'il y en a. */
 const RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
+
+/**
+ * Occasions d'agir par tour (announced-action.ts) : la seconde rattrape le
+ * modèle qui, après avoir lu ce qu'il annonçait, promet encore la suite
+ * (« Je te propose une séance d'ouverture… », constaté).
+ */
+const MAX_PROBES = 2;
 
 /**
  * Client d'une API **compatible OpenAI** (Chat Completions) : le fournisseur
@@ -57,6 +69,15 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     // Dernier texte non vide : la phrase dite AVEC une proposition survit à
     // un dernier tour vide.
     let said = '';
+    // La réponse écrite AVANT l'occasion d'agir, quand le modèle a agi :
+    // elle reste en tête de la réplique archivée, déjà lue à l'écran.
+    let before = '';
+    let lastKept = '';
+    // Ce qui est déjà écrit, plus ce qui s'y ajoute depuis.
+    const reply = () =>
+      said !== '' && said !== lastKept
+        ? [before, said].filter(Boolean).join('\n\n')
+        : before || said;
     // En flux : du texte déjà montré (`shown`), et dans CE tour (`spoke`). Un
     // tour d'outils qui parlait ne se colle pas au suivant : un saut de
     // paragraphe les sépare, le temps que la réplique archivée les remplace.
@@ -71,22 +92,33 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         input.onText?.(text);
       });
 
-    // Une relance au plus par tour quand le modèle annonce sans agir.
-    let nudged = false;
+    const maxTokens = input.maxOutputTokens ?? this.config.coachGateway.maxOutputTokens;
+    // Une occasion d'agir au plus par tour (announced-action.ts).
+    let probes = 0;
+    // Une séance ou un programme proposé : la suite promise est là.
+    let proposed = false;
+    const request =
+      [...input.history].reverse().find((turn) => turn.role === 'user')?.content ?? '';
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
       spoke = false;
-      const { completion, served } = await this.complete(
+      const served = await this.complete(
         { messages, tools },
         signal,
         onText,
-        input.maxOutputTokens ?? this.config.coachGateway.maxOutputTokens,
-      ).catch((error: unknown) => unavailable(error, usage, shown));
-      worker = served;
-      usage.inputTokens += completion.usage?.prompt_tokens ?? 0;
-      usage.outputTokens += completion.usage?.completion_tokens ?? 0;
-      usage.cacheReadTokens += completion.usage?.prompt_tokens_details?.cached_tokens ?? 0;
+        maxTokens,
+        worker,
+      ).catch((error: unknown) => {
+        // Le modèle a agi après une réponse déjà affichée : une panne
+        // ensuite (échéance, 5xx) rend cette réponse, plutôt que rien.
+        if (before !== '' && input.signal?.aborted !== true) return null;
+        return unavailable(error, usage, shown);
+      });
+      if (served === null) return this.output(reply(), proposal, usage, worker);
+      const { completion } = served;
+      worker = served.served;
+      addUsage(usage, completion);
 
-      const choice = completion.choices?.[0];
+      let choice = completion.choices?.[0];
       if (choice?.finish_reason === 'error') {
         // Mistral : génération coupée chez lui, texte tronqué à ne pas archiver.
         throw new CoachProviderUnavailableException('Coach : génération interrompue.', usage);
@@ -94,30 +126,39 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       said = textOf(choice?.message?.content) || said;
       // Sur la PRÉSENCE d'appels, jamais sur `finish_reason` : certains
       // fournisseurs rendent « stop » avec des appels d'outils.
-      const toolCalls = choice?.message?.tool_calls ?? [];
-      // Une proposition retenue est la suite promise : « Voici la séance : »
-      // précède sa carte, il n'y a rien à relancer.
-      const promised =
-        !nudged && proposal === null && round < COACH_MAX_TOOL_ROUNDS - 1 && input.tools.length > 0;
-      if (toolCalls.length === 0 && promised && announcesAction(textOf(choice?.message?.content))) {
-        // « Une minute. » et la main rendue : sans relance, la suite promise
-        // ne viendrait jamais (announced-action.ts).
-        nudged = true;
-        messages.push(
-          { role: 'assistant', content: choice?.message?.content ?? '' },
-          { role: 'user', content: ANNOUNCED_ACTION_NUDGE },
-        );
-        continue;
+      let toolCalls = choice?.message?.tool_calls ?? [];
+      // L'occasion d'agir (announced-action.ts) : séance demandée ou promise
+      // sans carte, fin qui parle d'une suite. Rien, une fois une séance ou
+      // un programme proposé : « Voici la séance : » précède sa carte.
+      const mayProbe =
+        toolCalls.length === 0 &&
+        probes < MAX_PROBES &&
+        !proposed &&
+        round < COACH_MAX_TOOL_ROUNDS - 1 &&
+        input.tools.length > 0;
+      const question = mayProbe ? probeFor(textOf(choice?.message?.content), request) : null;
+      if (question !== null) {
+        probes += 1;
+        const answer = { role: 'assistant', content: choice?.message?.content ?? '' };
+        const asked = { role: 'user', content: question };
+        const acted = await probeForAction(this.complete.bind(this), [...messages, answer, asked], {
+          tools,
+          signal,
+          cancelled: input.signal,
+          maxTokens,
+          worker,
+          usage,
+        }).catch((error: unknown) => unavailable(error, usage, shown));
+        if (acted !== null) {
+          messages.push(answer, asked);
+          before = reply();
+          lastKept = said;
+          choice = acted.choices?.[0];
+          toolCalls = choice?.message?.tool_calls ?? [];
+        }
       }
       if (toolCalls.length === 0) {
-        return {
-          text: said || COACH_GAVE_UP_TEXT,
-          proposal,
-          usage,
-          refused: false,
-          worker,
-          model: this.config.coachProvider.model,
-        };
+        return this.output(reply(), proposal, usage, worker);
       }
 
       // Appel sans `function` (passerelle non conforme) : nom vide, que les
@@ -130,6 +171,9 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       // `propose_session` n'est pas exécutée : elle est RETENUE, puis validée
       // par le serveur avant d'exister.
       proposal = calls.find((call) => call.name === PROPOSE_SESSION_TOOL)?.input ?? proposal;
+      proposed ||= calls.some(
+        (c) => c.name === PROPOSE_SESSION_TOOL || c.name === PROPOSE_PROGRAM_TOOL,
+      );
       const results = await input.runTools(calls.filter((c) => c.name !== PROPOSE_SESSION_TOOL));
 
       messages.push({
@@ -143,8 +187,20 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       }
     }
 
+    // Trop de tours d'outils : la réponse écrite avant l'occasion d'agir,
+    // s'il y en a une, vaut mieux qu'un abandon.
+    return this.output(before, proposal, usage, worker);
+  }
+
+  /** La réplique du tour ; sans texte, l'abandon dit comme tel. */
+  private output(
+    text: string,
+    proposal: Record<string, unknown> | null,
+    usage: CoachTurnUsage,
+    worker: string | undefined,
+  ): CoachTurnOutput {
     return {
-      text: COACH_GAVE_UP_TEXT,
+      text: text || COACH_GAVE_UP_TEXT,
       proposal,
       usage,
       refused: false,
@@ -153,11 +209,14 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     };
   }
 
+  /** Une requête au modèle, sur `prefer` s'il est sain ; `retries` nouvelles tentatives. */
   private async complete(
     payload: Record<string, unknown>,
     signal: AbortSignal,
     onText: ((delta: string) => void) | undefined,
     maxOutputTokens: number,
+    prefer?: string,
+    retries = RETRIES,
   ): Promise<{ completion: ChatCompletion; served: string }> {
     // En flux, l'usage n'arrive que si on le demande (dernier morceau).
     const stream = onText ? { stream: true, stream_options: { include_usage: true } } : {};
@@ -170,7 +229,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     });
     const tried = new Set<string>();
     for (let attempt = 0; ; attempt++) {
-      const worker = this.pool.acquire(tried);
+      const worker = this.pool.acquire(tried, prefer);
       // Panne DU WORKER (réseau, 5xx, flux rompu) : il est écarté un temps.
       // Jamais une annulation ni une échéance, qui ne disent rien de lui.
       let failed = false;
@@ -185,7 +244,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
           body,
         }).catch((error: unknown) => {
           failed = !signal.aborted;
-          if (signal.aborted || attempt === RETRIES) throw error;
+          if (signal.aborted || attempt === retries) throw error;
           return null;
         });
         if (response?.ok) {
@@ -198,7 +257,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         if (response !== null) {
           const retryable = response.status === 429 || response.status >= 500;
           failed = response.status >= 500;
-          if (!retryable || attempt === RETRIES) {
+          if (!retryable || attempt === retries) {
             // Jamais relayé tel quel : un 429 du fournisseur (quota GLOBAL)
             // s'afficherait « limite du jour » sur le téléphone.
             throw new ServiceUnavailableException(
@@ -214,116 +273,4 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       await wait(RETRY_DELAY_MS * (attempt + 1), undefined, { signal });
     }
   }
-}
-
-/** Le flux recomposé, ou le corps JSON d'une réponse d'un bloc. */
-async function readCompletion(
-  response: Response,
-  onText?: (delta: string) => void,
-): Promise<ChatCompletion> {
-  if (onText) {
-    return readChatStream(response, onText);
-  }
-  const body: unknown = await response.json();
-  if (typeof body !== 'object' || body === null) {
-    throw new ServiceUnavailableException('Coach : réponse illisible.');
-  }
-  return body;
-}
-
-/**
- * Statut refusé, réseau coupé, échéance dépassée, JSON illisible : 503, avec
- * les jetons déjà consommés. Le message ne sert qu'aux JOURNAUX (le filtre
- * masque tout 5xx) : notre propre texte (avec, pour un 429 ou un 5xx, la
- * raison du fournisseur, voir `refusalReason`), ou le NOM de l'erreur,
- * jamais son message, qui peut citer le corps de la réponse.
- */
-function unavailable(error: unknown, usage: CoachTurnUsage, shown = false): never {
-  // Un flux coupé ne dit pas ce qu'il a coûté (l'usage n'arrive qu'à la
-  // fin) : du texte montré prouve des jetons consommés, le message n'est
-  // donc PAS rendu (`refundIfUnavailable` ne rend qu'à zéro jeton).
-  if (shown && usage.inputTokens === 0) {
-    usage.inputTokens = 1;
-  }
-  const reason =
-    error instanceof HttpException
-      ? error.message
-      : `Coach : fournisseur injoignable (${error instanceof Error ? error.name : 'inconnue'}).`;
-  throw new CoachProviderUnavailableException(reason, usage);
-}
-
-/**
- * Le corps d'un refus (4xx) n'est jamais lu : il peut citer le message de la
- * personne. Celui d'un 429 ou d'un 5xx dit POURQUOI le fournisseur refuse
- * (débit, volume du mois, capacité saturée) : son seul champ `message`,
- * tronqué, part au journal, avec les en-têtes de limites. Ce sont eux qui
- * départagent : `x-ratelimit-limit-req-minute=0` dit que le modèle n'a AUCUNE
- * allocation dans l'offre (changer `COACH_MODEL`), une limite pleine dit
- * qu'il faut attendre.
- */
-async function refusalReason(response: Response, retryable: boolean): Promise<string> {
-  if (!retryable) {
-    await response.body?.cancel();
-    return '';
-  }
-  const body = (await response.json().catch(() => null)) as {
-    message?: unknown;
-    error?: { message?: unknown };
-  } | null;
-  const message = body?.message ?? body?.error?.message;
-  const limits: string[] = [];
-  response.headers.forEach((value, name) => {
-    if (/ratelimit|retry-after/i.test(name)) {
-      limits.push(`${name}=${value.slice(0, 40)}`);
-    }
-  });
-  return (
-    (typeof message === 'string' ? ` (${message.slice(0, 160)})` : '') +
-    (limits.length > 0 ? ` [${limits.join(', ').slice(0, 300)}]` : '')
-  );
-}
-
-/** Ce que le modèle relit de chaque appel, dans l'ordre de ses appels. */
-function toolReply(call: CoachToolCall, results: CoachToolResult[]): string {
-  if (call.name === PROPOSE_SESSION_TOOL) {
-    // Accusé de réception, pour que le modèle puisse conclure son tour.
-    return 'Proposition reçue.';
-  }
-  const result = results.find((candidate) => candidate.id === call.id);
-  if (result === undefined) {
-    return 'Erreur : outil sans résultat.';
-  }
-  return result.isError ? `Erreur : ${result.content}` : result.content;
-}
-
-/** Chaîne JSON (le cas général) ou objet (Ollama) ; illisible : `{}`. */
-function parseArguments(raw: unknown): Record<string, unknown> {
-  try {
-    const value: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
-  } catch {
-    // Les outils retombent sur leurs défauts ; le validateur rejette une
-    // proposition vide.
-    return {};
-  }
-}
-
-/** Texte simple, ou morceaux d'un modèle qui raisonne : seul le texte final. */
-function textOf(content: unknown): string {
-  if (typeof content === 'string') {
-    return content.trim();
-  }
-  if (!Array.isArray(content)) {
-    return '';
-  }
-  return (content as unknown[])
-    .filter(
-      (part): part is { type: 'text'; text: string } =>
-        typeof part === 'object' && part !== null && 'type' in part && part.type === 'text',
-    )
-    .map((part) => part.text)
-    .join('')
-    .trim();
 }

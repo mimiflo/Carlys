@@ -24,6 +24,17 @@ describe('CoachWorkerPool', () => {
     expect(workers.acquire().url).toBe(first.url);
   });
 
+  it('la suite d’un tour retourne au worker qui l’a commencé, même plus occupé', () => {
+    // Lui seul a la conversation en cache : ailleurs, elle se relirait en entier.
+    const workers = pool();
+    const started = workers.acquire();
+    const other = started.url === A ? B : A;
+    expect(workers.acquire(new Set(), started.name).url).toBe(started.url);
+    // En panne, il n'est plus préféré : le tour continue ailleurs.
+    workers.release(started, true);
+    expect(workers.acquire(new Set(), started.name).url).toBe(other);
+  });
+
   it('écarte un worker en panne, puis le reprend après sa mise de côté', () => {
     const workers = pool();
     const down = workers.acquire();
