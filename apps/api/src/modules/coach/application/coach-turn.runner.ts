@@ -8,6 +8,7 @@ import {
   CoachRepository,
   type MessageWithProposal,
 } from '../infrastructure/coach.repository';
+import { frenchExerciseNames, frenchExerciseNamesStream } from './coach-exercise-names';
 import { CoachContextBuilder } from './coach-context.builder';
 import { type CoachAdmission } from './coach-admissions';
 import { CoachGateway } from './coach-gateway';
@@ -71,6 +72,8 @@ export class CoachTurnRunner {
     // `now` est gardé pour rendre le message au même jour.
     let turn: { now: Date; remaining: number; userMessage: MessageWithProposal } | undefined;
     const programs = collectProgramProposal((calls) => this.tools.run(userId, calls));
+    // Les noms d'exercices du catalogue, dans le flux comme dans la réponse.
+    const names = stream.onText && frenchExerciseNamesStream(stream.onText);
     const output = await this.gateway
       .generate(
         admission,
@@ -104,7 +107,7 @@ export class CoachTurnRunner {
             tools: COACH_TOOLS,
             history: context.history,
             runTools: programs.runTools,
-            onText: stream.onText,
+            onText: names?.push,
             signal: stream.signal,
           };
         },
@@ -126,6 +129,7 @@ export class CoachTurnRunner {
       // Impossible : `generate` n'appelle le modèle qu'après `prepare`.
       throw new Error('Tour de coach sans question écrite');
     }
+    names?.flush();
     const { remaining, userMessage } = turn;
 
     const proposal = await acceptableSessionProposal(output.proposal, this.repository, this.logger);
@@ -148,7 +152,7 @@ export class CoachTurnRunner {
     const assistantMessage = await this.repository.saveAssistantMessage({
       conversationId,
       id: randomUUID(),
-      content: output.text,
+      content: frenchExerciseNames(output.text),
       inputTokens: output.usage.inputTokens,
       outputTokens: output.usage.outputTokens,
       proposal:

@@ -485,9 +485,11 @@ describe('CoachService.sendMessage — un tour à la fois, au fil de l’écritu
 
     await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.', { onText });
 
-    // La passerelle s'interpose (elle date le premier mot) sans rien retenir.
-    stubs.model.reply.mock.calls[0]?.[0].onText?.('Sal');
-    expect(onText).toHaveBeenCalledWith('Sal');
+    // La passerelle s'interpose (elle date le premier mot) ; seul le dernier
+    // mot, peut-être coupé, attend la suite (« dead… lift » : les noms du
+    // catalogue, coach-exercise-names.ts).
+    stubs.model.reply.mock.calls[0]?.[0].onText?.('Salut coach, ');
+    expect(onText).toHaveBeenCalledWith('Salut coach, ');
   });
 });
 
