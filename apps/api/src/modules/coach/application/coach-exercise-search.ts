@@ -130,3 +130,45 @@ export function filtersFromSearch(
     ...(equipmentSlug === undefined ? {} : { equipmentSlug }),
   };
 }
+
+/** Ce que les deux fonctions suivantes lisent d'un exercice. */
+interface Named {
+  name: string;
+  primaryMuscleGroup: { slug: string } | null;
+}
+
+const fold = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+/**
+ * Les exercices dont le nom contient CHAQUE mot cherché, sans accents ni
+ * majuscules, dans n'importe quel ordre. Le dépôt cherche le nom d'un seul
+ * tenant et accents compris : « developpe couche » y manquait 93 des 190
+ * exercices du catalogue (balayage du 1er octobre 2026).
+ */
+export function matchByName<T extends Named>(items: readonly T[], search: string): T[] {
+  const words = fold(search)
+    .split(/\s+/)
+    .filter((word) => word !== '');
+  return items.filter((item) => {
+    const name = fold(item.name);
+    return words.every((word) => name.includes(word));
+  });
+}
+
+/**
+ * Le filtre de groupe retient aussi les muscles SECONDAIRES (des burpees
+ * pour les pectoraux) : les exercices dont c'est le muscle principal
+ * passent devant, pour tenir dans les premiers résultats.
+ */
+export function primaryFirst<T extends Named>(
+  items: readonly T[],
+  muscle: string | undefined,
+): T[] {
+  if (muscle === undefined) return [...items];
+  const primary = items.filter((item) => item.primaryMuscleGroup?.slug === muscle);
+  return [...primary, ...items.filter((item) => item.primaryMuscleGroup?.slug !== muscle)];
+}

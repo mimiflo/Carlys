@@ -1,5 +1,6 @@
-import { type ProgressPeriod } from '@carlys/api-contracts';
+import { type ExerciseSummary, type ProgressPeriod } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { BodyMetricType } from '@prisma/client';
 import { ExercisesService } from '../../exercises/application/exercises.service';
 import { MealsService } from '../../nutrition/application/meals.service';
@@ -10,7 +11,12 @@ import { ProgressService } from '../../progress/application/progress.service';
 import { UsersService } from '../../users/application/users.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
-import { exerciseSearchFilters, filtersFromSearch } from './coach-exercise-search';
+import {
+  exerciseSearchFilters,
+  filtersFromSearch,
+  matchByName,
+  primaryFirst,
+} from './coach-exercise-search';
 import { coachMealView } from './coach-meal-view';
 import {
   coachBodyMetricView,
@@ -34,6 +40,13 @@ import { type CoachToolCall, type CoachToolResult } from '../domain/coach-model.
 
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 30;
+/**
+ * Exercices rendus par une recherche : la plus grosse combinaison groupe
+ * principal + matériel du catalogue en compte 15 (épaules + haltères).
+ */
+const SEARCH_LIMIT = 15;
+/** Le catalogue entier tient dans une lecture (190 exercices, en cache). */
+const CATALOG_MAX = 500;
 /** Fenêtre du journal alimentaire : la veille par défaut, une semaine au plus. */
 const DEFAULT_MEAL_DAYS = 1;
 const MAX_MEAL_DAYS = 7;
@@ -52,6 +65,7 @@ export class CoachTools {
     private readonly meals: MealsService,
     private readonly users: UsersService,
     private readonly programs: ProgramsService,
+    @InjectPinoLogger(CoachTools.name) private readonly logger: PinoLogger,
   ) {}
 
   async run(userId: string, calls: CoachToolCall[]): Promise<CoachToolResult[]> {
@@ -133,9 +147,13 @@ export class CoachTools {
 
   /**
    * Ce que le modèle écrit, traduit vers le catalogue
-   * (`coach-exercise-search.ts`). Des mots du nom qui ne figurent dans aucun
-   * exercice (« exercices de », « muscler ») ne doivent pas vider un filtre
-   * de groupe ou de matériel valable : sans résultat, on les relâche.
+   * (`coach-exercise-search.ts`), puis cherché en deux temps : le nom tel
+   * quel par le dépôt ; sinon, dans le catalogue filtré par groupe et
+   * matériel, chaque mot sans accents et dans n'importe quel ordre ; sinon,
+   * le filtre seul (des mots comme « exercices » ou « muscler » ne figurent
+   * dans aucun nom). Balayé sur les 190 exercices du catalogue : chacun se
+   * trouve par son nom, avec ou sans accents, et par son groupe principal
+   * avec chacun de ses matériels.
    */
   private async searchExercises(input: Record<string, unknown>) {
     const [muscleGroups, equipment] = await Promise.all([
@@ -144,19 +162,41 @@ export class CoachTools {
     ]);
     const catalog = { muscleGroups, equipment };
     const exact = exerciseSearchFilters(input, catalog);
-    // Le nom tel quel, puis le muscle ou le matériel tirés des mots, puis le
-    // filtre seul : on s'arrête au premier essai qui trouve.
     const pulled = filtersFromSearch(exact, catalog);
+    // Toute la recherche nomme un groupe ou un matériel (« avant-bras ») :
+    // c'est le groupe entier qu'on veut, pas les deux exercices qui portent
+    // ce mot-clé.
+    const onlyFilters = pulled !== null && pulled.search === undefined;
+    if (exact.search !== undefined && !onlyFilters) {
+      const found = (await this.exercises.list(exact, SEARCH_LIMIT)).items;
+      if (found.length > 0) return this.shown(found, exact.muscleGroupSlug);
+    }
+    // D'abord le nom ENTIER (« Face Pull à la barre » se fait à la poulie :
+    // en tirer le filtre « barre » l'écarterait), puis le groupe ou le
+    // matériel tirés de ses mots.
+    const attempts = pulled === null ? [exact] : onlyFilters ? [pulled] : [exact, pulled];
+    let pool: ExerciseSummary[] = [];
+    for (const filters of attempts) {
+      const { muscleGroupSlug, equipmentSlug } = filters;
+      const page = await this.exercises.list({ muscleGroupSlug, equipmentSlug }, CATALOG_MAX);
+      if (page.hasMore) {
+        // Le catalogue a dépassé ce qu'une lecture couvre : des exercices
+        // deviendraient introuvables par le nom, sans que rien ne le dise.
+        this.logger.warn({ max: CATALOG_MAX }, 'Catalogue plus grand que la recherche du coach');
+      }
+      pool = page.items;
+      const named = filters.search === undefined ? pool : matchByName(pool, filters.search);
+      if (named.length > 0) return this.shown(named, muscleGroupSlug);
+    }
+    // Ni nom ni filtre qui tienne : rien, plutôt que des exercices au hasard.
     const last = pulled ?? exact;
-    const tries = [exact, ...(pulled === null ? [] : [pulled])];
-    if (last.search !== undefined && (last.muscleGroupSlug ?? last.equipmentSlug) !== undefined) {
-      tries.push({ ...last, search: undefined });
-    }
-    for (const filters of tries) {
-      const page = await this.exercises.list(filters, DEFAULT_LIMIT);
-      if (page.items.length > 0) return page.items.map(coachExerciseView);
-    }
-    return [];
+    const filtered = last.muscleGroupSlug !== undefined || last.equipmentSlug !== undefined;
+    return filtered ? this.shown(pool, last.muscleGroupSlug) : [];
+  }
+
+  /** Muscle principal d'abord, borné, dans la vue du coach. */
+  private shown(items: readonly ExerciseSummary[], muscle: string | undefined) {
+    return primaryFirst(items, muscle).slice(0, SEARCH_LIMIT).map(coachExerciseView);
   }
 }
 

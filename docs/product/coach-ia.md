@@ -526,7 +526,17 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   ambigu, mots de salle (pecs, abdos, ischios) ; un mot de la recherche qui
   nomme un groupe ou un matériel en devient le filtre ; sans résultat, les
   mots du nom sont relâchés. Un nom inconnu revient au modèle AVEC la liste
-  des valeurs, et il corrige au tour suivant.
+  des valeurs, et il corrige au tour suivant. Si le nom tel quel ne donne
+  rien, la recherche compare chaque mot sans accents et dans n'importe quel
+  ordre (« developpe couche ») ; une recherche qui ne nomme qu'un groupe
+  (« avant-bras ») rend le groupe entier ; les exercices dont c'est le
+  muscle PRINCIPAL passent devant, 15 au plus (la plus grosse combinaison
+  groupe + matériel du catalogue). `coach-catalog.spec.ts` balaie tout le
+  catalogue (`catalog-data.ts`) à chaque test : chaque exercice par son nom
+  (exact, minuscules, sans accents, partiel, mots inversés), par son groupe
+  principal avec chacun de ses matériels, chaque groupe et matériel nommé
+  comme on le dit. Avant correctif, 93 noms sur 190 étaient introuvables
+  sans leurs accents.
 - **L'annonce sans l'action.** Il écrivait parfois « Je cherche… Une
   minute. » et rendait la main sans appeler d'outil : la suite promise ne
   venait jamais. Les consignes l'interdisent, et le client relance UNE fois
@@ -705,7 +715,7 @@ Widgets : `CoachHeader`, `CoachMessageBubble`, `CoachSuggestions`,
 deux lignes discrètes du coach ont quitté `coach_screen.dart` le jour où
 l'ajout de la mention de traitement l'a poussé au-delà de la limite.
 
-**Le coach dit bonjour à chaque ouverture** (1er octobre 2026). Un court
+**Le coach dit bonjour, une fois par jour au plus** (1er octobre 2026). Un court
 « Réfléchit… », puis une bulle au prénom (« Bonjour » de 5 h à 18 h,
 « Bonsoir » ensuite), à la voix du Mentor choisie : à la première visite il
 se présente et dit ce qu'il sait faire, au retour il reprend
@@ -716,7 +726,12 @@ le modèle : sur le processeur du serveur, un bonjour généré coûterait de 20
 file. Il n'est ni archivé ni envoyé au modèle. Il se pose à son rang dans le
 fil (après les messages présents à l'ouverture) et y reste pendant la
 visite ; un fil vide garde l'encart « Ton coach est là » au centre, avec le
-bonjour dessous. Pas de bonjour en lecture seule ni hors ligne : il
+bonjour dessous. Le jour du dernier bonjour est gardé sur l'appareil
+(`CoachGreetingStore`, effacé au changement de compte) : rouvrir l'écran le
+même jour ne le redit pas, et il ne se dit pas du tout quand on a déjà
+écrit au coach aujourd'hui (`shouldGreet`). La question est tranchée une
+fois par ouverture : un écran resté ouvert passé minuit ne dit pas bonjour
+au milieu de la conversation. Pas de bonjour en lecture seule ni hors ligne : il
 inviterait à une question que le coach ne recevrait pas. Moins
 d'animations : le bonjour est là tout de suite. Captures `coach-02-vide` et
 `coach-08-bonjour`.

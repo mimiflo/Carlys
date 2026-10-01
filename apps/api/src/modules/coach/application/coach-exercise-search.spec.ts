@@ -1,4 +1,9 @@
-import { exerciseSearchFilters, filtersFromSearch } from './coach-exercise-search';
+import {
+  exerciseSearchFilters,
+  filtersFromSearch,
+  matchByName,
+  primaryFirst,
+} from './coach-exercise-search';
 
 /**
  * Ce que le modèle écrit n'est pas ce que le catalogue range : « pecs »,
@@ -83,5 +88,31 @@ describe('exerciseSearchFilters', () => {
   it('des valeurs vides ou absentes ne filtrent rien', () => {
     expect(filters({})).toEqual({});
     expect(filters({ search: '  ', muscleGroupSlug: '' })).toEqual({});
+  });
+});
+
+describe('matchByName et primaryFirst', () => {
+  const ex = (name: string, muscle: string | null = null) => ({
+    name,
+    primaryMuscleGroup: muscle === null ? null : { slug: muscle },
+  });
+
+  it('sans accents, sans majuscules, dans n’importe quel ordre', () => {
+    const items = [ex('Développé couché'), ex('Écarté couché haltères'), ex('Squat')];
+    expect(matchByName(items, 'developpe couche').map((e) => e.name)).toEqual(['Développé couché']);
+    expect(matchByName(items, 'COUCHE ecarte').map((e) => e.name)).toEqual([
+      'Écarté couché haltères',
+    ]);
+    expect(matchByName(items, 'curl')).toEqual([]);
+  });
+
+  it('les exercices dont le groupe est le muscle PRINCIPAL viennent d’abord', () => {
+    const items = [ex('Burpees', 'quadriceps'), ex('Pompes', 'pectoraux'), ex('Dips', 'triceps')];
+    expect(primaryFirst(items, 'pectoraux').map((e) => e.name)).toEqual([
+      'Pompes',
+      'Burpees',
+      'Dips',
+    ]);
+    expect(primaryFirst(items, undefined)).toEqual(items);
   });
 });

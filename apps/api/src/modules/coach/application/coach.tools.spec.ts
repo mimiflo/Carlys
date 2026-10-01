@@ -1,4 +1,5 @@
 import { type MealEntry } from '@carlys/api-contracts';
+import { type PinoLogger } from 'nestjs-pino';
 import { type ExercisesService } from '../../exercises/application/exercises.service';
 import { type MealsService } from '../../nutrition/application/meals.service';
 import { type NutritionService } from '../../nutrition/application/nutrition.service';
@@ -84,6 +85,7 @@ function buildTools(stubs: Stubs, exercises: object = {}): CoachTools {
     stubs.meals as unknown as MealsService,
     stubs.users as unknown as UsersService,
     stubs.programs as unknown as ProgramsService,
+    { warn: jest.fn() } as unknown as PinoLogger,
   );
 }
 
@@ -122,8 +124,7 @@ describe('CoachTools', () => {
       list: jest
         .fn()
         .mockResolvedValueOnce({ items: [], hasMore: false, total: 0, nextCursor: null })
-        .mockResolvedValueOnce({ items: [], hasMore: false, total: 0, nextCursor: null })
-        .mockResolvedValueOnce({ items: [pushUp], hasMore: false, total: 1, nextCursor: null }),
+        .mockResolvedValue({ items: [pushUp], hasMore: false, total: 1, nextCursor: null }),
     };
     const tools = buildTools(buildStubs(), exercises);
 
@@ -137,17 +138,16 @@ describe('CoachTools', () => {
       { search: 'exercices pectoraux' },
       expect.any(Number),
     );
-    // Puis le muscle tiré des mots ; enfin le filtre de groupe seul.
-    expect(exercises.list).toHaveBeenNthCalledWith(
-      2,
-      { search: 'exercices', muscleGroupSlug: 'pectoraux' },
-      expect.any(Number),
-    );
+    // Puis le catalogue entier, nom comparé sans accents ; puis le catalogue
+    // du groupe tiré des mots : « exercices » n'est dans aucun nom, le
+    // filtre de groupe seul répond.
+    expect(exercises.list).toHaveBeenNthCalledWith(2, {}, expect.any(Number));
     expect(exercises.list).toHaveBeenNthCalledWith(
       3,
       { muscleGroupSlug: 'pectoraux' },
       expect.any(Number),
     );
+    expect(exercises.list).toHaveBeenCalledTimes(3);
     // La vue du coach : de quoi citer et proposer, sans image ni slug.
     expect(JSON.parse(result?.content ?? '')).toEqual([
       {
