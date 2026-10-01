@@ -61,8 +61,6 @@ ou conteneurisées derrière le profil Compose `app`.
   radius, typographie, ombres, motion, breakpoints). Le design system Flutter
   (`apps/mobile/lib/design_system`) et le thème Tailwind de l'admin reflètent
   ces valeurs — mais par des chemins différents, et il faut le savoir :
-  - `packages/ui` **génère** son CSS depuis les jetons
-    (`scripts/build-css.mjs`) ; c'est la seule vraie génération du dépôt ;
   - `apps/mobile` **recopie** dans `AppColors`, `AppSpacing`, `AppMotion`… et
     `test/design_system/design_tokens_test.dart` n'en tient qu'une **partie**,
     qu'il faut connaître avant de s'y fier : **30 valeurs sur les 198** de

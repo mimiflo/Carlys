@@ -71,10 +71,9 @@ jobs:
       - name: Build des packages partagés
         run: pnpm --filter "./packages/**" build
 
-      # Le LINT et les TESTS des paquets partagés ne sont PAS ici, et c'est
-      # une décision, pas un oubli : ils vivaient dans les DEUX workflows, et
-      # chaque poussée touchant packages/** les exécutait deux fois. api-ci
-      # les garde — avec la garde sur le script `test` de packages/ui — et
+      # Le LINT des paquets partagés n'est PAS ici, et c'est une décision,
+      # pas un oubli : il vivait dans les DEUX workflows, et chaque poussée
+      # touchant packages/** l'exécutait deux fois. api-ci le garde, et
       # ses déclencheurs couvrent exactement les mêmes chemins (packages/**
       # en push comme en pull_request) : la porte est la même, payée une fois.
       # Le BUILD, lui, reste ci-dessus : la compilation de l'admin en dépend.

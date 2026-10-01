@@ -479,8 +479,7 @@ par `design_tokens_test.dart` :
 Les clés sont en anglais, comme tout `tokens.json` ; `LeagueDivision` parle
 français (argent = `silver`, or = `gold`, platine = `platinum`, diamant =
 `diamond`). L'admin ne les recopie pas : aucun de ses écrans ne montre de
-ligue, et `packages/ui/scripts/build-css.mjs` n'émet pas ce groupe, pas plus
-que `color.vendor`.
+ligue, pas plus que de `color.vendor`.
 
 ## Les popups (arbitrage du 24 septembre 2026)
 
@@ -664,21 +663,6 @@ l'indicatif des champs le prend (3,36 → 6,96). Les lignes d'exercices
 supprimés et de signalements résolus ne pâlissent plus par opacité (2,17) :
 elles se barrent, ou le disent dans leur colonne d'état.
 
-**Design system web** (`packages/ui/src/styles/components.css`, rendu dans
-les aperçus de `.design-sync/`) : il gardait intactes les paires corrigées
-côté application et admin. Il prend la même séparation encre / aplat, par
-des variables de thème tirées des jetons. Ratios au pire point, sur la
-page, une carte ou la surface alternée : `--carlys-primary-ink`
-(`primaryDark` en clair, `primaryLight` en sombre) écrit le bouton
-secondaire (3,58 → 7,23, survol sombre) et la pastille violette, posée sur
-`--carlys-primary-tint` (3,67 → 4,76 en clair, 3,17 → 5,70 en sombre) ;
-`--carlys-warning-ink` écrit la pastille ambre (`neutral.950` en clair :
-1,75 → 15,91) ; `--carlys-danger-ink` écrit l'erreur d'un champ
-(`dangerStrong` en clair : 3,61 → 4,63) ; le bouton destructif se remplit de
-`dangerStrong` (3,76 → 4,83) ; `--carlys-text-muted` passe à `neutral.600`
-en clair (4,04 → 6,96 sur la page et une carte, 3,83 → 6,61 sous le
-survol du bouton fantôme).
-
 **Ce qui le garde.** `contrast_pairs_test.dart` est une TABLE : chaque ligne
 pose un composant du design system dans un état (thème sombre, OLED ;
 repos, survol, focus, appui, éclaboussure, chargement), lit les couleurs
@@ -709,11 +693,7 @@ vit plus qu'en un endroit. `app_colors_test.dart` garde les bornes
 de `cta` et de `signatureInk` ; `design_tokens_test.dart` leur miroir. Côté
 admin, `contrast.test.ts` mesure chaque paire employée dans les deux thèmes
 et refuse les classes qui la contourneraient (`text-primary`, `text-danger`,
-`text-accent`, blanc sur `bg-danger`, survol par opacité). Côté design
-system web, `packages/ui/src/contrast.test.ts` lit chaque règle de
-`components.css` — son encre, son fond, les variables du thème, les
-jetons — et mesure la paire dans les trois thèmes : l'ancienne feuille y
-échoue sur 52 paires. Côté mobile, les formules vivent dans
+`text-accent`, blanc sur `bg-danger`, survol par opacité). Côté mobile, les formules vivent dans
 `test/support/contrast.dart`.
 
 ## Écarts assumés

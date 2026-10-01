@@ -10,7 +10,7 @@ const eslintConfig = defineConfig([
   // La base partagée du monorepo s'empile ici comme dans les cinq autres projets.
   // Sans elle `eslint --print-config` rendait `no-empty = undefined` côté admin :
   // un `try { … } catch {}` vide y passait lint ET typecheck, alors que le même
-  // fichier dans packages/ui rendait « Empty block statement  no-empty ».
+  // fichier dans un paquet partagé rendait « Empty block statement  no-empty ».
   ...base,
   {
     languageOptions: {

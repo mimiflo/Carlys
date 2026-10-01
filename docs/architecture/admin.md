@@ -331,20 +331,15 @@ la liste tardait, elle ne l'arrache pas à qui l'a posé ailleurs entre-temps.
   interactions), pas l'implémentation.
 - `pnpm test` (dans `apps/admin`) ou `pnpm -r test` à la racine ; exécuté par
   le workflow `admin-ci` avec format, lint, typecheck et build — auxquels
-  s'ajoutent le lint et les tests des paquets partagés
-  (`pnpm --filter "./packages/**" lint` et `test`).
+  s'ajoute le lint des paquets partagés (`pnpm --filter "./packages/**"
+  lint`).
 
-  `packages/ui` en fait partie, mais l'admin **ne le consomme pas** : c'est la
-  déclinaison React du design system Flutter, maintenue pour la
-  synchronisation Claude Design (`.design-sync/config.json`, arbitrage écrit
-  dans `.design-sync/NOTES.md`). Le dépôt le dit à trois endroits — le
-  `package.json` de l'admin ne liste aucun `@carlys/ui`, `pnpm-lock.yaml` ne
-  lui connaît aucun importateur, et le `Dockerfile` installe
-  `--filter "@carlys/admin..."`, dont la fermeture transitive l'exclut donc.
-  `apps/admin/src/app/globals.css` acte la même absence : ses couleurs sont
-  RECOPIÉES depuis `packages/design-tokens/src/tokens.json`, pas importées.
-  L'adoption reste possible ; elle se déciderait à part, et ferait cesser
-  cette recopie.
+  L'admin n'a pas de bibliothèque de composants partagée : ses couleurs sont
+  RECOPIÉES dans `apps/admin/src/app/globals.css` depuis
+  `packages/design-tokens/src/tokens.json`, et `globals-tokens.test.ts` tient
+  la recopie. (Le design system React `packages/ui`, qui n'existait que pour
+  la synchronisation Claude Design, a été retiré le 1er octobre 2026 avec
+  elle.)
 
 ## Build standalone et Docker
 
