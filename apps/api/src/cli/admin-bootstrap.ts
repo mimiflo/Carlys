@@ -32,6 +32,7 @@ import {
   syncAdminRbac,
 } from '../modules/admin/application/admin-rbac';
 import { PasswordService } from '../modules/auth/application/password.service';
+import { runCli } from './run-cli';
 
 export const PASSWORD_MIN_LENGTH = 12;
 
@@ -271,14 +272,5 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 if (require.main === module) {
-  main(process.argv.slice(2))
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      // Une configuration invalide (validateEnv) sort en message lisible et
-      // code maîtrisé, jamais en rejet non géré à pile brute.
-      process.stderr.write(`Échec : ${(error as Error).message}\n`);
-      process.exitCode = 1;
-    });
+  runCli(main);
 }

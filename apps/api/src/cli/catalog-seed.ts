@@ -40,6 +40,7 @@ import {
   sweepSupersededSeedMedia,
 } from '../modules/media/application/catalog-media-sweep';
 import { syncExerciseMedia } from '../modules/media/application/catalog-media-sync';
+import { runCli } from './run-cli';
 
 export class UsageError extends Error {}
 
@@ -229,12 +230,5 @@ function switchPhotoFailure(
 }
 
 if (require.main === module) {
-  main(process.argv.slice(2))
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      process.stderr.write(`Échec : ${(error as Error).message}\n`);
-      process.exitCode = 1;
-    });
+  runCli(main);
 }

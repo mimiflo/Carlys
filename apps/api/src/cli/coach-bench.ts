@@ -27,6 +27,7 @@ import { type Env, validateEnv } from '../config/env.schema';
 import { TokenService } from '../modules/auth/application/token.service';
 import { generateFriendCode } from '../modules/users/domain/friend-code';
 import { type BenchSample, renderTable, summarize, type LevelReport } from './coach-bench.stats';
+import { runCli } from './run-cli';
 
 const EMAIL_PREFIX = 'coach-bench-';
 const EMAIL_SUFFIX = '@carlys-bench.invalid';
@@ -240,13 +241,5 @@ async function run(args: BenchArgs): Promise<number> {
 }
 
 if (require.main === module) {
-  Promise.resolve()
-    .then(() => run(parseBenchArgs(process.argv.slice(2))))
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      process.stderr.write(`Échec : ${(error as Error).message}\n`);
-      process.exitCode = 1;
-    });
+  runCli(async (argv) => run(parseBenchArgs(argv)));
 }

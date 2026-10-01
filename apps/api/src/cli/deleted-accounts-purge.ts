@@ -49,6 +49,7 @@ import {
   deleteActiveAccount,
   withApplication,
 } from './active-account-erasure';
+import { runCli } from './run-cli';
 
 export class UsageError extends Error {}
 
@@ -237,12 +238,5 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 if (require.main === module) {
-  main(process.argv.slice(2))
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      process.stderr.write(`Échec : ${(error as Error).message}\n`);
-      process.exitCode = 1;
-    });
+  runCli(main);
 }
