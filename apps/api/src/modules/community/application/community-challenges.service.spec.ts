@@ -151,6 +151,25 @@ describe('CommunityChallengesService — défis collectifs', () => {
     ]);
   });
 
+  it('les trois compteurs d’une métrique s’écrivent ENSEMBLE, pas en file', async () => {
+    const stubs = buildStubs();
+    let release = (): void => undefined;
+    stubs.contribute.mockReturnValueOnce(new Promise<void>((resolve) => (release = resolve)));
+    const service = buildService(stubs);
+
+    const pending = service.recordWorkoutCompleted(ME, new Date('2026-09-15T12:00:00.000Z'), {
+      countsAsWorkout: true,
+      activeSeconds: 0,
+      distanceMeters: 0,
+    });
+    await Promise.resolve();
+    // Le collectif n'a pas encore répondu : amis et ligue sont déjà partis.
+    expect(friendStub.contribute).toHaveBeenCalledTimes(1);
+    expect(leagueStub.contribute).toHaveBeenCalledTimes(1);
+    release();
+    await pending;
+  });
+
   it('une séance qui ne compte pas (sans série) ne verse PAS la métrique « séance »', async () => {
     const stubs = buildStubs();
     const service = buildService(stubs);

@@ -77,9 +77,14 @@ export class CommunityChallengesService {
     amount: number,
     at: Date,
   ): Promise<void> {
-    await this.challenges.contribute(userId, metric, amount, at);
-    await this.friendChallenges.contribute(userId, metric, amount, at);
-    await this.leagues.contribute(userId, metric, amount, at);
+    // Trois tables sans rien de commun : écrites ensemble. Les MÉTRIQUES,
+    // elles, restent l'une après l'autre (la ligue ouvre sa période à la
+    // première).
+    await Promise.all([
+      this.challenges.contribute(userId, metric, amount, at),
+      this.friendChallenges.contribute(userId, metric, amount, at),
+      this.leagues.contribute(userId, metric, amount, at),
+    ]);
   }
 
   async listChallenges(userId: string): Promise<ChallengeContract[]> {

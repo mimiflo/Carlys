@@ -259,13 +259,14 @@ export class WorkoutsService {
     const closed = await this.ownedSession(userId, sessionId);
     if (to === WorkoutSessionStatus.COMPLETED) {
       // Aucun des deux ne fait échouer la clôture : chacun journalise
-      // ses erreurs et se rattrape à la séance suivante.
-      await this.progress.updateRecordsForSession(userId, sessionId, closed.sets);
-      await this.community.recordWorkoutCompleted(
-        userId,
-        endedAt,
-        await creditedSessionEffort(this.workouts, userId, closed, endedAt),
-      );
+      // ses erreurs et se rattrape à la séance suivante. Indépendants :
+      // menés ensemble.
+      await Promise.all([
+        this.progress.updateRecordsForSession(userId, sessionId, closed.sets),
+        creditedSessionEffort(this.workouts, userId, closed, endedAt).then((effort) =>
+          this.community.recordWorkoutCompleted(userId, endedAt, effort),
+        ),
+      ]);
     }
     return presentSessionDetail(closed);
   }
