@@ -52,6 +52,7 @@ vers l'ADR qui la remplace).
 | [0010](0010-coach-fournisseur-compatible-openai.md) | Fournisseur du coach IA : un réglage, Mistral gratuit par défaut | Acceptée — 2026-09 (décision 2 remplacée par 0011) |
 | [0011](0011-coach-qwen3-sur-le-serveur.md) | Coach IA : Qwen3-4B sur notre serveur, servi par Ollama | Acceptée — 2026-09 |
 | [0012](0012-coach-reponse-en-flux.md) | Coach IA : la réponse s'écrit en direct (SSE) | Acceptée — 2026-09 |
+| [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 |
 
 ## Ajouter un ADR
 

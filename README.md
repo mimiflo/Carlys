@@ -461,6 +461,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 - [`docs/product/`](./docs/product/) — vision produit et fonctionnalités, dont
   [la conformité à la maquette Claude Design](./docs/product/design-conformity.md) ;
+- [`docs/design/`](./docs/design/) — illustrations, dont
+  [les groupes musculaires](./docs/design/muscle-illustrations.md) ;
 - [`docs/architecture/`](./docs/architecture/) — architecture technique ;
 - [`docs/api/`](./docs/api/) — conventions et contrats de l'API ;
 - [`docs/database/`](./docs/database/) — base de données et migrations ;
