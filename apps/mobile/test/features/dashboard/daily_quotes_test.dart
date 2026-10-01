@@ -212,8 +212,8 @@ void main() {
       // servir une maxime écrite pour un contexte.
       for (final maxime in carlysQuotes) {
         expect(
-          maxime.isRotating,
-          isTrue,
+          maxime.contexts,
+          isEmpty,
           reason: '« ${maxime.text} » tourne alors qu’elle est étiquetée',
         );
       }

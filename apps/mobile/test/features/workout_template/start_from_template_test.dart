@@ -82,7 +82,6 @@ void main() {
       expect(active.session.status, WorkoutStatus.inProgress);
       expect(active.session.templateId, templateId);
       expect(active.session.templateName, 'Push force');
-      expect(active.session.isFromTemplate, isTrue);
       expect(
         active.sets,
         isEmpty,

@@ -89,7 +89,6 @@ void main() {
       expect(set.weightKg, 60);
       expect(set.plannedReps, 8);
       expect(set.plannedWeightKg, 60);
-      expect(set.deviatesFromPlan, isTrue);
     },
   );
 

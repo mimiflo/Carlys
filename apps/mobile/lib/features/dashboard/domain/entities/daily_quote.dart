@@ -35,8 +35,4 @@ class DailyQuote {
   final String text;
   final CarlysValue value;
   final Set<QuoteContext> contexts;
-
-  /// Vrai pour une maxime de rotation — celles, et celles-là seules, que le
-  /// repli calendaire a le droit de servir.
-  bool get isRotating => contexts.isEmpty;
 }

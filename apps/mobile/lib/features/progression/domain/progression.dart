@@ -132,22 +132,6 @@ class ProgressionProfile {
   /// recule jamais d'un palier à l'autre — elle raconte l'histoire complète.
   double get totalProgress => (points / maxTotal).clamp(0.0, 1.0);
 
-  /// Part du chemin parcouru vers le titre suivant, de 0 à 1.
-  ///
-  /// Au dernier titre, la barre est pleine : il n'y a plus de suite à
-  /// montrer, et une barre vide y serait un contresens.
-  double get progressToNextTitle {
-    final next = title.next;
-    if (next == null) {
-      return 1;
-    }
-    final span = next.threshold - title.threshold;
-    if (span <= 0) {
-      return 1;
-    }
-    return ((points - title.threshold) / span).clamp(0.0, 1.0);
-  }
-
   /// Les axes encore sans fait : l'écran les regroupe pour dire quoi faire.
   List<ProgressionAxis> get pending =>
       axes.where((axis) => !axis.known).toList(growable: false);

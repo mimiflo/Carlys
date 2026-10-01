@@ -57,7 +57,7 @@ Carlys/
 │   └── mobile/               # Application Flutter (hors workspace pnpm)
 │       ├── lib/
 │       │   ├── app/          # bootstrap, environnement, routeur, observers
-│       │   ├── core/         # api, auth, database, network, sync, erreurs…
+│       │   ├── core/         # api, auth, database, sync, erreurs…
 │       │   ├── design_system/# couleurs, typo, espacements, thèmes, composants
 │       │   ├── features/     # <feature>/{data,domain,presentation}
 │       │   └── shared/       # éléments transverses

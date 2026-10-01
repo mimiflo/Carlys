@@ -206,7 +206,6 @@ void main() {
       expect(full.title, CarlysTitle.icone);
       expect(full.title.next, isNull);
       expect(full.pointsToNextTitle, isNull);
-      expect(full.progressToNextTitle, 1);
     });
 
     test('le dernier titre reste ATTEIGNABLE avec les cinq axes pleins', () {

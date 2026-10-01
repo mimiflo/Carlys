@@ -621,7 +621,7 @@ Points structurants :
 
 - Les secrets (tokens de session, Étape 2) vivent exclusivement dans
   **`flutter_secure_storage`** (Keychain iOS / Keystore Android), via
-  `core/security/`. Jamais dans SharedPreferences, un fichier ou la base Drift.
+  `core/auth/token_storage.dart`. Jamais dans SharedPreferences, un fichier ou la base Drift.
 - Drift contient des données métier, pas des secrets.
 - Aucun token ni secret dans les logs (`AppLogger`) ; les erreurs remontées à
   Sentry (cible) seront filtrées de la même façon.

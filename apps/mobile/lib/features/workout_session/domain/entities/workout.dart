@@ -94,9 +94,6 @@ class WorkoutInfo {
   final String? templateName;
 
   final LocalSyncState syncState;
-
-  /// `true` quand la séance a été lancée depuis un modèle.
-  bool get isFromTemplate => templateName != null;
 }
 
 class WorkoutSetEntry {
@@ -144,14 +141,6 @@ class WorkoutSetEntry {
 
   final DateTime completedAt;
   final LocalSyncState syncState;
-
-  /// `true` quand la série portait une cible et s'en est écartée.
-  /// Une déviation est **normale**, jamais une erreur.
-  bool get deviatesFromPlan =>
-      (plannedReps != null && reps != null && plannedReps != reps) ||
-      (plannedWeightKg != null &&
-          weightKg != null &&
-          plannedWeightKg != weightKg);
 }
 
 /// Séance avec ses séries (active ou historique).
