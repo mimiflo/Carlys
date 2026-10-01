@@ -104,6 +104,8 @@ class WorkoutTemplateLocalDataSource {
     kind: SetKind.fromApi(row.kind),
     targetReps: row.targetReps,
     targetWeightKg: row.targetWeightKg,
+    targetDurationSeconds: row.targetDurationSeconds,
+    targetDistanceMeters: row.targetDistanceMeters,
     restSeconds: row.restSeconds,
   );
 
@@ -149,10 +151,12 @@ class WorkoutTemplateLocalDataSource {
       _db.localTemplateExercises,
     )..where((line) => line.templateId.equals(template.id))).go();
 
-    for (final exercise in template.exercises) {
-      await _db
-          .into(_db.localTemplateExercises)
-          .insert(
+    // Un seul lot : une écriture par ligne coûtait un aller-retour vers
+    // l'isolat de la base, ligne après ligne, à chaque modèle rapatrié.
+    await _db.batch((batch) {
+      batch
+        ..insertAll(_db.localTemplateExercises, [
+          for (final exercise in template.exercises)
             LocalTemplateExercisesCompanion.insert(
               id: exercise.id,
               templateId: template.id,
@@ -161,11 +165,10 @@ class WorkoutTemplateLocalDataSource {
               position: exercise.position,
               notes: Value(exercise.notes),
             ),
-          );
-      for (final set in exercise.sets) {
-        await _db
-            .into(_db.localTemplateSets)
-            .insert(
+        ])
+        ..insertAll(_db.localTemplateSets, [
+          for (final exercise in template.exercises)
+            for (final set in exercise.sets)
               LocalTemplateSetsCompanion.insert(
                 id: set.id,
                 templateExerciseId: exercise.id,
@@ -173,11 +176,14 @@ class WorkoutTemplateLocalDataSource {
                 kind: Value(set.kind.apiValue),
                 targetReps: Value(set.targetReps),
                 targetWeightKg: Value(set.targetWeightKg),
+                // Les cibles chronométrées aussi : les oublier ici faisait
+                // revenir une course rapatriée sans durée ni distance.
+                targetDurationSeconds: Value(set.targetDurationSeconds),
+                targetDistanceMeters: Value(set.targetDistanceMeters),
                 restSeconds: Value(set.restSeconds),
               ),
-            );
-      }
-    }
+        ]);
+    });
   }
 
   /// Écrit l'en-tête du modèle. [lastUsedAt] est un miroir de la valeur

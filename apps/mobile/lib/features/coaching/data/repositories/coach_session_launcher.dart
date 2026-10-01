@@ -74,7 +74,7 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
         startedAt: startedAt,
         // Aucun `templateId` : une proposition n'est pas un modèle
         // enregistré. Le nom part quand même, il devient celui de la séance.
-        plan: plan.map(_planItemBody).toList(),
+        plan: plan.map(SessionPlanLocalDataSource.requestBody).toList(),
       );
       await _plans.insertPlanItems(plan);
     });
@@ -104,24 +104,6 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
           restSeconds: Value(set.restSeconds),
         ),
     ];
-  }
-
-  /// Corps d'une prévision dans `session.create`. L'`exerciseName` part
-  /// toujours : c'est le repli qui garantit que le serveur n'a aucune raison
-  /// de refuser la séance.
-  Map<String, dynamic> _planItemBody(LocalSessionPlanItemsCompanion item) {
-    return <String, dynamic>{
-      'id': item.id.value,
-      'exercisePosition': item.exercisePosition.value,
-      if (item.exerciseId.value != null) 'exerciseId': item.exerciseId.value,
-      'exerciseName': item.exerciseName.value,
-      'setPosition': item.setPosition.value,
-      'kind': item.kind.value,
-      if (item.targetReps.value != null) 'targetReps': item.targetReps.value,
-      if (item.targetWeightKg.value != null)
-        'targetWeightKg': item.targetWeightKg.value,
-      if (item.restSeconds.value != null) 'restSeconds': item.restSeconds.value,
-    };
   }
 }
 

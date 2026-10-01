@@ -22,6 +22,27 @@ class SessionPlanLocalDataSource {
 
   final AppDatabase _db;
 
+  /// Corps d'une prévision dans `session.create`, partagé par les deux
+  /// lancements (modèle, proposition du coach). L'`exerciseName` part
+  /// toujours, même avec un `exerciseId` : c'est le repli qui garantit que le
+  /// serveur n'a aucune raison de refuser la séance. La durée et la distance
+  /// cibles restent LOCALES : le plan de séance de l'API ne les porte pas, et
+  /// refuserait la séance entière pour un champ inconnu.
+  static Map<String, dynamic> requestBody(LocalSessionPlanItemsCompanion item) {
+    return <String, dynamic>{
+      'id': item.id.value,
+      'exercisePosition': item.exercisePosition.value,
+      if (item.exerciseId.value != null) 'exerciseId': item.exerciseId.value,
+      'exerciseName': item.exerciseName.value,
+      'setPosition': item.setPosition.value,
+      'kind': item.kind.value,
+      if (item.targetReps.value != null) 'targetReps': item.targetReps.value,
+      if (item.targetWeightKg.value != null)
+        'targetWeightKg': item.targetWeightKg.value,
+      if (item.restSeconds.value != null) 'restSeconds': item.restSeconds.value,
+    };
+  }
+
   Stream<SessionPlan?> watchPlan(String sessionId) =>
       _planQuery(sessionId).watch().map(_toPlan);
 
