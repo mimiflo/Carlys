@@ -156,14 +156,12 @@ export function matchByName<T extends Named>(items: readonly T[], search: string
 
 /**
  * Le filtre de groupe retient aussi les muscles SECONDAIRES (des burpees
- * pour les pectoraux) : les exercices dont c'est le muscle principal
- * passent devant, pour tenir dans les premiers résultats.
+ * pour les pectoraux, des squats pour les fessiers) : seuls restent les
+ * exercices dont c'est le muscle principal, s'il y en a. Sinon chaque
+ * groupe des jambes rendait les mêmes squats et fentes, et le contexte du
+ * modèle payait chaque doublon (2 octobre 2026).
  */
-export function primaryFirst<T extends Named>(
-  items: readonly T[],
-  muscle: string | undefined,
-): T[] {
-  if (muscle === undefined) return [...items];
+export function primaryOnly<T extends Named>(items: readonly T[], muscle: string | undefined): T[] {
   const primary = items.filter((item) => item.primaryMuscleGroup?.slug === muscle);
-  return [...primary, ...items.filter((item) => item.primaryMuscleGroup?.slug !== muscle)];
+  return primary.length > 0 ? primary : [...items];
 }

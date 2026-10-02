@@ -55,6 +55,65 @@ describe('prefetchFor', () => {
     expect(names('Mon programme me fatigue, normal ?')).not.toContain('get_training_profile');
   });
 
+  it('une séance pour des muscles NOMMÉS : leurs exercices, lus d’avance', () => {
+    // Constaté le 2 octobre 2026 : « je dois faire une séance quad fessiers »
+    // n'était pas reconnue ; le modèle ne cherchait que « fessiers », et la
+    // séance arrivait en texte, sans carte, faite de ponts fessiers.
+    const calls = prefetchFor('je dois faire une séance quad fessiers que me conseilles tu?');
+    expect(calls.map((call) => [call.name, call.input])).toEqual([
+      ['get_training_profile', {}],
+      ['search_exercises', { muscleGroupSlug: 'quadriceps' }],
+      ['search_exercises', { muscleGroupSlug: 'fessiers' }],
+    ]);
+    expect(new Set(calls.map((call) => call.id)).size).toBe(calls.length);
+    // Les jambes : leurs trois groupes, chacun une fois.
+    expect(
+      prefetchFor('Une séance jambes et cuisses ?')
+        .filter((call) => call.name === 'search_exercises')
+        .map((call) => call.input.muscleGroupSlug),
+    ).toEqual(['quadriceps', 'ischio-jambiers', 'fessiers']);
+    // Un muscle nommé SANS séance demandée : une question, pas un plan.
+    expect(names('Le squat, ça travaille les fessiers ?')).toEqual([]);
+  });
+
+  it('une séance demandée avec « faire » ou un conseil', () => {
+    expect(names('Je dois faire une séance ce soir')).toContain('get_training_profile');
+    expect(names('Tu me conseilles quoi comme séance aujourd’hui ?')).toContain(
+      'get_training_profile',
+    );
+    expect(names('Tu me recommandes une séance courte ?')).toContain('get_training_profile');
+  });
+
+  it('un conseil AUTOUR de sa séance n’en demande pas une', () => {
+    for (const request of [
+      'Faut-il faire des étirements après la séance',
+      'Je dois faire combien de séances par semaine ?',
+      'Combien de séries faire par séance pour les pecs ?',
+      'Je n’arrive pas à faire ma séance dos en entier',
+      'Tu me conseilles de manger avant la séance ?',
+      'Que me conseilles-tu pour la récup après la séance ?',
+      'Un conseil pour mieux récupérer après ma séance ?',
+      'Tu recommandes de boire pendant la séance ?',
+      'Je peux faire mon programme deux fois par jour',
+    ]) {
+      expect(names(request)).not.toContain('get_training_profile');
+    }
+  });
+
+  it('un muscle cité pour une douleur ou une exclusion n’est pas lu', () => {
+    const searched = (request: string) =>
+      prefetchFor(request)
+        .filter((call) => call.name === 'search_exercises')
+        .map((call) => call.input.muscleGroupSlug);
+    expect(searched('J’ai mal au dos, tu me conseilles quelle séance ?')).toEqual([]);
+    expect(searched('Une séance pecs sans les épaules')).toEqual(['pectoraux']);
+    expect(searched('Mal aux épaules, tu me conseilles une séance jambes ?')).toEqual([
+      'quadriceps',
+      'ischio-jambiers',
+      'fessiers',
+    ]);
+  });
+
   it('une question qui ne parle pas de ses données ne lit rien', () => {
     for (const request of [
       'Explique-moi la surcharge progressive',

@@ -19,7 +19,7 @@ import {
   exerciseSearchFilters,
   filtersFromSearch,
   matchByName,
-  primaryFirst,
+  primaryOnly,
 } from './coach-exercise-search';
 import {
   coachBodyMetricView,
@@ -198,9 +198,9 @@ export class CoachTools {
     return filtered ? this.shown(pool, last.muscleGroupSlug) : [];
   }
 
-  /** Muscle principal d'abord, borné, dans la vue du coach. */
+  /** Muscle principal seul s'il y en a, borné, dans la vue du coach. */
   private shown(items: readonly ExerciseSummary[], muscle: string | undefined) {
-    return primaryFirst(items, muscle).slice(0, SEARCH_LIMIT).map(coachExerciseView);
+    return primaryOnly(items, muscle).slice(0, SEARCH_LIMIT).map(coachExerciseView);
   }
 }
 

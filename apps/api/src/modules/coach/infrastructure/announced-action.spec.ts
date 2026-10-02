@@ -78,6 +78,25 @@ describe('probeFor', () => {
     expect(probeFor('Combien de temps as-tu ?', 'Fais-moi une séance', false)).toBeNull();
   });
 
+  it('l’ordre nomme ce qui a été demandé : une séance n’appelle pas un programme', () => {
+    // Constaté le 2 octobre 2026 : à l'ordre qui citait les deux, une séance
+    // demandée revenait avec la séance ET un programme.
+    const session = probeFor('Pont fessier.', 'je dois faire une séance quad fessiers', true)?.text;
+    expect(session).toContain('propose_session');
+    expect(session).not.toContain('propose_program');
+    const program = probeFor('Trois séances.', 'Je veux un programme de 4 semaines', true)?.text;
+    expect(program).toContain('propose_program');
+    expect(program).not.toContain('propose_session');
+    // Un conseil autour de la séance n'appelle aucune séance.
+    expect(
+      probeFor(
+        'Mange léger, deux heures avant.',
+        'Tu me conseilles de manger avant la séance ?',
+        true,
+      ),
+    ).toBeNull();
+  });
+
   it('une fin qui parle d’une suite reçoit une question qui CITE cette fin', () => {
     const probe = probeFor(
       'Premier paragraphe. Deuxième. On commence par le squat. Je vais t’adapter les charges.',

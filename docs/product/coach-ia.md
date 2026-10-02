@@ -464,14 +464,18 @@ sont gratuites, et vraies.
   l'étape. Dans la bulle en cours, une étape a ses trois points animés tant
   qu'elle se fait, puis sa coche ; ses étapes faites, « Je réfléchis à ta
   réponse » s'anime jusqu'au premier mot. Le chrono court (« Réflexion ·
-  12 s ») et se fige au premier mot (« Réflexion en 14 s »). Sans étape,
-  « Réfléchit… » comme avant.
+  12 s ») et se fige au premier mot (« Réflexion en 14 s »). Il court DÈS
+  le début, avant toute étape (« Je réfléchis à ta réponse ») : un
+  « Réfléchit… » nu devenait d'un coup « Réflexion en 16 s », l'étape déjà
+  cochée (signalé le 2 octobre 2026). Le texte commencé, la bulle dit
+  « Écrit… » dessous, plus « Réfléchit… ».
 - **Archivées** : `CoachMessage.steps` (colonne `steps`, migration
   `coach_reflexion`) et `thinkingSeconds` (sa durée, du créneau obtenu au
   premier mot écrit ; vide sans premier mot mesuré, plutôt que fausse ;
   migration `coach_reflexion_duree`), rendues par
   l'API ; repliées au-dessus de la réponse (« Réflexion en 32 s ·
-  3 étapes »), dépliées d'un appui. Une copie gardée sur
+  3 étapes »), dépliées d'un appui ; sans étape, la durée seule
+  (« Réflexion en 6 s »), comme en direct. Une copie gardée sur
   l'appareil avant leur arrivée n'en a simplement pas.
 
 ### Réponses coupées : la reprise (2 octobre 2026)
@@ -546,7 +550,19 @@ de 10 répétitions », « 4×8 ») ou l'annonce au présent (« J'adapte une
 séance ») sans carte reçoit l'ordre de la proposer : un signal de structure,
 mesuré sur 130 réponses réelles (six déclenchements, cinq séances décrites,
 dont quatre sans carte jusque-là ; aucun sur les réponses de conseil). Et une séance ou un programme demandé fait lire le profil
-d'entraînement d'avance (`coach-prefetch.ts`) : un tour de moins.
+d'entraînement d'avance (`coach-prefetch.ts`) : un tour de moins. Les muscles
+qu'elle nomme (« quad fessiers », « jambes », « pecs ») font lire d'avance
+les exercices de CHACUN : pour « je dois faire une séance quad fessiers »,
+le modèle ne cherchait que « fessiers » et rendait trois ponts fessiers en
+texte, sans carte (2 octobre 2026). Un muscle cité pour une douleur ou une
+exclusion (« mal au dos », « sans les épaules ») n'est pas lu. Une recherche
+par muscle ne rend que les exercices dont c'est le muscle PRINCIPAL, s'il y
+en a : sinon chaque groupe des jambes rendait les mêmes squats et fentes, et
+le contexte payait chaque doublon. « Faire », « conseiller », « recommander »
+ne comptent que devant UNE séance (« je dois faire une séance », « tu me
+conseilles quoi comme séance ») : « tu me conseilles de manger avant la
+séance ? » reste un conseil. L'ordre de proposer ne nomme que ce qui
+a été demandé : citant séance et programme, il rendait les deux.
 
 **Mesures** (`/metrics`, préfixe `carlys_api_ai_`) :
 `generation_finish_reason_total{reason}`, `continuations_total`,
@@ -700,7 +716,7 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   garantit pour les termes connus (« soulevé de terre », « développé
   couché »…), dans le flux comme dans la réponse archivée, sans jamais
   toucher un nom du catalogue (« Hip thrust », « Push Press »).
-Sur l'appli, « Réfléchit… » reste
+Sur l'appli, « Écrit… » reste
   sous le texte jusqu'à la fin du tour : entre deux recherches, la bulle ne
   semble plus finie. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en

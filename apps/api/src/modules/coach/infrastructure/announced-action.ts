@@ -1,3 +1,4 @@
+import { fold } from '../application/coach-exercise-search';
 import { asksForPlan } from '../application/coach-prefetch';
 import { type CoachTurnUsage } from '../domain/coach-model.port';
 import { type CoachWorkerRequests } from './coach-worker-requests';
@@ -132,7 +133,7 @@ export function probeFor(
   // corrigée la REMPLACE (`keep: false`).
   if (!read && citesUserData(answer)) return { text: DATA_PROBE, keep: false };
   const asks = !endingOf(answer).endsWith('?') && asksForPlan(request);
-  if (asks || claimsUnproposed(answer)) return { text: PROPOSAL_PROBE, keep: true };
+  if (asks || claimsUnproposed(answer)) return { text: proposalProbe(request), keep: true };
   if (!mayAnnounceAction(answer)) return null;
   const text =
     `(Message automatique, pas de l'utilisateur.) Ton message se termine ainsi : « ${endingOf(answer)} ». ` +
@@ -170,12 +171,32 @@ const DATA_PROBE =
   "rendu. Lis maintenant ce dont tu parles avec l'outil adapté, puis réécris ta réponse " +
   'avec les vrais chiffres, sans rien inventer.';
 
-const PROPOSAL_PROBE =
-  "(Message automatique, pas de l'utilisateur.) Aucune séance ni aucun programme n'a été " +
-  "proposé avec l'outil : l'utilisateur ne peut ni le voir ni le lancer. Propose-le " +
-  'maintenant : une séance avec propose_session, après avoir lu les identifiants de ses ' +
-  'exercices avec search_exercises ; un programme avec propose_program, après avoir lu ' +
-  'get_training_profile.';
+const PROPOSE_SESSION =
+  'une séance avec propose_session, après avoir lu les identifiants de ses exercices avec ' +
+  'search_exercises';
+const PROPOSE_PROGRAM = 'un programme avec propose_program, après avoir lu get_training_profile';
+
+/**
+ * L'ordre de proposer, qui ne nomme que ce qui a été demandé : citant les
+ * deux, une séance demandée revenait avec la séance ET un programme
+ * (constaté le 2 octobre 2026). Rien de demandé, ou les deux : les deux.
+ */
+function proposalProbe(request: string): string {
+  const asked = fold(request);
+  const program = /\b(programme|plan)s?\b/.test(asked);
+  const session = /\b(seance|entrainement|routine)s?\b/.test(asked);
+  const what =
+    program === session
+      ? `${PROPOSE_SESSION} ; ${PROPOSE_PROGRAM}`
+      : session
+        ? PROPOSE_SESSION
+        : PROPOSE_PROGRAM;
+  return (
+    "(Message automatique, pas de l'utilisateur.) Aucune séance ni aucun programme n'a été " +
+    "proposé avec l'outil : l'utilisateur ne peut ni le voir ni le lancer. Propose maintenant " +
+    `${what}.`
+  );
+}
 
 /** Au-delà, ce n'est plus « FIN » : le modèle rédige, l'occasion est close. */
 const PROBE_TEXT_LIMIT = 4;

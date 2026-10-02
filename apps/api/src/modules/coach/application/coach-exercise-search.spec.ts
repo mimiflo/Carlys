@@ -2,7 +2,7 @@ import {
   exerciseSearchFilters,
   filtersFromSearch,
   matchByName,
-  primaryFirst,
+  primaryOnly,
 } from './coach-exercise-search';
 
 /**
@@ -91,7 +91,7 @@ describe('exerciseSearchFilters', () => {
   });
 });
 
-describe('matchByName et primaryFirst', () => {
+describe('matchByName et primaryOnly', () => {
   const ex = (name: string, muscle: string | null = null) => ({
     name,
     primaryMuscleGroup: muscle === null ? null : { slug: muscle },
@@ -106,13 +106,14 @@ describe('matchByName et primaryFirst', () => {
     expect(matchByName(items, 'curl')).toEqual([]);
   });
 
-  it('les exercices dont le groupe est le muscle PRINCIPAL viennent d’abord', () => {
+  it('seuls les exercices dont le groupe est le muscle PRINCIPAL, s’il y en a', () => {
+    // Constaté le 2 octobre 2026 : « fessiers » rendait 15 exercices, dont
+    // les squats et fentes déjà rendus pour « quadriceps » — le contexte
+    // payait chaque doublon, et la séance tardait de plusieurs minutes.
     const items = [ex('Burpees', 'quadriceps'), ex('Pompes', 'pectoraux'), ex('Dips', 'triceps')];
-    expect(primaryFirst(items, 'pectoraux').map((e) => e.name)).toEqual([
-      'Pompes',
-      'Burpees',
-      'Dips',
-    ]);
-    expect(primaryFirst(items, undefined)).toEqual(items);
+    expect(primaryOnly(items, 'pectoraux').map((e) => e.name)).toEqual(['Pompes']);
+    // Aucun principal : les secondaires plutôt que rien.
+    expect(primaryOnly(items, 'epaules')).toEqual(items);
+    expect(primaryOnly(items, undefined)).toEqual(items);
   });
 });
