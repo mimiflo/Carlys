@@ -212,6 +212,35 @@ void main() {
     await capture(tester, 'coach-10-reflexion-debut');
   });
 
+  testWidgets('coach — la séance enregistrée', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: [
+        ..._conversation,
+        CoachMessage(
+          id: 'm4',
+          role: CoachRole.user,
+          content: 'Ok crée-la.',
+          createdAt: _today.add(const Duration(minutes: 2)),
+        ),
+        CoachMessage(
+          id: 'm5',
+          role: CoachRole.assistant,
+          content:
+              'C’est enregistré : « Haut du corps, format court » t’attend '
+              'dans tes séances, prête à lancer.',
+          steps: const ['J’enregistre ta séance'],
+          createdWorkout: (
+            templateId: 'modele-1',
+            name: 'Haut du corps, format court',
+          ),
+          createdAt: _today.add(const Duration(minutes: 2)),
+        ),
+      ],
+    );
+    await capture(tester, 'coach-11-seance-enregistree');
+  });
+
   testWidgets('coach — sa réflexion, dépliée sous la réponse', (tester) async {
     await pumpCoach(tester, messages: _conversation);
     await tester.tap(find.text('Réflexion en 32 s · 3 étapes'));

@@ -183,6 +183,9 @@ abstract final class AppIcons {
   /// Une étape de sa réflexion, faite.
   static const IconData coachStepDone = Icons.check_rounded;
 
+  /// Une séance que le coach a enregistrée dans tes modèles.
+  static const IconData coachSavedWorkout = Icons.bookmark_added_rounded;
+
   /// Précision neutre — jamais une erreur, jamais une alerte.
   static const IconData info = Icons.info_outline_rounded;
 

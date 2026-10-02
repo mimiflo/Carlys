@@ -27,7 +27,9 @@ class CoachScreen extends StatelessWidget {
     required this.onOpenProgram,
     required this.onRetry,
     this.onStop,
+    this.onOpenCreated,
     this.busyProgramId,
+    this.busyCreatedId,
     this.isOffline = false,
     this.live,
     this.notice,
@@ -47,6 +49,10 @@ class CoachScreen extends StatelessWidget {
 
   /// Programme proposé en cours de création, s'il y en a un.
   final String? busyProgramId;
+
+  /// Ouvrir une séance que le coach a enregistrée, et celle qui s'ouvre.
+  final ValueChanged<CoachCreatedWorkout>? onOpenCreated;
+  final String? busyCreatedId;
 
   /// Sortie de l'état hors ligne : l'encart qui remplace le composeur
   /// l'offre, faute de quoi l'écran resterait muet le réseau revenu.
@@ -109,7 +115,9 @@ class CoachScreen extends StatelessWidget {
                             constraints.maxWidth * _bubbleWidthFactor,
                         onOpenProposal: onOpenProposal,
                         onOpenProgram: onOpenProgram,
+                        onOpenCreated: onOpenCreated,
                         busyProgramId: busyProgramId,
+                        busyCreatedId: busyCreatedId,
                         greeting: greeting,
                       ),
                     ),

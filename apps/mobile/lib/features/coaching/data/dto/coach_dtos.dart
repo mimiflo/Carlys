@@ -115,8 +115,18 @@ CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
         ? coachProposalFromJson(proposal)
         : null,
     programProposal: coachProgramProposalFromJson(json['programProposal']),
+    createdWorkout: _createdWorkoutFromJson(json['createdWorkout']),
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
+}
+
+/// Absente d'un serveur ou d'une copie d'avant les créations : aucune.
+CoachCreatedWorkout? _createdWorkoutFromJson(Object? json) {
+  if (json is! Map<String, dynamic>) return null;
+  final templateId = json['templateId'];
+  final name = json['name'];
+  if (templateId is! String || name is! String) return null;
+  return (templateId: templateId, name: name);
 }
 
 CoachConversationSummary coachSummaryFromJson(Map<String, dynamic> json) =>

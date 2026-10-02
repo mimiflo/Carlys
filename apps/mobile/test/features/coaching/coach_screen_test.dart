@@ -50,6 +50,7 @@ void main() {
     CoachLiveTurn? live,
     ValueChanged<String>? onSend,
     ValueChanged<CoachSessionProposal>? onOpenProposal,
+    ValueChanged<CoachCreatedWorkout>? onOpenCreated,
   }) async {
     final controller = TextEditingController();
     addTearDown(controller.dispose);
@@ -64,6 +65,7 @@ void main() {
           onSend: onSend ?? (_) {},
           onOpenProposal: onOpenProposal ?? (_) {},
           onOpenProgram: (_) {},
+          onOpenCreated: onOpenCreated,
           onRetry: () {},
           isOffline: isOffline,
           live: live,
@@ -71,6 +73,30 @@ void main() {
       ),
     );
   }
+
+  testWidgets('une séance ENREGISTRÉE par le coach : sa carte, qui l’ouvre', (
+    tester,
+  ) async {
+    CoachCreatedWorkout? opened;
+    await pumpCoach(
+      tester,
+      messages: const [
+        CoachMessage(id: 'q', role: CoachRole.user, content: 'Ok crée-la.'),
+        CoachMessage(
+          id: 'r',
+          role: CoachRole.assistant,
+          content: 'C’est enregistré.',
+          createdWorkout: (templateId: 'modele-1', name: 'Haut du corps'),
+        ),
+      ],
+      onOpenCreated: (workout) => opened = workout,
+    );
+
+    expect(find.text('SÉANCE ENREGISTRÉE'), findsOneWidget);
+    expect(find.text('Haut du corps'), findsOneWidget);
+    await tester.tap(find.text('Ouvrir dans mes séances'));
+    expect(opened?.templateId, 'modele-1');
+  });
 
   testWidgets('on voit qui parle sans lire le texte', (tester) async {
     await pumpCoach(tester);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/services/coach_greeting.dart';
 import '../controllers/coach_controllers.dart';
@@ -31,6 +34,9 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   /// Programme proposé en cours de création : un second appui n'en engendre
   /// pas un second, et sa carte patiente.
   String? _busyProgramId;
+
+  /// Séance enregistrée en cours d'ouverture : ses modèles se rapatrient.
+  String? _busyCreatedId;
 
   /// Le bonjour de CETTE ouverture : écrit une fois, à sa place dans le
   /// fil, et qui y reste pendant la visite.
@@ -80,6 +86,24 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     }
   }
 
+  /// Une séance que le coach a enregistrée vit côté serveur : on rapatrie
+  /// les modèles (le seul sens de lecture des modèles), puis on l'ouvre.
+  Future<void> _openCreated(CoachCreatedWorkout workout) async {
+    if (_busyCreatedId != null) return;
+    final router = GoRouter.of(context);
+    final notices = AppNotices.of(context);
+    setState(() => _busyCreatedId = workout.templateId);
+    try {
+      await ref.read(workoutTemplateActionsProvider).refresh();
+      // Le retour ramène au coach : l'éditeur s'empile, il ne remplace pas.
+      unawaited(router.push(AppRoutes.templateEditor(workout.templateId)));
+    } on AppException catch (exception) {
+      notices.show(serverFailureMessage(exception), tone: AppNoticeTone.error);
+    } finally {
+      if (mounted) setState(() => _busyCreatedId = null);
+    }
+  }
+
   Future<void> _openProgram(CoachProgramProposal proposal) async {
     if (_busyProgramId != null) return;
     final router = GoRouter.of(context);
@@ -126,7 +150,9 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         onSend: _send,
         onOpenProposal: _openProposal,
         onOpenProgram: _openProgram,
+        onOpenCreated: _openCreated,
         busyProgramId: _busyProgramId,
+        busyCreatedId: _busyCreatedId,
         onRetry: () => ref.read(coachThreadProvider.notifier).clearOffline(),
         onStop: () => ref.read(coachThreadProvider.notifier).stop(),
         isOffline: state.isOffline,

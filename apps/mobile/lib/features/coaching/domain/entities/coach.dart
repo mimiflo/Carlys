@@ -132,6 +132,7 @@ class CoachMessage {
     this.thinkingSeconds,
     this.proposal,
     this.programProposal,
+    this.createdWorkout,
     this.createdAt,
   });
 
@@ -154,11 +155,18 @@ class CoachMessage {
   /// Programme proposé, quand le coach en a formulé un.
   final CoachProgramProposal? programProposal;
 
+  /// La séance que ce tour a ENREGISTRÉE (« Ok crée-la ») : un modèle de
+  /// séance, prouvé par le serveur. `null` sinon.
+  final CoachCreatedWorkout? createdWorkout;
+
   /// Instant d'écriture, tel que le serveur l'a daté (UTC). `null` pour un
   /// message qui n'en porte pas (données de démonstration, anciens tests) :
   /// on ne lui invente pas de jour.
   final DateTime? createdAt;
 }
+
+/// Une séance enregistrée par le coach : le modèle de séance, et son nom.
+typedef CoachCreatedWorkout = ({String templateId, String name});
 
 /// Fil de discussion complet.
 class CoachConversation {

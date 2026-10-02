@@ -259,6 +259,31 @@ void main() {
     expect(done.since, since);
   });
 
+  test('la séance enregistrée se lit du serveur ; absente, aucune', () {
+    final json = {
+      'id': 'a',
+      'role': 'ASSISTANT',
+      'content': 'C’est enregistré.',
+      'createdAt': '2026-10-02T08:00:00.000Z',
+    };
+    expect(coachMessageFromJson(json).createdWorkout, isNull);
+    expect(
+      coachMessageFromJson({
+        ...json,
+        'createdWorkout': {'templateId': 'modele-1', 'name': 'Jambes'},
+      }).createdWorkout,
+      (templateId: 'modele-1', name: 'Jambes'),
+    );
+    // Une forme inattendue ne fait pas tomber le fil.
+    expect(
+      coachMessageFromJson({
+        ...json,
+        'createdWorkout': {'templateId': 3},
+      }).createdWorkout,
+      isNull,
+    );
+  });
+
   test('les étapes se lisent du serveur ; absentes d’une copie ancienne', () {
     final json = {
       'id': 'a',

@@ -5,6 +5,7 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/services/coach_greeting.dart';
+import 'coach_created_workout_card.dart';
 import 'coach_greeting_bubble.dart';
 import 'coach_live_bubble.dart';
 import 'coach_message_bubble.dart';
@@ -34,7 +35,9 @@ class CoachThreadView extends StatelessWidget {
     required this.maxBubbleWidth,
     required this.onOpenProposal,
     required this.onOpenProgram,
+    this.onOpenCreated,
     this.busyProgramId,
+    this.busyCreatedId,
     this.greeting,
     super.key,
   });
@@ -44,6 +47,10 @@ class CoachThreadView extends StatelessWidget {
   final double maxBubbleWidth;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
   final ValueChanged<CoachProgramProposal> onOpenProgram;
+
+  /// Ouvrir une séance que le coach a enregistrée, et celle qui s'ouvre.
+  final ValueChanged<CoachCreatedWorkout>? onOpenCreated;
+  final String? busyCreatedId;
 
   /// Programme proposé en cours de création : sa carte patiente.
   final String? busyProgramId;
@@ -114,6 +121,7 @@ class CoachThreadView extends StatelessWidget {
         final message = messages[position];
         final proposal = message.proposal;
         final program = message.programProposal;
+        final created = message.createdWorkout;
         // Juste après le bonjour, c'est à lui (aujourd'hui) qu'on se compare.
         final day = position == greetAt
             ? _dayBreak(message.createdAt, now)
@@ -143,6 +151,17 @@ class CoachThreadView extends StatelessWidget {
                 maxWidth: maxBubbleWidth,
                 isBusy: busyProgramId == program.id,
                 onOpen: () => onOpenProgram(program),
+              ),
+            ],
+            if (created != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              CoachCreatedWorkoutCard(
+                workout: created,
+                maxWidth: maxBubbleWidth,
+                isBusy: busyCreatedId == created.templateId,
+                onOpen: onOpenCreated == null
+                    ? null
+                    : () => onOpenCreated?.call(created),
               ),
             ],
           ],
