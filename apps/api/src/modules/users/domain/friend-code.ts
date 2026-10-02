@@ -41,4 +41,4 @@ export function normalizeFriendCode(raw: string): string | null {
  * n'importe quel autre code scanné par erreur — le scanner mobile refuse
  * tout ce qui ne le porte pas.
  */
-export const FRIEND_CODE_QR_PREFIX = 'carlys:friend:';
+const FRIEND_CODE_QR_PREFIX = 'carlys:friend:';

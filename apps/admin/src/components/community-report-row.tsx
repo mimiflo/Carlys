@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { CommunityReportStatusCell } from './community-report-status-cell';
 
 /** Motifs tels que le membre les a choisis, dans les mots de l'écran mobile. */
-export const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, string> = {
+const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, string> = {
   HARCELEMENT: 'Harcèlement',
   SPAM: 'Spam',
   CONTENU_INAPPROPRIE: 'Contenu inapproprié',

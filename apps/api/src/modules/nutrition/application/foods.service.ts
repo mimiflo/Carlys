@@ -11,7 +11,7 @@ function asNumber(value: Prisma.Decimal | null): number | null {
 }
 
 /** Un aliment tel que le client le lit (valeurs pour 100 g). */
-export function presentFood(food: FoodSearchRow): FoodContract {
+function presentFood(food: FoodSearchRow): FoodContract {
   return {
     code: food.code,
     name: food.name,

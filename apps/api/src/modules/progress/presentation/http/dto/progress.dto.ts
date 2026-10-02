@@ -26,7 +26,7 @@ import {
 } from 'class-validator';
 import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
 
-export const PROGRESS_PERIODS = ['week', 'month', 'year'] as const;
+const PROGRESS_PERIODS = ['week', 'month', 'year'] as const;
 export type ProgressPeriodValue = (typeof PROGRESS_PERIODS)[number];
 
 export class OverviewQuery {

@@ -18,7 +18,7 @@ import {
 } from 'class-validator';
 import { trimmed } from '../../../../../common/transforms/trimmed';
 
-export class DeviceInfoDto {
+class DeviceInfoDto {
   @ApiPropertyOptional({ example: 'iPhone de Camille' })
   @IsOptional()
   @IsString()

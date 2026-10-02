@@ -62,7 +62,7 @@ export function idFor(programId: string, key: string): string {
  * changerait le programme, ce qui ferait passer une donnée d'interface pour
  * une décision d'entraînement.
  */
-export function seedOf(input: GenerationInput): string {
+function seedOf(input: GenerationInput): string {
   const kit = [...input.equipmentSlugs].sort().join(',');
   return `${input.programId}|${input.goal}|${input.experience}|${input.weeklySessionsTarget}|${input.sessionMinutesTarget}|${kit}`;
 }

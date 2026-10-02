@@ -16,7 +16,7 @@ import { PrismaService } from '../../../database/prisma/prisma.service';
  * déduit le type du résultat ; l'annoter l'effacerait, et `plan.entitlements`
  * redeviendrait inconnu.
  */
-export const PLAN_AVEC_DROITS = {
+const PLAN_AVEC_DROITS = {
   plan: { include: { entitlements: true } },
 } satisfies Prisma.SubscriptionInclude;
 

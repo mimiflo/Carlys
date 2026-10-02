@@ -49,7 +49,7 @@ export function formatFor(sessionMinutes: number): SessionFormat {
   };
 }
 
-export function warmupSeconds(goal: TrainingGoal, sessionMinutes: number): number {
+function warmupSeconds(goal: TrainingGoal, sessionMinutes: number): number {
   if (goal === TrainingGoal.STRENGTH) return WARMUP_SECONDS_HEAVY;
   return sessionMinutes <= WARMUP_SHORT_THRESHOLD_MINUTES
     ? WARMUP_SECONDS_SHORT

@@ -3,7 +3,7 @@ import { type PinoLogger } from 'nestjs-pino';
 import { withTimeout } from '../../../common/utilities/with-timeout';
 
 /** Au-delà, la dépendance est déclarée en panne : une sonde lente n'aide personne. */
-export const PROBE_TIMEOUT_MS = 2_000;
+const PROBE_TIMEOUT_MS = 2_000;
 
 /**
  * Le seul libellé qu'une sonde en échec PUBLIE.

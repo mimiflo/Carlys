@@ -65,7 +65,7 @@ export interface GenerationInput {
 }
 
 /** Une série prescrite. `targetWeightKg` n'existe pas : voir `goal-rules.ts`. */
-export interface PrescribedSet {
+interface PrescribedSet {
   position: number;
   targetReps: number | null;
   /**

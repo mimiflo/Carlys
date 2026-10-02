@@ -22,7 +22,7 @@ import { type TrainingGoal } from '@prisma/client';
  */
 
 /** Un pas du mésocycle : trois semaines qui montent, une qui décharge. */
-export interface MesocycleStep {
+interface MesocycleStep {
   setsDelta: number;
   repsDelta: number;
   restDelta: number;

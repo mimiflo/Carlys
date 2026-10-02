@@ -34,7 +34,7 @@ type Existing = Pick<
   | 'retiredAt'
 >;
 
-export interface FoodRow extends CiqualFood {
+interface FoodRow extends CiqualFood {
   readonly sourceVersion: string;
 }
 
@@ -112,13 +112,13 @@ export function planFoodSync(
  * les repas ne pourraient plus être composés. `--accepter-retraits` assume
  * le cas voulu, après une simulation (`--a-blanc`).
  */
-export const MASS_RETIREMENT_SHARE = 0.25;
+const MASS_RETIREMENT_SHARE = 0.25;
 
 export function isMassRetirement(plan: FoodSyncPlan): boolean {
   return plan.activeBefore > 0 && plan.toRetire.length > plan.activeBefore * MASS_RETIREMENT_SHARE;
 }
 
-export class MassRetirementError extends Error {}
+class MassRetirementError extends Error {}
 
 /**
  * Une clé de verrou consultatif propre à l'import, dérivée d'un nom comme

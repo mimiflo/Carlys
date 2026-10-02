@@ -16,7 +16,7 @@ import { TokenService } from './token.service';
  * celle dont dépend la réinitialisation de mot de passe de tout le monde —
  * avec elle.
  */
-export const EMAIL_VERIFICATION_CADENCE = {
+const EMAIL_VERIFICATION_CADENCE = {
   cooldownMs: 60_000,
   maxPerWindow: 5,
   windowMs: 24 * 3_600_000,

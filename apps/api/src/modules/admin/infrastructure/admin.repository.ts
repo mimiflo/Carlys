@@ -1,11 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  type AdminUserStatus,
-  type AuditLog,
-  type Prisma,
-  UserStatus,
-  WorkoutSessionStatus,
-} from '@prisma/client';
+import { type AuditLog, type Prisma, UserStatus, WorkoutSessionStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export type AdminWithAccess = Prisma.AdminUserGetPayload<{
@@ -126,5 +120,3 @@ export function permissionsOf(admin: AdminWithAccess): string[] {
 export function rolesOf(admin: AdminWithAccess): string[] {
   return admin.roles.map((link) => link.role.slug).sort();
 }
-
-export type { AdminUserStatus };

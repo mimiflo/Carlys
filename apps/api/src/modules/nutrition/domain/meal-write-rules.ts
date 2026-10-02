@@ -12,14 +12,7 @@
  */
 
 /** Les champs que la composition CALCULE, et qu'un repas composé ne reçoit pas. */
-export const COMPUTED_FIELDS = [
-  'kcal',
-  'proteinG',
-  'carbsG',
-  'fatG',
-  'quantity',
-  'quantityUnit',
-] as const;
+const COMPUTED_FIELDS = ['kcal', 'proteinG', 'carbsG', 'fatG', 'quantity', 'quantityUnit'] as const;
 export type ComputedField = (typeof COMPUTED_FIELDS)[number];
 
 /**

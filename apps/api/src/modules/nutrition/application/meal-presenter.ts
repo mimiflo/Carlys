@@ -20,7 +20,7 @@ function tenth(value: Prisma.Decimal | null): number | null {
  * ses valeurs pour SA quantité, recalculées depuis cet instantané — jamais
  * depuis la base, qu'une nouvelle version de CIQUAL a pu changer depuis.
  */
-export function presentComponent(component: MealComponent): MealComponentContract {
+function presentComponent(component: MealComponent): MealComponentContract {
   const values = componentValues(component);
   return {
     id: component.id,

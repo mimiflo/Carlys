@@ -19,7 +19,7 @@ export const PROVIDER_LABELS: Record<PaymentProvider, string> = {
   PLAY_STORE: 'Google Play',
 };
 
-export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
   TRIALING: 'en essai',
   ACTIVE: 'actif',
   PAST_DUE: 'paiement en retard',

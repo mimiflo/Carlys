@@ -27,7 +27,7 @@ import { type PoolExercise } from './types';
 export type PoolByGroup = Map<string, PoolExercise[]>;
 
 /** Par quel échelon de dégradation un exercice a été trouvé. */
-export type PickStep = 'principal' | 'secondaire' | 'voisin';
+type PickStep = 'principal' | 'secondaire' | 'voisin';
 
 export interface Pick {
   exercise: PoolExercise;
@@ -54,7 +54,7 @@ export function isTimed(exercise: PoolExercise): boolean {
  * Le score ne départage jamais tout seul : le slug tranche les ex æquo, ce
  * qui rend le tri stable quelle que soit l'implémentation de `sort`.
  */
-export function scoreOf(exercise: PoolExercise, experience: TrainingExperience): number {
+function scoreOf(exercise: PoolExercise, experience: TrainingExperience): number {
   let score = 0;
   if (isPolyarticular(exercise)) score += SCORE_POLYARTICULAR;
   if (experience === TrainingExperience.BEGINNER) {
@@ -137,7 +137,7 @@ export interface PickContext {
  * circulairement : d'une semaine à l'autre et d'un créneau à l'autre, le
  * premier candidat change, donc la sélection tourne sans jamais tirer au sort.
  */
-export function pickForGroup(
+function pickForGroup(
   byGroup: PoolByGroup,
   group: string,
   context: PickContext,

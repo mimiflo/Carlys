@@ -17,7 +17,7 @@ import {
 /** Audience JWT dédiée : un jeton admin n'est JAMAIS accepté côté mobile (et inversement). */
 export const ADMIN_JWT_AUDIENCE = 'carlys-admin';
 /** Durée de vie du jeton admin — pas de refresh : reconnexion quotidienne. */
-export const ADMIN_TOKEN_TTL_SECONDS = 12 * 3_600;
+const ADMIN_TOKEN_TTL_SECONDS = 12 * 3_600;
 
 const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou mot de passe incorrect.';
 
@@ -26,11 +26,11 @@ const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou mot de passe incorrect.';
  * mobile (LockoutService), mais un compte admin et un compte mobile de même
  * adresse ne partagent jamais leurs échecs.
  */
-export function adminLockoutIdentifier(email: string): string {
+function adminLockoutIdentifier(email: string): string {
   return `admin:${email}`;
 }
 
-export function presentAdmin(admin: AdminWithAccess): AdminMe {
+function presentAdmin(admin: AdminWithAccess): AdminMe {
   return {
     id: admin.id,
     email: admin.email,

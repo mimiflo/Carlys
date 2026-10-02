@@ -13,7 +13,7 @@ import {
 } from '../infrastructure/workout-templates.repository';
 import { presentTemplateDetail, presentTemplateSummary } from './workout-template.presenter';
 
-export interface PlannedSetInput {
+interface PlannedSetInput {
   id: string;
   kind?: WorkoutSetKind | null;
   targetReps?: number | null;

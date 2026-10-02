@@ -40,7 +40,7 @@ export const LEAGUE_GROUP_SIZE = 20;
 
 /** Combien montent, et combien descendent, au règlement d'une période. */
 export const LEAGUE_PROMOTED = 5;
-export const LEAGUE_RELEGATED = 5;
+const LEAGUE_RELEGATED = 5;
 
 /**
  * En dessous de ce nombre de JOUEURS (score non nul), personne ne bouge.
@@ -65,7 +65,7 @@ export const LEAGUE_MIN_PLAYERS = 10;
  * un registre de restes par personne et par métrique, et rendrait le score
  * dépendant de l'ordre des écritures.
  */
-export const POINTS_PER_METRIC: Record<ChallengeMetric, { per: number; points: number }> = {
+const POINTS_PER_METRIC: Record<ChallengeMetric, { per: number; points: number }> = {
   /** Une séance terminée. */
   WORKOUTS: { per: 1, points: 50 },
   /** Soixante secondes réellement chronométrées dans les séries. */
@@ -126,7 +126,7 @@ export function previousPeriodKey(periodKey: string): string {
  * synchronise le lundi ou le mardi. La ligne arrivée après le règlement se
  * règle seule (voir `LeaguesRepository.settle`).
  */
-export const LEAGUE_LATE_OPENING_MS = 48 * 3_600_000;
+const LEAGUE_LATE_OPENING_MS = 48 * 3_600_000;
 
 /**
  * Ce qu'une contribution datée de `at` peut faire à la ligue, vu de `now`.

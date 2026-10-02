@@ -13,7 +13,7 @@ import { applyFoodSync, isMassRetirement } from './ciqual-sync';
  * introuvable ou une teneur illisible n'écrit rien du tout.
  */
 
-export class CiqualImportError extends Error {}
+class CiqualImportError extends Error {}
 
 export interface CiqualImportReport {
   readonly version: string;

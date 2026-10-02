@@ -12,8 +12,8 @@
  */
 export const CIQUAL_ATTRIBUTION =
   'Source : Anses, Table de composition nutritionnelle des aliments Ciqual';
-export const CIQUAL_LICENSE = 'Licence Ouverte Etalab 2.0';
-export const CIQUAL_URL = 'https://ciqual.anses.fr/';
+const CIQUAL_LICENSE = 'Licence Ouverte Etalab 2.0';
+const CIQUAL_URL = 'https://ciqual.anses.fr/';
 
 /** La mention complète à afficher, sans la version, propre à chaque réponse. */
 export function ciqualAttribution(): { attribution: string; license: string; url: string } {

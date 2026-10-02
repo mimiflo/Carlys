@@ -35,7 +35,7 @@ export const MAX_CREDITED_DISTANCE_METERS = 300_000;
  * au-dessus d'une sortie vélo rapide. Une séance d'une minute ne crédite
  * donc pas plus de 1,2 km.
  */
-export const MAX_PLAUSIBLE_SPEED_METERS_PER_SECOND = 20;
+const MAX_PLAUSIBLE_SPEED_METERS_PER_SECOND = 20;
 
 /**
  * Séances qui comptent, par personne et par jour UTC (de clôture). Au-delà,

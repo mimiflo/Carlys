@@ -15,7 +15,7 @@ import { xmlRecords } from './xml-records';
 export class CiqualParseError extends Error {}
 
 /** Les quatre constituants lus, sous leur nom officiel. */
-export const CIQUAL_CONSTITUENTS = {
+const CIQUAL_CONSTITUENTS = {
   kcal: 'Energie, Règlement UE N° 1169/2011 (kcal/100 g)',
   protein: 'Protéines, N x facteur de Jones (g/100 g)',
   carbs: 'Glucides (g/100 g)',
@@ -38,7 +38,7 @@ export interface CiqualFood {
   readonly fatPer100g: Prisma.Decimal | null;
 }
 
-export type IgnoredReason = 'énergie inconnue' | 'nom absent';
+type IgnoredReason = 'énergie inconnue' | 'nom absent';
 
 export interface CiqualIgnored {
   readonly code: number;

@@ -34,12 +34,12 @@ function trains(exercise: PoolExercise): boolean {
   return exercise.type === ExerciseType.STRENGTH || exercise.type === ExerciseType.CARDIO;
 }
 
-export function playableAt(exercise: PoolExercise, experience: TrainingExperience): boolean {
+function playableAt(exercise: PoolExercise, experience: TrainingExperience): boolean {
   return DIFFICULTY_ORDER[exercise.difficulty] <= DIFFICULTY_ORDER[CEILING[experience]];
 }
 
 /** L'exercice se joue-t-il avec ce kit ? INCLUSION, jamais intersection. */
-export function playableWith(exercise: PoolExercise, kit: Set<string>): boolean {
+function playableWith(exercise: PoolExercise, kit: Set<string>): boolean {
   return exercise.equipment.length > 0 && exercise.equipment.every((slug) => kit.has(slug));
 }
 

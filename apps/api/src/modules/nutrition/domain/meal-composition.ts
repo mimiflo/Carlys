@@ -15,7 +15,7 @@ const Decimal = Prisma.Decimal;
  */
 
 /** Ce qu'un composant recopie de la base au moment de l'ajout. */
-export interface FoodSnapshot {
+interface FoodSnapshot {
   readonly foodCode: number;
   readonly foodName: string;
   readonly foodShortName: string;

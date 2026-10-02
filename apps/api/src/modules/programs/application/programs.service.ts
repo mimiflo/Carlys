@@ -13,7 +13,7 @@ import { anchorOf, dateOfSlot } from '../domain/calendar-dates';
 import { ProgramsRepository, type ProgramWithDays } from '../infrastructure/programs.repository';
 import { presentProgramDetail, presentProgramSummary } from './program.presenter';
 
-export interface ProgramDayInput {
+interface ProgramDayInput {
   id: string;
   weekNumber: number;
   dayOfWeek: number;

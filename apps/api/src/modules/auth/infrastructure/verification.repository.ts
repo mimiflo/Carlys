@@ -16,11 +16,7 @@ export interface LinkCadence {
  * `true` si un nouveau lien peut partir, vu les dates des liens déjà posés
  * sur la fenêtre (du plus récent au plus ancien).
  */
-export function allowsNewLink(
-  recentDesc: readonly Date[],
-  cadence: LinkCadence,
-  now: number,
-): boolean {
+function allowsNewLink(recentDesc: readonly Date[], cadence: LinkCadence, now: number): boolean {
   const latest = recentDesc[0]?.getTime();
   return (
     recentDesc.length < cadence.maxPerWindow &&

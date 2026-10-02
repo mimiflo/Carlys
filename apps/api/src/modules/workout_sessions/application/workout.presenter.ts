@@ -53,7 +53,7 @@ export function presentSessionSummary(session: SessionSummaryRow): WorkoutSessio
   };
 }
 
-export function presentPlanItem(item: WorkoutSessionPlanItem): WorkoutSessionPlanItemContract {
+function presentPlanItem(item: WorkoutSessionPlanItem): WorkoutSessionPlanItemContract {
   return {
     id: item.id,
     exercisePosition: item.exercisePosition,

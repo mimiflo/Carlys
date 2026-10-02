@@ -25,7 +25,7 @@ import { cohortToJoin, type LeagueGroupCount } from '../domain/league-ladder';
  * préfixe range ces clés à part de tout autre usage futur des verrous
  * consultatifs.
  */
-export function groupLockKey(periodKey: string, division: LeagueDivision): bigint {
+function groupLockKey(periodKey: string, division: LeagueDivision): bigint {
   return createHash('sha256')
     .update(`carlys:ligue:${periodKey}:${division}`)
     .digest()

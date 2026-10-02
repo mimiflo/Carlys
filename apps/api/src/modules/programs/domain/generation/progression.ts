@@ -78,7 +78,7 @@ export function prescriptionFor(
 }
 
 /** Le suffixe du libellé d'un jour de décharge. */
-export const DELOAD_LABEL_SUFFIX = ' (semaine allégée)';
+const DELOAD_LABEL_SUFFIX = ' (semaine allégée)';
 
 /**
  * Une semaine allégée que l'utilisateur ne voit pas est une semaine qu'il
