@@ -1,6 +1,7 @@
 import { type FinishReason } from '../domain/coach-model.port';
 import { type Complete, completeAnswer } from './answer-continuation';
 import { AnswerStream, atWordBoundary, continuationPrompt, saysFin, stitch } from './answer-stream';
+import { ContextBudget } from './context-budget';
 import { GenerationFailure } from './generation-end';
 
 describe('atWordBoundary — repartir d’un mot entier', () => {
@@ -141,7 +142,11 @@ const QUESTION = [{ role: 'user', content: 'Le développé couché, ça travaill
 
 async function answer(
   steps: Step[],
-  options: { stream?: boolean; cancelled?: AbortController; trustStop?: boolean } = {},
+  options: {
+    stream?: boolean;
+    cancelled?: AbortController;
+    trustStop?: boolean;
+  } = {},
 ) {
   const { complete, sent } = model(steps);
   const shown: string[] = [];
@@ -345,6 +350,35 @@ describe('completeAnswer — une réponse coupée reprend, une réponse finie pa
     );
     expect(result.shown).toBe(result.text);
     expect(result.report).toMatchObject({ continuations: 2, recovered: 1, truncated: false });
+  });
+
+  it('le contexte presque plein : la sortie est bornée, et une reprise sans place n’est pas tentée', async () => {
+    const { complete } = model([
+      { text: ['Le développé couché travaille les pectoraux, les tri'], finish: 'length' },
+    ]);
+    // Contexte minuscule : la question tient, une reprise non.
+    const result = await completeAnswer(complete, {
+      messages: QUESTION,
+      tools: [],
+      signal: new AbortController().signal,
+      cancelled: undefined,
+      onText: undefined,
+      maxTokens: 2_048,
+      worker: undefined,
+      maxContinuations: 2,
+      trustStop: false,
+      budget: new ContextBudget(420, []),
+      usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 },
+    });
+
+    const asked = complete.mock.calls[0]?.[3] ?? 0;
+    expect(asked).toBeGreaterThan(0);
+    expect(asked).toBeLessThan(2_048);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(result.report).toMatchObject({
+      ends: ['MAX_TOKENS', 'CONTEXT_LIMIT'],
+      truncated: true,
+    });
   });
 
   it('plafond de reprises atteint : la réponse est rendue, coupée net au dernier mot entier', async () => {

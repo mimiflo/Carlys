@@ -42,6 +42,18 @@ describe('prefetchFor', () => {
     expect(new Set(calls.map((call) => call.id)).size).toBe(calls.length);
   });
 
+  it('une séance ou un programme demandé : son profil, qu’il relit toujours avant de proposer', () => {
+    expect(names('Une séance full body rapide au poids du corps ?')).toEqual([
+      'get_training_profile',
+    ]);
+    expect(names('Prépare-moi une séance haut du corps pour ce soir')).toEqual([
+      'get_training_profile',
+    ]);
+    expect(names('Je veux un programme de 4 semaines')).toEqual(['get_training_profile']);
+    // Parler de SA séance n'en demande pas une.
+    expect(names('Mon programme me fatigue, normal ?')).not.toContain('get_training_profile');
+  });
+
   it('une question qui ne parle pas de ses données ne lit rien', () => {
     for (const request of [
       'Explique-moi la surcharge progressive',

@@ -369,18 +369,24 @@ describe('CoachService.sendMessage', () => {
       USER,
       CONVERSATION,
       MESSAGE,
-      'Mon record, et une séance ?',
+      'Mon record, et prépare-moi une séance ?',
       {
         onStep: (label) => shown.push(label),
       },
     );
 
-    const steps = ['Je regarde tes records', 'Je cherche des exercices', 'Je prépare ta séance'];
+    const steps = [
+      'Je regarde tes records',
+      // « une séance » demandée : le profil, lu d'avance (coach-prefetch.ts).
+      'Je relis ton profil d’entraînement',
+      'Je cherche des exercices',
+      'Je prépare ta séance',
+    ];
     expect(shown).toEqual(steps);
     const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [{ steps: string[] }];
     // Aucune séance n'a survécu à la validation : son « Je prépare… » ne
     // s'archive pas, alors qu'il a été montré pendant qu'il se faisait.
-    expect(saved.steps).toEqual(steps.slice(0, 2));
+    expect(saved.steps).toEqual(steps.slice(0, 3));
   });
 
   it('le fil n’est relu que sur une FENÊTRE, jamais en entier', async () => {

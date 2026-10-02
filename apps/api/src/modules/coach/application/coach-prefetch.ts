@@ -41,6 +41,13 @@ const READS: readonly (readonly [RegExp, readonly Omit<CoachToolCall, 'id'>[]])[
       { name: 'get_recent_meals', input: {} },
     ],
   ],
+  [
+    // Une séance ou un programme DEMANDÉ (pas « Ma séance d'hier était
+    // dure ») : il relit TOUJOURS le profil avant de proposer (constaté) —
+    // un tour d'outil de moins, sur six.
+    /\b(veux|voudrais|aimerais|fais|donne|propose|prepare|cree|construis|monte|besoin)\b[^?.!]*\b(seance|programme|entrainement|routine)s?\b|^\W*(une|un) (seance|programme|routine)\b/,
+    [{ name: 'get_training_profile', input: {} }],
+  ],
 ];
 
 /**

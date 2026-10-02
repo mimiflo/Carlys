@@ -8,6 +8,7 @@ import {
   recoverable,
 } from './generation-end';
 import { AnswerStream, atWordBoundary, continuationPrompt } from './answer-stream';
+import { type ContextBudget } from './context-budget';
 import { addUsage, textOf } from './openai-compatible.helpers';
 
 /**
@@ -20,6 +21,9 @@ import { addUsage, textOf } from './openai-compatible.helpers';
  * signe de coupure (`length`, panne, `looksSuspended`) ; jamais sur un appel
  * d'outil, jamais après l'annulation par la personne.
  */
+
+/** En deçà, un appel n'écrirait presque rien : le contexte est plein. */
+const MIN_ROOM = 64;
 
 /** La requête au modèle du client : charge utile, signal, flux, plafond, worker. */
 export type Complete = (
@@ -52,6 +56,8 @@ interface AnswerTurn {
   maxTokens: number;
   worker: string | undefined;
   maxContinuations: number;
+  /** Ce que le contexte du modèle peut encore contenir (context-budget.ts). */
+  budget?: ContextBudget;
   /**
    * Une fin voulue (`stop`) n'est jamais une coupure : une proposition est
    * déjà faite, « Voici la séance : » précède sa carte.
@@ -83,15 +89,22 @@ export async function completeAnswer(
   // `null` : l'appel a lâché après du texte, une reprise peut en repartir.
   const call = async (messages: Record<string, unknown>[]) => {
     try {
+      // Jamais plus que le contexte ne peut contenir : au-delà, Ollama décale
+      // le contexte et la réponse prend des minutes de plus.
+      const room = turn.budget?.room(messages) ?? turn.maxTokens;
+      if (room < MIN_ROOM) {
+        throw new GenerationFailure('Coach : contexte du modèle plein.', 'CONTEXT_LIMIT');
+      }
       const result = await complete(
         { messages, tools: turn.tools },
         turn.signal,
         turn.onText && stream.push,
-        turn.maxTokens,
+        Math.min(turn.maxTokens, room),
         served,
       );
       served = result.served;
       addUsage(turn.usage, result.completion);
+      turn.budget?.calibrate(messages, result.completion.usage?.prompt_tokens);
       // Sans flux, le texte arrive d'un bloc.
       const content = result.completion.choices?.[0]?.message?.content;
       if (!turn.onText) stream.push(typeof content === 'string' ? content : textOf(content));

@@ -15,6 +15,7 @@ const ollama = () =>
         streamIdleTimeoutMs: 60_000,
         maxOutputTokens: 2048,
         maxContinuations: 2,
+        contextTokens: 8_192,
       },
     } as unknown as AppConfigService,
     new CoachWorkerPool(['http://ollama:11434/v1'], 30_000),

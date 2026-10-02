@@ -382,6 +382,10 @@ services:
       # « heap out of memory » — un arrêt net, journalisé, relancé — plutôt
       # qu'en processus tué par le noyau sans un mot. Vide : défaut de Node.
       NODE_OPTIONS: ${CARLYS_API_NODE_OPTIONS:-}
+      # Le contexte du coach EST celui d'Ollama : une seule valeur, sinon
+      # l'API laisserait déborder le contexte (915 s pour une réponse, mesuré)
+      # ou couperait l'historique pour rien. Posée dans le .env, elle prime.
+      COACH_CONTEXT_TOKENS: ${COACH_CONTEXT_TOKENS:-${CARLYS_OLLAMA_CONTEXT_LENGTH:-8192}}
     # PAR EXEMPLAIRE : N exemplaires, N plafonds.
     mem_limit: ${CARLYS_API_MEM_LIMIT:-0}
     # ── Plusieurs exemplaires de l'API ────────────────────────────────────

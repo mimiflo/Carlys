@@ -33,6 +33,11 @@ export const coachGatewayEnv = {
   COACH_MAX_OUTPUT_TOKENS: int(16, 8_192, 2_048),
   /** Reprises d'une réponse coupée, au plus, par appel au modèle. */
   COACH_MAX_CONTINUATIONS: int(0, 5, 2),
+  /**
+   * Contexte du modèle, en jetons : celui des workers (`OLLAMA_CONTEXT_LENGTH`).
+   * L'historique le plus ancien cède pour y garder la place de la réponse.
+   */
+  COACH_CONTEXT_TOKENS: int(2_048, 1_000_000, 8_192),
   /** Générations simultanées pour UNE personne (file comprise). */
   COACH_MAX_CONCURRENT_PER_USER: int(1, 10, 1),
   /** Messages par personne et par minute, en plus du plafond quotidien. */
@@ -81,6 +86,7 @@ export interface CoachGatewaySettings {
   streamIdleTimeoutMs: number;
   maxOutputTokens: number;
   maxContinuations: number;
+  contextTokens: number;
   maxConcurrentPerUser: number;
   messagesPerMinute: number;
   maxMessageChars: number;
@@ -107,6 +113,7 @@ export function coachGatewaySettings(config: ConfigService<Env, true>): CoachGat
     streamIdleTimeoutMs: get('COACH_STREAM_IDLE_TIMEOUT_MS'),
     maxOutputTokens: get('COACH_MAX_OUTPUT_TOKENS'),
     maxContinuations: get('COACH_MAX_CONTINUATIONS'),
+    contextTokens: get('COACH_CONTEXT_TOKENS'),
     maxConcurrentPerUser: get('COACH_MAX_CONCURRENT_PER_USER'),
     messagesPerMinute: get('COACH_MESSAGES_PER_MINUTE'),
     maxMessageChars: get('COACH_MAX_MESSAGE_CHARS'),

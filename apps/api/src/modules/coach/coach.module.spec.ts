@@ -55,6 +55,7 @@ describe('coachModelFor', () => {
         streamIdleTimeoutMs: 60_000,
         maxOutputTokens: 512,
         maxContinuations: 2,
+        contextTokens: 8_192,
       },
       coachProvider: { model: 'qwen3:4b-instruct-2507-q4_K_M' },
       anthropicApiKey: 'sk-ant-factice-1234567890',

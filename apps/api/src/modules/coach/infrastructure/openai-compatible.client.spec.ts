@@ -35,6 +35,7 @@ function client(provider: { baseUrl?: string; apiKey?: string; model?: string } 
         streamIdleTimeoutMs: 60_000,
         maxOutputTokens: 2048,
         maxContinuations: 2,
+        contextTokens: 8_192,
       },
     } as unknown as AppConfigService,
     new CoachWorkerPool(provider.baseUrl === undefined ? [] : [provider.baseUrl], 30_000),
@@ -123,6 +124,7 @@ function clientWith(pool: CoachWorkerPool) {
         streamIdleTimeoutMs: 60_000,
         maxOutputTokens: 2048,
         maxContinuations: 2,
+        contextTokens: 8_192,
       },
     } as unknown as AppConfigService,
     pool,
@@ -775,6 +777,40 @@ describe('OpenAiCompatibleCoachClient', () => {
     });
   });
 
+  describe('les derniers tours servent à conclure (tool-round.ts)', () => {
+    it('plus de lecture dans les deux derniers tours : il propose, et sa phrase reste', async () => {
+      // Constaté : une lecture par tour, et les six tours passaient avant la séance.
+      const read = (id: string) =>
+        completion({ content: null, tool_calls: [toolCall(id, 'get_personal_records', '{}')] });
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(read('lect00001'))
+        .mockResolvedValueOnce(read('lect00002'))
+        .mockResolvedValueOnce(read('lect00003'))
+        .mockResolvedValueOnce(read('lect00004'))
+        .mockResolvedValueOnce(read('lect00005'))
+        .mockResolvedValueOnce(
+          completion({
+            content: 'Voici ta séance.',
+            tool_calls: [toolCall('prop00001', 'propose_session', '{"name":"Full body"}')],
+          }),
+        );
+      global.fetch = fetchMock;
+      const runTools = jest.fn((calls: CoachToolCall[]) =>
+        Promise.resolve(calls.map((call) => ({ id: call.id, content: '{}' }))),
+      );
+
+      const output = await client().reply(input({ runTools }));
+
+      // Quatre lectures faites ; la cinquième, refusée, lui dit de conclure.
+      expect(runTools.mock.calls.filter(([calls]) => calls.length > 0)).toHaveLength(4);
+      const fifth = sent(fetchMock, 5).body.messages.at(-1) as { content: string };
+      expect(fifth.content).toMatch(/^Erreur : Plus de lecture dans ce tour/);
+      // Au bout des tours, ce qui est écrit, avec sa séance — jamais l'abandon.
+      expect(output).toMatchObject({ text: 'Voici ta séance.', proposal: { name: 'Full body' } });
+    });
+  });
+
   describe('les pannes : toujours un 503, jamais le 429 du fournisseur', () => {
     it('429 puis 500 : deux nouvelles tentatives espacées, puis la réponse', async () => {
       const fetchMock = jest
@@ -951,6 +987,7 @@ describe('OpenAiCompatibleCoachClient', () => {
             streamIdleTimeoutMs: 60_000,
             maxOutputTokens: 512,
             maxContinuations: 2,
+            contextTokens: 8_192,
           },
         } as unknown as AppConfigService,
         pool,

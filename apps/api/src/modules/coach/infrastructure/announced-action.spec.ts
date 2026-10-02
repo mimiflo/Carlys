@@ -123,6 +123,9 @@ describe('asksForPlan', () => {
       'Quelle séance je fais demain ?',
       'Une séance pour les jambes ?',
       'J’aimerais un programme de remise en forme',
+      // Sans verbe : constaté, la séance arrivait écrite, sans carte.
+      'Une séance full body rapide au poids du corps ?',
+      'Un programme force sur 4 semaines ?',
     ]) {
       expect(asksForPlan(request)).toBe(true);
     }
@@ -134,6 +137,10 @@ describe('asksForPlan', () => {
       'Quel est mon record au squat ?',
       'Explique-moi la surcharge progressive',
       'Merci beaucoup !',
+      'Mes dernières séances étaient bien ?',
+      'C’est quoi une bonne séance ?',
+      'Mon programme me fatigue, normal ?',
+      'Ma séance d’hier était dure, j’ai soulevé combien ?',
     ]) {
       expect(asksForPlan(request)).toBe(false);
     }

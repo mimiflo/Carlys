@@ -504,6 +504,34 @@ pas la consigne :
 - tout s'écrit dans la même bulle, sans « Suite : ». Reprise impossible :
   la réponse montrée reste, finie par « … », comptée incomplète.
 
+**Le contexte, jamais débordé** (`context-budget.ts`). Qwen3-4B tourne avec
+8 192 jetons de contexte. Une question de 7 059 jetons et un plafond de 2 048
+débordaient : Ollama décalait alors le contexte et continuait — 915 s pour
+une réponse. Le client garde désormais TOUJOURS la place de la réponse et
+d'une reprise (plafond + 512) : l'historique le plus ancien cède (la mémoire
+résumée en garde l'essentiel), la dernière question jamais — et cède ENCORE
+à chaque tour d'outils, dont les résultats s'accumulent, plutôt que la place
+de la sortie (une séance proposée coupée en plein JSON serait perdue) ;
+chaque appel, l'occasion d'agir comprise, borne sa sortie à ce qui reste, et
+une reprise sans place n'est pas tentée (réponse rendue avec « … »). L'estimation part des caractères (mesuré sur
+Qwen3 : 3,3 caractères par jeton en français, 2,6 pour le JSON des lectures),
+puis se recale sur le compte exact que le moteur rend après chaque appel.
+
+**Les derniers tours servent à conclure** (`tool-round.ts`). Constaté sur
+« Une séance full body rapide au poids du corps ? » : une lecture par tour
+(modèles, séances, progression, records, profil, recherches — la même deux
+fois), et les six tours d'outils passaient avant la séance — « Je n'ai pas
+réussi à aboutir » une fois sur trois, une séance écrite sans carte les deux
+autres. Dans les deux derniers tours, une lecture est refusée par un
+résultat qui dit de conclure (`propose_session`, `propose_program`) ;
+l'occasion d'agir reste permise au dernier tour (la séance demandée et
+décrite sans carte y est encore proposée), sauf la vérification des données,
+qui écarterait la réponse sans pouvoir en écrire une autre ; au bout des
+tours, ce qui est écrit est rendu, jamais l'abandon s'il y a un texte. Une
+demande sans verbe (« Une séance full body rapide ? ») compte comme une
+demande — pas « Ma séance d'hier était dure ». Et une séance ou un programme demandé fait lire le profil
+d'entraînement d'avance (`coach-prefetch.ts`) : un tour de moins.
+
 **Mesures** (`/metrics`, préfixe `carlys_api_ai_`) :
 `generation_finish_reason_total{reason}`, `continuations_total`,
 `continuation_success_total`, `continuation_failed_total`,
@@ -762,6 +790,7 @@ démarrage.
 | `COACH_STREAM_IDLE_TIMEOUT_MS` | Silence toléré d'un flux déjà commencé avant de le tenir pour mort (60 000) |
 | `COACH_MAX_OUTPUT_TOKENS` | Jetons de sortie par appel au modèle ; une reprise est un autre appel (2 048) |
 | `COACH_MAX_CONTINUATIONS` | Reprises d'une réponse coupée, au plus, par appel (2) |
+| `COACH_CONTEXT_TOKENS` | Contexte du modèle en jetons : celui des workers (`OLLAMA_CONTEXT_LENGTH`, que le compose du serveur reprend par défaut), ou celui du fournisseur distant (Mistral : à relever) ; l'historique le plus ancien cède pour garder la place de la réponse (8 192) |
 | `COACH_MAX_CONCURRENT_PER_USER` | Générations simultanées pour une personne, file comprise (1) |
 | `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
 | `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |

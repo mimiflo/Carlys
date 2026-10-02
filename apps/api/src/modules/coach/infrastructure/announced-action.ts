@@ -99,6 +99,10 @@ export function endingOf(text: string): string {
 const ASKED = [
   /\b(veux|voudrais|aimerais|fais|fais-moi|donne|donne-moi|propose|propose-moi|prépare|prépare-moi|crée|construis|monte|besoin|quelle|quel)\b[^?.!]*\b(séance|programme|entraînement|plan)s?\b/iu,
   /\b(une|ma|la) (séance|programme)\b[^?.!]*\bpour\b/iu,
+  // Une demande sans verbe : « Une séance full body rapide au poids du
+  // corps ? » (constaté : la séance arrivait écrite, sans carte).
+  // Pas « Ma séance d'hier était dure », ni « Mon programme me fatigue ».
+  /^\W*(une|un) (nouvelle |petite |bonne )?(séance|programme|routine)\b/iu,
 ];
 
 export function asksForPlan(request: string): boolean {
