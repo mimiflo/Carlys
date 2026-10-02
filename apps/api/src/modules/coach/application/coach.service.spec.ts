@@ -347,6 +347,42 @@ describe('CoachService.sendMessage', () => {
     });
   });
 
+  it('sa réflexion : chaque lecture et chaque outil, montrés EN DIRECT et archivés, une fois chacun', async () => {
+    const stubs = buildStubs();
+    stubs.model.reply.mockImplementation((input: CoachTurnInput) => {
+      // Le modèle cherche des exercices (deux fois), puis propose une séance.
+      input.onToolCalls?.([{ id: 'a', name: 'search_exercises', input: {} }]);
+      input.onToolCalls?.([
+        { id: 'b', name: 'search_exercises', input: {} },
+        { id: 'c', name: 'propose_session', input: {} },
+      ]);
+      return Promise.resolve({
+        text: 'Voici ta séance.',
+        proposal: null,
+        usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0 },
+        refused: false,
+      });
+    });
+    const shown: string[] = [];
+
+    await buildService(stubs).sendMessage(
+      USER,
+      CONVERSATION,
+      MESSAGE,
+      'Mon record, et une séance ?',
+      {
+        onStep: (label) => shown.push(label),
+      },
+    );
+
+    const steps = ['Je regarde tes records', 'Je cherche des exercices', 'Je prépare ta séance'];
+    expect(shown).toEqual(steps);
+    const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [{ steps: string[] }];
+    // Aucune séance n'a survécu à la validation : son « Je prépare… » ne
+    // s'archive pas, alors qu'il a été montré pendant qu'il se faisait.
+    expect(saved.steps).toEqual(steps.slice(0, 2));
+  });
+
   it('le fil n’est relu que sur une FENÊTRE, jamais en entier', async () => {
     // Le fil n'a aucun plafond, l'historique envoyé au modèle en a un (20
     // tours). Relire des centaines de messages, leurs propositions et les

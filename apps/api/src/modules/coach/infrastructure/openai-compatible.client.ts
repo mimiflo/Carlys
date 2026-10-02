@@ -213,6 +213,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       proposed ||= calls.some(
         (c) => c.name === PROPOSE_SESSION_TOOL || c.name === PROPOSE_PROGRAM_TOOL,
       );
+      input.onToolCalls?.(calls);
       const results = await input.runTools(calls.filter((c) => c.name !== PROPOSE_SESSION_TOOL));
       // Ses données lues pour de bon : une lecture réussie d'un outil qui les rend.
       read ||= results.some(

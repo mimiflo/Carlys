@@ -442,6 +442,27 @@ s'écrit à mesure qu'Ollama la produit. Un renvoi de la même question pendant
 qu'elle s'écrit est refusé (409) par un verrou Redis, au lieu d'être compté et
 répondu deux fois.
 
+### Sa réflexion, montrée (2 octobre 2026)
+
+Comme Claude ou ChatGPT, le coach montre ce qu'il fait avant de répondre —
+mais ce sont ses étapes RÉELLES, nommées depuis ses appels d'outils
+(`application/coach-steps.ts`) : « Je regarde tes records », « Je relis tes
+dernières séances », « Je cherche des exercices », « Je prépare ta séance ».
+Jamais un raisonnement rédigé par le modèle : sur le processeur du serveur
+(≈ 8 jetons/s), une réflexion écrite coûterait des dizaines de secondes à
+chaque réponse, et pourrait dire autre chose que ce qu'il fait. Celles-ci
+sont gratuites, et vraies.
+
+- **En direct** : l'évènement SSE `step` (`{ label }`) part à chaque lecture
+  préalable (`coach-prefetch.ts`) et à chaque outil que le modèle demande
+  (`CoachTurnInput.onToolCalls`, `propose_session` comprise), une fois par
+  étape. Le mobile les déplie dans la bulle en cours, la dernière animée tant
+  que rien ne s'écrit ; sans étape, « Réfléchit… » comme avant.
+- **Archivées** : `CoachMessage.steps` (colonne `steps`, migration
+  `coach_reflexion`), rendues par l'API ; repliées au-dessus de la réponse
+  (« Réflexion · 3 étapes »), dépliées d'un appui. Une copie gardée sur
+  l'appareil avant leur arrivée n'en a simplement pas.
+
 ### Réponses coupées : la reprise (2 octobre 2026)
 
 Que le modèle cesse d'écrire ne dit pas que la réponse est finie. Chaque
@@ -506,7 +527,8 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   l'API voient la même file.
 - **En flux**, l'évènement `queued` (`{ ahead }`) dit combien de demandes
   passent avant, `started` que son tour est venu ; le mobile affiche « En
-  attente ». Refus propre au-delà : file pleine, ou attente plus longue que
+  attente ». Puis `step` (`{ label }`) dit chaque étape de sa réflexion
+  (« Sa réflexion, montrée »). Refus propre au-delà : file pleine, ou attente plus longue que
   `COACH_QUEUE_TIMEOUT_MS`. Sans flux (anciennes versions de l'appli),
   l'attente est plafonnée à 5 s : le tour doit tenir sous les 60 s de nginx.
 - **Le quota se décompte APRÈS la file**, juste avant le modèle : un « très

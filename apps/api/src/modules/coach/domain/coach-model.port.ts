@@ -60,6 +60,12 @@ export interface CoachTurnInput {
    */
   runTools: (calls: CoachToolCall[]) => Promise<CoachToolResult[]>;
   /**
+   * Apprend chaque appel d'outil demandé par le modèle, AVANT son exécution,
+   * propositions comprises (`propose_session` n'est jamais exécutée) : les
+   * étapes de la réflexion montrée à la personne (coach-steps.ts).
+   */
+  onToolCalls?: (calls: CoachToolCall[]) => void;
+  /**
    * Reçoit le texte AU FIL de sa génération (route en flux). Un fournisseur
    * qui ne sait pas streamer l'ignore : la réponse arrive alors d'un bloc,
    * dans `CoachTurnOutput.text`, qui reste la seule version archivée.

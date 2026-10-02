@@ -79,6 +79,8 @@ class CoachThreadView extends StatelessWidget {
               ? CoachLiveBubble(
                   text: live.text,
                   ahead: live.ahead,
+                  steps: live.steps,
+                  stepRunning: live.stepRunning,
                   maxWidth: maxBubbleWidth,
                 )
               : CoachBubble(
@@ -116,6 +118,9 @@ class CoachThreadView extends StatelessWidget {
             : _newDay(position);
 
         return Column(
+          // Par message, pas par rang : une question envoyée décale tout le
+          // fil, et une réflexion dépliée ne doit pas passer à un autre.
+          key: ValueKey(message.id),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (day != null)

@@ -64,7 +64,13 @@ class CoachThreadState {
 
 /// Un tour de conversation pendant qu'il s'écrit.
 class CoachLiveTurn {
-  const CoachLiveTurn({required this.question, this.text = '', this.ahead});
+  const CoachLiveTurn({
+    required this.question,
+    this.text = '',
+    this.ahead,
+    this.steps = const [],
+    this.stepRunning = false,
+  });
 
   /// La question envoyée, affichée tout de suite sans attendre le serveur.
   final String question;
@@ -77,11 +83,22 @@ class CoachLiveTurn {
   /// tour est venu (ou n'a jamais attendu).
   final int? ahead;
 
+  /// Sa réflexion jusqu'ici : ce qu'il a fait (« Je regarde tes records »),
+  /// la dernière étape étant celle en cours.
+  final List<String> steps;
+
+  /// La dernière étape se fait encore : rien ne s'est écrit depuis.
+  final bool stepRunning;
+
   CoachLiveTurn append(String more) =>
-      CoachLiveTurn(question: question, text: text + more);
+      CoachLiveTurn(question: question, text: text + more, steps: steps);
 
   CoachLiveTurn queued(int ahead) =>
-      CoachLiveTurn(question: question, text: text, ahead: ahead);
+      CoachLiveTurn(question: question, text: text, ahead: ahead, steps: steps);
 
-  CoachLiveTurn started() => CoachLiveTurn(question: question, text: text);
+  CoachLiveTurn started() =>
+      CoachLiveTurn(question: question, text: text, steps: steps);
+
+  CoachLiveTurn step(String label) =>
+      CoachLiveTurn(question: question, text: text, steps: [...steps, label]);
 }

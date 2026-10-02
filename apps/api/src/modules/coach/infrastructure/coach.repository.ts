@@ -187,6 +187,8 @@ export class CoachRepository {
     outputTokens: number;
     proposal: (ValidatedProposal & { id: string; itemIds: string[] }) | null;
     programProposal: (ValidatedProgramProposal & { id: string }) | null;
+    /** Les étapes de sa réflexion (coach-steps.ts). */
+    steps: string[];
     title: string | null;
   }): Promise<MessageWithProposal> {
     return this.prisma.$transaction(async (tx) => {
@@ -198,6 +200,7 @@ export class CoachRepository {
           content: input.content,
           inputTokens: input.inputTokens,
           outputTokens: input.outputTokens,
+          steps: input.steps,
         },
       });
 

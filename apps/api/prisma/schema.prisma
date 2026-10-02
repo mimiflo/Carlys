@@ -1161,6 +1161,9 @@ model CoachMessage {
   /// observabilité du coût, jamais de la facturation.
   inputTokens    Int?
   outputTokens   Int?
+  /// Les étapes de la réflexion montrée (« Je regarde tes records ») : ce
+  /// que le coach a vraiment fait avant de répondre. Vide pour la personne.
+  steps          String[]         @default([])
   createdAt      DateTime         @default(now())
 
   conversation    CoachConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)

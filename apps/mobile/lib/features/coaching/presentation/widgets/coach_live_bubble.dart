@@ -4,24 +4,34 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import 'coach_message_bubble.dart';
+import 'coach_reflection.dart';
 
 /// La réponse du coach PENDANT qu'elle s'écrit.
 ///
 /// Trois temps, comme une personne sollicitée : « en attente » quand d'autres
 /// passent avant (le coach répond à un nombre fixe de personnes à la fois),
-/// puis « réfléchit… » (il lit tes séances et tes records avant d'écrire),
-/// puis le texte qui s'allonge mot après mot. La réplique archivée la
-/// remplace à la fin.
+/// puis sa réflexion — ce qu'il fait vraiment, étape par étape (« Je regarde
+/// tes records »), ou « Réfléchit… » s'il n'a rien à lire —, puis le texte
+/// qui s'allonge mot après mot. La réplique archivée la remplace à la fin.
 class CoachLiveBubble extends StatelessWidget {
   const CoachLiveBubble({
     required this.text,
     this.ahead,
+    this.steps = const [],
+    this.stepRunning = false,
     this.maxWidth = double.infinity,
     super.key,
   });
 
   /// La réponse reçue jusqu'ici ; vide tant que le coach réfléchit.
   final String text;
+
+  /// Sa réflexion jusqu'ici ([CoachReflection]).
+  final List<String> steps;
+
+  /// La dernière étape se fait encore, même après du texte (il écrit, puis
+  /// cherche des exercices) : elle s'anime au lieu d'être cochée.
+  final bool stepRunning;
 
   /// Demandes qui passent avant, en file d'attente ; `null` : son tour.
   final int? ahead;
@@ -55,22 +65,31 @@ class CoachLiveBubble extends StatelessWidget {
         ],
       ),
     );
+    final reflection = CoachReflection(
+      steps: steps,
+      live: true,
+      inProgress: stepRunning,
+    );
     return CoachBubble(
       isUser: false,
       maxWidth: maxWidth,
       // Le texte commencé, la réflexion continue dessous jusqu'à la fin du
       // tour : entre deux recherches, rien ne s'écrit, et la bulle ne doit
       // pas sembler finie.
-      child: text.isEmpty
-          ? status
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CoachBubbleText(text, isUser: false),
-                const SizedBox(height: AppSpacing.sm),
-                status,
-              ],
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (steps.isNotEmpty) reflection,
+          if (text.isEmpty && steps.isEmpty) status,
+          if (text.isNotEmpty) ...[
+            if (steps.isNotEmpty) const SizedBox(height: AppSpacing.sm),
+            CoachBubbleText(text, isUser: false),
+            const SizedBox(height: AppSpacing.sm),
+            status,
+          ],
+        ],
+      ),
     );
   }
 }

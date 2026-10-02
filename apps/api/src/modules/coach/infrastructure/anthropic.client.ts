@@ -157,6 +157,7 @@ export class AnthropicCoachClient implements CoachModelPort {
         return { text: textOf(response), proposal, usage, refused: false, model: this.modelName };
       }
 
+      input.onToolCalls?.(calls);
       const results = await input.runTools(
         calls.filter((call) => call.name !== PROPOSE_SESSION_TOOL),
       );

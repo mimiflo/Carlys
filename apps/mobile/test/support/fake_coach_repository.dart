@@ -40,6 +40,9 @@ class FakeCoachRepository implements CoachRepository {
   /// Morceaux rendus au fil de l'écriture, avant la réplique.
   List<String> streamed = const [];
 
+  /// Étapes de la réflexion annoncées avant le texte (`step`).
+  List<String> steps = const [];
+
   /// Attentes annoncées avant le tour (`queued`), puis `started`.
   List<int> queued = const [];
 
@@ -97,6 +100,7 @@ class FakeCoachRepository implements CoachRepository {
     void Function(String text)? onText,
     void Function(int ahead)? onQueued,
     void Function()? onStarted,
+    void Function(String label)? onStep,
     Future<void>? cancel,
   }) async {
     sent.add(content);
@@ -105,6 +109,9 @@ class FakeCoachRepository implements CoachRepository {
     if (error != null) throw error;
     for (final ahead in queued) {
       onQueued?.call(ahead);
+    }
+    for (final step in steps) {
+      onStep?.call(step);
     }
     if (hangUntilCancelled) {
       await cancel;

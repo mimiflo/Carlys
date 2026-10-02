@@ -17,9 +17,8 @@ import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/repositories/coach_repository.dart';
 import '../utils/coach_notice.dart';
 
-// L'état du fil vit dans le domaine, les amorces dans `providers/` (elles ne
-// portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
-// pour que l'écran et ses tests n'aient pas à changer d'import.
+// L'état du fil vit dans le domaine, les amorces dans `providers/` (sans
+// Notifier) : réexportés ici, l'écran et ses tests gardent leur import.
 export '../../domain/entities/coach_thread_state.dart';
 export '../providers/coach_greeting_providers.dart';
 export '../providers/coach_proposal_actions.dart';
@@ -161,6 +160,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         onText: (text) => _updateLive((live) => live.append(text)),
         onQueued: (ahead) => _updateLive((live) => live.queued(ahead)),
         onStarted: () => _updateLive((live) => live.started()),
+        onStep: (label) => _updateLive((live) => live.step(label)),
         cancel: cancel.future,
       );
 
@@ -213,7 +213,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     if (cancel != null && !cancel.isCompleted) cancel.complete();
   }
 
-  /// Le tour en cours avance : file, premier mot, morceau de texte.
+  /// Le tour en cours avance : file, étape, premier mot, morceau de texte.
   void _updateLive(CoachLiveTurn Function(CoachLiveTurn live) update) {
     final now = state.valueOrNull;
     final live = now?.live;

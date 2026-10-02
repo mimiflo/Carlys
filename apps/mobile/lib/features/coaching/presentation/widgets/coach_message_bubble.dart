@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
+import 'coach_reflection.dart';
 
 /// Une réplique de la conversation.
 ///
@@ -25,10 +26,21 @@ class CoachMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == CoachRole.user;
+    final text = CoachBubbleText(message.content, isUser: isUser);
     return CoachBubble(
       isUser: isUser,
       maxWidth: maxWidth,
-      child: CoachBubbleText(message.content, isUser: isUser),
+      // Sa réflexion, repliée au-dessus de la réponse : ce qu'il a lu.
+      child: message.steps.isEmpty
+          ? text
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CoachReflection(steps: message.steps),
+                const SizedBox(height: AppSpacing.xs),
+                text,
+              ],
+            ),
     );
   }
 }

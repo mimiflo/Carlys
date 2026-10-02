@@ -128,6 +128,7 @@ class CoachMessage {
     required this.id,
     required this.role,
     required this.content,
+    this.steps = const [],
     this.proposal,
     this.programProposal,
     this.createdAt,
@@ -136,6 +137,11 @@ class CoachMessage {
   final String id;
   final CoachRole role;
   final String content;
+
+  /// La réflexion du coach : ce qu'il a fait avant de répondre (« Je regarde
+  /// tes records »), dans l'ordre. Vide pour un message de la personne, et
+  /// pour une réponse écrite sans rien lire.
+  final List<String> steps;
 
   /// Proposition rattachée au message, quand le coach en a formulé une.
   final CoachSessionProposal? proposal;

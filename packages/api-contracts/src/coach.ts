@@ -68,6 +68,11 @@ export const coachMessageSchema = z.object({
   id: z.string(),
   role: coachMessageRoleSchema,
   content: z.string(),
+  /**
+   * La réflexion du coach : ce qu'il a fait avant de répondre (« Je regarde
+   * tes records »), dans l'ordre. Vide pour un message de la personne.
+   */
+  steps: z.array(z.string()),
   /** Proposition rattachée au message, quand le coach en a formulé une. */
   proposal: coachSessionProposalSchema.nullable(),
   /** Programme proposé dans ce message, quand le coach en a formulé un. */

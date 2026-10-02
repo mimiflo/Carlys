@@ -177,6 +177,12 @@ abstract final class AppIcons {
   static const IconData coach = Icons.auto_awesome_rounded;
   static const IconData send = Icons.arrow_upward_rounded;
 
+  /// La réflexion du coach : ce qu'il a fait avant de répondre.
+  static const IconData coachReflection = Icons.psychology_rounded;
+
+  /// Une étape de sa réflexion, faite.
+  static const IconData coachStepDone = Icons.check_rounded;
+
   /// Précision neutre — jamais une erreur, jamais une alerte.
   static const IconData info = Icons.info_outline_rounded;
 

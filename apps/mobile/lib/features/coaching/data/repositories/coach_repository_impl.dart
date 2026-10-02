@@ -81,6 +81,7 @@ class CoachRepositoryImpl implements CoachRepository {
     void Function(String text)? onText,
     void Function(int ahead)? onQueued,
     void Function()? onStarted,
+    void Function(String label)? onStep,
     Future<void>? cancel,
   }) {
     // Fermer la requête, c'est arrêter la génération côté serveur.
@@ -103,6 +104,7 @@ class CoachRepositoryImpl implements CoachRepository {
         onText,
         onQueued: onQueued,
         onStarted: onStarted,
+        onStep: onStep,
         onDone: (json) => _cache.append(conversationId, [
           json['userMessage'] as Map<String, dynamic>,
           json['assistantMessage'] as Map<String, dynamic>,

@@ -46,6 +46,11 @@ final List<CoachMessage> _conversation = [
     content:
         'Tu as 25 minutes : je garde tes deux mouvements lourds, je retire '
         'les accessoires et je resserre les repos.',
+    steps: const [
+      'Je relis tes dernières séances',
+      'Je cherche des exercices',
+      'Je prépare ta séance',
+    ],
     proposal: const CoachSessionProposal(
       id: 'p1',
       name: 'Haut du corps, format court',
@@ -173,13 +178,25 @@ void main() {
   // comme à l'usage, plutôt qu'une question seule sur un écran vide.
   const question = 'Et demain, je fais quoi pour récupérer ?';
 
+  // Sa réflexion : ce qu'il fait VRAIMENT, étape par étape, avant d'écrire.
   testWidgets('coach — le coach réfléchit', (tester) async {
     await pumpCoach(
       tester,
       messages: _conversation,
-      live: const CoachLiveTurn(question: question),
+      live: const CoachLiveTurn(
+        question: question,
+        steps: ['Je relis tes dernières séances', 'Je regarde ta progression'],
+        stepRunning: true,
+      ),
     );
     await capture(tester, 'coach-03-reflexion');
+  });
+
+  testWidgets('coach — sa réflexion, dépliée sous la réponse', (tester) async {
+    await pumpCoach(tester, messages: _conversation);
+    await tester.tap(find.text('Réflexion · 3 étapes'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'coach-09-reflexion-depliee');
   });
 
   // Le coach sollicité (ADR 0013) : la file se dit, au lieu d'un silence.
@@ -198,6 +215,7 @@ void main() {
       messages: _conversation,
       live: const CoachLiveTurn(
         question: question,
+        steps: ['Je relis tes dernières séances', 'Je regarde ta progression'],
         text:
             'Demain, place à la récupération active : 20 minutes de vélo '
             'tranquille, puis des étirements pour les pectoraux et',

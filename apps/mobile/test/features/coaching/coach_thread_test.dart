@@ -341,6 +341,27 @@ void main() {
   );
 
   group('file d’attente, arrêt, saturation (ADR 0013)', () {
+    test('sa réflexion s’affiche en direct, étape par étape', () async {
+      final repository = FakeCoachRepository()
+        ..steps = ['Je regarde tes records', 'Je prépare ta séance']
+        ..hangUntilCancelled = true;
+      final container = containerWith(repository);
+      container.listen(coachThreadProvider, (_, __) {});
+      await container.read(coachThreadProvider.future);
+
+      final sent = container
+          .read(coachThreadProvider.notifier)
+          .send('Mon record ?');
+      await pumpEventQueue();
+
+      expect(container.read(coachThreadProvider).valueOrNull?.live?.steps, [
+        'Je regarde tes records',
+        'Je prépare ta séance',
+      ]);
+      container.read(coachThreadProvider.notifier).stop();
+      await sent;
+    });
+
     test('en file : la bulle sait combien passent avant', () async {
       final repository = FakeCoachRepository()
         ..queued = [2, 1]

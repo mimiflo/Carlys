@@ -105,6 +105,11 @@ CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
     id: json['id'] as String,
     role: CoachRole.fromApi(json['role'] as String),
     content: json['content'] as String,
+    // Absentes d'une copie gardée avant leur arrivée : aucune étape.
+    steps: [
+      for (final step in json['steps'] as List<dynamic>? ?? const [])
+        if (step is String) step,
+    ],
     proposal: proposal is Map<String, dynamic>
         ? coachProposalFromJson(proposal)
         : null,

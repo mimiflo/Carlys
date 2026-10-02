@@ -146,6 +146,30 @@ void main() {
       },
     );
 
+    test('`step` : chaque étape de sa réflexion, avant le texte', () async {
+      adapter.responses = (
+        200,
+        'event: step\ndata: {"label":"Je regarde tes records"}\n\n'
+            'event: step\ndata: {"label":"Je prépare ta séance"}\n\n'
+            '${_sse(['delta', 'done'])}',
+      );
+      final events = <String>[];
+
+      await repository.sendMessage(
+        conversationId: 'c1',
+        messageId: 'm1',
+        content: 'Mon record, et une séance ?',
+        onStep: (label) => events.add('étape:$label'),
+        onText: (text) => events.add('texte:$text'),
+      );
+
+      expect(events, [
+        'étape:Je regarde tes records',
+        'étape:Je prépare ta séance',
+        'texte:Répon',
+      ]);
+    });
+
     test(
       'file trop longue APRÈS l’attente : SERVICE_BUSY porté par l’erreur',
       () async {

@@ -11,6 +11,7 @@ export function presentMessage(message: MessageWithProposal): CoachMessage {
     id: message.id,
     role: message.role,
     content: message.content,
+    steps: message.steps,
     proposal: message.proposal === null ? null : presentProposal(message.proposal),
     programProposal:
       message.programProposal === null ? null : presentProgramProposal(message.programProposal),

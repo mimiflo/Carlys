@@ -31,7 +31,8 @@ abstract interface class CoachRepository {
   /// doublon.
   ///
   /// Le coach très sollicité fait attendre : [onQueued] reçoit le nombre de
-  /// demandes qui passent avant, [onStarted] dit que c'est son tour. Quand
+  /// demandes qui passent avant, [onStarted] dit que c'est son tour. [onStep]
+  /// reçoit chaque étape de sa réflexion (« Je regarde tes records »). Quand
   /// [cancel] se termine (« Arrêter »), la requête est abandonnée et le
   /// serveur arrête de générer ; l'envoi échoue alors.
   Future<CoachReply> sendMessage({
@@ -41,6 +42,7 @@ abstract interface class CoachRepository {
     void Function(String text)? onText,
     void Function(int ahead)? onQueued,
     void Function()? onStarted,
+    void Function(String label)? onStep,
     Future<void>? cancel,
   });
 
