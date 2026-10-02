@@ -22,6 +22,7 @@ import { runToolRound, WRAP_UP_ROUNDS } from './tool-round';
 import {
   parseArguments,
   prefetchedMessages,
+  restates,
   textOf,
   unavailable,
 } from './openai-compatible.helpers';
@@ -96,7 +97,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     let discarded = '';
     // Ce qui est déjà écrit, plus ce qui s'y ajoute depuis.
     const joined = () =>
-      said !== '' && said !== lastKept
+      said !== '' && said !== lastKept && !restates(said, before)
         ? [before, said].filter(Boolean).join('\n\n')
         : before || said;
     const reply = () => joined() || discarded;

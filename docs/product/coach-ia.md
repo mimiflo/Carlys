@@ -529,7 +529,12 @@ décrite sans carte y est encore proposée), sauf la vérification des données,
 qui écarterait la réponse sans pouvoir en écrire une autre ; au bout des
 tours, ce qui est écrit est rendu, jamais l'abandon s'il y a un texte. Une
 demande sans verbe (« Une séance full body rapide ? ») compte comme une
-demande — pas « Ma séance d'hier était dure ». Et une séance ou un programme demandé fait lire le profil
+demande — pas « Ma séance d'hier était dure » —, tout comme « Par où je
+commence ? ». Et une réponse qui PRESCRIT une séance en texte (« 3 séries
+de 10 répétitions », « 4×8 ») ou l'annonce au présent (« J'adapte une
+séance ») sans carte reçoit l'ordre de la proposer : un signal de structure,
+mesuré sur 130 réponses réelles (six déclenchements, cinq séances décrites,
+dont quatre sans carte jusque-là ; aucun sur les réponses de conseil). Et une séance ou un programme demandé fait lire le profil
 d'entraînement d'avance (`coach-prefetch.ts`) : un tour de moins.
 
 **Mesures** (`/metrics`, préfixe `carlys_api_ai_`) :

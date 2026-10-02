@@ -164,3 +164,20 @@ export function textOf(content: unknown): string {
     .join('')
     .trim();
 }
+
+/**
+ * `next` redit-il surtout `before` ? Après l'occasion d'agir, le modèle
+ * réécrit souvent la séance qu'il venait de décrire (constaté : la même
+ * séance deux fois dans la réplique archivée). Six mots sur dix déjà dits :
+ * c'est une redite, la première version suffit.
+ */
+export function restates(next: string, before: string): boolean {
+  if (before === '') return false;
+  const said = new Set(wordsOf(before));
+  const fresh = wordsOf(next);
+  return fresh.length > 0 && fresh.filter((word) => said.has(word)).length / fresh.length >= 0.6;
+}
+
+function wordsOf(text: string): string[] {
+  return text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [];
+}

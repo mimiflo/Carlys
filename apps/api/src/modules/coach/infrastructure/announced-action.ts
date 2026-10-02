@@ -50,19 +50,34 @@ const SUITE = [
 ];
 
 /**
- * Une séance ou un programme DONNÉ pour fait, n'importe où dans le message.
- * Le client ne le demande qu'en l'absence de proposition : alors, c'est
- * faux (« …j'ai fait une séance de base » après l'avoir écrite en texte,
- * sans la carte qui la rend jouable — constaté).
+ * Une séance ou un programme DONNÉ pour fait, n'importe où dans le message,
+ * au passé comme au présent. Le client ne le demande qu'en l'absence de
+ * proposition : alors, c'est faux (« …j'ai fait une séance de base », « Je
+ * t'adapte une séance », « J'adapte une séance avec les pompes » après
+ * l'avoir écrite en texte, sans la carte qui la rend jouable — constaté).
  */
 const CLAIMED = [
   // `(?!\p{L})` et non `\b`, qui ignore les lettres accentuées (« préparé »).
   /\bj['’]ai (fait|préparé|adapté|créé|construit|composé|monté|conçu|élaboré|ajusté|mis en place)(?!\p{L})[^.!?]*\b(séance|programme|plan)s?\b/iu,
   /\bvoici (ta|une|la|ton|un|tes) (séance|programme|plan)s?\b/iu,
+  // Au présent, jamais dans une question : « Tu veux que je te prépare une
+  // séance ? » est une offre, pas une annonce.
+  /\bje (te |t['’])?(prépare|propose|adapte|construis|crée|compose|monte|ajuste)(?!\p{L})[^.!?]*\b(séance|programme|plan)s?\b(?![^.!?]*\?)/iu,
+  /\bj['’](adapte|ajuste|élabore|établis)(?!\p{L})[^.!?]*\b(séance|programme|plan)s?\b(?![^.!?]*\?)/iu,
 ];
 
+/**
+ * Une séance PRESCRITE en texte : des séries et des répétitions (« 3 séries
+ * de 10 répétitions », « 4×8 »). Un signal de structure, pas une tournure :
+ * mesuré le 2 octobre 2026 sur 130 réponses réelles, il ne s'allume que sur
+ * six — cinq séances décrites (quatre sans carte, ratées jusque-là) et un
+ * conseil de progression au développé couché, où une séance reste à propos.
+ */
+const PRESCRIBED =
+  /(?<![\p{L}\p{N}])\d+\s*(séries?|sets?)\s+de\s+\d+|(?<![\p{L}\p{N}])\d+\s*[x×]\s*\d+(?![\p{L}\p{N}])/iu;
+
 function claimsUnproposed(text: string): boolean {
-  return CLAIMED.some((pattern) => pattern.test(text));
+  return PRESCRIBED.test(text) || CLAIMED.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -103,6 +118,9 @@ const ASKED = [
   // corps ? » (constaté : la séance arrivait écrite, sans carte).
   // Pas « Ma séance d'hier était dure », ni « Mon programme me fatigue ».
   /^\W*(une|un) (nouvelle |petite |bonne )?(séance|programme|routine)\b/iu,
+  // Débuter : il attend un plan, pas un conseil (« Par où je commence ? »,
+  // constaté : la séance arrivait écrite, sans carte).
+  /\bpar (où|quoi) (je )?(commence|débute)|\bje (débute|commence la muscu|reprends le sport)/iu,
 ];
 
 export function asksForPlan(request: string): boolean {

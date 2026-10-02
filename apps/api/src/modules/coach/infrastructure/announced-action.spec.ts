@@ -109,6 +109,28 @@ describe('probeFor', () => {
     }
   });
 
+  it('une séance annoncée au présent, ou PRESCRITE en texte, reçoit l’ordre (constaté)', () => {
+    for (const answer of [
+      // Le cas signalé : « Par où je commence ? », la séance en texte, sans carte.
+      'Pour travailler les pecs, tu peux commencer avec des pompes. J’adapte une séance avec ' +
+        'les pompes, idéales pour débuter. Tu peux faire 3 séries de 10 répétitions. C’est doux.',
+      'Je t’adapte une séance avec des mouvements que tu as récemment faits.',
+      'Commence par le squat gobelet en 4×8, puis les fentes. Bon courage !',
+    ]) {
+      expect(probeFor(answer, 'Des idées ?', true)?.text).toContain('propose_session');
+    }
+    // Des chiffres qui ne prescrivent rien.
+    for (const answer of [
+      'Ton record au squat est de 80 kg pour 5 répétitions.',
+      'Tu as fait 7 séances ce mois-ci, bravo.',
+      'Vise entre 6 et 12 répétitions pour l’hypertrophie.',
+      // Une offre posée en question rend la main.
+      'Tu veux que je te prépare une séance ?',
+    ]) {
+      expect(probeFor(answer, 'Des chiffres ?', true)).toBeNull();
+    }
+  });
+
   it('une réponse complète, sans demande de séance : rien', () => {
     expect(probeFor('Bois de l’eau et dors bien.', 'Des conseils de récup ?', false)).toBeNull();
   });
@@ -126,6 +148,10 @@ describe('asksForPlan', () => {
       // Sans verbe : constaté, la séance arrivait écrite, sans carte.
       'Une séance full body rapide au poids du corps ?',
       'Un programme force sur 4 semaines ?',
+      // Débuter : il attend un plan (constaté, sans carte).
+      'Par où je commence ?',
+      'Par quoi je commence pour me muscler ?',
+      'Je débute, tu me conseilles quoi ?',
     ]) {
       expect(asksForPlan(request)).toBe(true);
     }
