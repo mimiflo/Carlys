@@ -53,6 +53,7 @@ vers l'ADR qui la remplace).
 | [0011](0011-coach-qwen3-sur-le-serveur.md) | Coach IA : Qwen3-4B sur notre serveur, servi par Ollama | Acceptée — 2026-09 |
 | [0012](0012-coach-reponse-en-flux.md) | Coach IA : la réponse s'écrit en direct (SSE) | Acceptée — 2026-09 |
 | [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 |
+| [0014](0014-coach-actions-garanties.md) | Coach IA : proposer et créer une séance, garanti par l'orchestration | Acceptée — 2026-10 |
 
 ## Ajouter un ADR
 

@@ -59,6 +59,80 @@ par le coach »).
 proactives. Le programme, lui, y est entré le 30 septembre 2026 — voir
 « Programme proposé par le coach » ci-dessous.
 
+### Proposer, modifier, créer : décidé par l'orchestration (ADR 0014)
+
+Le serveur décide AVANT le modèle ce qu'un tour doit produire
+(`coach-intent.ts`), et refuse de le terminer sans (`coach-actions.ts`).
+Les cas et leur preuve :
+
+| Message | Intention | Ce qui prouve le résultat |
+| --- | --- | --- |
+| « Fais-moi une séance pecs », « J'ai 20 minutes, je fais quoi ? », « Par où je commence ? » | `WORKOUT_PROPOSAL_REQUIRED` | une proposition validée (`proposal.id`) |
+| « Fais-la plus courte », « Remplace le développé couché par des pompes » | `WORKOUT_MODIFICATION_REQUIRED` | une nouvelle proposition, d'après la précédente |
+| « Ok crée-la », « Enregistre ça », « Mets-la pour aujourd'hui » | `WORKOUT_CREATION_REQUIRED` + `proposalId` | le modèle de séance écrit (`createdWorkout.templateId`), SANS appel au modèle |
+| « Crée-moi une séance jambes », « ça fait 5 fois que je te demande de créer une séance » | `WORKOUT_CREATION_REQUIRED` + demande | proposition composée, PUIS enregistrée |
+| « Ok crée-la » sans séance en vue | `CLARIFICATION_REQUIRED` | une seule question précise |
+| « Quelle est la différence entre squat et presse ? » | `KNOWLEDGE` | rien d'imposé : une réponse |
+
+La séance créée est un modèle de séance qui porte l'identifiant de la
+proposition : la redemander, un double appui ou un renvoi redonnent le même,
+jamais réécrit. Côté appli, la carte « Séance enregistrée » rapatrie les
+modèles puis ouvre l'éditeur.
+
+### Séance demandée : composée à coup sûr (2 octobre 2026)
+
+**Le besoin.** « Il ne propose pas de séance, il parle juste » : signalé cinq
+fois. Laissé libre, Qwen3-4B décrivait la séance en texte au lieu d'appeler
+`propose_session`, parfois avec des choix absurdes (« développé couché à
+fessiers » pour une séance quadriceps-fessiers), et ni la consigne, ni l'ordre
+de proposer, ni la lecture d'avance des exercices n'en venaient à bout (deux
+cartes sur trois au mieux, 140 à 450 s).
+
+**Le principe : le modèle choisit, la forme est imposée.**
+
+1. **Reconnaître la demande** (`resolveIntent`, `coach-intent.ts`, règles dans
+   `coach-intent.rules.ts`) : une
+   séance DEMANDÉE (« fais-moi une séance », « quelle séance ce soir ? »,
+   « tu me conseilles, quoi en séance quad fessiers ? »), ou le mot séance
+   avec un muscle (« séance pecs ? »). Jamais une question AUTOUR d'une
+   séance (« quel échauffement avant une séance ? », « ma séance jambes
+   demain, je mange quoi ? », « des abdos à chaque séance ? ») : la carte
+   remplacerait la réponse. Ni un programme, qui garde `propose_program`.
+2. **Lire d'avance** son profil et les exercices dont chaque muscle nommé
+   est le muscle PRINCIPAL (tous : le catalogue rend par ordre alphabétique,
+   et une coupe à six perdait les squats), ou huit de chaque grand groupe
+   s'il n'en nomme aucun ; jamais un muscle cité pour une douleur ou une
+   exclusion.
+3. **Ne garder que le faisable** (`compositionFor`, `coach-session.ts`) :
+   ce que son matériel permet, rien d'avancé pour un débutant, ni étirement
+   ni mobilité — tant qu'il en reste assez.
+4. **Un seul appel, à sortie contrainte** (`session-composer.ts`,
+   `response_format: json_schema`) : un message et une séance, d'un seul jet,
+   donc cohérents ; chaque exercice est désigné par son alias (`e1`, `e2`…)
+   pris dans la liste, ce qu'aucune grammaire ne laisse inventer. Le serveur
+   retraduit les alias, calcule la durée et forme la proposition, validée
+   comme toute autre (`acceptableSessionProposal`).
+5. **Repli** : réponse illisible, panne ou échéance, le serveur compose seul,
+   un exercice de chaque muscle à tour de rôle, 3 × 12. La carte arrive
+   toujours ; le journal « Tour de coach » dit qui l'a composée et pourquoi
+   (`composed: { by: 'server', failure }`). Seule l'annulation par la
+   personne interrompt le tour, rendu au quota comme ailleurs.
+
+Mesuré le 2 octobre 2026 sur Qwen3-4B (processeur du banc, plus lent que le
+serveur) : quatre demandes sur quatre composées par le modèle, cartes
+valides, muscles demandés couverts, 60 à 110 s ; une question de conseil
+(« tu me conseilles de manger avant la séance ? ») reste une réponse.
+Sans « réponds directement par l'objet JSON », le modèle réfléchissait
+d'abord en texte libre et débordait deux fois sur quatre : la consigne le
+dit, et la sortie est plafonnée à 512 jetons.
+
+Le repli cloud (ADR 0013) ne sert donc pas ces tours-là : un worker en panne
+donne la séance composée par le serveur plutôt qu'un appel à Anthropic. Le
+fournisseur de repli, lui, ignore `compose` et garde la boucle d'outils, où
+il appelle `propose_session` de lui-même. Mistral parle aussi
+`response_format: json_schema`, mais n'a pas été essayé sur ce chemin : son
+éventuel refus se lirait dans `failure`.
+
 ### Programme proposé par le coach
 
 **Le besoin** (demande du propriétaire, 30 septembre 2026) : le coach doit
