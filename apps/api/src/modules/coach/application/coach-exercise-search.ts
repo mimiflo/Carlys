@@ -36,7 +36,8 @@ const SLANG: Record<string, string> = {
   quadris: 'quadriceps',
 };
 
-const fold = (text: string) =>
+/** Sans accents ni majuscules : « Développé » et « developpe » se rejoignent. */
+export const fold = (text: string) =>
   text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')

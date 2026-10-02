@@ -110,14 +110,11 @@ export class CoachTurnRunner {
             systemPerUser: context.systemPerUser,
             tools: COACH_TOOLS,
             history: context.history,
-            prefetched: reads.map((call) => ({
-              call,
-              result: results.find((result) => result.id === call.id) ?? {
-                id: call.id,
-                content: 'Lecture indisponible.',
-                isError: true,
-              },
-            })),
+            // `CoachTools.run` rend un résultat par lecture, dans l'ordre.
+            prefetched: reads.flatMap((call, i) => {
+              const result = results[i];
+              return result === undefined ? [] : [{ call, result }];
+            }),
             runTools: programs.runTools,
             onText: names?.push,
             signal: stream.signal,

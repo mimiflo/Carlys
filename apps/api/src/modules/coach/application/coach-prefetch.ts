@@ -1,4 +1,5 @@
 import { type CoachToolCall } from '../domain/coach-model.port';
+import { fold } from './coach-exercise-search';
 
 /**
  * Les lectures faites AVANT que le modèle n'écrive, quand la question porte
@@ -13,27 +14,28 @@ import { type CoachToolCall } from '../domain/coach-model.port';
  * Reconnaître la question est plus sûr que reconnaître l'oubli : la
  * personne dit « mon record », « est-ce que je progresse », « mon poids ».
  * Une question qui ne parle pas de ses données (« explique-moi la surcharge
- * progressive ») ne coûte rien : aucune lecture.
+ * progressive ») ne lit rien. La question est lue SANS ACCENTS : au
+ * téléphone, « mes dernieres seances » s'écrit souvent ainsi.
  */
 const READS: readonly (readonly [RegExp, readonly Omit<CoachToolCall, 'id'>[]])[] = [
   [
-    /(?<!\p{L})(records?|max|maximum|1rm|meilleure? perf\p{L}*)(?!\p{L})/iu,
+    /\b(mon|mes|ton|tes) (record|max)|\brecords?\b|\b1rm\b|\bmeilleure? perf/,
     [{ name: 'get_personal_records', input: {} }],
   ],
   [
-    /(?<!\p{L})(progresse|progresser|ma progression|progrès|évolu\p{L}*|stagn\p{L}*|régul\p{L}*|bilan|stat\p{L}*|combien de séances)(?!\p{L})/iu,
+    /\b(je progresse|progresser|ma progression|mes progres|progres|evolu\w*|stagn\w*|regularite|regulier|bilan|mes stats?|statistiques|combien de seances)\b/,
     [{ name: 'get_progress_overview', input: { period: 'month' } }],
   ],
   [
-    /(?<!\p{L})((mes|ma|mon|dernières?|derniers?) (séances?|entraînements?)|j['’]ai (fait|soulevé|couru)|hier|par où|par quoi|je (commence|débute|reprends)|débutant\p{L}*|reprise|reprendre)(?!\p{L})/iu,
+    /\b((mes|ma|mon|dernieres?|derniers?) (seances?|entrainements?)|j'ai (fait|souleve|couru)|hier|par ou|par quoi|je (commence|debute|reprends)|debutant\w*|reprise|reprendre)\b/,
     [{ name: 'get_recent_sessions', input: { limit: 5 } }],
   ],
   [
-    /(?<!\p{L})(mon poids|pèse|peser|pesée|kilos?|maigri\p{L}*|grossi\p{L}*|perdu du poids|pris du poids)(?!\p{L})/iu,
+    /\b(mon poids|je pese|peser|pesee\w*|kilos?|maigri\w*|grossi\w*|perdu du poids|pris du poids)\b/,
     [{ name: 'get_body_weight_trend', input: {} }],
   ],
   [
-    /(?<!\p{L})(calories?|kcal|protéines?|glucides?|lipides?|macros?|mange\p{L}*|repas|nutrition|régime)(?!\p{L})/iu,
+    /\b(calories?|kcal|proteines?|glucides?|lipides?|macros?|mange\w*|repas|nutrition|regime)\b/,
     [
       { name: 'get_nutrition_targets', input: {} },
       { name: 'get_recent_meals', input: {} },
@@ -41,12 +43,18 @@ const READS: readonly (readonly [RegExp, readonly Omit<CoachToolCall, 'id'>[]])[
   ],
 ];
 
-/** Les lectures que mérite cette question, une seule fois chacune. */
+/**
+ * Les lectures que mérite cette question, une seule fois chacune.
+ *
+ * Identifiants de neuf caractères alphanumériques (`lecture00`) : la forme
+ * que Mistral exige de ses `tool_call_id`, et qu'Anthropic accepte.
+ */
 export function prefetchFor(request: string): CoachToolCall[] {
+  const question = fold(request).replace(/[’`]/g, "'");
   const calls = new Map<string, Omit<CoachToolCall, 'id'>>();
   for (const [pattern, reads] of READS) {
-    if (!pattern.test(request)) continue;
+    if (!pattern.test(question)) continue;
     for (const read of reads) calls.set(read.name, read);
   }
-  return [...calls.values()].map((call, index) => ({ id: `lecture_${index}`, ...call }));
+  return [...calls.values()].map((call, index) => ({ id: `lecture0${index}`, ...call }));
 }

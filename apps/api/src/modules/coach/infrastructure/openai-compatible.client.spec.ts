@@ -467,6 +467,44 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
+    it('ses données déjà lues : un chiffre cité n’appelle pas le filet', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Ton record : 80 kg au squat.' }));
+      global.fetch = fetchMock;
+
+      await client().reply(
+        input({
+          prefetched: [
+            {
+              call: { id: 'lecture00', name: 'get_personal_records', input: {} },
+              result: { id: 'lecture00', content: '{"squat":80}' },
+            },
+          ],
+        }),
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('une recherche dans le catalogue n’est pas une lecture de SES données', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(
+          completion({
+            content: '',
+            tool_calls: [toolCall('call00001', 'search_exercises', '{}')],
+          }),
+        )
+        .mockResolvedValueOnce(completion({ content: 'Tes records : 120 kg au squat.' }))
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00002', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(completion({ content: 'Ton record : 80 kg au squat.' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Ton record : 80 kg au squat.',
+      });
+    });
+
     it('ses données lues AVANT lui arrivent comme des outils déjà appelés', async () => {
       const fetchMock = jest
         .fn()

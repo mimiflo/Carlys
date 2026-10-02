@@ -15,7 +15,7 @@ import {
 } from '../domain/coach-model.port';
 import { type ChatCompletion } from './chat-completion-stream';
 import { type CoachWorkerPool } from './coach-worker-pool';
-import { probeFor, probeForAction } from './announced-action';
+import { probeFor, probeForAction, USER_DATA_TOOLS } from './announced-action';
 import {
   addUsage,
   parseArguments,
@@ -78,12 +78,13 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     // Une réponse écartée (données inventées) : elle ne revient qu'à défaut d'autre.
     let discarded = '';
     // Ce qui est déjà écrit, plus ce qui s'y ajoute depuis.
-    const reply = () =>
-      (said !== '' && said !== lastKept
+    const joined = () =>
+      said !== '' && said !== lastKept
         ? [before, said].filter(Boolean).join('\n\n')
-        : before || said) || discarded;
+        : before || said;
+    const reply = () => joined() || discarded;
     // Des données de la personne lues dans ce tour, avant lui ou par lui.
-    let read = (input.prefetched?.length ?? 0) > 0;
+    let read = (input.prefetched ?? []).some(({ result }) => result.isError !== true);
     // En flux : du texte déjà montré (`shown`), et dans CE tour (`spoke`). Un
     // tour d'outils qui parlait ne se colle pas au suivant : un saut de
     // paragraphe les sépare, le temps que la réplique archivée les remplace.
@@ -158,7 +159,8 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         if (acted !== null) {
           messages.push(answer, asked);
           if (question.keep) {
-            before = reply();
+            // Jamais la réponse écartée : elle ne revient qu'à défaut de tout.
+            before = joined();
             lastKept = said;
           } else {
             discarded = said;
@@ -182,13 +184,15 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       // `propose_session` n'est pas exécutée : elle est RETENUE, puis validée
       // par le serveur avant d'exister.
       proposal = calls.find((call) => call.name === PROPOSE_SESSION_TOOL)?.input ?? proposal;
-      read ||= calls.some(
-        (c) => c.name !== PROPOSE_SESSION_TOOL && c.name !== PROPOSE_PROGRAM_TOOL,
-      );
       proposed ||= calls.some(
         (c) => c.name === PROPOSE_SESSION_TOOL || c.name === PROPOSE_PROGRAM_TOOL,
       );
       const results = await input.runTools(calls.filter((c) => c.name !== PROPOSE_SESSION_TOOL));
+      // Ses données lues pour de bon : une lecture réussie d'un outil qui les rend.
+      read ||= results.some(
+        (r) =>
+          r.isError !== true && USER_DATA_TOOLS.has(calls.find((c) => c.id === r.id)?.name ?? ''),
+      );
 
       messages.push({
         role: 'assistant',

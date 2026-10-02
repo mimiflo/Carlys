@@ -149,12 +149,25 @@ export function probeFor(
  * si rien n'a été lu dans le tour.
  */
 const CITES_DATA = [
-  // Avoir « vu » ses données : « J'ai vu tes dernières séances et tes records ».
-  /(?<!\p{L})(j['’]ai (vu|regardé|lu|consulté|vérifié)|d['’]après|selon) (tes|ton|ta)(?!\p{L})/iu,
+  // Avoir « vu » ses DONNÉES : « J'ai vu tes dernières séances et tes records ».
+  // Pas « selon ton objectif » : l'objectif et le niveau lui sont donnés.
+  /(?<!\p{L})(j['’]ai (vu|regardé|consulté|vérifié)|d['’]après|selon) (tes|ton|ta) (dernières? )?(séances?|records?|pesées?|données|repas|historique|statistiques|mesures|performances)(?!\p{L})/iu,
   /(?<!\p{L})tu as (déjà )?des records(?!\p{L})/iu,
-  // Un CHIFFRE à son sujet : « Tes records sont excellents : 120 kg au squat ».
-  /(?<!\p{L})(tu (as )?(soulevé|fait|réalisé|couru|pèses|pesais)|(ton|tes) (records?|poids|volume|max))(?!\p{L})[^.!?\n]{0,60}\d+([,.]\d+)? ?(kg|kilos?|séances?|km|kcal|reps|répétitions)(?!\p{L})/iu,
+  // Un CHIFFRE affirmé à son sujet : « Tes records : 120 kg au squat ».
+  // Pas « si tu as fait 3 séances » (une condition), ni « augmente ton max ».
+  /(?<!\p{L})(?<!si )(tu as (soulevé|fait|réalisé|couru)|tu (pèses|pesais)|(ton|tes) (records?|poids))(?!\p{L})[^.!?\n]{0,60}\d+([,.]\d+)? ?(kg|kilos?|séances?|km|kcal|reps|répétitions)(?!\p{L})/iu,
 ];
+
+/** Les lectures qui rendent SES données (pas le catalogue d'exercices). */
+export const USER_DATA_TOOLS: ReadonlySet<string> = new Set([
+  'get_recent_sessions',
+  'get_personal_records',
+  'get_progress_overview',
+  'get_body_weight_trend',
+  'get_nutrition_targets',
+  'get_recent_meals',
+  'get_training_profile',
+]);
 
 function citesUserData(answer: string): boolean {
   return CITES_DATA.some((pattern) => pattern.test(answer));

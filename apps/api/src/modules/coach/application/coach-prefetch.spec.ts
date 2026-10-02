@@ -21,6 +21,18 @@ describe('prefetchFor', () => {
     expect(names('Tu peux regarder mes dernières séances ?')).toEqual(['get_recent_sessions']);
   });
 
+  it('lue sans accents : au téléphone, on les oublie souvent', () => {
+    expect(names('mes dernieres seances ?')).toEqual(['get_recent_sessions']);
+    expect(names('combien de proteines je dois manger')).toContain('get_nutrition_targets');
+    expect(names('mon evolution ce mois')).toEqual(['get_progress_overview']);
+  });
+
+  it('des identifiants de neuf caractères alphanumériques, comme Mistral les exige', () => {
+    for (const call of prefetchFor('Mes records, mon poids et mes calories ?')) {
+      expect(call.id).toMatch(/^[a-zA-Z0-9]{9}$/);
+    }
+  });
+
   it('plusieurs sujets, plusieurs lectures, chacune une fois', () => {
     const calls = prefetchFor('Mes records et ma régularité, est-ce que je progresse ?');
     expect(calls.map((call) => call.name)).toEqual([
@@ -36,6 +48,8 @@ describe('prefetchFor', () => {
       'Comment bien faire un soulevé de terre ?',
       'Merci beaucoup !',
       'C’est quoi un bon échauffement ?',
+      'Combien de temps de repos max entre deux séries ?',
+      'Le gainage statique, ça sert à quoi ?',
     ]) {
       expect(names(request)).toEqual([]);
     }

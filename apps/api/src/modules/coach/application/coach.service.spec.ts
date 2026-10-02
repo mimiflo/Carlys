@@ -34,6 +34,7 @@ const OTHER_CONVERSATION = 'fil-d-autrui';
 const MESSAGE = 'message-1';
 
 interface Stubs {
+  tools: { run: jest.Mock };
   repository: {
     ensureConversation: jest.Mock;
     findConversation: jest.Mock;
@@ -87,6 +88,7 @@ function conversationWith(messages: ReturnType<typeof storedMessage>[]) {
 
 function buildStubs(): Stubs {
   return {
+    tools: { run: jest.fn().mockResolvedValue([]) },
     repository: {
       ensureConversation: jest.fn().mockResolvedValue(undefined),
       findConversation: jest.fn().mockResolvedValue(conversationWith([])),
@@ -189,7 +191,7 @@ function buildService(
   );
   const turns = new CoachTurnRunner(
     repository,
-    { run: jest.fn().mockResolvedValue([]) } as unknown as CoachTools,
+    stubs.tools as unknown as CoachTools,
     quota,
     gateway,
     context,
@@ -284,6 +286,30 @@ describe('CoachService.sendMessage', () => {
     expect(input?.history.map((turn) => turn.role)).toEqual(['user', 'assistant', 'user']);
     expect(input?.history.filter((turn) => turn.content.includes('Salut coach.'))).toHaveLength(1);
     expect(stubs.repository.saveAssistantMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('une question sur SES données : la lecture part AVANT le modèle, avec son résultat', async () => {
+    const stubs = buildStubs();
+    stubs.tools.run.mockImplementation((_user: string, calls: { id: string }[]) =>
+      Promise.resolve(calls.map((call) => ({ id: call.id, content: '{"squat":80}' }))),
+    );
+
+    await buildService(stubs).sendMessage(
+      USER,
+      CONVERSATION,
+      MESSAGE,
+      'Quel est mon record au squat ?',
+    );
+
+    expect(stubs.tools.run).toHaveBeenCalledWith(USER, [
+      { id: 'lecture00', name: 'get_personal_records', input: {} },
+    ]);
+    expect(stubs.model.reply.mock.calls[0]?.[0].prefetched).toEqual([
+      {
+        call: { id: 'lecture00', name: 'get_personal_records', input: {} },
+        result: { id: 'lecture00', content: '{"squat":80}' },
+      },
+    ]);
   });
 
   it('un programme proposé pendant le tour s’archive avec la réponse', async () => {

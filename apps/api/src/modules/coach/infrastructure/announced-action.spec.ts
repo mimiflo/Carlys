@@ -96,6 +96,17 @@ describe('probeFor', () => {
     expect(probe?.text).toContain('sans les avoir lues');
     // Lues dans le tour (avant lui ou par lui) : rien à redire sur ce point.
     expect(probeFor('Ton record au squat est de 80 kg. Bravo.', 'Mon record ?', true)).toBeNull();
+    // Des conseils, pas des données inventées : l'objectif et le niveau lui sont donnés.
+    for (const advice of [
+      'Selon ton objectif, vise 3 séries de 10.',
+      'D’après ton niveau, commence léger.',
+      'Pour ton volume, fais 3 séances par semaine.',
+      'Augmente ton max de 2,5 kg par semaine.',
+      'Si tu as fait 3 séances, repose-toi.',
+      'Basée sur ce que tu as déjà soulevé, la charge monte doucement.',
+    ]) {
+      expect(probeFor(advice, 'Des conseils ?', false)?.keep).not.toBe(false);
+    }
   });
 
   it('une réponse complète, sans demande de séance : rien', () => {
