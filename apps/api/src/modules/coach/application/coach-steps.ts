@@ -51,3 +51,65 @@ export function coachSteps() {
       ),
   };
 }
+
+/**
+ * La réflexion d'un tour, au fil de l'eau : chaque étape COMMENCE (« Je
+ * regarde tes records », trois points qui s'animent) puis FINIT (la coche),
+ * et sa durée court du créneau obtenu au premier mot écrit (« Réflexion en
+ * 30 s »). `onStep` reçoit l'étape, si elle est finie, et le temps écoulé
+ * depuis le début : le chrono de l'appli s'y recale.
+ */
+export function coachReflection(
+  onStep?: (label: string, done: boolean, elapsedMs: number) => void,
+) {
+  const steps = coachSteps();
+  let startedAt: number | undefined;
+  let thoughtUntil: number | undefined;
+  const elapsed = () => (startedAt === undefined ? 0 : Date.now() - startedAt);
+  const finished = new Set<string>();
+  // Une étape ne finit que si elle a commencé, et une fois.
+  const end = (calls: readonly Pick<CoachToolCall, 'name'>[]): void => {
+    const begun = steps.all({ session: true, program: true });
+    for (const call of calls) {
+      const label = LABELS.get(call.name);
+      if (label === undefined || !begun.includes(label) || finished.has(label)) continue;
+      finished.add(label);
+      onStep?.(label, true, elapsed());
+    }
+  };
+  const begin = (calls: readonly Pick<CoachToolCall, 'name'>[]): void => {
+    for (const label of steps.add(calls)) onStep?.(label, false, elapsed());
+    // Jamais exécutée, seulement retenue : faite dès qu'elle est demandée.
+    const retained = calls.filter((call) => call.name === PROPOSE_SESSION_TOOL);
+    if (retained.length > 0) end(retained);
+  };
+  return {
+    /** Le créneau est obtenu : la réflexion commence, par ces lectures. */
+    start(reads: readonly Pick<CoachToolCall, 'name'>[]): void {
+      startedAt ??= Date.now();
+      begin(reads);
+    },
+    begin,
+    end,
+    /** `run`, qui finit les étapes de ses appels une fois exécutés. */
+    track:
+      <T>(run: (calls: CoachToolCall[]) => Promise<T>) =>
+      async (calls: CoachToolCall[]): Promise<T> => {
+        const ran = await run(calls);
+        end(calls);
+        return ran;
+      },
+    /** Le premier mot écrit : la réflexion s'arrête là. */
+    wrote: () => (thoughtUntil ??= Date.now()),
+    /**
+     * Sa durée, en secondes ; `null` sans premier mot mesuré (route sans
+     * flux, repli qui ne streame pas) : jamais l'écriture comptée comme
+     * réflexion.
+     */
+    seconds: (): number | null =>
+      startedAt === undefined || thoughtUntil === undefined
+        ? null
+        : Math.round((thoughtUntil - startedAt) / 1000),
+    all: steps.all,
+  };
+}

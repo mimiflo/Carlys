@@ -129,6 +129,7 @@ class CoachMessage {
     required this.role,
     required this.content,
     this.steps = const [],
+    this.thinkingSeconds,
     this.proposal,
     this.programProposal,
     this.createdAt,
@@ -142,6 +143,10 @@ class CoachMessage {
   /// tes records »), dans l'ordre. Vide pour un message de la personne, et
   /// pour une réponse écrite sans rien lire.
   final List<String> steps;
+
+  /// Ce qu'a duré sa réflexion, en secondes, jusqu'à son premier mot
+  /// (« Réflexion en 30 s ») ; `null` pour la personne, ou s'il n'en dit rien.
+  final int? thinkingSeconds;
 
   /// Proposition rattachée au message, quand le coach en a formulé une.
   final CoachSessionProposal? proposal;

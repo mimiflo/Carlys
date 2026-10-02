@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/coach.dart';
+import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/repositories/coach_repository.dart';
 import '../coach_thread_cache.dart';
 import '../dto/coach_dtos.dart';
@@ -81,7 +82,7 @@ class CoachRepositoryImpl implements CoachRepository {
     void Function(String text)? onText,
     void Function(int ahead)? onQueued,
     void Function()? onStarted,
-    void Function(String label)? onStep,
+    void Function(CoachStep step)? onStep,
     Future<void>? cancel,
   }) {
     // Fermer la requête, c'est arrêter la génération côté serveur.

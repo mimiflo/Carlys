@@ -110,6 +110,7 @@ CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
       for (final step in json['steps'] as List<dynamic>? ?? const [])
         if (step is String) step,
     ],
+    thinkingSeconds: (json['thinkingSeconds'] as num?)?.toInt(),
     proposal: proposal is Map<String, dynamic>
         ? coachProposalFromJson(proposal)
         : null,

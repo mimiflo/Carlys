@@ -453,14 +453,25 @@ Jamais un raisonnement rédigé par le modèle : sur le processeur du serveur
 chaque réponse, et pourrait dire autre chose que ce qu'il fait. Celles-ci
 sont gratuites, et vraies.
 
-- **En direct** : l'évènement SSE `step` (`{ label }`) part à chaque lecture
-  préalable (`coach-prefetch.ts`) et à chaque outil que le modèle demande
-  (`CoachTurnInput.onToolCalls`, `propose_session` comprise), une fois par
-  étape. Le mobile les déplie dans la bulle en cours, la dernière animée tant
-  que rien ne s'écrit ; sans étape, « Réfléchit… » comme avant.
+- **En direct** : l'évènement SSE `step` (`{ label }`) part quand une
+  étape COMMENCE — chaque lecture préalable (`coach-prefetch.ts`), chaque
+  outil que le modèle demande (`CoachTurnInput.onToolCalls`) —, et
+  `stepDone` (`{ label }`) quand elle FINIT — les deux avec `elapsedMs`, le
+  temps de réflexion écoulé côté serveur, sur lequel le chrono de l'appli
+  se recale (il compte du coach au travail, pas de l'envoi) : ses outils exécutés, ou tout de
+  suite pour `propose_session`, retenue sans être exécutée. Deux évènements
+  plutôt qu'un drapeau : une appli d'avant `stepDone` l'ignore, sans doubler
+  l'étape. Dans la bulle en cours, une étape a ses trois points animés tant
+  qu'elle se fait, puis sa coche ; ses étapes faites, « Je réfléchis à ta
+  réponse » s'anime jusqu'au premier mot. Le chrono court (« Réflexion ·
+  12 s ») et se fige au premier mot (« Réflexion en 14 s »). Sans étape,
+  « Réfléchit… » comme avant.
 - **Archivées** : `CoachMessage.steps` (colonne `steps`, migration
-  `coach_reflexion`), rendues par l'API ; repliées au-dessus de la réponse
-  (« Réflexion · 3 étapes »), dépliées d'un appui. Une copie gardée sur
+  `coach_reflexion`) et `thinkingSeconds` (sa durée, du créneau obtenu au
+  premier mot écrit ; vide sans premier mot mesuré, plutôt que fausse ;
+  migration `coach_reflexion_duree`), rendues par
+  l'API ; repliées au-dessus de la réponse (« Réflexion en 32 s ·
+  3 étapes »), dépliées d'un appui. Une copie gardée sur
   l'appareil avant leur arrivée n'en a simplement pas.
 
 ### Réponses coupées : la reprise (2 octobre 2026)

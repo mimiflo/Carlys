@@ -18,7 +18,9 @@ class CoachLiveBubble extends StatelessWidget {
     required this.text,
     this.ahead,
     this.steps = const [],
-    this.stepRunning = false,
+    this.done = const {},
+    this.since,
+    this.thoughtFor,
     this.maxWidth = double.infinity,
     super.key,
   });
@@ -26,12 +28,12 @@ class CoachLiveBubble extends StatelessWidget {
   /// La réponse reçue jusqu'ici ; vide tant que le coach réfléchit.
   final String text;
 
-  /// Sa réflexion jusqu'ici ([CoachReflection]).
+  /// Sa réflexion jusqu'ici ([CoachReflection]) : ses étapes, celles qui
+  /// sont finies, son début et, le premier mot écrit, sa durée.
   final List<String> steps;
-
-  /// La dernière étape se fait encore, même après du texte (il écrit, puis
-  /// cherche des exercices) : elle s'anime au lieu d'être cochée.
-  final bool stepRunning;
+  final Set<String> done;
+  final DateTime? since;
+  final Duration? thoughtFor;
 
   /// Demandes qui passent avant, en file d'attente ; `null` : son tour.
   final int? ahead;
@@ -67,8 +69,11 @@ class CoachLiveBubble extends StatelessWidget {
     );
     final reflection = CoachReflection(
       steps: steps,
+      done: done,
       live: true,
-      inProgress: stepRunning,
+      writing: text.isNotEmpty,
+      since: since,
+      thoughtFor: thoughtFor,
     );
     return CoachBubble(
       isUser: false,

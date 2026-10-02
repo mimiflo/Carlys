@@ -1,31 +1,49 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
-import 'coach_live_bubble.dart';
+import 'coach_reflection_parts.dart';
 
-/// La RÉFLEXION du coach : ce qu'il a vraiment fait avant de répondre —
+/// La RÉFLEXION du coach : ce qu'il fait vraiment avant de répondre —
 /// « Je regarde tes records », « Je cherche des exercices », « Je prépare
-/// ta séance ».
+/// ta séance » — et combien de temps.
 ///
-/// En direct ([live]), dépliée : chaque étape s'ajoute, et la dernière
-/// s'anime tant qu'elle est en cours ([inProgress]). Archivée, repliée en
-/// une ligne (« Réflexion · 3 étapes ») qu'on déplie d'un appui. Sans étape,
-/// rien.
+/// En direct ([live]), dépliée : chaque étape a ses trois points animés tant
+/// qu'elle se fait, puis sa coche ([done]) ; ses étapes faites, il réfléchit
+/// encore (« Je réfléchis à ta réponse »), et le chrono court
+/// (« Réflexion · 12 s ») jusqu'au premier mot (« Réflexion en 14 s »).
+/// Archivée, repliée en une ligne (« Réflexion en 30 s · 3 étapes ») qu'on
+/// déplie d'un appui. Sans étape, rien.
 class CoachReflection extends StatefulWidget {
   const CoachReflection({
     required this.steps,
+    this.done = const {},
     this.live = false,
-    this.inProgress = false,
+    this.writing = false,
+    this.since,
+    this.thoughtFor,
+    this.seconds,
     super.key,
   });
 
   final List<String> steps;
 
+  /// En direct : les étapes finies ; archivée, toutes le sont.
+  final Set<String> done;
+
   /// Le tour s'écrit encore : dépliée, sans rien à replier.
   final bool live;
 
-  /// La dernière étape se fait encore : rien n'est écrit depuis.
-  final bool inProgress;
+  /// Le premier mot est écrit : la réflexion est finie.
+  final bool writing;
+
+  /// En direct : le début de la réflexion, d'où court le chrono.
+  final DateTime? since;
+
+  /// En direct : sa durée, figée au premier mot.
+  final Duration? thoughtFor;
+
+  /// Archivée : sa durée, en secondes, telle que le serveur l'a mesurée.
+  final int? seconds;
 
   @override
   State<CoachReflection> createState() => _CoachReflectionState();
@@ -34,18 +52,15 @@ class CoachReflection extends StatefulWidget {
 class _CoachReflectionState extends State<CoachReflection> {
   bool _open = false;
 
-  static const double _iconSize = AppSpacing.md;
-
-  String get _summary {
-    final count = widget.steps.length;
-    return count == 1 ? 'Réflexion · 1 étape' : 'Réflexion · $count étapes';
-  }
+  static const double _iconSize = CoachReflectionStep.iconSize;
 
   @override
   Widget build(BuildContext context) {
     final steps = widget.steps;
     if (steps.isEmpty) return const SizedBox.shrink();
     final open = widget.live || _open;
+    final thinking =
+        widget.live && !widget.writing && steps.every(widget.done.contains);
     final header = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -55,12 +70,7 @@ class _CoachReflectionState extends State<CoachReflection> {
           color: AppColors.primaryLight,
         ),
         const SizedBox(width: AppSpacing.xs),
-        Flexible(
-          child: Text(
-            widget.live ? 'Réflexion' : _summary,
-            style: AppTypography.label.copyWith(color: AppColors.primaryLight),
-          ),
-        ),
+        Flexible(child: _title()),
         if (!widget.live) ...[
           const SizedBox(width: AppSpacing.xxs),
           Icon(
@@ -99,10 +109,19 @@ class _CoachReflectionState extends State<CoachReflection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (var i = 0; i < steps.length; i++)
-                        _Step(
-                          label: steps[i],
-                          current: widget.inProgress && i == steps.length - 1,
+                      for (final label in steps)
+                        CoachReflectionStep(
+                          label: label,
+                          // Même après le premier mot : il écrit, puis
+                          // cherche des exercices.
+                          current: widget.live && !widget.done.contains(label),
+                        ),
+                      // Ses lectures faites, il réfléchit encore : la bulle
+                      // ne doit pas sembler arrêtée.
+                      if (thinking)
+                        const CoachReflectionStep(
+                          label: 'Je réfléchis à ta réponse',
+                          current: true,
                         ),
                     ],
                   ),
@@ -112,52 +131,30 @@ class _CoachReflectionState extends State<CoachReflection> {
       ],
     );
   }
-}
 
-/// Une étape : faite (coche), ou en cours (les points qui pulsent).
-class _Step extends StatelessWidget {
-  const _Step({required this.label, required this.current});
-
-  final String label;
-  final bool current;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-      child: Semantics(
-        label: current ? '$label, en cours' : '$label, fait',
-        excludeSemantics: true,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              // Les trois points de « réfléchit » y tiennent ; la coche,
-              // calée à gauche, s'aligne sur l'icône du titre.
-              width: AppSpacing.lg + AppSpacing.xxs,
-              alignment: Alignment.centerLeft,
-              child: current
-                  ? const CoachThinkingDots()
-                  : const Icon(
-                      AppIcons.coachStepDone,
-                      size: _CoachReflectionState._iconSize,
-                      color: AppColors.primaryLight,
-                    ),
-            ),
-            const SizedBox(width: AppSpacing.xxs),
-            Flexible(
-              child: Text(
-                label,
-                style: AppTypography.label.copyWith(
-                  color: current
-                      ? AppColors.darkTextPrimary
-                      : AppColors.darkTextSecondary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _title() {
+    final style = AppTypography.label.copyWith(color: AppColors.primaryLight);
+    final count = widget.steps.length;
+    final stepCount = count == 1 ? '1 étape' : '$count étapes';
+    if (!widget.live) {
+      final seconds = widget.seconds;
+      return Text(
+        seconds == null
+            ? 'Réflexion · $stepCount'
+            : 'Réflexion en ${reflectionDuration(seconds)} · $stepCount',
+        style: style,
+      );
+    }
+    final thoughtFor = widget.thoughtFor;
+    if (widget.writing && thoughtFor != null) {
+      return Text(
+        // Arrondie comme le serveur arrondit la durée archivée.
+        'Réflexion en ${reflectionDuration((thoughtFor.inMilliseconds / 1000).round())}',
+        style: style,
+      );
+    }
+    final since = widget.since;
+    if (widget.writing || since == null) return Text('Réflexion', style: style);
+    return CoachReflectionTimer(since: since, style: style);
   }
 }

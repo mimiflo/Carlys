@@ -63,13 +63,19 @@ class CoachThreadState {
 }
 
 /// Un tour de conversation pendant qu'il s'écrit.
+/// Une étape de sa réflexion, telle que le flux la dit : son libellé, si
+/// elle est finie, et le temps de réflexion écoulé côté serveur.
+typedef CoachStep = ({String label, bool done, Duration? elapsed});
+
 class CoachLiveTurn {
   const CoachLiveTurn({
     required this.question,
     this.text = '',
     this.ahead,
     this.steps = const [],
-    this.stepRunning = false,
+    this.done = const {},
+    this.since,
+    this.thoughtFor,
   });
 
   /// La question envoyée, affichée tout de suite sans attendre le serveur.
@@ -83,22 +89,61 @@ class CoachLiveTurn {
   /// tour est venu (ou n'a jamais attendu).
   final int? ahead;
 
-  /// Sa réflexion jusqu'ici : ce qu'il a fait (« Je regarde tes records »),
-  /// la dernière étape étant celle en cours.
+  /// Sa réflexion jusqu'ici (« Je regarde tes records »), dans l'ordre.
   final List<String> steps;
 
-  /// La dernière étape se fait encore : rien ne s'est écrit depuis.
-  final bool stepRunning;
+  /// Celles qui sont finies : les autres se font encore.
+  final Set<String> done;
 
-  CoachLiveTurn append(String more) =>
-      CoachLiveTurn(question: question, text: text + more, steps: steps);
+  /// Le début de sa réflexion : l'envoi, ou son tour venu après la file.
+  final DateTime? since;
 
-  CoachLiveTurn queued(int ahead) =>
-      CoachLiveTurn(question: question, text: text, ahead: ahead, steps: steps);
+  /// Ce qu'a duré sa réflexion, figé au premier mot écrit.
+  final Duration? thoughtFor;
 
-  CoachLiveTurn started() =>
-      CoachLiveTurn(question: question, text: text, steps: steps);
+  CoachLiveTurn _with({
+    String? text,
+    int? ahead,
+    List<String>? steps,
+    Set<String>? done,
+    DateTime? since,
+    Duration? thoughtFor,
+  }) => CoachLiveTurn(
+    question: question,
+    text: text ?? this.text,
+    ahead: ahead,
+    steps: steps ?? this.steps,
+    done: done ?? this.done,
+    since: since ?? this.since,
+    thoughtFor: thoughtFor ?? this.thoughtFor,
+  );
 
-  CoachLiveTurn step(String label) =>
-      CoachLiveTurn(question: question, text: text, steps: [...steps, label]);
+  /// Un morceau de réponse. Le premier arrête la réflexion : ses étapes
+  /// sont faites, sa durée figée.
+  CoachLiveTurn append(String more) {
+    if (text.isNotEmpty) return _with(text: text + more);
+    final since = this.since;
+    return _with(
+      text: more,
+      done: {...done, ...steps},
+      thoughtFor: since == null ? null : DateTime.now().difference(since),
+    );
+  }
+
+  CoachLiveTurn queued(int ahead) => _with(ahead: ahead);
+
+  /// Son tour est venu : sa réflexion commence maintenant.
+  CoachLiveTurn started() => _with(since: DateTime.now());
+
+  /// Une étape qui commence, ou qui finit. Le temps écoulé que le serveur
+  /// mesure recale le chrono : il compte du coach au travail, pas de l'envoi.
+  CoachLiveTurn step(CoachStep step) {
+    final elapsed = step.elapsed;
+    final since = elapsed == null ? null : DateTime.now().subtract(elapsed);
+    if (step.done) return _with(done: {...done, step.label}, since: since);
+    return _with(
+      steps: steps.contains(step.label) ? null : [...steps, step.label],
+      since: since,
+    );
+  }
 }

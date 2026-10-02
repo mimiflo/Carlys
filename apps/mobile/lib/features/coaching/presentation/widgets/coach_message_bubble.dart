@@ -36,7 +36,10 @@ class CoachMessageBubble extends StatelessWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CoachReflection(steps: message.steps),
+                CoachReflection(
+                  steps: message.steps,
+                  seconds: message.thinkingSeconds,
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 text,
               ],

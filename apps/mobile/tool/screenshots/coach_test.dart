@@ -51,6 +51,7 @@ final List<CoachMessage> _conversation = [
       'Je cherche des exercices',
       'Je prépare ta séance',
     ],
+    thinkingSeconds: 32,
     proposal: const CoachSessionProposal(
       id: 'p1',
       name: 'Haut du corps, format court',
@@ -183,10 +184,16 @@ void main() {
     await pumpCoach(
       tester,
       messages: _conversation,
-      live: const CoachLiveTurn(
+      // La première étape faite, la seconde en cours, le chrono à 12 s.
+      live: CoachLiveTurn(
         question: question,
-        steps: ['Je relis tes dernières séances', 'Je regarde ta progression'],
-        stepRunning: true,
+        steps: const [
+          'Je relis tes dernières séances',
+          'Je regarde ta progression',
+        ],
+        done: const {'Je relis tes dernières séances'},
+        // Une demi-seconde de marge : le chrono lit la vraie horloge.
+        since: DateTime.now().subtract(const Duration(milliseconds: 12500)),
       ),
     );
     await capture(tester, 'coach-03-reflexion');
@@ -194,7 +201,7 @@ void main() {
 
   testWidgets('coach — sa réflexion, dépliée sous la réponse', (tester) async {
     await pumpCoach(tester, messages: _conversation);
-    await tester.tap(find.text('Réflexion · 3 étapes'));
+    await tester.tap(find.text('Réflexion en 32 s · 3 étapes'));
     await tester.pumpAndSettle();
     await capture(tester, 'coach-09-reflexion-depliee');
   });
@@ -216,6 +223,8 @@ void main() {
       live: const CoachLiveTurn(
         question: question,
         steps: ['Je relis tes dernières séances', 'Je regarde ta progression'],
+        done: {'Je relis tes dernières séances', 'Je regarde ta progression'},
+        thoughtFor: Duration(seconds: 14),
         text:
             'Demain, place à la récupération active : 20 minutes de vélo '
             'tranquille, puis des étirements pour les pectoraux et',

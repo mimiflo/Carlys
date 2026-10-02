@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/data/dto/coach_dtos.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_live_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
 import 'package:flutter/material.dart';
@@ -19,44 +20,79 @@ void main() {
     );
   }
 
-  testWidgets('en direct, chaque étape se lit, la dernière en cours', (
-    tester,
-  ) async {
-    await pump(
-      tester,
-      const CoachLiveBubble(text: '', steps: steps, stepRunning: true),
-    );
+  testWidgets(
+    'en direct : trois points tant qu’elle se fait, la coche une fois finie',
+    (tester) async {
+      await pump(
+        tester,
+        CoachLiveBubble(
+          text: '',
+          steps: steps,
+          done: const {'Je regarde tes records'},
+          since: DateTime.now().subtract(const Duration(seconds: 12)),
+        ),
+      );
 
-    expect(find.text('Réflexion'), findsOneWidget);
-    expect(find.text('Je regarde tes records'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel('Je regarde tes records, fait'),
-      findsOneWidget,
-    );
-    expect(
-      find.bySemanticsLabel('Je cherche des exercices, en cours'),
-      findsOneWidget,
-    );
-    // Les étapes disent déjà qu'il travaille : pas de « Réfléchit… » en plus.
-    expect(find.text('Réfléchit…'), findsNothing);
-  });
+      // Le chrono court, à la seconde.
+      expect(find.text('Réflexion · 12 s'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Je regarde tes records, fait'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Je cherche des exercices, en cours'),
+        findsOneWidget,
+      );
+      expect(find.text('Je réfléchis à ta réponse'), findsNothing);
+      expect(find.text('Réfléchit…'), findsNothing);
+    },
+  );
 
-  testWidgets('le texte commencé, les étapes sont faites, la réponse dessous', (
-    tester,
-  ) async {
-    await pump(
-      tester,
-      const CoachLiveBubble(text: 'Ton record au squat : 80 kg.', steps: steps),
-    );
+  testWidgets(
+    'ses étapes faites, il réfléchit encore : une ligne qui s’anime',
+    (tester) async {
+      await pump(
+        tester,
+        CoachLiveBubble(
+          text: '',
+          steps: steps,
+          done: steps.toSet(),
+          since: DateTime.now(),
+        ),
+      );
 
-    expect(
-      find.bySemanticsLabel('Je cherche des exercices, fait'),
-      findsOneWidget,
-    );
-    expect(find.text('Ton record au squat : 80 kg.'), findsOneWidget);
-  });
+      expect(
+        find.bySemanticsLabel('Je réfléchis à ta réponse, en cours'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('une étape lancée APRÈS du texte s’anime, elle aussi', (
+  testWidgets(
+    'le premier mot écrit : « Réflexion en 14 s », la réponse dessous',
+    (tester) async {
+      await pump(
+        tester,
+        CoachLiveBubble(
+          text: 'Ton record au squat : 80 kg.',
+          steps: steps,
+          done: steps.toSet(),
+          since: DateTime.now().subtract(const Duration(seconds: 20)),
+          thoughtFor: const Duration(seconds: 14),
+        ),
+      );
+
+      expect(find.text('Réflexion en 14 s'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Je cherche des exercices, fait'),
+        findsOneWidget,
+      );
+      expect(find.text('Je réfléchis à ta réponse'), findsNothing);
+      expect(find.text('Ton record au squat : 80 kg.'), findsOneWidget);
+    },
+  );
+
+  testWidgets('une étape lancée APRÈS du texte s’anime jusqu’à sa fin', (
     tester,
   ) async {
     await pump(
@@ -64,7 +100,8 @@ void main() {
       const CoachLiveBubble(
         text: 'Je regarde ça.',
         steps: steps,
-        stepRunning: true,
+        done: {'Je regarde tes records'},
+        thoughtFor: Duration(seconds: 3),
       ),
     );
 
@@ -74,31 +111,53 @@ void main() {
     );
   });
 
-  testWidgets('archivée : repliée en une ligne, dépliée d’un appui', (
-    tester,
-  ) async {
-    await pump(
-      tester,
-      const CoachMessageBubble(
-        message: CoachMessage(
-          id: 'a',
-          role: CoachRole.assistant,
-          content: 'Voici ta séance.',
-          steps: steps,
+  testWidgets(
+    'archivée : « Réflexion en 32 s · 2 étapes », dépliée d’un appui',
+    (tester) async {
+      await pump(
+        tester,
+        const CoachMessageBubble(
+          message: CoachMessage(
+            id: 'a',
+            role: CoachRole.assistant,
+            content: 'Voici ta séance.',
+            steps: steps,
+            thinkingSeconds: 32,
+          ),
+          maxWidth: 320,
         ),
-        maxWidth: 320,
-      ),
-    );
+      );
 
-    expect(find.text('Réflexion · 2 étapes'), findsOneWidget);
-    expect(find.text('Je regarde tes records'), findsNothing);
+      expect(find.text('Réflexion en 32 s · 2 étapes'), findsOneWidget);
+      expect(find.text('Je regarde tes records'), findsNothing);
 
-    await tester.tap(find.text('Réflexion · 2 étapes'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Réflexion en 32 s · 2 étapes'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Je regarde tes records'), findsOneWidget);
-    expect(find.text('Voici ta séance.'), findsOneWidget);
-  });
+      expect(find.text('Je regarde tes records'), findsOneWidget);
+      expect(find.text('Voici ta séance.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'archivée sans durée (avant qu’on la mesure) : ses étapes seules',
+    (tester) async {
+      await pump(
+        tester,
+        const CoachMessageBubble(
+          message: CoachMessage(
+            id: 'a',
+            role: CoachRole.assistant,
+            content: 'Voici ta séance.',
+            steps: steps,
+          ),
+          maxWidth: 320,
+        ),
+      );
+
+      expect(find.text('Réflexion · 2 étapes'), findsOneWidget);
+    },
+  );
 
   testWidgets('sans étape, la réponse seule', (tester) async {
     await pump(
@@ -116,6 +175,30 @@ void main() {
     expect(find.textContaining('Réflexion'), findsNothing);
   });
 
+  test('le chrono se recale sur le temps que le serveur a mesuré', () {
+    final sent = DateTime.now().subtract(const Duration(seconds: 3));
+    final live = CoachLiveTurn(question: 'Par où je commence ?', since: sent)
+        .step((
+          label: 'Je regarde tes records',
+          done: false,
+          elapsed: const Duration(seconds: 1),
+        ));
+
+    // Le coach réfléchit depuis 1 s, pas depuis l'envoi (3 s).
+    final since = live.since!;
+    expect(DateTime.now().difference(since).inMilliseconds, lessThan(1500));
+    expect(live.steps, ['Je regarde tes records']);
+
+    final done = live.step((
+      label: 'Je regarde tes records',
+      done: true,
+      elapsed: null,
+    ));
+    expect(done.done, {'Je regarde tes records'});
+    // Sans temps mesuré, le chrono garde son départ.
+    expect(done.since, since);
+  });
+
   test('les étapes se lisent du serveur ; absentes d’une copie ancienne', () {
     final json = {
       'id': 'a',
@@ -127,5 +210,10 @@ void main() {
     };
     expect(coachMessageFromJson(json).steps, isEmpty);
     expect(coachMessageFromJson({...json, 'steps': steps}).steps, steps);
+    expect(coachMessageFromJson(json).thinkingSeconds, isNull);
+    expect(
+      coachMessageFromJson({...json, 'thinkingSeconds': 32}).thinkingSeconds,
+      32,
+    );
   });
 }

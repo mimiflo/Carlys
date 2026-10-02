@@ -146,10 +146,11 @@ void main() {
       },
     );
 
-    test('`step` : chaque étape de sa réflexion, avant le texte', () async {
+    test('`step` puis `stepDone` : chaque étape commence, puis finit', () async {
       adapter.responses = (
         200,
-        'event: step\ndata: {"label":"Je regarde tes records"}\n\n'
+        'event: step\ndata: {"label":"Je regarde tes records","elapsedMs":0}\n\n'
+            'event: stepDone\ndata: {"label":"Je regarde tes records","elapsedMs":1500}\n\n'
             'event: step\ndata: {"label":"Je prépare ta séance"}\n\n'
             '${_sse(['delta', 'done'])}',
       );
@@ -159,12 +160,17 @@ void main() {
         conversationId: 'c1',
         messageId: 'm1',
         content: 'Mon record, et une séance ?',
-        onStep: (label) => events.add('étape:$label'),
+        onStep: (step) => events.add(
+          '${step.done ? 'finie' : 'étape'}:${step.label}'
+          '${step.elapsed == null ? '' : ' (${step.elapsed!.inMilliseconds} ms)'}',
+        ),
         onText: (text) => events.add('texte:$text'),
       );
 
       expect(events, [
-        'étape:Je regarde tes records',
+        'étape:Je regarde tes records (0 ms)',
+        // Le temps écoulé côté serveur, sur lequel le chrono se recale.
+        'finie:Je regarde tes records (1500 ms)',
         'étape:Je prépare ta séance',
         'texte:Répon',
       ]);

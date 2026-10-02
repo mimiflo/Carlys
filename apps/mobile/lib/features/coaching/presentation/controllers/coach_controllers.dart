@@ -133,7 +133,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     // La question s'affiche aussitôt ; la réponse viendra s'écrire dessous.
     state = AsyncData(
       current.copyWith(
-        live: CoachLiveTurn(question: trimmed),
+        live: CoachLiveTurn(question: trimmed, since: DateTime.now()),
         isOffline: false,
         clearNotice: true,
       ),
@@ -160,7 +160,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         onText: (text) => _updateLive((live) => live.append(text)),
         onQueued: (ahead) => _updateLive((live) => live.queued(ahead)),
         onStarted: () => _updateLive((live) => live.started()),
-        onStep: (label) => _updateLive((live) => live.step(label)),
+        onStep: (step) => _updateLive((live) => live.step(step)),
         cancel: cancel.future,
       );
 

@@ -15,6 +15,7 @@ function message(
     inputTokens: null,
     outputTokens: null,
     steps: [],
+    thinkingSeconds: null,
     createdAt,
     proposal: null,
     programProposal: null,

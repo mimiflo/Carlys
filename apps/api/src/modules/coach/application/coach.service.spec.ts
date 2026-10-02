@@ -364,6 +364,7 @@ describe('CoachService.sendMessage', () => {
       });
     });
     const shown: string[] = [];
+    const finished: string[] = [];
 
     await buildService(stubs).sendMessage(
       USER,
@@ -371,7 +372,7 @@ describe('CoachService.sendMessage', () => {
       MESSAGE,
       'Mon record, et prépare-moi une séance ?',
       {
-        onStep: (label) => shown.push(label),
+        onStep: (label, done) => (done ? finished : shown).push(label),
       },
     );
 
@@ -383,7 +384,15 @@ describe('CoachService.sendMessage', () => {
       'Je prépare ta séance',
     ];
     expect(shown).toEqual(steps);
-    const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [{ steps: string[] }];
+    // Les lectures faites d'avance finissent ; la séance, retenue sans être
+    // exécutée, l'est dès qu'elle est demandée ; la recherche, jamais lancée
+    // par ce faux modèle, non.
+    expect(finished).toEqual([steps[0], steps[1], steps[3]]);
+    const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [
+      { steps: string[]; thinkingSeconds: number | null },
+    ];
+    // Sans flux, pas de premier mot mesuré : aucune durée plutôt qu'une fausse.
+    expect(saved.thinkingSeconds).toBeNull();
     // Aucune séance n'a survécu à la validation : son « Je prépare… » ne
     // s'archive pas, alors qu'il a été montré pendant qu'il se faisait.
     expect(saved.steps).toEqual(steps.slice(0, 3));

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
 import 'package:carlys_mobile/features/coaching/domain/repositories/coach_repository.dart';
 
 /// Coach de test : rend ce qu'on lui dit de rendre, ou l'erreur qu'on lui
@@ -40,8 +41,10 @@ class FakeCoachRepository implements CoachRepository {
   /// Morceaux rendus au fil de l'écriture, avant la réplique.
   List<String> streamed = const [];
 
-  /// Étapes de la réflexion annoncées avant le texte (`step`).
+  /// Étapes de la réflexion annoncées avant le texte (`step`), puis celles
+  /// qui finissent (`stepDone`).
   List<String> steps = const [];
+  List<String> finished = const [];
 
   /// Attentes annoncées avant le tour (`queued`), puis `started`.
   List<int> queued = const [];
@@ -100,7 +103,7 @@ class FakeCoachRepository implements CoachRepository {
     void Function(String text)? onText,
     void Function(int ahead)? onQueued,
     void Function()? onStarted,
-    void Function(String label)? onStep,
+    void Function(CoachStep step)? onStep,
     Future<void>? cancel,
   }) async {
     sent.add(content);
@@ -111,7 +114,10 @@ class FakeCoachRepository implements CoachRepository {
       onQueued?.call(ahead);
     }
     for (final step in steps) {
-      onStep?.call(step);
+      onStep?.call((label: step, done: false, elapsed: null));
+    }
+    for (final step in finished) {
+      onStep?.call((label: step, done: true, elapsed: null));
     }
     if (hangUntilCancelled) {
       await cancel;

@@ -114,7 +114,8 @@ export class CoachController {
       'le premier évènement garde son statut HTTP (429, 503 SERVICE_BUSY si la ' +
       'file est pleine). Ensuite, flux SSE : `queued` ({ ahead }, demandes ' +
       'devant, à chaque changement), `started` (son tour est venu), `step` ' +
-      '({ label }, une étape de sa réflexion : « Je regarde tes records »), `delta` ' +
+      '({ label, elapsedMs }, une étape de sa réflexion qui commence : « Je regarde tes ' +
+      'records » ; elapsedMs, le temps de réflexion écoulé), `stepDone` (la même, finie), `delta` ' +
       '({ text }) à chaque morceau, ' +
       'puis `done` (enveloppe de succès, même `CoachReply`), ou `error` ' +
       '(enveloppe d’erreur). Fermer la connexion annule la génération. Le ' +
@@ -135,7 +136,8 @@ export class CoachController {
         onText: (text) => emit('delta', { text }),
         onQueued: (ahead) => emit('queued', { ahead }),
         onStarted: () => emit('started', {}),
-        onStep: (label) => emit('step', { label }),
+        // Deux évènements : une appli d'avant `stepDone` l'ignore, sans doubler l'étape.
+        onStep: (label, done, elapsedMs) => emit(done ? 'stepDone' : 'step', { label, elapsedMs }),
         signal: cancel.signal,
       });
       emit('done', enveloped(reply, {}, request));

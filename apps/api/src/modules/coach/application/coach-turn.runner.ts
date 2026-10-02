@@ -10,7 +10,7 @@ import {
 } from '../infrastructure/coach.repository';
 import { frenchExerciseNames, frenchExerciseNamesStream } from './coach-exercise-names';
 import { prefetchFor } from './coach-prefetch';
-import { coachSteps } from './coach-steps';
+import { coachReflection } from './coach-steps';
 import { CoachContextBuilder } from './coach-context.builder';
 import { type CoachAdmission } from './coach-admissions';
 import { CoachGateway } from './coach-gateway';
@@ -33,8 +33,8 @@ export interface CoachStream {
   onQueued?: (ahead: number) => void;
   /** Son tour est venu, après avoir attendu. */
   onStarted?: () => void;
-  /** Une étape de la réflexion : ce que le coach fait, avant de répondre (coach-steps.ts). */
-  onStep?: (label: string) => void;
+  /** Une étape de sa réflexion, commencée puis finie (coach-steps.ts). */
+  onStep?: (label: string, done: boolean, elapsedMs: number) => void;
   /** Écran fermé, « Arrêter », réseau coupé : la génération s'arrête. */
   signal?: AbortSignal;
 }
@@ -78,11 +78,9 @@ export class CoachTurnRunner {
     const programs = collectProgramProposal((calls) => this.tools.run(userId, calls));
     // Les noms d'exercices du catalogue, dans le flux comme dans la réponse.
     const names = stream.onText && frenchExerciseNamesStream(stream.onText);
-    // Ce qu'il fait avant d'écrire : montré en direct, archivé avec la réponse.
-    const steps = coachSteps();
-    const step = (calls: readonly { name: string }[]) => {
-      for (const label of steps.add(calls)) stream.onStep?.(label);
-    };
+    // Ce qu'il fait avant d'écrire, et combien de temps : montré en direct,
+    // archivé avec la réponse (coach-steps.ts).
+    const reflection = coachReflection(stream.onStep);
     const output = await this.gateway
       .generate(
         admission,
@@ -101,11 +99,12 @@ export class CoachTurnRunner {
           // Ses données, lues AVANT que le modèle n'écrive (coach-prefetch.ts),
           // PENDANT que la question s'écrit : deux allers-retours, une attente.
           const reads = prefetchFor(content);
-          step(reads);
+          reflection.start(reads);
           const [userMessage, results] = await Promise.all([
             this.repository.saveUserMessage(conversationId, messageId, content),
             reads.length === 0 ? [] : this.tools.run(userId, reads),
           ]);
+          reflection.end(reads);
           if (userMessage === null) {
             // Course entre la vérification et l'écriture : même refus, rien n'a été écrit.
             throw new NotFoundException(CONVERSATION_NOT_FOUND);
@@ -123,9 +122,9 @@ export class CoachTurnRunner {
               const result = results[i];
               return result === undefined ? [] : [{ call, result }];
             }),
-            runTools: programs.runTools,
-            onToolCalls: step,
-            onText: names?.push,
+            runTools: reflection.track(programs.runTools),
+            onToolCalls: (calls) => reflection.begin(calls),
+            onText: names && ((delta) => (reflection.wrote(), names.push(delta))),
             signal: stream.signal,
           };
         },
@@ -182,7 +181,8 @@ export class CoachTurnRunner {
               itemIds: proposal.items.map(() => randomUUID()),
             },
       programProposal: programProposal === null ? null : { ...programProposal, id: randomUUID() },
-      steps: steps.all({ session: proposal !== null, program: programProposal !== null }),
+      steps: reflection.all({ session: proposal !== null, program: programProposal !== null }),
+      thinkingSeconds: reflection.seconds(),
       title: conversation.title ?? titleFrom(content),
     });
 

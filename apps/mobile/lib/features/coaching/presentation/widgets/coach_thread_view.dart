@@ -80,7 +80,9 @@ class CoachThreadView extends StatelessWidget {
                   text: live.text,
                   ahead: live.ahead,
                   steps: live.steps,
-                  stepRunning: live.stepRunning,
+                  done: live.done,
+                  since: live.since,
+                  thoughtFor: live.thoughtFor,
                   maxWidth: maxBubbleWidth,
                 )
               : CoachBubble(

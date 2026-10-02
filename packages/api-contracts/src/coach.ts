@@ -73,6 +73,8 @@ export const coachMessageSchema = z.object({
    * tes records »), dans l'ordre. Vide pour un message de la personne.
    */
   steps: z.array(z.string()),
+  /** Durée de sa réflexion en secondes, jusqu'au premier mot ; `null` sinon. */
+  thinkingSeconds: z.number().int().nullable(),
   /** Proposition rattachée au message, quand le coach en a formulé une. */
   proposal: coachSessionProposalSchema.nullable(),
   /** Programme proposé dans ce message, quand le coach en a formulé un. */

@@ -7,11 +7,13 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/sse_events.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/coach.dart';
+import '../../domain/entities/coach_thread_state.dart';
 import '../dto/coach_dtos.dart';
 
 /// Lit la réponse EN FLUX du coach (`…/messages/stream`) : `queued` dit à
 /// [onQueued] combien de demandes passent avant, `started` à [onStarted] que
-/// c'est son tour, chaque `step` (une étape de sa réflexion) à [onStep],
+/// c'est son tour, chaque `step` puis `stepDone` (une étape de sa réflexion
+/// qui commence, puis qui finit) à [onStep],
 /// chaque `delta` part à [onText], `done` rend la réplique
 /// archivée (son JSON passe d'abord par [onDone]), `error` lève la même
 /// exception qu'un refus ordinaire. Un évènement inconnu est ignoré : le
@@ -25,7 +27,7 @@ Future<CoachReply> readCoachReplyStream(
   Future<void> Function(Map<String, dynamic> json)? onDone,
   void Function(int ahead)? onQueued,
   void Function()? onStarted,
-  void Function(String label)? onStep,
+  void Function(CoachStep step)? onStep,
 }) async {
   final requestId = requestIdOf(response.headers);
   final body = response.data;
@@ -43,9 +45,16 @@ Future<CoachReply> readCoachReplyStream(
           onQueued?.call((data['ahead'] as num?)?.toInt() ?? 0);
         case 'started':
           onStarted?.call();
-        case 'step':
+        case 'step' || 'stepDone':
           final label = data['label'];
-          if (label is String) onStep?.call(label);
+          final elapsed = (data['elapsedMs'] as num?)?.toInt();
+          if (label is String) {
+            onStep?.call((
+              label: label,
+              done: sse.event == 'stepDone',
+              elapsed: elapsed == null ? null : Duration(milliseconds: elapsed),
+            ));
+          }
         case 'delta':
           onText?.call(data['text'] as String? ?? '');
         case 'done':
