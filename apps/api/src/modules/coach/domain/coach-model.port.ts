@@ -92,6 +92,36 @@ export interface CoachTurnUsage {
   cacheReadTokens: number;
 }
 
+/**
+ * Comment un appel au modèle s'est arrêté. Qu'il cesse d'envoyer des jetons
+ * ne dit pas que la réponse est finie : `MAX_TOKENS` est une coupure.
+ */
+export type FinishReason =
+  | 'NORMAL_STOP'
+  | 'MAX_TOKENS'
+  | 'CONTEXT_LIMIT'
+  | 'TIMEOUT'
+  | 'CLIENT_DISCONNECT'
+  | 'WORKER_ERROR'
+  | 'STREAM_ERROR'
+  | 'CANCELLED'
+  | 'UNKNOWN';
+
+/** Le bilan de fin d'un tour : ce que mesurent journaux et métriques. */
+export interface CoachGeneration {
+  /** La fin du dernier appel. */
+  finishReason: FinishReason;
+  /** La fin de chaque appel au modèle du tour, reprises comprises. */
+  ends: FinishReason[];
+  continuations: number;
+  /** Reprises qui ont terminé une réponse coupée. */
+  recovered: number;
+  /** Reprises superflues (« FIN » : la réponse était finie). */
+  unneeded: number;
+  /** Réponse rendue incomplète, faute de reprise possible. */
+  truncated: boolean;
+}
+
 export interface CoachTurnOutput {
   text: string;
   /** Appel à `propose_session` retenu par le modèle, s'il y en a un. */
@@ -103,6 +133,8 @@ export interface CoachTurnOutput {
   worker?: string;
   /** Modèle qui a répondu (repli cloud compris). */
   model?: string;
+  /** Absent : le fournisseur ne le mesure pas (Anthropic). */
+  generation?: CoachGeneration;
 }
 
 export interface CoachModelPort {
@@ -123,6 +155,7 @@ export class CoachProviderUnavailableException extends ServiceUnavailableExcepti
   constructor(
     reason: string,
     readonly usage: CoachTurnUsage,
+    readonly end: FinishReason = 'UNKNOWN',
   ) {
     super(reason);
   }
@@ -145,10 +178,12 @@ export const COACH_TURN_DEADLINE_MS = 50_000;
 /**
  * Le signal d'un tour : son échéance, et l'annulation de qui l'a demandé.
  *
- * En flux, l'échéance est `COACH_REQUEST_TIMEOUT_MS` (3 min par défaut) : les
- * 60 s de nginx ne comptent qu'entre deux octets, et il en passe toujours —
- * le texte, ou le battement de `sseKeepAlive`. Sur le processeur du serveur
- * (≈ 8 jetons/s), relire des séances puis répondre dépasse souvent 50 s.
+ * En flux, l'échéance est `COACH_REQUEST_TIMEOUT_MS` (10 min par défaut), un
+ * PLAFOND : les 60 s de nginx ne comptent qu'entre deux octets, et il en
+ * passe toujours — le texte, ou le battement de `sseKeepAlive`. Sur le
+ * processeur du serveur (≈ 8 jetons/s), 2 048 jetons prennent plus de 4 min ;
+ * un worker muet, lui, est coupé par le délai d'inactivité du flux
+ * (`COACH_STREAM_IDLE_TIMEOUT_MS`, coach-worker-requests.ts).
  * D'un bloc, c'est `COACH_TURN_DEADLINE_MS`, sous nginx.
  */
 export function turnSignal(

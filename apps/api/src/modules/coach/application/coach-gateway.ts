@@ -7,6 +7,7 @@ import { UserFacingUnavailableException } from '../../../common/filters/user-fac
 import {
   COACH_MODEL_PORT,
   type CoachModelPort,
+  type CoachGeneration,
   CoachProviderUnavailableException,
   type CoachTurnInput,
   type CoachTurnOutput,
@@ -174,6 +175,8 @@ export class CoachGateway {
     try {
       const output = await this.model.reply({ ...input, onText });
       this.metrics.tokens.inc(output.usage.outputTokens);
+      if (output.generation)
+        this.recordEnd(requestId, output.generation, output.usage.outputTokens);
       await this.end(requestId, 'completed', {
         status: 'COMPLETED',
         inputTokens: output.usage.inputTokens,
@@ -185,6 +188,10 @@ export class CoachGateway {
     } catch (error) {
       const cancelled = input.signal?.aborted === true;
       const usage = error instanceof CoachProviderUnavailableException ? error.usage : undefined;
+      if (error instanceof CoachProviderUnavailableException) {
+        this.metrics.finishReasons.inc({ reason: error.end });
+        this.logger.warn({ requestId, finishReason: error.end }, 'Coach : génération en échec');
+      }
       await this.end(requestId, cancelled ? 'cancelled' : 'failed', {
         status: cancelled ? 'CANCELLED' : 'FAILED',
         errorCode: cancelled ? undefined : errorCodeOf(error),
@@ -196,6 +203,25 @@ export class CoachGateway {
       clearInterval(renew);
       this.metrics.active.dec();
       this.metrics.duration.observe((Date.now() - startedAt) / 1000);
+    }
+  }
+
+  /**
+   * Comment le tour a fini : chaque fin d'appel, ses reprises, une réponse
+   * rendue incomplète. Une ligne de journal par tour, corrélée au `requestId`.
+   */
+  private recordEnd(requestId: string, generation: CoachGeneration, generatedTokens: number) {
+    for (const reason of generation.ends) this.metrics.finishReasons.inc({ reason });
+    const succeeded = generation.recovered + generation.unneeded;
+    this.metrics.continuations.inc(generation.continuations);
+    this.metrics.continuationSuccess.inc(succeeded);
+    this.metrics.continuationFailed.inc(generation.continuations - succeeded);
+    if (generation.truncated) this.metrics.truncated.inc();
+    const log = { requestId, ...generation, generatedTokens, completed: !generation.truncated };
+    if (generation.truncated || generation.continuations > 0) {
+      this.logger.warn(log, 'Coach : réponse reprise ou incomplète');
+    } else {
+      this.logger.info(log, 'Coach : fin de génération');
     }
   }
 
@@ -256,7 +282,7 @@ export class CoachGateway {
 /** Raison courte pour la base et les métriques — jamais le message. */
 function errorCodeOf(error: unknown): string {
   if (error instanceof CoachProviderUnavailableException) {
-    return /Timeout/.test(error.message) ? 'timeout' : 'provider';
+    return error.end === 'UNKNOWN' ? 'provider' : error.end.toLowerCase();
   }
   return 'internal';
 }

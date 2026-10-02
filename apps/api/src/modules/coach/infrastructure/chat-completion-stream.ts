@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from '@nestjs/common';
+import { GenerationFailure } from './generation-end';
 
 /** Un appel d'outil tel que Chat Completions le rend, flux ou pas. */
 interface ChatToolCall {
@@ -46,13 +46,15 @@ interface ChatChunk {
  * Un flux qui se ferme SANS `[DONE]` ni `finish_reason` est une panne : c'est
  * le seul signe qu'Ollama donne d'une erreur en cours de génération (statut
  * déjà parti en 200, message perdu). Le texte déjà montré n'est pas archivé.
+ * `onChunk` apprend chaque arrivée d'octets : le délai d'inactivité s'y règle.
  */
 export async function readChatStream(
   response: Response,
   onText: (delta: string) => void,
+  onChunk?: () => void,
 ): Promise<ChatCompletion> {
   if (response.body === null) {
-    throw new ServiceUnavailableException('Coach : flux vide.');
+    throw new GenerationFailure('Coach : flux vide.', 'STREAM_ERROR');
   }
   let content = '';
   let finish: string | null = null;
@@ -86,6 +88,7 @@ export async function readChatStream(
   let buffer = '';
   try {
     for await (const bytes of response.body) {
+      onChunk?.();
       buffer += decoder.decode(bytes, { stream: true });
       let end: number;
       while ((end = buffer.indexOf('\n')) >= 0) {
@@ -98,12 +101,12 @@ export async function readChatStream(
     }
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new ServiceUnavailableException('Coach : flux illisible.');
+      throw new GenerationFailure('Coach : flux illisible.', 'STREAM_ERROR');
     }
     throw error;
   }
   if (!done && finish === null) {
-    throw new ServiceUnavailableException('Coach : flux interrompu.');
+    throw new GenerationFailure('Coach : flux interrompu.', 'STREAM_ERROR');
   }
 
   return {

@@ -1,11 +1,10 @@
-import { ServiceUnavailableException } from '@nestjs/common';
-import { setTimeout as wait } from 'node:timers/promises';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { PROPOSE_PROGRAM_TOOL, PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_TOOL_ROUNDS,
   CoachProviderUnavailableException,
+  type CoachGeneration,
   type CoachModelPort,
   type CoachToolCall,
   type CoachTurnInput,
@@ -13,23 +12,18 @@ import {
   type CoachTurnUsage,
   turnSignal,
 } from '../domain/coach-model.port';
-import { type ChatCompletion } from './chat-completion-stream';
+import { completeAnswer } from './answer-continuation';
 import { type CoachWorkerPool } from './coach-worker-pool';
+import { CoachWorkerRequests } from './coach-worker-requests';
 import { probeFor, probeForAction, USER_DATA_TOOLS } from './announced-action';
+import { endOfError } from './generation-end';
 import {
-  addUsage,
   parseArguments,
   prefetchedMessages,
-  readCompletion,
-  refusalReason,
   textOf,
   toolReply,
   unavailable,
 } from './openai-compatible.helpers';
-
-/** Nouvelles tentatives (429, 5xx, worker injoignable), chacune sur un AUTRE worker s'il y en a. */
-const RETRIES = 2;
-const RETRY_DELAY_MS = 1000;
 
 /**
  * Occasions d'agir par tour (announced-action.ts) : la seconde rattrape le
@@ -48,10 +42,14 @@ const MAX_PROBES = 2;
  * déclare (souvent 0), ce n'est pas un préfixe cassé.
  */
 export class OpenAiCompatibleCoachClient implements CoachModelPort {
+  private readonly requests: CoachWorkerRequests;
+
   constructor(
     private readonly config: AppConfigService,
-    private readonly pool: CoachWorkerPool,
-  ) {}
+    pool: CoachWorkerPool,
+  ) {
+    this.requests = new CoachWorkerRequests(config, pool);
+  }
 
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     // UNE échéance pour tout le tour, tentatives et outils compris.
@@ -99,7 +97,17 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         input.onText?.(text);
       });
 
-    const maxTokens = input.maxOutputTokens ?? this.config.coachGateway.maxOutputTokens;
+    const { maxOutputTokens, maxContinuations } = this.config.coachGateway;
+    const maxTokens = input.maxOutputTokens ?? maxOutputTokens;
+    const complete = this.requests.complete.bind(this.requests);
+    const generation: CoachGeneration = {
+      finishReason: 'UNKNOWN',
+      ends: [],
+      continuations: 0,
+      recovered: 0,
+      unneeded: 0,
+      truncated: false,
+    };
     // Une occasion d'agir au plus par tour (announced-action.ts).
     let probes = 0;
     // Une séance ou un programme proposé : la suite promise est là.
@@ -108,22 +116,38 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       [...input.history].reverse().find((turn) => turn.role === 'user')?.content ?? '';
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
       spoke = false;
-      const served = await this.complete(
-        { messages, tools },
+      // Un appel, et ses reprises si la réponse s'arrête avant sa fin.
+      const served = await completeAnswer(complete, {
+        messages,
+        tools,
         signal,
+        cancelled: input.signal,
         onText,
         maxTokens,
         worker,
-      ).catch((error: unknown) => {
+        maxContinuations,
+        trustStop: proposed,
+        usage,
+      }).catch((error: unknown) => {
+        const end = endOfError(error, signal, input.signal);
+        generation.ends.push(end);
+        generation.finishReason = end;
         // Le modèle a agi après une réponse déjà affichée : une panne
         // ensuite (échéance, 5xx) rend cette réponse, plutôt que rien.
         if (before + discarded !== '' && input.signal?.aborted !== true) return null;
-        return unavailable(error, usage, shown);
+        return unavailable(error, usage, shown, end);
       });
-      if (served === null) return this.output(reply(), proposal, usage, worker);
-      const { completion } = served;
+      if (served === null) return this.output(reply(), proposal, usage, worker, generation);
+      const { completion, report } = served;
       worker = served.served;
-      addUsage(usage, completion);
+      Object.assign(generation, {
+        finishReason: report.ends.at(-1) ?? 'UNKNOWN',
+        ends: [...generation.ends, ...report.ends],
+        continuations: generation.continuations + report.continuations,
+        recovered: generation.recovered + report.recovered,
+        unneeded: generation.unneeded + report.unneeded,
+        truncated: generation.truncated || report.truncated,
+      });
 
       let choice = completion.choices?.[0];
       if (choice?.finish_reason === 'error') {
@@ -148,14 +172,16 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         probes += 1;
         const answer = { role: 'assistant', content: choice?.message?.content ?? '' };
         const asked = { role: 'user', content: question.text };
-        const acted = await probeForAction(this.complete.bind(this), [...messages, answer, asked], {
+        const acted = await probeForAction(complete, [...messages, answer, asked], {
           tools,
           signal,
           cancelled: input.signal,
           maxTokens,
           worker,
           usage,
-        }).catch((error: unknown) => unavailable(error, usage, shown));
+        }).catch((error: unknown) =>
+          unavailable(error, usage, shown, endOfError(error, signal, input.signal)),
+        );
         if (acted !== null) {
           messages.push(answer, asked);
           if (question.keep) {
@@ -171,7 +197,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         }
       }
       if (toolCalls.length === 0) {
-        return this.output(reply(), proposal, usage, worker);
+        return this.output(reply(), proposal, usage, worker, generation);
       }
 
       // Appel sans `function` (passerelle non conforme) : nom vide, que les
@@ -207,7 +233,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
 
     // Trop de tours d'outils : la réponse écrite avant l'occasion d'agir,
     // s'il y en a une, vaut mieux qu'un abandon.
-    return this.output(before, proposal, usage, worker);
+    return this.output(before, proposal, usage, worker, generation);
   }
 
   /** La réplique du tour ; sans texte, l'abandon dit comme tel. */
@@ -216,6 +242,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     proposal: Record<string, unknown> | null,
     usage: CoachTurnUsage,
     worker: string | undefined,
+    generation: CoachGeneration,
   ): CoachTurnOutput {
     return {
       text: text || COACH_GAVE_UP_TEXT,
@@ -224,71 +251,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       refused: false,
       worker,
       model: this.config.coachProvider.model,
+      generation,
     };
-  }
-
-  /** Une requête au modèle, sur `prefer` s'il est sain ; `retries` nouvelles tentatives. */
-  private async complete(
-    payload: Record<string, unknown>,
-    signal: AbortSignal,
-    onText: ((delta: string) => void) | undefined,
-    maxOutputTokens: number,
-    prefer?: string,
-    retries = RETRIES,
-  ): Promise<{ completion: ChatCompletion; served: string }> {
-    // En flux, l'usage n'arrive que si on le demande (dernier morceau).
-    const stream = onText ? { stream: true, stream_options: { include_usage: true } } : {};
-    const { apiKey, model } = this.config.coachProvider;
-    const body = JSON.stringify({
-      model,
-      max_tokens: maxOutputTokens,
-      ...payload,
-      ...stream,
-    });
-    const tried = new Set<string>();
-    for (let attempt = 0; ; attempt++) {
-      const worker = this.pool.acquire(tried, prefer);
-      // Panne DU WORKER (réseau, 5xx, flux rompu) : il est écarté un temps.
-      // Jamais une annulation ni une échéance, qui ne disent rien de lui.
-      let failed = false;
-      try {
-        const response = await fetch(`${worker.url.replace(/\/+$/, '')}/chat/completions`, {
-          method: 'POST',
-          signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiKey === undefined ? {} : { Authorization: `Bearer ${apiKey}` }),
-          },
-          body,
-        }).catch((error: unknown) => {
-          failed = !signal.aborted;
-          if (signal.aborted || attempt === retries) throw error;
-          return null;
-        });
-        if (response?.ok) {
-          const completion = await readCompletion(response, onText).catch((error: unknown) => {
-            failed = !signal.aborted;
-            throw error;
-          });
-          return { completion, served: worker.name };
-        }
-        if (response !== null) {
-          const retryable = response.status === 429 || response.status >= 500;
-          failed = response.status >= 500;
-          if (!retryable || attempt === retries) {
-            // Jamais relayé tel quel : un 429 du fournisseur (quota GLOBAL)
-            // s'afficherait « limite du jour » sur le téléphone.
-            throw new ServiceUnavailableException(
-              `Coach : le fournisseur a répondu ${response.status}${await refusalReason(response, retryable)}.`,
-            );
-          }
-          await response.body?.cancel();
-        }
-      } finally {
-        this.pool.release(worker, failed);
-      }
-      tried.add(worker.url);
-      await wait(RETRY_DELAY_MS * (attempt + 1), undefined, { signal });
-    }
   }
 }

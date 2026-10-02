@@ -241,6 +241,7 @@ describe('CoachGateway — génération', () => {
         outputTokens: 0,
         cacheReadTokens: 0,
       },
+      'TIMEOUT',
     );
     model.reply.mockRejectedValue(down);
     const admission = await admissions.admit('u', 'c', 'm', 'Salut');

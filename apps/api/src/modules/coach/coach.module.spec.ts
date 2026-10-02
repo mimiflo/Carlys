@@ -49,7 +49,13 @@ describe('coachModelFor', () => {
     const original = global.fetch;
     global.fetch = fetchMock;
     const fallbackConfig = {
-      coachGateway: { cloudFallback: true, requestTimeoutMs: 180_000, maxOutputTokens: 512 },
+      coachGateway: {
+        cloudFallback: true,
+        requestTimeoutMs: 180_000,
+        streamIdleTimeoutMs: 60_000,
+        maxOutputTokens: 512,
+        maxContinuations: 2,
+      },
       coachProvider: { model: 'qwen3:4b-instruct-2507-q4_K_M' },
       anthropicApiKey: 'sk-ant-factice-1234567890',
     } as unknown as AppConfigService;

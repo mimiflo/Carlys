@@ -26,6 +26,11 @@ export class CoachMetrics {
   readonly tokens: Counter<string>;
   readonly errors: Counter<'reason'>;
   readonly cancelled: Counter<string>;
+  readonly finishReasons: Counter<'reason'>;
+  readonly continuations: Counter<string>;
+  readonly continuationSuccess: Counter<string>;
+  readonly continuationFailed: Counter<string>;
+  readonly truncated: Counter<string>;
 
   constructor(metrics: MetricsService) {
     const registers = [metrics.registry];
@@ -78,6 +83,32 @@ export class CoachMetrics {
     this.cancelled = new Counter({
       name: name('cancelled_total'),
       help: 'Générations annulées (écran fermé, « Arrêter », coupure).',
+      registers,
+    });
+    this.finishReasons = new Counter({
+      name: name('generation_finish_reason_total'),
+      help: 'Fins d’appel au modèle, par raison (NORMAL_STOP, MAX_TOKENS, TIMEOUT…).',
+      labelNames: ['reason'],
+      registers,
+    });
+    this.continuations = new Counter({
+      name: name('continuations_total'),
+      help: 'Reprises d’une réponse coupée.',
+      registers,
+    });
+    this.continuationSuccess = new Counter({
+      name: name('continuation_success_total'),
+      help: 'Reprises qui ont terminé la réponse (ou confirmé, « FIN », qu’elle l’était).',
+      registers,
+    });
+    this.continuationFailed = new Counter({
+      name: name('continuation_failed_total'),
+      help: 'Reprises qui n’ont pas terminé la réponse.',
+      registers,
+    });
+    this.truncated = new Counter({
+      name: name('generation_truncated_total'),
+      help: 'Réponses rendues incomplètes, faute de reprise possible.',
       registers,
     });
   }

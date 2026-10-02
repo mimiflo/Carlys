@@ -13,7 +13,7 @@ import 'coach_reply_stream.dart';
 /// EN-TÊTES de la réponse, qui partent au premier mot du coach ou à son
 /// premier battement (`sseKeepAlive`, toutes les 15 s côté serveur). Il
 /// dépasse donc les 20 s du client partagé sans borner la réponse elle-même,
-/// que le serveur laisse durer trois minutes en flux
+/// que le serveur laisse durer dix minutes au plus en flux
 /// (`COACH_REQUEST_TIMEOUT_MS`).
 const coachReplyTimeout = Duration(seconds: 65);
 

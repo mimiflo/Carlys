@@ -21,10 +21,18 @@ export const coachGatewayEnv = {
   COACH_QUEUE_MAX_SIZE: int(0, 10_000, 20),
   /** Attente maximale dans la file avant d'abandonner la demande. */
   COACH_QUEUE_TIMEOUT_MS: int(1_000, 600_000, 120_000),
-  /** Échéance d'une génération EN FLUX, file non comprise. */
-  COACH_REQUEST_TIMEOUT_MS: int(10_000, 900_000, 180_000),
-  /** Jetons de sortie par appel au modèle. */
+  /**
+   * Plafond d'une génération EN FLUX, file non comprise — reprises comprises.
+   * Un plafond, pas la mesure d'une panne : c'est le rôle du délai
+   * d'inactivité ci-dessous.
+   */
+  COACH_REQUEST_TIMEOUT_MS: int(10_000, 900_000, 600_000),
+  /** Silence toléré d'un flux déjà commencé avant de le tenir pour mort. */
+  COACH_STREAM_IDLE_TIMEOUT_MS: int(5_000, 300_000, 60_000),
+  /** Jetons de sortie par appel au modèle (une reprise est un autre appel). */
   COACH_MAX_OUTPUT_TOKENS: int(16, 8_192, 2_048),
+  /** Reprises d'une réponse coupée, au plus, par appel au modèle. */
+  COACH_MAX_CONTINUATIONS: int(0, 5, 2),
   /** Générations simultanées pour UNE personne (file comprise). */
   COACH_MAX_CONCURRENT_PER_USER: int(1, 10, 1),
   /** Messages par personne et par minute, en plus du plafond quotidien. */
@@ -70,7 +78,9 @@ export interface CoachGatewaySettings {
   queueMaxSize: number;
   queueTimeoutMs: number;
   requestTimeoutMs: number;
+  streamIdleTimeoutMs: number;
   maxOutputTokens: number;
+  maxContinuations: number;
   maxConcurrentPerUser: number;
   messagesPerMinute: number;
   maxMessageChars: number;
@@ -94,7 +104,9 @@ export function coachGatewaySettings(config: ConfigService<Env, true>): CoachGat
     queueMaxSize: get('COACH_QUEUE_MAX_SIZE'),
     queueTimeoutMs: get('COACH_QUEUE_TIMEOUT_MS'),
     requestTimeoutMs: get('COACH_REQUEST_TIMEOUT_MS'),
+    streamIdleTimeoutMs: get('COACH_STREAM_IDLE_TIMEOUT_MS'),
     maxOutputTokens: get('COACH_MAX_OUTPUT_TOKENS'),
+    maxContinuations: get('COACH_MAX_CONTINUATIONS'),
     maxConcurrentPerUser: get('COACH_MAX_CONCURRENT_PER_USER'),
     messagesPerMinute: get('COACH_MESSAGES_PER_MINUTE'),
     maxMessageChars: get('COACH_MAX_MESSAGE_CHARS'),

@@ -10,7 +10,12 @@ const ollama = () =>
   new OpenAiCompatibleCoachClient(
     {
       coachProvider: { model: 'qwen3' },
-      coachGateway: { requestTimeoutMs: 180_000, maxOutputTokens: 2048 },
+      coachGateway: {
+        requestTimeoutMs: 180_000,
+        streamIdleTimeoutMs: 60_000,
+        maxOutputTokens: 2048,
+        maxContinuations: 2,
+      },
     } as unknown as AppConfigService,
     new CoachWorkerPool(['http://ollama:11434/v1'], 30_000),
   );
@@ -174,21 +179,26 @@ describe('OpenAiCompatibleCoachClient en flux', () => {
     expect(output.usage.inputTokens).toBe(50);
   });
 
-  it('un flux coupé après du texte montré n’est pas rendu au quota', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValueOnce(sse([delta('Bon')]));
+  it('un flux coupé avant le premier mot entier, et ses reprises aussi : la panne remonte', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(() => Promise.resolve(sse([delta('Bon')])));
+    const seen: string[] = [];
 
-    const failure = ollama()
+    const failure = await ollama()
       .reply({
         system: 'Tu es le coach.',
         tools: [],
         history: [{ role: 'user', content: 'Salut' }],
         runTools: jest.fn(),
-        onText: () => undefined,
+        onText: (text) => seen.push(text),
       })
       .catch((error: unknown) => error);
 
-    // `refundIfUnavailable` ne rend qu'à zéro jeton : du texte a coûté.
-    await expect(failure).resolves.toBeInstanceOf(CoachProviderUnavailableException);
-    await expect(failure).resolves.toMatchObject({ usage: { inputTokens: 1 } });
+    expect(failure).toBeInstanceOf(CoachProviderUnavailableException);
+    expect(failure).toMatchObject({ end: 'STREAM_ERROR' });
+    // Le premier appel et ses deux reprises ; le mot coupé n'a jamais été montré.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(seen).toEqual([]);
   });
 });

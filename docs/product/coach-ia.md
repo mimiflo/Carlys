@@ -391,7 +391,8 @@ simultanés, le second peut recevoir un 503. Le plafond par personne (`COACH_DAI
 désormais la machine, plus une facture.
 
 **Latence.** Une seule échéance couvre le tour entier (tentatives et
-outils) : **3 minutes en flux** (`COACH_REQUEST_TIMEOUT_MS`, réglable), **50 s d'un
+outils) : **10 minutes en flux** (`COACH_REQUEST_TIMEOUT_MS`, réglable, un plafond ;
+un flux commencé puis muet 60 s est coupé plus tôt, `COACH_STREAM_IDLE_TIMEOUT_MS`), **50 s d'un
 bloc** (`COACH_TURN_DEADLINE_MS`, sous les 60 s de nginx). En flux, les 60 s
 de nginx ne comptent qu'entre deux octets, et il en passe toujours : le texte,
 ou un battement (`: ping`, commentaire SSE que tout client ignore) toutes les
@@ -440,6 +441,50 @@ aussitôt, une bulle « Réfléchit… » attend le premier mot, puis la répons
 s'écrit à mesure qu'Ollama la produit. Un renvoi de la même question pendant
 qu'elle s'écrit est refusé (409) par un verrou Redis, au lieu d'être compté et
 répondu deux fois.
+
+### Réponses coupées : la reprise (2 octobre 2026)
+
+Que le modèle cesse d'écrire ne dit pas que la réponse est finie. Chaque
+appel finit sur une raison classée (`FinishReason`, `coach-model.port.ts`) :
+`NORMAL_STOP`, `MAX_TOKENS` (le `length` d'Ollama, coupé au milieu d'un
+mot), `CONTEXT_LIMIT` (400 `exceed_context_size_error`), `TIMEOUT`,
+`CLIENT_DISCONNECT`, `WORKER_ERROR`, `STREAM_ERROR`, `CANCELLED`, `UNKNOWN`.
+
+**Causes trouvées.** Une échéance ABSOLUE de 3 min par tour, quand 2 048
+jetons en prennent plus de 4 sur le processeur du serveur (≈ 8 jetons/s) ;
+le plafond de jetons (`length`), rendu tel quel ; un flux rompu, rendu en
+erreur. L'échéance est devenue un plafond de 10 min, et la panne se mesure
+au SILENCE du flux (60 s sans un octet après le premier, `coach-worker-requests.ts`).
+
+**La reprise** (`infrastructure/answer-continuation.ts`, raccord dans `answer-stream.ts`) — l'orchestration,
+pas la consigne :
+
+- elle ne part que sur un signe de coupure : `MAX_TOKENS`, une panne
+  récupérable APRÈS du texte (`TIMEOUT` d'inactivité, `WORKER_ERROR`,
+  `STREAM_ERROR`), ou un `stop` dont la fin est manifestement en suspens
+  (`looksSuspended`, `generation-end.ts` : bloc de code ou parenthèse
+  ouverts, « : » ou « , » final, puce vide, mot-outil final). Une réponse
+  finie ne coûte AUCUN appel de plus ; jamais sur un appel d'outil, jamais
+  après l'annulation, jamais après une proposition faite (« Voici la séance : ») ;
+- le client redemande la SUITE (consigne interne, jamais montrée ni
+  archivée, qui CITE les derniers mots écrits : mesuré sur 9 vraies
+  coupures, elle repart au mot près 8 fois sur 9, contre 6 pour « continue
+  à partir du dernier caractère »), sur le même worker (son cache), au plus
+  `COACH_MAX_CONTINUATIONS` fois, AVANT l'occasion d'agir ;
+- le dernier mot est retenu dans le flux tant qu'il n'est pas fini : coupé,
+  il n'a jamais été montré, et la reprise le réécrit en entier ;
+- le raccord retire le recouvrement à la jointure seulement (mots répétés,
+  fin de phrase réécrite) ; une reprise qui RECOMMENCE la réponse n'est
+  gardée qu'à partir de ses derniers mots retrouvés, sinon écartée ; « FIN »
+  dit que la réponse était finie ;
+- tout s'écrit dans la même bulle, sans « Suite : ». Reprise impossible :
+  la réponse montrée reste, finie par « … », comptée incomplète.
+
+**Mesures** (`/metrics`, préfixe `carlys_api_ai_`) :
+`generation_finish_reason_total{reason}`, `continuations_total`,
+`continuation_success_total`, `continuation_failed_total`,
+`generation_truncated_total` ; et une ligne de journal par tour, corrélée au
+`requestId` (raisons, reprises, jetons produits, réponse complète ou non).
 
 ## La passerelle : file, workers, annulation (ADR 0013)
 
@@ -688,8 +733,10 @@ démarrage.
 | `COACH_MAX_CONCURRENT_REQUESTS` | Générations simultanées, tous exemplaires de l'API confondus (1). Égale la somme des `OLLAMA_NUM_PARALLEL` des workers |
 | `COACH_QUEUE_MAX_SIZE` | Attentes au-delà desquelles une demande est refusée tout de suite, 503 `SERVICE_BUSY` (20) |
 | `COACH_QUEUE_TIMEOUT_MS` | Attente maximale dans la file (120 000) |
-| `COACH_REQUEST_TIMEOUT_MS` | Échéance d'une génération en flux, file non comprise (180 000) |
-| `COACH_MAX_OUTPUT_TOKENS` | Jetons de sortie par appel au modèle (2 048) |
+| `COACH_REQUEST_TIMEOUT_MS` | Plafond d'une génération en flux, file non comprise, reprises comprises (600 000) |
+| `COACH_STREAM_IDLE_TIMEOUT_MS` | Silence toléré d'un flux déjà commencé avant de le tenir pour mort (60 000) |
+| `COACH_MAX_OUTPUT_TOKENS` | Jetons de sortie par appel au modèle ; une reprise est un autre appel (2 048) |
+| `COACH_MAX_CONTINUATIONS` | Reprises d'une réponse coupée, au plus, par appel (2) |
 | `COACH_MAX_CONCURRENT_PER_USER` | Générations simultanées pour une personne, file comprise (1) |
 | `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
 | `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |

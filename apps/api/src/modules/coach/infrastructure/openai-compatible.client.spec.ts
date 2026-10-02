@@ -30,7 +30,12 @@ function client(provider: { baseUrl?: string; apiKey?: string; model?: string } 
   return new OpenAiCompatibleCoachClient(
     {
       coachProvider: provider,
-      coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 2048 },
+      coachGateway: {
+        requestTimeoutMs: STREAM_TIMEOUT_MS,
+        streamIdleTimeoutMs: 60_000,
+        maxOutputTokens: 2048,
+        maxContinuations: 2,
+      },
     } as unknown as AppConfigService,
     new CoachWorkerPool(provider.baseUrl === undefined ? [] : [provider.baseUrl], 30_000),
   );
@@ -113,7 +118,12 @@ function clientWith(pool: CoachWorkerPool) {
   return new OpenAiCompatibleCoachClient(
     {
       coachProvider: MISTRAL,
-      coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 2048 },
+      coachGateway: {
+        requestTimeoutMs: STREAM_TIMEOUT_MS,
+        streamIdleTimeoutMs: 60_000,
+        maxOutputTokens: 2048,
+        maxContinuations: 2,
+      },
     } as unknown as AppConfigService,
     pool,
   );
@@ -267,6 +277,14 @@ describe('OpenAiCompatibleCoachClient', () => {
         text: 'Ton record : 100 kg.',
         proposal: null,
         usage: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0 },
+        generation: {
+          finishReason: 'NORMAL_STOP',
+          ends: ['NORMAL_STOP'],
+          continuations: 0,
+          recovered: 0,
+          unneeded: 0,
+          truncated: false,
+        },
         refused: false,
         // L'hôte seul : ce qui part en base et aux métriques.
         worker: 'api.mistral.ai',
@@ -928,7 +946,12 @@ describe('OpenAiCompatibleCoachClient', () => {
       new OpenAiCompatibleCoachClient(
         {
           coachProvider: { model: 'qwen3' },
-          coachGateway: { requestTimeoutMs: STREAM_TIMEOUT_MS, maxOutputTokens: 512 },
+          coachGateway: {
+            requestTimeoutMs: STREAM_TIMEOUT_MS,
+            streamIdleTimeoutMs: 60_000,
+            maxOutputTokens: 512,
+            maxContinuations: 2,
+          },
         } as unknown as AppConfigService,
         pool,
       );

@@ -2,6 +2,7 @@ import { HttpException, ServiceUnavailableException } from '@nestjs/common';
 import {
   CoachProviderUnavailableException,
   type CoachToolCall,
+  type FinishReason,
   type CoachToolResult,
   type CoachTurnUsage,
 } from '../domain/coach-model.port';
@@ -50,9 +51,10 @@ export function addUsage(usage: CoachTurnUsage, completion: ChatCompletion): voi
 export async function readCompletion(
   response: Response,
   onText?: (delta: string) => void,
+  onChunk?: () => void,
 ): Promise<ChatCompletion> {
   if (onText) {
-    return readChatStream(response, onText);
+    return readChatStream(response, onText, onChunk);
   }
   const body: unknown = await response.json();
   if (typeof body !== 'object' || body === null) {
@@ -68,7 +70,12 @@ export async function readCompletion(
  * raison du fournisseur, voir `refusalReason`), ou le NOM de l'erreur,
  * jamais son message, qui peut citer le corps de la réponse.
  */
-export function unavailable(error: unknown, usage: CoachTurnUsage, shown = false): never {
+export function unavailable(
+  error: unknown,
+  usage: CoachTurnUsage,
+  shown = false,
+  end: FinishReason = 'UNKNOWN',
+): never {
   // Un flux coupé ne dit pas ce qu'il a coûté (l'usage n'arrive qu'à la
   // fin) : du texte montré prouve des jetons consommés, le message n'est
   // donc PAS rendu (`refundIfUnavailable` ne rend qu'à zéro jeton).
@@ -79,7 +86,7 @@ export function unavailable(error: unknown, usage: CoachTurnUsage, shown = false
     error instanceof HttpException
       ? error.message
       : `Coach : fournisseur injoignable (${error instanceof Error ? error.name : 'inconnue'}).`;
-  throw new CoachProviderUnavailableException(reason, usage);
+  throw new CoachProviderUnavailableException(reason, usage, end);
 }
 
 /**

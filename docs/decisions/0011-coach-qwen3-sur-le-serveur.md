@@ -83,8 +83,12 @@ fournisseur : faire tourner le modèle nous-mêmes, sur le serveur.
   désormais 3 minutes (`COACH_REQUEST_TIMEOUT_MS`), nginx et l'application
   tenus éveillés par un battement toutes les 15 s — voir `coach-ia.md`,
   « Latence ». Le tour d'un bloc garde ses 50 s.*
+  *2 octobre 2026 : ces 3 minutes coupaient encore les longues réponses
+  (2 048 jetons ≈ 4 min). Le tour en flux a un PLAFOND de 10 minutes ; la
+  panne se mesure au silence du flux (60 s), et une réponse coupée reprend
+  — `coach-ia.md`, « Réponses coupées : la reprise ».*
 - **Une réponse à la fois**, et l'attente dans la file d'Ollama compte dans
-  l'échéance du tour (3 min en flux depuis le 30 septembre 2026) : deux
+  l'échéance du tour (10 min en flux depuis le 2 octobre 2026) : deux
   personnes qui écrivent en même temps, la seconde attend, et peut recevoir
   « momentanément indisponible » si la première réponse est longue.
 - Un petit modèle suit moins bien les consignes : les garde-fous du prompt
