@@ -67,10 +67,14 @@ export function stitch(previous: string, continuation: string): string | null {
 
 function join(previous: string, rest: string): string {
   if (rest.trim() === '') return previous;
-  // Une ponctuation dite deux fois (« rythme : » puis « : elle… »).
+  // Une ponctuation dite deux fois (« rythme : » puis « : elle… »), ou qui
+  // ouvre la suite d'une phrase finie (« …de santé. » puis « : si tu… »).
   const end = previous.trimEnd().at(-1) ?? '';
+  const opening = rest.trimStart().at(0) ?? '';
   const tidy =
-    /[.,;:!?…]/.test(end) && rest.trimStart().startsWith(end) ? rest.trimStart().slice(1) : rest;
+    /[.,;:!?…]/.test(end) && (opening === end || /[,;:]/.test(opening))
+      ? rest.trimStart().slice(1)
+      : rest;
   if (/\s$/.test(previous)) return previous + tidy.replace(/^[ \t]+/, '');
   if (/^\s/.test(tidy) || /^[.,;:!?…)»\]]/.test(tidy)) return previous + tidy;
   return `${previous} ${tidy}`;
@@ -180,7 +184,7 @@ export class AnswerStream {
       this.text = decided;
       this.pending = null;
     }
-    this.show(atWordBoundary(this.text));
+    this.show(withoutFin(atWordBoundary(this.text)));
   };
 
   /**
@@ -227,8 +231,18 @@ export class AnswerStream {
     this.text = `${kept.trimEnd().length >= this.shown ? kept.trimEnd() : kept}…`;
   }
 
-  /** Montre ce qui restait retenu. */
+  /**
+   * Montre ce qui restait retenu — sans un « FIN » final : le mot de la
+   * consigne interne, que le modèle ajoute parfois à une vraie réponse
+   * (« …ton corps. FIN. », constaté au banc). Retenu dans le flux tant que
+   * rien ne le suit, il n'a jamais été montré.
+   */
   flush(): void {
+    const kept = withoutFin(this.text);
+    if (kept.length >= this.shown) {
+      // L'espace d'avant « FIN » peut être déjà montrée : elle reste.
+      this.text = kept.trimEnd().length >= this.shown ? kept.trimEnd() : kept;
+    }
     this.show(this.text);
   }
 
@@ -237,4 +251,9 @@ export class AnswerStream {
     this.emit?.(upTo.slice(this.shown));
     this.shown = upTo.length;
   }
+}
+
+/** `text` sans un « FIN » final, ponctuation comprise (« … FIN. »). */
+function withoutFin(text: string): string {
+  return text.replace(/(^|[\s.!?…])FIN[.!]?\s*$/u, '$1');
 }

@@ -484,7 +484,9 @@ pas la consigne :
   récupérable APRÈS du texte (`TIMEOUT` d'inactivité, `WORKER_ERROR`,
   `STREAM_ERROR`), ou un `stop` dont la fin est manifestement en suspens
   (`looksSuspended`, `generation-end.ts` : bloc de code ou parenthèse
-  ouverts, « : » ou « , » final, puce vide, mot-outil final). Une réponse
+  ouverts, « : » ou « , » final, puce vide, mot-outil final, phrase qui
+  s'arrête sur un mot sans ponctuation — aucune des 79 réponses complètes
+  relevées ne finit ainsi). Une réponse
   finie ne coûte AUCUN appel de plus ; jamais sur un appel d'outil, jamais
   après l'annulation, jamais après une proposition faite (« Voici la séance : ») ;
 - le client redemande la SUITE (consigne interne, jamais montrée ni
@@ -497,7 +499,8 @@ pas la consigne :
 - le raccord retire le recouvrement à la jointure seulement (mots répétés,
   fin de phrase réécrite) ; une reprise qui RECOMMENCE la réponse n'est
   gardée qu'à partir de ses derniers mots retrouvés, sinon écartée ; « FIN »
-  dit que la réponse était finie ;
+  dit que la réponse était finie, et un « FIN » que le modèle colle à la fin
+  d'une vraie réponse n'est jamais montré ;
 - tout s'écrit dans la même bulle, sans « Suite : ». Reprise impossible :
   la réponse montrée reste, finie par « … », comptée incomplète.
 

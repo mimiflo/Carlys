@@ -73,6 +73,12 @@ describe('stitch — ce que Qwen3-4B fait vraiment d’une reprise (mesuré)', (
     ).toBeNull();
   });
 
+  it('une suite qui s’ouvre sur « : » après une phrase finie : la ponctuation tombe', () => {
+    expect(
+      stitch('consulte un professionnel de santé.  \n\n', ': si tu sens une douleur, arrête-toi.'),
+    ).toBe('consulte un professionnel de santé.  \n\nsi tu sens une douleur, arrête-toi.');
+  });
+
   it('les retours à la ligne de la suite sont gardés ; une ponctuation dite deux fois ne l’est pas', () => {
     expect(stitch('Voici ta séance :\n1. Squat', 'Squat 3×8\n2. Pompes 3×12')).toBe(
       'Voici ta séance :\n1. Squat 3×8\n2. Pompes 3×12',
@@ -202,7 +208,7 @@ describe('completeAnswer — une réponse coupée reprend, une réponse finie pa
       'Oui.',
       'Avec plaisir !',
       'Bonne séance 💪',
-      'Garde 70 kg cette semaine',
+      'Garde 70 kg cette semaine.',
     ]) {
       const result = await answer([{ text: [short] }]);
       expect(result.calls).toBe(1);
@@ -382,6 +388,18 @@ describe('completeAnswer — une réponse coupée reprend, une réponse finie pa
 });
 
 describe('AnswerStream — ce qui est montré ne se reprend jamais', () => {
+  it('un « FIN » ajouté à une vraie réponse n’est jamais montré (constaté au banc)', () => {
+    // Les formes relevées : « … supporter. FIN », « …\n\nFIN », « … corps. FIN. ».
+    for (const ending of [' FIN', '\n\nFIN', ' FIN.']) {
+      const shown: string[] = [];
+      const stream = new AnswerStream((delta) => shown.push(delta));
+      stream.push(`Consulte un professionnel de santé.${ending}`);
+      stream.flush();
+      expect(shown.join('').trimEnd()).toBe('Consulte un professionnel de santé.');
+      expect(stream.text.trimEnd()).toBe('Consulte un professionnel de santé.');
+    }
+  });
+
   it('retient le dernier mot jusqu’à ce qu’il soit fini', () => {
     const shown: string[] = [];
     const stream = new AnswerStream((delta) => shown.push(delta));

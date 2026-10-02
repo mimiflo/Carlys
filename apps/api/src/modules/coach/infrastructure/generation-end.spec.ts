@@ -22,6 +22,10 @@ describe('looksSuspended — une fin manifestement en suspens, malgré un stop',
       'Garde une charge modérée (environ 70 % de ton max',
       '```\nsquat 3x8',
       'Je te conseille ensuite de',
+      // II. Constatées au banc : une phrase arrêtée sur un mot plein.
+      'Le développé couché travaille',
+      'Parce que ça relâche les muscles tendus, prévient les douleurs et améliore',
+      'Un squat bien fait renforce les quadriceps. Si tu as un enregistrement récent',
     ]) {
       expect(looksSuspended(cut)).toBe(true);
     }
@@ -35,7 +39,11 @@ describe('looksSuspended — une fin manifestement en suspens, malgré un stop',
       'Bonne séance 💪',
       'Tu veux que je te prépare une séance ?',
       'Repos : 90 secondes (pas plus).',
-      'Garde 70 kg cette semaine',
+      'Garde 70 kg cette semaine.',
+      // Une liste, un titre : leur dernière ligne n'est pas une phrase.
+      'Ta séance :\n- Squat 3×8\n- Pompes 3×12',
+      'Bonne séance !\n\n### Récupération',
+      '**Bonne séance**',
       '',
     ]) {
       expect(looksSuspended(done)).toBe(false);

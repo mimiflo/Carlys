@@ -61,12 +61,18 @@ export function recoverable(end: FinishReason, turn: AbortSignal): boolean {
 /**
  * La réponse s'arrête-t-elle MANIFESTEMENT en suspens, malgré un `stop` ?
  *
- * Conservateur à dessein : une réponse courte (« Oui, c'est possible. »),
- * une liste finie, un émoji final sont des fins. Seuls comptent des signaux
- * de syntaxe que rien ne termine : un bloc de code ou une parenthèse
- * ouverts, deux-points ou virgule finaux, une puce vide, un mot-outil sans
- * ponctuation (« …travailler principalement les »), un appel d'outil écrit
- * en texte et inachevé.
+ * Une réponse courte (« Oui, c'est possible. »), une liste finie, un émoji
+ * final sont des fins. Comptent des signaux de syntaxe que rien ne termine :
+ * un bloc de code ou une parenthèse ouverts, deux-points ou virgule finaux,
+ * une puce vide, un mot-outil final (« …travailler principalement les »),
+ * un appel d'outil écrit en texte et inachevé — et une PHRASE qui s'arrête
+ * sur un mot, sans ponctuation (« Le développé couché travaille »).
+ *
+ * Mesuré (2 octobre 2026) : aucune des 79 réponses complètes de Qwen3-4B
+ * relevées ne finit sa dernière phrase sans ponctuation ; les trois arrêtées
+ * en plein milieu (« …et améliore ») y finissaient toutes. Une liste, un
+ * titre ou un tableau finissent sans point : leur dernière ligne n'est pas
+ * une phrase. Un faux positif coûte une reprise qui répond « FIN ».
  */
 export function looksSuspended(text: string): boolean {
   const trimmed = text.trimEnd();
@@ -78,7 +84,10 @@ export function looksSuspended(text: string): boolean {
   if (/[:,;]$/.test(trimmed)) return true;
   // Une puce ou un numéro, et rien derrière.
   if (/(^|\n)\s*([-*•]|\d+[.)])$/.test(trimmed)) return true;
-  // Un mot-outil final, sans ponctuation : la phrase attend sa suite.
+  // Une phrase (ni puce, ni numéro, ni titre, ni tableau) qui finit sur un mot.
+  const lastLine = trimmed.slice(trimmed.lastIndexOf('\n') + 1).trim();
+  if (!/^([-*•#|]|\d+[.)])/.test(lastLine) && /[\p{L}\p{N}]$/u.test(lastLine)) return true;
+  // Un mot-outil final, même dans une liste : la ligne attend sa suite.
   return /(?<!\p{L})(de|du|des|le|la|les|l'|l’|un|une|et|ou|à|au|aux|en|pour|par|avec|sans|sur|sous|dans|vers|que|qui|mais|donc|car|ton|ta|tes|mon|ma|mes|son|sa|ses|ce|cet|cette|ces|d'|d’|qu'|qu’|est|sont|très|plus|moins)$/iu.test(
     trimmed,
   );
