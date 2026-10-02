@@ -17,7 +17,8 @@ describe('prefetchFor', () => {
       'get_recent_meals',
     ]);
     // « Par où je commence ? » : ce qu'il a déjà fait, avant de conseiller.
-    expect(names('Par où je commence ?')).toEqual(['get_recent_sessions']);
+    // Débuter : ses séances, et son profil — il attend un plan.
+    expect(names('Par où je commence ?')).toEqual(['get_recent_sessions', 'get_training_profile']);
     expect(names('Tu peux regarder mes dernières séances ?')).toEqual(['get_recent_sessions']);
   });
 

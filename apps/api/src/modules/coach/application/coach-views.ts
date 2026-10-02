@@ -1,6 +1,7 @@
 import {
   type BodyMetric,
   type ExerciseSummary,
+  type MealEntry,
   type PersonalRecord,
   type WorkoutSessionSummary,
   type WorkoutTemplateDetail,
@@ -9,8 +10,7 @@ import {
 } from '@carlys/api-contracts';
 
 /**
- * Ce que le coach LIT des séances, records et modèles — même logique que
- * `coach-meal-view.ts` pour les repas.
+ * Ce que le coach LIT des séances, records, modèles et repas.
  *
  * Les contrats d'écran portent des identifiants de ligne, des révisions et
  * des champs vides qu'un écran utilise et qu'un modèle ne fait que relire.
@@ -106,4 +106,30 @@ export function coachTemplateView(template: WorkoutTemplateDetail) {
 function coachSetView(set: WorkoutTemplateSet) {
   const { id: _id, position: _position, ...targets } = set;
   return Object.fromEntries(Object.entries(targets).filter(([, value]) => value !== null));
+}
+
+/**
+ * Un repas du journal tel que le coach le lit. Le contrat de l'écran porte,
+ * pour chaque aliment d'un repas composé, identifiant, code, groupe et quatre
+ * valeurs : une semaine de repas à trente aliments pèserait des dizaines de
+ * milliers de caractères pour dire « 120 g de poulet ». Le coach reçoit le
+ * repas, son MOMENT (`null` : enregistré sans ; un dîner à 23 h n'est pas
+ * une collation, et c'est une donnée enregistrée, pas une déduction de
+ * l'heure), ses totaux (`computed` : calculés depuis ses aliments, pas
+ * saisis), et ce qui le compose en clair, dans l'ordre du repas.
+ */
+export function coachMealView(meal: MealEntry) {
+  return {
+    name: meal.name,
+    moment: meal.moment,
+    eatenAt: meal.eatenAt,
+    kcal: meal.kcal,
+    proteinG: meal.proteinG,
+    carbsG: meal.carbsG,
+    fatG: meal.fatG,
+    quantity: meal.quantity,
+    quantityUnit: meal.quantityUnit,
+    computed: meal.computed,
+    foods: meal.components.map((component) => `${component.name} : ${component.quantityG} g`),
+  };
 }

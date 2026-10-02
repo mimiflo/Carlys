@@ -306,7 +306,7 @@ Prisma direct depuis le module coach pour les domaines voisins.
 | `get_progress_overview` | Volume, assiduité, tendance sur une période |
 | `get_body_weight_trend` | Mesures corporelles |
 | `get_nutrition_targets` | Cibles du module métabolisme (des objectifs, jamais le consommé) |
-| `get_recent_meals` | Le journal alimentaire : repas notés sur les N derniers jours (1 par défaut, 7 au plus), en instants UTC — nom, moment de la journée (`null` s'il n'a pas été noté), totaux, `computed`, et pour un repas composé ses aliments en clair (« Poulet, filet, sans peau, cuit : 120 g ») ; pas le détail d'écran de chaque composant, qui coûterait des jetons sans rien apprendre au modèle (`coach-meal-view.ts`). JAMAIS la photo du repas, ni même le fait qu'il en ait une : la vue ne recopie pas `photo`, et `docs/legal/privacy.md` promet qu'elle n'est transmise à aucun prestataire |
+| `get_recent_meals` | Le journal alimentaire : repas notés sur les N derniers jours (1 par défaut, 7 au plus), en instants UTC — nom, moment de la journée (`null` s'il n'a pas été noté), totaux, `computed`, et pour un repas composé ses aliments en clair (« Poulet, filet, sans peau, cuit : 120 g ») ; pas le détail d'écran de chaque composant, qui coûterait des jetons sans rien apprendre au modèle (`coachMealView`, `coach-views.ts`). JAMAIS la photo du repas, ni même le fait qu'il en ait une : la vue ne recopie pas `photo`, et `docs/legal/privacy.md` promet qu'elle n'est transmise à aucun prestataire |
 | `propose_session` | **Seul outil « d'écriture »** — n'écrit rien, produit une proposition |
 
 Chaque description dit **quand** appeler l'outil, pas seulement ce qu'il fait :
@@ -415,7 +415,7 @@ préfixe commun — consignes (≈ 1 080 jetons) et outils (≈ 1 660) — est g
 en mémoire par Ollama d'une question à l'autre : il ne se paie qu'au
 chargement du modèle. Ce qui se paie à CHAQUE tour d'outil, c'est ce que les
 outils rendent. Les lectures passent donc par des vues
-(`application/coach-views.ts`, comme `coach-meal-view.ts`) qui retirent les
+(`application/coach-views.ts`, repas compris) qui retirent les
 identifiants de ligne, révisions et champs vides que le modèle ne fait que
 relire : mesuré sur un jeu réaliste, 10 séances passent de ≈ 1 140 à ≈ 470
 jetons, un modèle de 6 exercices × 4 séries de ≈ 1 730 à ≈ 710, 15 records de
@@ -629,8 +629,8 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   consignes, ne chasse PAS le préfixe commun (la personne suivante a
   retrouvé 2 654 jetons sur 2 661 en cache) ; lui faire réutiliser les
   consignes du coach n'apportait rien.
-  Les résultats d'outils passent par des vues allégées (`coach-views.ts`,
-  `coach-meal-view.ts`) : 10 pesées, 783 jetons complètes, 223 allégées ;
+  Les résultats d'outils passent par des vues allégées (`coach-views.ts`) :
+  10 pesées, 783 jetons complètes, 223 allégées ;
   10 exercices du catalogue, 1 962 contre 582.
 - **Ce que le modèle écrit n'est pas ce que le catalogue range** (constaté le
   1er octobre 2026 sur Qwen3-4B). Il cherchait « pecs », « pectoral », ou

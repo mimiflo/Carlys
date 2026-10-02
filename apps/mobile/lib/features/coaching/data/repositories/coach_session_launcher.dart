@@ -11,20 +11,8 @@ import '../../../workout_session/data/local/workout_session_writer.dart';
 import '../../../workout_template/data/datasources/session_plan_local_data_source.dart';
 import '../../domain/entities/coach.dart';
 
-/// Lance une séance depuis une proposition du coach.
-///
-/// Interface plutôt que classe concrète : le mode démo tourne sans base
-/// locale, et doit pouvoir substituer sa propre implémentation comme il le
-/// fait déjà pour les séances.
-abstract interface class CoachSessionLauncher {
-  /// Crée la séance et matérialise son plan ; rend l'identifiant de séance.
-  ///
-  /// Lève un [StateError] si une séance est déjà en cours — la règle « au plus
-  /// une séance » appartient à `workout_session` et n'est pas redéfinie ici.
-  Future<String> start(CoachSessionProposal proposal);
-}
-
-/// Implémentation offline-first, sur la base locale.
+/// Lance une séance depuis une proposition du coach — offline-first, sur la
+/// base locale.
 ///
 /// Rigoureusement le même chemin que le lancement d'un modèle
 /// (`startFromTemplate`) : séance, plan et opération de synchronisation dans
@@ -35,8 +23,8 @@ abstract interface class CoachSessionLauncher {
 /// Aucun appel réseau : accepter fonctionne hors ligne comme le reste des
 /// séances. Le serveur apprend l'acceptation par une route séparée, qui
 /// n'écrit aucune séance.
-class DriftCoachSessionLauncher implements CoachSessionLauncher {
-  DriftCoachSessionLauncher({
+class CoachSessionLauncher {
+  CoachSessionLauncher({
     required AppDatabase database,
     required SyncEngine syncEngine,
     SyncOwnerResolver? owner,
@@ -57,7 +45,10 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
   final SessionPlanLocalDataSource _plans;
   final WorkoutSessionWriter _sessions;
 
-  @override
+  /// Crée la séance et matérialise son plan ; rend l'identifiant de séance.
+  ///
+  /// Lève un [StateError] si une séance est déjà en cours — la règle « au plus
+  /// une séance » appartient à `workout_session` et n'est pas redéfinie ici.
   Future<String> start(CoachSessionProposal proposal) async {
     // « Au plus une séance active » se vérifie dans `insertSession`, donc
     // DANS la transaction — hors d'elle, accepter une proposition pendant
@@ -108,7 +99,7 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
 }
 
 final coachSessionLauncherProvider = Provider<CoachSessionLauncher>((ref) {
-  return DriftCoachSessionLauncher(
+  return CoachSessionLauncher(
     database: ref.watch(appDatabaseProvider),
     syncEngine: ref.watch(syncEngineProvider),
     owner: ref.watch(syncOwnerResolverProvider),

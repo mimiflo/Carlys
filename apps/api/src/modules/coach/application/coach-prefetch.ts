@@ -41,14 +41,32 @@ const READS: readonly (readonly [RegExp, readonly Omit<CoachToolCall, 'id'>[]])[
       { name: 'get_recent_meals', input: {} },
     ],
   ],
-  [
-    // Une séance ou un programme DEMANDÉ (pas « Ma séance d'hier était
-    // dure ») : il relit TOUJOURS le profil avant de proposer (constaté) —
-    // un tour d'outil de moins, sur six.
-    /\b(veux|voudrais|aimerais|fais|donne|propose|prepare|cree|construis|monte|besoin)\b[^?.!]*\b(seance|programme|entrainement|routine)s?\b|^\W*(une|un) (seance|programme|routine)\b/,
-    [{ name: 'get_training_profile', input: {} }],
-  ],
 ];
+
+/**
+ * Une DEMANDE de séance ou de programme, lue dans le message de la personne
+ * (sans accents) — plus simple à reconnaître que les mille façons qu'a le
+ * modèle de ne pas la faire (« l'adaptation est faite pour t'offrir une
+ * séance réaliste », constaté, sans carte). Une seule source : la lecture
+ * préalable du profil et l'occasion d'agir (announced-action.ts).
+ */
+const ASKED = [
+  /\b(veux|voudrais|aimerais|fais|donne|propose|prepare|cree|construis|monte|besoin|quelle?)\b[^?.!]*\b(seance|programme|entrainement|plan|routine)s?\b/,
+  /\b(une|ma|la) (seance|programme)\b[^?.!]*\bpour\b/,
+  // Sans verbe : « Une séance full body rapide au poids du corps ? »
+  // (constaté : la séance arrivait écrite, sans carte). Pas « Ma séance
+  // d'hier était dure », ni « Mon programme me fatigue ».
+  /^\W*(une|un) (nouvelle |petite |bonne )?(seance|programme|routine)\b/,
+  // Débuter : il attend un plan, pas un conseil (« Par où je commence ? »).
+  /\bpar (ou|quoi) (je )?(commence|debute)|\bje (debute|commence la muscu|reprends le sport)/,
+];
+
+export function asksForPlan(request: string): boolean {
+  const question = folded(request);
+  return ASKED.some((pattern) => pattern.test(question));
+}
+
+const folded = (request: string) => fold(request).replace(/[’`]/g, "'");
 
 /**
  * Les lectures que mérite cette question, une seule fois chacune.
@@ -57,11 +75,15 @@ const READS: readonly (readonly [RegExp, readonly Omit<CoachToolCall, 'id'>[]])[
  * que Mistral exige de ses `tool_call_id`, et qu'Anthropic accepte.
  */
 export function prefetchFor(request: string): CoachToolCall[] {
-  const question = fold(request).replace(/[’`]/g, "'");
+  const question = folded(request);
   const calls = new Map<string, Omit<CoachToolCall, 'id'>>();
   for (const [pattern, reads] of READS) {
     if (!pattern.test(question)) continue;
     for (const read of reads) calls.set(read.name, read);
   }
+  // Une séance ou un programme demandé : il relit TOUJOURS le profil avant
+  // de proposer (constaté) — un tour d'outil de moins, sur six.
+  if (asksForPlan(request))
+    calls.set('get_training_profile', { name: 'get_training_profile', input: {} });
   return [...calls.values()].map((call, index) => ({ id: `lecture0${index}`, ...call }));
 }

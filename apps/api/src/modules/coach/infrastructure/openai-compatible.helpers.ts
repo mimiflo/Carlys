@@ -73,8 +73,8 @@ export async function readCompletion(
 export function unavailable(
   error: unknown,
   usage: CoachTurnUsage,
-  shown = false,
-  end: FinishReason = 'UNKNOWN',
+  shown: boolean,
+  end: FinishReason,
 ): never {
   // Un flux coupé ne dit pas ce qu'il a coûté (l'usage n'arrive qu'à la
   // fin) : du texte montré prouve des jetons consommés, le message n'est

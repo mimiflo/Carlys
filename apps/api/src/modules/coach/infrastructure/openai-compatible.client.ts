@@ -126,7 +126,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       unneeded: 0,
       truncated: false,
     };
-    // Une occasion d'agir au plus par tour (announced-action.ts).
+    // Les occasions d'agir du tour, au plus MAX_PROBES (announced-action.ts).
     let probes = 0;
     // Une séance ou un programme proposé : la suite promise est là.
     let proposed = false;

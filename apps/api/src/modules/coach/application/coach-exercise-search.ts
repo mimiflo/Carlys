@@ -15,7 +15,7 @@
  *   modèle corrige au tour suivant, au lieu de conclure sur une liste vide.
  */
 
-export interface CatalogEntry {
+interface CatalogEntry {
   slug: string;
   name: string;
 }

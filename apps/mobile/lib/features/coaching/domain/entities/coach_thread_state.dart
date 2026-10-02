@@ -62,11 +62,11 @@ class CoachThreadState {
   }
 }
 
-/// Un tour de conversation pendant qu'il s'écrit.
 /// Une étape de sa réflexion, telle que le flux la dit : son libellé, si
 /// elle est finie, et le temps de réflexion écoulé côté serveur.
 typedef CoachStep = ({String label, bool done, Duration? elapsed});
 
+/// Un tour de conversation pendant qu'il s'écrit.
 class CoachLiveTurn {
   const CoachLiveTurn({
     required this.question,

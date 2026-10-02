@@ -1,4 +1,6 @@
+import { asksForPlan } from '../application/coach-prefetch';
 import { type CoachTurnUsage } from '../domain/coach-model.port';
+import { type CoachWorkerRequests } from './coach-worker-requests';
 import { type ChatCompletion } from './chat-completion-stream';
 import { addUsage } from './openai-compatible.helpers';
 
@@ -93,7 +95,7 @@ export function mayAnnounceAction(text: string): boolean {
 }
 
 /** Les deux dernières phrases : là où se cache une promesse. */
-export function endingOf(text: string): string {
+function endingOf(text: string): string {
   return (
     text
       .trim()
@@ -103,28 +105,6 @@ export function endingOf(text: string): string {
       .slice(-2)
       .join(' ')
   );
-}
-
-/**
- * Une DEMANDE de séance ou de programme, lue dans le message de la personne
- * — plus simple à reconnaître que les mille façons qu'a le modèle de ne pas
- * la faire (« l'adaptation est faite pour t'offrir une séance réaliste »,
- * constaté, sans carte).
- */
-const ASKED = [
-  /\b(veux|voudrais|aimerais|fais|fais-moi|donne|donne-moi|propose|propose-moi|prépare|prépare-moi|crée|construis|monte|besoin|quelle|quel)\b[^?.!]*\b(séance|programme|entraînement|plan)s?\b/iu,
-  /\b(une|ma|la) (séance|programme)\b[^?.!]*\bpour\b/iu,
-  // Une demande sans verbe : « Une séance full body rapide au poids du
-  // corps ? » (constaté : la séance arrivait écrite, sans carte).
-  // Pas « Ma séance d'hier était dure », ni « Mon programme me fatigue ».
-  /^\W*(une|un) (nouvelle |petite |bonne )?(séance|programme|routine)\b/iu,
-  // Débuter : il attend un plan, pas un conseil (« Par où je commence ? »,
-  // constaté : la séance arrivait écrite, sans carte).
-  /\bpar (où|quoi) (je )?(commence|débute)|\bje (débute|commence la muscu|reprends le sport)/iu,
-];
-
-export function asksForPlan(request: string): boolean {
-  return ASKED.some((pattern) => pattern.test(request));
 }
 
 /**
@@ -180,17 +160,6 @@ const CITES_DATA = [
   /(?<!\p{L})(?<!si )(tu as (soulevé|fait|réalisé|couru)|tu (pèses|pesais)|(ton|tes) (records?|poids))(?!\p{L})[^.!?\n]{0,60}\d+([,.]\d+)? ?(kg|kilos?|séances?|km|kcal|reps|répétitions)(?!\p{L})/iu,
 ];
 
-/** Les lectures qui rendent SES données (pas le catalogue d'exercices). */
-export const USER_DATA_TOOLS: ReadonlySet<string> = new Set([
-  'get_recent_sessions',
-  'get_personal_records',
-  'get_progress_overview',
-  'get_body_weight_trend',
-  'get_nutrition_targets',
-  'get_recent_meals',
-  'get_training_profile',
-]);
-
 function citesUserData(answer: string): boolean {
   return CITES_DATA.some((pattern) => pattern.test(answer));
 }
@@ -211,15 +180,8 @@ const PROPOSAL_PROBE =
 /** Au-delà, ce n'est plus « FIN » : le modèle rédige, l'occasion est close. */
 const PROBE_TEXT_LIMIT = 4;
 
-/** La requête au modèle du client : charge utile, signal, flux, plafond, worker, essais. */
-type Complete = (
-  payload: Record<string, unknown>,
-  signal: AbortSignal,
-  onText: (delta: string) => void,
-  maxOutputTokens: number,
-  prefer: string | undefined,
-  retries: number,
-) => Promise<{ completion: ChatCompletion }>;
+/** La requête au modèle du client (coach-worker-requests.ts). */
+type Complete = CoachWorkerRequests['complete'];
 
 /**
  * L'occasion d'agir, `messages` finissant par elle : la complétion si le

@@ -21,10 +21,10 @@ import {
   matchByName,
   primaryFirst,
 } from './coach-exercise-search';
-import { coachMealView } from './coach-meal-view';
 import {
   coachBodyMetricView,
   coachExerciseView,
+  coachMealView,
   coachRecordView,
   coachSessionView,
   coachTemplateSummaryView,

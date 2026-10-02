@@ -1,4 +1,8 @@
-import { type CoachTurnUsage, type FinishReason } from '../domain/coach-model.port';
+import {
+  type CoachGeneration,
+  type CoachTurnUsage,
+  type FinishReason,
+} from '../domain/coach-model.port';
 import { type ChatCompletion } from './chat-completion-stream';
 import {
   endOfCompletion,
@@ -8,6 +12,7 @@ import {
   recoverable,
 } from './generation-end';
 import { AnswerStream, atWordBoundary, continuationPrompt } from './answer-stream';
+import { type CoachWorkerRequests } from './coach-worker-requests';
 import { type ContextBudget } from './context-budget';
 import { addUsage, textOf } from './openai-compatible.helpers';
 
@@ -25,27 +30,11 @@ import { addUsage, textOf } from './openai-compatible.helpers';
 /** En deçà, un appel n'écrirait presque rien : le contexte est plein. */
 const MIN_ROOM = 64;
 
-/** La requête au modèle du client : charge utile, signal, flux, plafond, worker. */
-export type Complete = (
-  payload: Record<string, unknown>,
-  signal: AbortSignal,
-  onText: ((delta: string) => void) | undefined,
-  maxOutputTokens: number,
-  prefer?: string,
-) => Promise<{ completion: ChatCompletion; served: string }>;
+/** La requête au modèle du client (coach-worker-requests.ts). */
+export type Complete = CoachWorkerRequests['complete'];
 
-/** Le bilan d'un appel et de ses reprises : ce que mesurent journaux et métriques. */
-export interface AnswerReport {
-  /** La fin de chaque appel, dans l'ordre. */
-  ends: FinishReason[];
-  continuations: number;
-  /** Reprises qui ont terminé la réponse. */
-  recovered: number;
-  /** Reprises superflues : le modèle a répondu « FIN », la réponse était finie. */
-  unneeded: number;
-  /** Réponse rendue incomplète, faute de reprise possible. */
-  truncated: boolean;
-}
+/** Le bilan d'un appel et de ses reprises : le bilan du tour, sans sa fin. */
+export type AnswerReport = Omit<CoachGeneration, 'finishReason'>;
 
 interface AnswerTurn {
   messages: Record<string, unknown>[];

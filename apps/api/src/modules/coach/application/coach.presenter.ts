@@ -20,7 +20,7 @@ export function presentMessage(message: MessageWithProposal): CoachMessage {
   };
 }
 
-export function presentProposal(
+function presentProposal(
   proposal: NonNullable<MessageWithProposal['proposal']>,
 ): CoachSessionProposal {
   return {
@@ -43,7 +43,7 @@ export function presentProposal(
   };
 }
 
-export function presentProgramProposal(
+function presentProgramProposal(
   proposal: NonNullable<MessageWithProposal['programProposal']>,
 ): CoachProgramProposal {
   return {

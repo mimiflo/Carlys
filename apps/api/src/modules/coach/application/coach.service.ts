@@ -12,7 +12,6 @@ import { type CoachStream, CoachTurnRunner } from './coach-turn.runner';
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
-import { replay } from './coach.replay';
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -142,9 +141,19 @@ export class CoachService {
       // invalide ne coûte pas un tour), refusé comme un fil d'autrui : 404.
       await this.assertMessageAddressable(conversationId, messageId);
     } else {
-      const replayed = await replay(this.quota, userId, deja.message, deja.reply, content);
-      if (replayed !== null) {
-        return replayed;
+      // Rejeu d'un message déjà écrit dans CE fil : sa réponse archivée s'il
+      // en a une, sans tour consommé ni appel au modèle ; sans réponse (tour
+      // interrompu), il reste à le terminer. Un autre contenu sous le même
+      // identifiant est une collision : 409, comme les repas et les séances.
+      if (deja.message.content !== content) {
+        throw new ConflictException('Identifiant de message déjà utilisé.');
+      }
+      if (deja.reply !== null) {
+        return {
+          userMessage: presentMessage(deja.message),
+          assistantMessage: presentMessage(deja.reply),
+          remainingToday: await this.quota.remaining(userId),
+        };
       }
     }
 

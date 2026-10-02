@@ -1,6 +1,5 @@
 import { PROPOSE_PROGRAM_TOOL, PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
 import { type CoachToolCall, type CoachTurnInput } from '../domain/coach-model.port';
-import { USER_DATA_TOOLS } from './announced-action';
 import { toolReply } from './openai-compatible.helpers';
 
 /**
@@ -16,6 +15,17 @@ import { toolReply } from './openai-compatible.helpers';
  * faire ; il lui reste deux tours pour proposer et répondre.
  */
 export const WRAP_UP_ROUNDS = 2;
+
+/** Les lectures qui rendent SES données (pas le catalogue d'exercices). */
+const USER_DATA_TOOLS: ReadonlySet<string> = new Set([
+  'get_recent_sessions',
+  'get_personal_records',
+  'get_progress_overview',
+  'get_body_weight_trend',
+  'get_nutrition_targets',
+  'get_recent_meals',
+  'get_training_profile',
+]);
 
 const ENOUGH_READ =
   'Plus de lecture dans ce tour : réponds maintenant avec ce que tu as déjà lu. Une séance ' +

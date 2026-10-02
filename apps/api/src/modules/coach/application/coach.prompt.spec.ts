@@ -2,13 +2,27 @@ import { CarlysProfile, MentorStyle } from '@prisma/client';
 import {
   COACH_SYSTEM_PROMPT,
   carlysProfileBriefing,
-  looksVolatile,
   mentorStyleBriefing,
   mentorVoiceBriefing,
   volatileContext,
 } from './coach.prompt';
 import { TARGET_KCAL_FLOOR } from '../../nutrition/application/metabolism.calculator';
 import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tool-definitions';
+
+/**
+ * Le préfixe contient-il une donnée volatile ?
+ *
+ * Garde-fou testable contre le piège le plus coûteux et le plus silencieux du
+ * cache — il ne sert qu'ici.
+ */
+function looksVolatile(prefix: string): boolean {
+  const volatilePatterns = [
+    /\d{4}-\d{2}-\d{2}/, // une date
+    /\b\d{2}:\d{2}\b/, // une heure
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i, // un UUID
+  ];
+  return volatilePatterns.some((pattern) => pattern.test(prefix));
+}
 
 /**
  * Préfixe mis en cache et périmètre du coach.

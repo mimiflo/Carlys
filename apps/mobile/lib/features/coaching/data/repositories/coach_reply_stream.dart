@@ -66,22 +66,17 @@ Future<CoachReply> readCoachReplyStream(
           throw _streamError(data, requestId);
       }
     }
-  } on FormatException catch (error, stack) {
-    throw MalformedResponseException(
-      'Flux du coach illisible',
-      requestId: requestId,
-      cause: error,
-      stackTrace: stack,
-    );
-  } on TypeError catch (error, stack) {
-    throw MalformedResponseException(
-      'Flux du coach illisible',
-      requestId: requestId,
-      cause: error,
-      stackTrace: stack,
-    );
   } on IOException catch (error, stack) {
     throw _cut(error, stack);
+  } catch (error, stack) {
+    // JSON illisible, ou d'une forme inattendue : la même panne.
+    if (error is! FormatException && error is! TypeError) rethrow;
+    throw MalformedResponseException(
+      'Flux du coach illisible',
+      requestId: requestId,
+      cause: error,
+      stackTrace: stack,
+    );
   }
   throw _cut(null, null);
 }

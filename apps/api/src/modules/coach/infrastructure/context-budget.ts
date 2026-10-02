@@ -19,7 +19,7 @@ const CHARS_PER_TOKEN = 3;
 const MESSAGE_TOKENS = 5;
 const MARGIN = 256;
 
-export type ChatMessage = Record<string, unknown>;
+type ChatMessage = Record<string, unknown>;
 
 export class ContextBudget {
   private scale = 1;

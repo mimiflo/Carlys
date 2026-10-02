@@ -1,4 +1,5 @@
-import { asksForPlan, mayAnnounceAction, probeFor } from './announced-action';
+import { asksForPlan } from '../application/coach-prefetch';
+import { mayAnnounceAction, probeFor } from './announced-action';
 
 /**
  * Le premier étage, large : la fin du message parle-t-elle d'une suite ?

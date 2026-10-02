@@ -105,7 +105,7 @@ class CoachThinkingDots extends StatefulWidget {
   const CoachThinkingDots({this.dotSize = _dotSize, super.key});
 
   /// Le diamètre d'un point ; l'écart entre deux en est les deux tiers
-  /// (6 et 4 pour « Réfléchit… », comme avant).
+  /// (6 et 4 pour « Réfléchit… »).
   final double dotSize;
 
   /// Un tour complet de la vague : le rythme des anneaux de l'appli.

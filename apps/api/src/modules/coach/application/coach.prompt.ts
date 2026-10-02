@@ -117,18 +117,3 @@ export function mentorVoiceBriefing(voice: {
     .filter((part) => part !== '')
     .join('\n\n');
 }
-
-/**
- * Le préfixe contient-il une donnée volatile ?
- *
- * Garde-fou testable contre le piège le plus coûteux et le plus silencieux du
- * cache. Utilisé par les tests, pas par le chemin de production.
- */
-export function looksVolatile(prefix: string): boolean {
-  const volatilePatterns = [
-    /\d{4}-\d{2}-\d{2}/, // une date
-    /\b\d{2}:\d{2}\b/, // une heure
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i, // un UUID
-  ];
-  return volatilePatterns.some((pattern) => pattern.test(prefix));
-}

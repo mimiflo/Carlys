@@ -19,7 +19,7 @@ export interface ValidatedProposal {
   items: ValidatedProposalItem[];
 }
 
-export interface ValidatedProposalItem {
+interface ValidatedProposalItem {
   exercisePosition: number;
   exerciseId: string;
   exerciseName: string;

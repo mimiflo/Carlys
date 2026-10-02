@@ -29,14 +29,10 @@ final coachVoiceProvider = Provider<CoachVoice>((ref) {
   return (displayName: user?.displayName, style: user?.mentorStyle);
 });
 
-final coachGreetingStoreProvider = Provider<CoachGreetingStore>(
-  (ref) => const CoachGreetingStore(),
-);
-
 /// Le jour du dernier bonjour, RELU à chaque ouverture de l'écran (d'où
 /// `autoDispose`) : un bonjour dit le matin ne se redit pas le soir.
 final coachLastGreetingDayProvider = FutureProvider.autoDispose<String?>(
-  (ref) => ref.watch(coachGreetingStoreProvider).lastDay(),
+  (ref) => const CoachGreetingStore().lastDay(),
 );
 
 const _logger = AppLogger('CoachOpening');
@@ -80,8 +76,7 @@ List<String> coachVisibleSuggestions(WidgetRef ref, CoachThreadState state) {
   );
   if (!greet) return none;
   unawaited(
-    ref
-        .read(coachGreetingStoreProvider)
+    const CoachGreetingStore()
         .greeted(formatDayKey(now))
         .catchError(
           (Object error) => _logger.warning(
