@@ -108,7 +108,7 @@ jobs:
       S3_PUBLIC_BASE_URL: http://localhost:9000/carlys-media
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # ── Une migration PUBLIÉE ne se réécrit pas ─────────────────────────────
       # Base : en pull request, la branche cible ; en poussée, le dernier
@@ -166,7 +166,7 @@ jobs:
       # versions.env, et construire.sh refuse toute autre (GOTOOLCHAIN=local).
       # `cache: false` : il n'y a pas de go.sum dans ce dépôt à indexer, et les
       # binaires sont déjà mis en cache ci-dessus.
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: steps.minio-cache.outputs.cache-hit != 'true'
         with:
           go-version: ${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}
