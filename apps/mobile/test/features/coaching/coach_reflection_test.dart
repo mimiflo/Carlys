@@ -159,7 +159,67 @@ void main() {
     },
   );
 
-  testWidgets('sans étape, la réponse seule', (tester) async {
+  testWidgets(
+    'avant toute étape : déjà la réflexion et son chrono, pas « Réfléchit… »',
+    (tester) async {
+      // Constaté le 2 octobre 2026 : « Réfléchit… » nu pendant 16 s, puis
+      // d'un coup « Réflexion en 16 s » et l'étape déjà cochée.
+      await pump(
+        tester,
+        CoachLiveBubble(
+          text: '',
+          since: DateTime.now().subtract(const Duration(seconds: 5)),
+        ),
+      );
+
+      expect(find.text('Réflexion · 5 s'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Je réfléchis à ta réponse, en cours'),
+        findsOneWidget,
+      );
+      expect(find.text('Réfléchit…'), findsNothing);
+    },
+  );
+
+  testWidgets('sans étape, le premier mot écrit : « Réflexion en 6 s »', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      CoachLiveBubble(
+        text: 'Avec plaisir !',
+        since: DateTime.now().subtract(const Duration(seconds: 9)),
+        thoughtFor: const Duration(seconds: 6),
+      ),
+    );
+
+    expect(find.text('Réflexion en 6 s'), findsOneWidget);
+    expect(find.text('Je réfléchis à ta réponse'), findsNothing);
+  });
+
+  testWidgets('archivée sans étape : sa durée seule, rien à déplier', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const CoachMessageBubble(
+        message: CoachMessage(
+          id: 'a',
+          role: CoachRole.assistant,
+          content: 'Avec plaisir !',
+          thinkingSeconds: 6,
+        ),
+        maxWidth: 320,
+      ),
+    );
+
+    expect(find.text('Réflexion en 6 s'), findsOneWidget);
+    expect(find.byIcon(AppIcons.expand), findsNothing);
+  });
+
+  testWidgets('ni étape ni durée (copie ancienne) : la réponse seule', (
+    tester,
+  ) async {
     await pump(
       tester,
       const CoachMessageBubble(

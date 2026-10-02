@@ -10,9 +10,11 @@ import 'coach_reflection.dart';
 ///
 /// Trois temps, comme une personne sollicitée : « en attente » quand d'autres
 /// passent avant (le coach répond à un nombre fixe de personnes à la fois),
-/// puis sa réflexion — ce qu'il fait vraiment, étape par étape (« Je regarde
-/// tes records »), ou « Réfléchit… » s'il n'a rien à lire —, puis le texte
-/// qui s'allonge mot après mot. La réplique archivée la remplace à la fin.
+/// puis sa réflexion — son chrono dès le départ, et ce qu'il fait vraiment,
+/// étape par étape (« Je regarde tes records ») —, puis le texte qui
+/// s'allonge mot après mot. La réplique archivée la remplace à la fin, avec
+/// la même ligne de réflexion. Sans début ([since], la bulle d'accueil),
+/// trois points seulement.
 class CoachLiveBubble extends StatelessWidget {
   const CoachLiveBubble({
     required this.text,
@@ -41,7 +43,9 @@ class CoachLiveBubble extends StatelessWidget {
 
   String get _waiting {
     final ahead = this.ahead;
-    if (ahead == null) return 'Réfléchit…';
+    // Le texte commencé, sa réflexion est finie (« Réflexion en 14 s ») :
+    // il écrit encore, il ne réfléchit plus.
+    if (ahead == null) return text.isEmpty ? 'Réfléchit…' : 'Écrit…';
     if (ahead == 0) return 'En attente · tu es le prochain';
     return 'En attente · $ahead avant toi';
   }
@@ -50,7 +54,7 @@ class CoachLiveBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = Semantics(
       label: ahead == null
-          ? 'Le coach réfléchit'
+          ? (text.isEmpty ? 'Le coach réfléchit' : 'Le coach écrit')
           : 'Le coach est sollicité : $_waiting',
       excludeSemantics: true,
       child: Row(
@@ -67,6 +71,9 @@ class CoachLiveBubble extends StatelessWidget {
         ],
       ),
     );
+    // Son tour venu, il réfléchit : le chrono court avant même la première
+    // étape, comme la réplique archivée le dira.
+    final thinks = ahead == null && (since != null || steps.isNotEmpty);
     final reflection = CoachReflection(
       steps: steps,
       done: done,
@@ -85,10 +92,10 @@ class CoachLiveBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (steps.isNotEmpty) reflection,
-          if (text.isEmpty && steps.isEmpty) status,
+          if (thinks) reflection,
+          if (text.isEmpty && !thinks) status,
           if (text.isNotEmpty) ...[
-            if (steps.isNotEmpty) const SizedBox(height: AppSpacing.sm),
+            if (thinks) const SizedBox(height: AppSpacing.sm),
             CoachBubbleText(text, isUser: false),
             const SizedBox(height: AppSpacing.sm),
             status,

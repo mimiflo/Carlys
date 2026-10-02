@@ -267,19 +267,23 @@ void main() {
     expect(radius, greaterThan(height / 2));
   });
 
-  testWidgets('la question s’affiche aussitôt, et le coach « réfléchit »', (
+  testWidgets('la question s’affiche aussitôt, et sa réflexion commence', (
     tester,
   ) async {
     await pumpCoach(
       tester,
       messages: const [],
-      live: const CoachLiveTurn(question: 'Séance jambes 30 min ?'),
+      // Comme le contrôleur : le chrono part de l'envoi.
+      live: CoachLiveTurn(
+        question: 'Séance jambes 30 min ?',
+        since: DateTime.now(),
+      ),
     );
 
     // Même sur un fil vide : le tour en cours remplace l'invitation.
     expect(find.text('Séance jambes 30 min ?'), findsOneWidget);
-    expect(find.text('Réfléchit…'), findsOneWidget);
-    expect(find.bySemanticsLabel('Le coach réfléchit'), findsOneWidget);
+    expect(find.text('Réflexion · 0 s'), findsOneWidget);
+    expect(find.text('Je réfléchis à ta réponse'), findsOneWidget);
   });
 
   testWidgets('la réponse s’écrit sous la question, au fil de son arrivée', (
@@ -297,8 +301,8 @@ void main() {
     final question = tester.getRect(find.text('Et demain ?'));
     final reponse = tester.getRect(find.text('Demain, repos actif :'));
     expect(reponse.top, greaterThan(question.bottom));
-    // Tant que le tour n'est pas fini, la réflexion se dit SOUS le texte.
-    final status = tester.getRect(find.text('Réfléchit…'));
+    // Tant que le tour n'est pas fini, il se dit au travail SOUS le texte.
+    final status = tester.getRect(find.text('Écrit…'));
     expect(status.top, greaterThan(reponse.bottom));
   });
 

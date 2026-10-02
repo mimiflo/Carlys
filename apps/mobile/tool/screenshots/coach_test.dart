@@ -199,6 +199,19 @@ void main() {
     await capture(tester, 'coach-03-reflexion');
   });
 
+  testWidgets('coach — il réfléchit, avant toute étape', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      // Rien lu encore : le chrono court déjà, jamais un « Réfléchit… » nu.
+      live: CoachLiveTurn(
+        question: question,
+        since: DateTime.now().subtract(const Duration(milliseconds: 4500)),
+      ),
+    );
+    await capture(tester, 'coach-10-reflexion-debut');
+  });
+
   testWidgets('coach — sa réflexion, dépliée sous la réponse', (tester) async {
     await pumpCoach(tester, messages: _conversation);
     await tester.tap(find.text('Réflexion en 32 s · 3 étapes'));

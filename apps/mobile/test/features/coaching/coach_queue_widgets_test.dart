@@ -27,12 +27,14 @@ void main() {
       expect(find.text('En attente · tu es le prochain'), findsOneWidget);
     });
 
-    testWidgets('son tour venu : il réfléchit', (tester) async {
+    testWidgets('sans début (la bulle d’accueil) : « Réfléchit… »', (
+      tester,
+    ) async {
       await pump(tester, const CoachLiveBubble(text: ''));
       expect(find.text('Réfléchit…'), findsOneWidget);
     });
 
-    testWidgets('le texte commencé, il réfléchit ENCORE jusqu’à la fin', (
+    testWidgets('le texte commencé, il écrit ENCORE jusqu’à la fin', (
       tester,
     ) async {
       // « Je cherche des exercices… » puis rien : entre deux recherches, la
@@ -45,7 +47,7 @@ void main() {
         find.text('Je cherche des exercices pour les pecs.'),
         findsOneWidget,
       );
-      expect(find.text('Réfléchit…'), findsOneWidget);
+      expect(find.text('Écrit…'), findsOneWidget);
       expect(find.byType(CoachThinkingDots), findsOneWidget);
     });
   });

@@ -31,7 +31,7 @@ class CoachMessageBubble extends StatelessWidget {
       isUser: isUser,
       maxWidth: maxWidth,
       // Sa réflexion, repliée au-dessus de la réponse : ce qu'il a lu.
-      child: message.steps.isEmpty
+      child: message.steps.isEmpty && message.thinkingSeconds == null
           ? text
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,

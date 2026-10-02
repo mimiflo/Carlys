@@ -11,8 +11,11 @@ import 'coach_reflection_parts.dart';
 /// qu'elle se fait, puis sa coche ([done]) ; ses étapes faites, il réfléchit
 /// encore (« Je réfléchis à ta réponse »), et le chrono court
 /// (« Réflexion · 12 s ») jusqu'au premier mot (« Réflexion en 14 s »).
-/// Archivée, repliée en une ligne (« Réflexion en 30 s · 3 étapes ») qu'on
-/// déplie d'un appui. Sans étape, rien.
+/// Sans étape encore, il réfléchit déjà : le chrono court dès le début,
+/// jamais un « Réfléchit… » nu qui deviendrait d'un coup « Réflexion en
+/// 16 s ». Archivée, repliée en une ligne (« Réflexion en 30 s · 3 étapes »)
+/// qu'on déplie d'un appui ; sans étape, sa durée seule ; ni l'une ni
+/// l'autre (copie ancienne), rien.
 class CoachReflection extends StatefulWidget {
   const CoachReflection({
     required this.steps,
@@ -57,7 +60,10 @@ class _CoachReflectionState extends State<CoachReflection> {
   @override
   Widget build(BuildContext context) {
     final steps = widget.steps;
-    if (steps.isEmpty) return const SizedBox.shrink();
+    final foldable = !widget.live && steps.isNotEmpty;
+    if (!widget.live && !foldable && widget.seconds == null) {
+      return const SizedBox.shrink();
+    }
     final open = widget.live || _open;
     final thinking =
         widget.live && !widget.writing && steps.every(widget.done.contains);
@@ -71,7 +77,7 @@ class _CoachReflectionState extends State<CoachReflection> {
         ),
         const SizedBox(width: AppSpacing.xs),
         Flexible(child: _title()),
-        if (!widget.live) ...[
+        if (foldable) ...[
           const SizedBox(width: AppSpacing.xxs),
           Icon(
             open ? AppIcons.collapse : AppIcons.expand,
@@ -85,7 +91,7 @@ class _CoachReflectionState extends State<CoachReflection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.live)
+        if (!foldable)
           header
         else
           Semantics(
@@ -103,7 +109,7 @@ class _CoachReflectionState extends State<CoachReflection> {
         AnimatedSize(
           duration: AppMotion.resolve(context, AppMotion.normal),
           alignment: Alignment.topLeft,
-          child: open
+          child: open && (steps.isNotEmpty || thinking)
               ? Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Column(
@@ -135,13 +141,17 @@ class _CoachReflectionState extends State<CoachReflection> {
   Widget _title() {
     final style = AppTypography.label.copyWith(color: AppColors.primaryLight);
     final count = widget.steps.length;
-    final stepCount = count == 1 ? '1 étape' : '$count étapes';
+    final stepCount = switch (count) {
+      0 => '',
+      1 => ' · 1 étape',
+      _ => ' · $count étapes',
+    };
     if (!widget.live) {
       final seconds = widget.seconds;
       return Text(
         seconds == null
-            ? 'Réflexion · $stepCount'
-            : 'Réflexion en ${reflectionDuration(seconds)} · $stepCount',
+            ? 'Réflexion$stepCount'
+            : 'Réflexion en ${reflectionDuration(seconds)}$stepCount',
         style: style,
       );
     }
