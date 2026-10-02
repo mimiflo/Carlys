@@ -65,6 +65,9 @@ class CoachReflectionStep extends StatelessWidget {
   /// La taille des icônes de la réflexion : coche et titre s'alignent.
   static const double iconSize = AppSpacing.md;
 
+  /// Les points d'une étape en cours.
+  static const double dotSize = 4;
+
   final String label;
   final bool current;
 
@@ -84,7 +87,9 @@ class CoachReflectionStep extends StatelessWidget {
               width: AppSpacing.lg + AppSpacing.xxs,
               alignment: Alignment.centerLeft,
               child: current
-                  ? const CoachThinkingDots()
+                  // Plus petits que ceux de « Réfléchit… » : à la taille du
+                  // texte d'une étape.
+                  ? const CoachThinkingDots(dotSize: dotSize)
                   : const Icon(
                       AppIcons.coachStepDone,
                       size: CoachReflectionStep.iconSize,

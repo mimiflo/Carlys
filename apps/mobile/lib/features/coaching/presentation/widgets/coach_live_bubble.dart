@@ -102,7 +102,11 @@ class CoachLiveBubble extends StatelessWidget {
 /// Trois points qui s'allument l'un après l'autre : le seul signe de vie
 /// avant le premier mot. Immobiles quand le système réduit les animations.
 class CoachThinkingDots extends StatefulWidget {
-  const CoachThinkingDots({super.key});
+  const CoachThinkingDots({this.dotSize = _dotSize, super.key});
+
+  /// Le diamètre d'un point ; l'écart entre deux en est les deux tiers
+  /// (6 et 4 pour « Réfléchit… », comme avant).
+  final double dotSize;
 
   /// Un tour complet de la vague : le rythme des anneaux de l'appli.
   static const Duration cycle = AppMotion.ring;
@@ -146,10 +150,10 @@ class _CoachThinkingDotsState extends State<CoachThinkingDots>
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < CoachThinkingDots._dotCount; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.xxs),
+            if (i > 0) SizedBox(width: widget.dotSize * 2 / 3),
             Container(
-              width: CoachThinkingDots._dotSize,
-              height: CoachThinkingDots._dotSize,
+              width: widget.dotSize,
+              height: widget.dotSize,
               decoration: BoxDecoration(
                 color: AppColors.primaryLight.withValues(alpha: _alpha(i)),
                 shape: BoxShape.circle,
