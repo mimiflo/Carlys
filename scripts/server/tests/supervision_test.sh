@@ -180,4 +180,18 @@ grep -q -E -- 'prune.*(-a|--all|--volumes)|volume prune' "$FAUX_JOURNAL" && larg
 verifier "élagage : jamais -a, jamais les volumes" non "$large"
 banc_nettoyer
 
+echo
+echo "mise à l'échelle — jamais retirer un exemplaire qui sert encore une réponse"
+
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+echo 'CARLYS_SCALE_DOWN_PATIENCE=1' >> "$ENV_STAGING"
+decider() { appeler scale_decide staging "$ENV_STAGING" 2 1 0 '' "$1" > /dev/null; cut -d' ' -f1-3 "$BANC_SORTIE"; }
+verifier "charge en baisse, rien en vol : on descend" "1 descendre charge-en-baisse" "$(decider 0)"
+verifier "une réponse du coach en vol : on attend" "2 attendre requetes-en-cours" "$(decider 1)"
+appeler scale_apply staging "$ENV_STAGING" 1 > /dev/null || true
+grep -q -- 'up -d --no-deps --no-recreate api' "$FAUX_JOURNAL" && garde=oui || garde=non
+verifier "changer le nombre ne recrée jamais les exemplaires qui restent" oui "$garde"
+banc_nettoyer
+
 banc_bilan

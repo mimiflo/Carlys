@@ -194,7 +194,8 @@ autoscale_passage() {
   fi
 
   decision="$(scale_decide "$env_name" "$file" "$actuel" \
-    "$(metrics_field "$resume" utilisateurs)" "$debit" "$latence")"
+    "$(metrics_field "$resume" utilisateurs)" "$debit" "$latence" \
+    "$(metrics_field "$resume" en_vol)")"
   cible="$(printf '%s' "$decision" | awk '{print $1}')"
   verdict="$(printf '%s' "$decision" | awk '{print $2}')"
   raison="$(printf '%s' "$decision" | awk '{print $3}')"
@@ -202,7 +203,7 @@ autoscale_passage() {
   state_set "$env_name" votes_baisse "${votes:-0}"
 
   info "exemplaires $actuel → $cible ($verdict, $raison)"
-  info "  utilisateurs=$(metrics_field "$resume" utilisateurs) débit=${debit:-?} req/s latence=${latence:-?} ms"
+  info "  utilisateurs=$(metrics_field "$resume" utilisateurs) débit=${debit:-?} req/s latence=${latence:-?} ms en_vol=$(metrics_field "$resume" en_vol)"
 
   case "$verdict" in
     monter | descendre)

@@ -48,6 +48,7 @@ metrics_scrape_one() {
 #
 #   lus=<exemplaires ayant répondu>
 #   utilisateurs=<utilisateurs en ligne, -1 si inconnu>
+#   en_vol=<requêtes commencées et pas finies, la lecture de /metrics exclue>
 #   requetes=<compteur cumulé de requêtes HTTP, somme des exemplaires>
 #   latence_somme=<secondes cumulées>  latence_compte=<requêtes comptées>
 #
@@ -61,7 +62,7 @@ metrics_summary() {
   mapfile -t ports < <(api_replica_ports "$env_name" "$file")
 
   if [ "${#ports[@]}" -eq 0 ]; then
-    printf 'horodatage=%s lus=0 refuses=0 code= utilisateurs=-1 requetes=0 latence_somme=0 latence_compte=0' "$(maintenant)"
+    printf 'horodatage=%s lus=0 refuses=0 code= utilisateurs=-1 requetes=0 latence_somme=0 latence_compte=0 en_vol=0' "$(maintenant)"
     return 0
   fi
 
@@ -90,11 +91,13 @@ metrics_summary() {
         # Dans les trois cas le corps est NON VIDE et ne contient aucune
         # serie : le compter comme une lecture ferait accuser Redis.
         if (code != "") { refuses++; dernier_code = code }
-        vu = 0; up = 0; u = -1; code = ""
+        vu = 0; up = 0; u = -1; f = 0; code = ""
         next
       }
       if (vu) {
         lus++
+        # Moins un : la lecture de /metrics est elle-meme une requete en vol.
+        if (f > 1) en_vol += f - 1
         # Presence : globale (comptee dans Redis), donc JAMAIS additionnee.
         # La sommer multiplierait les utilisateurs par le nombre
         # dexemplaires. On retient celle du premier exemplaire dont la
@@ -104,10 +107,11 @@ metrics_summary() {
         # awk, qui est delimite par des apostrophes simples.)
         if (up && !fige) { utilisateurs = u; fige = 1 }
       }
-      vu = 0; up = 0; u = -1; code = ""
+      vu = 0; up = 0; u = -1; f = 0; code = ""
       next
     }
     { vu = 1 }
+    $1 == "carlys_api_http_requests_in_flight" { f = $2 }
 
     $1 == "carlys_api_presence_up"  { up = ($2 == 1) }
     $1 == "carlys_api_online_users" { u = $2 }
@@ -118,9 +122,9 @@ metrics_summary() {
     /^carlys_api_http_request_duration_seconds_count\{/  { lat_compte += $2 }
 
     END {
-      printf "horodatage=%s lus=%d refuses=%d code=%s utilisateurs=%s requetes=%d latence_somme=%.6f latence_compte=%d",
+      printf "horodatage=%s lus=%d refuses=%d code=%s utilisateurs=%s requetes=%d latence_somme=%.6f latence_compte=%d en_vol=%d",
         horodatage, lus, refuses, dernier_code, (fige ? utilisateurs : -1),
-        requetes, lat_somme, lat_compte
+        requetes, lat_somme, lat_compte, en_vol
     }
   '
 }

@@ -67,7 +67,7 @@ scale_cible() {
     }'
 }
 
-# `scale_decide <env> <.env> <exemplaires actuels> <utilisateurs> <rps> <latence_ms>`
+# `scale_decide <env> <.env> <exemplaires actuels> <utilisateurs> <rps> <latence_ms> [<en_vol>]`
 #
 # Rend une ligne : `<cible> <verdict> <raison> <votes_baisse>` où verdict vaut
 # `monter`, `descendre`, `garder` ou `attendre`.
@@ -83,7 +83,7 @@ scale_cible() {
 # appelée pour un simple « qu'est-ce que tu ferais ? » sans changer le
 # comportement du tour suivant.
 scale_decide() {
-  local env_name="$1" file="$2" actuel="$3" utilisateurs="$4" rps="$5" latence="$6"
+  local env_name="$1" file="$2" actuel="$3" utilisateurs="$4" rps="$5" latence="$6" en_vol="${7:-0}"
   local mini maxi cible depuis patience votes latence_haute
 
   mini="$(scale_min "$file")"
@@ -123,6 +123,17 @@ scale_decide() {
     return 0
   fi
 
+  # Descendre RETIRE un exemplaire, et coupe net ce qu'il sert encore : une
+  # réponse du coach dure une à deux minutes sur processeur (2 octobre 2026,
+  # une réponse tuée en plein calcul par une descente de 2 à 1). On attend
+  # donc qu'aucune requête ne soit en vol, sans perdre les votes déjà acquis.
+  # ponytail: mesure à l'instant du passage, une requête partie dans les
+  # secondes avant `up -d` peut encore tomber ; drainer par Nginx si ça arrive.
+  if [ "$en_vol" -gt 0 ]; then
+    printf '%d attendre requetes-en-cours %d\n' "$actuel" "$(state_get "$env_name" votes_baisse 0)"
+    return 0
+  fi
+
   # Descendre : il faut plusieurs passages d'accord.
   patience="$(scale_patience_baisse "$file")"
   votes="$(state_get "$env_name" votes_baisse 0)"
@@ -151,7 +162,11 @@ scale_apply() {
     "taille de la plage de ports ($(api_port_capacity "$env_name" "$file"))."
 
   env_set_value "$file" CARLYS_API_REPLICAS "$cible"
-  dc "$env_name" "$file" up -d --no-deps api || die \
+  # `--no-recreate` : le .env est aussi l'`env_file` de l'API, donc y changer
+  # le nombre change la configuration de CHAQUE exemplaire, et Compose les
+  # recréait tous — y compris ceux qui restent, réponses en cours comprises.
+  # Seuls les exemplaires en trop partent, seuls les nouveaux naissent.
+  dc "$env_name" "$file" up -d --no-deps --no-recreate api || die \
     "Compose n'a pas pu porter l'API à $cible exemplaire(s)." \
     "Le .env porte déjà $cible : corriger la cause puis relancer" \
     "  carlysctl scale $env_name <n>"

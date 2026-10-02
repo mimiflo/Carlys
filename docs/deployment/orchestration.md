@@ -207,7 +207,7 @@ débit (il faut deux échantillons pour dériver un compteur). Cette absence ne
 vaut pas « zéro requête par seconde », sans quoi la pile se réduirait à chaque
 redémarrage du superviseur.
 
-### 4.2 Les trois garde-fous, et pourquoi ils existent
+### 4.2 Les quatre garde-fous, et pourquoi ils existent
 
 Ce qui rend cette décision difficile n'est pas la formule, c'est
 **l'oscillation**. Un superviseur qui suit la charge à la lettre ajoute un
@@ -220,6 +220,13 @@ un cache froid, et le service devient **plus lent** qu'avec un nombre fixe.
 | Délai de garde | 300 s | deux changements coup sur coup |
 | Patience à la baisse | 3 passages | retirer un exemplaire sur un creux passager |
 | Plafond | `nproc`, borné par la plage de ports | une mesure folle qui asphyxie la machine |
+| Requêtes en vol | aucune descente tant qu'une requête est en cours (`en_vol`, lu sur `/metrics`) | couper une réponse du coach en plein calcul (une à deux minutes sur processeur) |
+
+Changer le nombre ne recrée JAMAIS les exemplaires qui restent
+(`up -d --no-recreate`) : le `.env` étant aussi l'`env_file` de l'API, y écrire
+le nouveau nombre changeait la configuration de tous, et Compose les recréait
+tous. Le 2 octobre 2026, une descente de 2 à 1 a ainsi recréé `api-1` et retiré
+`api-2` en même temps, et tué la réponse du coach en cours.
 
 La **patience est asymétrique**, et c'est voulu : un seul passage suffit pour
 monter, trois pour descendre. Se tromper en ajoutant coûte de la mémoire ; se
