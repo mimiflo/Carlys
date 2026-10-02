@@ -32,6 +32,25 @@ export interface CoachToolCall {
   input: Record<string, unknown>;
 }
 
+/** Un exercice parmi lesquels composer une séance demandée. */
+export interface CoachSessionCandidate {
+  id: string;
+  name: string;
+  muscle: string | null;
+  equipment: string[];
+  /** Son meilleur record en charge : d'où se tire la charge proposée. Absent, aucune charge. */
+  record?: { weightKg: number; reps: number };
+}
+
+/** De quoi composer une séance demandée (application/coach-session.ts). */
+export interface CoachComposition {
+  candidates: CoachSessionCandidate[];
+  /** Le temps qu'il a annoncé, en minutes : la séance s'y tient. */
+  minutes: number | null;
+  /** Ce que le modèle doit savoir de plus : la demande, la séance à modifier, ses dernières séances. */
+  context: string[];
+}
+
 export interface CoachToolResult {
   id: string;
   content: string;
@@ -86,6 +105,19 @@ export interface CoachTurnInput {
    * quitte pas le serveur (politique de confidentialité).
    */
   localOnly?: boolean;
+  /**
+   * Une SÉANCE demandée (application/coach-session.ts) : le fournisseur qui
+   * sait contraindre sa sortie la compose parmi ces exercices seulement, au
+   * lieu de la boucle d'outils ; les autres l'ignorent.
+   */
+  compose?: CoachComposition;
+  /**
+   * Ce que l'orchestration EXIGE de ce tour (application/coach-intent.ts),
+   * quand il passe par la boucle d'outils : une séance ou un programme. Le
+   * client en donne l'ordre au modèle qui n'a rien proposé ; sans exigence,
+   * aucun ordre — une question n'appelle pas de carte.
+   */
+  requires?: 'session' | 'program';
 }
 
 export interface CoachTurnUsage {
@@ -141,6 +173,8 @@ export interface CoachTurnOutput {
   model?: string;
   /** Absent : le fournisseur ne le mesure pas (Anthropic). */
   generation?: CoachGeneration;
+  /** Une séance demandée (`compose`) : choisie par le modèle, ou par le serveur seul. */
+  composed?: { by: 'model' } | { by: 'server'; failure: string };
 }
 
 export interface CoachModelPort {

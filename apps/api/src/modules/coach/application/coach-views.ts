@@ -63,6 +63,8 @@ export function coachExerciseView(exercise: ExerciseSummary) {
     difficulty: exercise.difficulty,
     muscle: exercise.primaryMuscleGroup?.slug ?? null,
     equipment: exercise.equipment.map((item) => item.slug),
+    // Seulement s'il surprend : un étirement ne fait pas une série de force.
+    ...(exercise.type === 'STRENGTH' ? {} : { type: exercise.type }),
   };
 }
 

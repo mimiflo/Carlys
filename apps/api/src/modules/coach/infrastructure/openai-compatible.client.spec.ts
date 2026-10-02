@@ -438,11 +438,8 @@ describe('OpenAiCompatibleCoachClient', () => {
       });
       expect(probe[1]).toMatchObject({
         role: 'user',
-        content: probeFor(
-          'Commence par le squat. Je vais t’adapter une séance.',
-          'Mes records ?',
-          false,
-        )?.text,
+        content: probeFor('Commence par le squat. Je vais t’adapter une séance.', null, false)
+          ?.text,
       });
       expect(String(probe[1]?.content)).toContain(
         '« Commence par le squat. Je vais t’adapter une séance. »',
@@ -774,6 +771,79 @@ describe('OpenAiCompatibleCoachClient', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(COACH_MAX_TOOL_ROUNDS);
       expect(output).toMatchObject({ text: COACH_GAVE_UP_TEXT, refused: false });
+    });
+  });
+
+  describe('une séance demandée se compose à coup sûr (session-composer.ts)', () => {
+    const compose = {
+      candidates: [
+        { id: 'squat', name: 'Squat', muscle: 'quadriceps', equipment: [] },
+        { id: 'hip', name: 'Hip thrust', muscle: 'fessiers', equipment: [] },
+        { id: 'fentes', name: 'Fentes', muscle: 'quadriceps', equipment: [] },
+      ],
+      minutes: null,
+      context: [],
+    };
+    const set = (id: string) => ({ id, sets: 3, reps: 12, rest: 60 });
+
+    it('un appel, sans outils, sa sortie contrainte aux exercices lus : la carte et son message', async () => {
+      const fetchMock = jest.fn().mockResolvedValueOnce(
+        completion({
+          content: JSON.stringify({
+            message: 'J’ai choisi le squat et le hip thrust.',
+            name: 'Quadriceps et fessiers',
+            exercises: [set('e1'), set('e2'), set('e3')],
+          }),
+        }),
+      );
+      global.fetch = fetchMock;
+      const steps: string[] = [];
+
+      const output = await client().reply(
+        input({ compose, onToolCalls: (calls) => steps.push(...calls.map((c) => c.name)) }),
+      );
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const body = sent(fetchMock).body as unknown as Record<string, unknown>;
+      expect(body.tools).toBeUndefined();
+      expect(JSON.stringify(body.response_format)).toContain('["e1","e2","e3"]');
+      expect(output).toMatchObject({
+        text: 'J’ai choisi le squat et le hip thrust.',
+        composed: { by: 'model' },
+        proposal: { name: 'Quadriceps et fessiers', estimatedMinutes: 16 },
+      });
+      expect((output.proposal?.items as unknown[]).length).toBe(9);
+      // « Je prépare ta séance », dans sa réflexion.
+      expect(steps).toEqual(['compose_session']);
+    });
+
+    it('une réponse inutilisable ou une panne : le serveur compose seul, la carte arrive quand même', async () => {
+      global.fetch = jest.fn().mockResolvedValueOnce(completion({ content: 'Voici ta séance !' }));
+      await expect(client().reply(input({ compose }))).resolves.toMatchObject({
+        composed: { by: 'server', failure: 'réponse inutilisable (NORMAL_STOP)' },
+        proposal: { name: 'Séance du coach' },
+      });
+
+      // Un fournisseur qui refuserait `response_format` : visible au journal.
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(new Response('{"message":"bad"}', { status: 400 }));
+      await expect(client().reply(input({ compose }))).resolves.toMatchObject({
+        composed: { by: 'server', failure: 'Coach : le fournisseur a répondu 400.' },
+        proposal: { name: 'Séance du coach' },
+      });
+    });
+
+    it('annulée par la personne : le tour s’arrête, comme la boucle d’outils', async () => {
+      const controller = new AbortController();
+      global.fetch = jest.fn().mockImplementationOnce(() => {
+        controller.abort();
+        return Promise.reject(new DOMException('annulé', 'AbortError'));
+      });
+
+      await expect(
+        client().reply(input({ compose, signal: controller.signal })),
+      ).rejects.toBeInstanceOf(CoachProviderUnavailableException);
     });
   });
 

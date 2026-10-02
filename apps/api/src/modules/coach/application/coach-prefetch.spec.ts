@@ -1,4 +1,8 @@
-import { prefetchFor } from './coach-prefetch';
+import { resolveIntent } from './coach-intent';
+import { asksForSession, prefetchFor as prefetchWith } from './coach-prefetch';
+
+/** La lecture d'avance de ce message, seul dans son fil. */
+const prefetchFor = (request: string) => prefetchWith(request, resolveIntent(request, []));
 
 const names = (request: string) => prefetchFor(request).map((call) => call.name);
 
@@ -17,8 +21,13 @@ describe('prefetchFor', () => {
       'get_recent_meals',
     ]);
     // « Par où je commence ? » : ce qu'il a déjà fait, avant de conseiller.
-    // Débuter : ses séances, et son profil — il attend un plan.
-    expect(names('Par où je commence ?')).toEqual(['get_recent_sessions', 'get_training_profile']);
+    // Débuter : ses séances, son profil, et de quoi composer sa séance.
+    expect(names('Par où je commence ?').slice(0, 4)).toEqual([
+      'get_recent_sessions',
+      'get_training_profile',
+      'get_personal_records',
+      'search_exercises',
+    ]);
     expect(names('Tu peux regarder mes dernières séances ?')).toEqual(['get_recent_sessions']);
   });
 
@@ -44,12 +53,12 @@ describe('prefetchFor', () => {
   });
 
   it('une séance ou un programme demandé : son profil, qu’il relit toujours avant de proposer', () => {
-    expect(names('Une séance full body rapide au poids du corps ?')).toEqual([
+    expect(names('Une séance full body rapide au poids du corps ?')[0]).toBe(
       'get_training_profile',
-    ]);
-    expect(names('Prépare-moi une séance haut du corps pour ce soir')).toEqual([
+    );
+    expect(names('Prépare-moi une séance haut du corps pour ce soir')[0]).toBe(
       'get_training_profile',
-    ]);
+    );
     expect(names('Je veux un programme de 4 semaines')).toEqual(['get_training_profile']);
     // Parler de SA séance n'en demande pas une.
     expect(names('Mon programme me fatigue, normal ?')).not.toContain('get_training_profile');
@@ -60,8 +69,12 @@ describe('prefetchFor', () => {
     // n'était pas reconnue ; le modèle ne cherchait que « fessiers », et la
     // séance arrivait en texte, sans carte, faite de ponts fessiers.
     const calls = prefetchFor('je dois faire une séance quad fessiers que me conseilles tu?');
+    // Et de quoi la régler : son profil, ses records (les charges), ses
+    // dernières séances (ne pas refaire hier).
     expect(calls.map((call) => [call.name, call.input])).toEqual([
       ['get_training_profile', {}],
+      ['get_personal_records', {}],
+      ['get_recent_sessions', { limit: 3 }],
       ['search_exercises', { muscleGroupSlug: 'quadriceps' }],
       ['search_exercises', { muscleGroupSlug: 'fessiers' }],
     ]);
@@ -74,6 +87,74 @@ describe('prefetchFor', () => {
     ).toEqual(['quadriceps', 'ischio-jambiers', 'fessiers']);
     // Un muscle nommé SANS séance demandée : une question, pas un plan.
     expect(names('Le squat, ça travaille les fessiers ?')).toEqual([]);
+  });
+
+  it('une SÉANCE demandée, même sans verbe : le mot séance et un muscle suffisent', () => {
+    // Constaté le 2 octobre 2026 : « tu me conseilles, quoi en séance quad
+    // fessiers ? » n'était pas reconnue, et la séance arrivait en texte.
+    for (const request of [
+      'tu me conseilles, quoi en séance quad fessiers ?',
+      'je dois faire une séance quad fessiers que me conseilles tu?',
+      'Une séance full body rapide au poids du corps ?',
+      'Prépare-moi une séance haut du corps pour ce soir',
+      'séance pecs ?',
+      'Quelle séance je peux faire ce soir ?',
+      'Fais-moi une séance de 30 minutes',
+      'Par où je commence ?',
+    ]) {
+      expect(asksForSession(request)).toBe(true);
+    }
+    for (const request of [
+      'Je veux un programme de 4 semaines',
+      'Je n’arrive pas à faire ma séance dos en entier',
+      'Combien de séries faire par séance pour les pecs ?',
+      'Tu me conseilles de manger avant la séance ?',
+      'Ma séance d’hier était dure',
+      'Le squat, ça travaille les fessiers ?',
+      // Des questions AUTOUR d'une séance : une carte n'y répondrait pas.
+      'Quelle est la durée idéale d’une séance ?',
+      'Quel est le meilleur moment pour faire ma séance ?',
+      'Quel échauffement avant une séance de pecs ?',
+      'Je fais ma séance jambes demain, je mange quoi avant ?',
+      'J’ai besoin de m’étirer après l’entraînement',
+      'Combien de protéines après la séance pour récupérer ?',
+      'Je reprends le sport après une blessure, des conseils ?',
+      'Après une séance de jambes, j’ai mal aux cuisses, c’est normal ?',
+      'Je peux faire des abdos à chaque séance ?',
+    ]) {
+      expect(asksForSession(request)).toBe(false);
+    }
+  });
+
+  it('une séance sans muscle nommé : un peu de chaque grand groupe', () => {
+    const searched = prefetchFor('Une séance pour ce soir ?').filter(
+      (call) => call.name === 'search_exercises',
+    );
+    expect(searched.map((call) => call.input.muscleGroupSlug)).toEqual([
+      'quadriceps',
+      'fessiers',
+      'pectoraux',
+      'dos',
+      'epaules',
+      'abdominaux',
+    ]);
+    expect(searched.every((call) => call.input.limit === 8)).toBe(true);
+    expect(
+      prefetchFor('Une séance haut du corps')
+        .filter((call) => call.name === 'search_exercises')
+        .map((call) => call.input.muscleGroupSlug),
+    ).toEqual(['pectoraux', 'dos', 'epaules']);
+  });
+
+  it('modifier une séance : le remplaçant nommé est cherché par son nom', () => {
+    const intent = resolveIntent('Remplace le développé couché par des pompes.', [
+      { role: 'assistant', content: 'Voici ta séance.', proposalId: 'p-1' },
+    ]);
+    expect(
+      prefetchWith('Remplace le développé couché par des pompes.', intent)
+        .filter((call) => call.name === 'search_exercises')
+        .map((call) => call.input),
+    ).toEqual([{ search: 'pompes' }]);
   });
 
   it('une séance demandée avec « faire » ou un conseil', () => {
@@ -105,7 +186,13 @@ describe('prefetchFor', () => {
       prefetchFor(request)
         .filter((call) => call.name === 'search_exercises')
         .map((call) => call.input.muscleGroupSlug);
-    expect(searched('J’ai mal au dos, tu me conseilles quelle séance ?')).toEqual([]);
+    expect(searched('J’ai mal au dos, tu me conseilles quelle séance ?')).toEqual([
+      'quadriceps',
+      'fessiers',
+      'pectoraux',
+      'epaules',
+      'abdominaux',
+    ]);
     expect(searched('Une séance pecs sans les épaules')).toEqual(['pectoraux']);
     expect(searched('Mal aux épaules, tu me conseilles une séance jambes ?')).toEqual([
       'quadriceps',

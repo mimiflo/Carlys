@@ -22,8 +22,12 @@ import { CoachContextBuilder } from './coach-context.builder';
 import { CoachAdmissions } from './coach-admissions';
 import { CoachGateway } from './coach-gateway';
 import { type CoachMemory } from './coach-memory';
+import { CoachActionTurn } from './coach-action-turn';
+import { CoachActions } from './coach-actions';
 import { CoachTurnRunner } from './coach-turn.runner';
-import { type CoachQuota } from './coach.quota';
+import { CoachWorkoutCreator } from './coach-workout-creator';
+import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
+import { type CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { CoachAvailability } from './coach.availability';
 import { CoachService } from './coach.service';
 import { type CoachTools } from './coach.tools';
@@ -45,7 +49,9 @@ interface Stubs {
     saveUserMessage: jest.Mock;
     saveAssistantMessage: jest.Mock;
     catalogueNames: jest.Mock;
+    findOwnProposal: jest.Mock;
   };
+  templates: { templateDetail: jest.Mock; saveTemplate: jest.Mock };
   quota: {
     consume: jest.Mock;
     remaining: jest.Mock;
@@ -67,8 +73,9 @@ function storedMessage(role: 'USER' | 'ASSISTANT', content: string, id = `${role
     inputTokens: null,
     outputTokens: null,
     createdAt: new Date('2026-08-09T10:00:00.000Z'),
-    proposal: null,
+    proposal: null as { id: string } | null,
     programProposal: null,
+    createdTemplate: null,
   };
 }
 
@@ -99,6 +106,14 @@ function buildStubs(): Stubs {
       saveUserMessage: jest.fn().mockResolvedValue(storedMessage('USER', 'Salut coach.', MESSAGE)),
       saveAssistantMessage: jest.fn().mockResolvedValue(storedMessage('ASSISTANT', 'Salut.')),
       catalogueNames: jest.fn().mockResolvedValue(new Map()),
+      findOwnProposal: jest.fn().mockResolvedValue(null),
+    },
+    // Aucun modèle encore : le créer réussit, sous l'identifiant demandé.
+    templates: {
+      templateDetail: jest.fn().mockRejectedValue(new NotFoundException()),
+      saveTemplate: jest.fn((_user: string, id: string, input: { name: string }) =>
+        Promise.resolve({ created: true, template: { id, name: input.name } }),
+      ),
     },
     quota: {
       consume: jest.fn().mockResolvedValue(29),
@@ -189,6 +204,11 @@ function buildService(
     { activeProgramName: jest.fn().mockResolvedValue(null) } as unknown as ProgramsService,
     config as unknown as AppConfigService,
   );
+  const creator = new CoachWorkoutCreator(
+    stubs.templates as unknown as WorkoutTemplatesService,
+    repository,
+    logger,
+  );
   const turns = new CoachTurnRunner(
     repository,
     stubs.tools as unknown as CoachTools,
@@ -196,9 +216,20 @@ function buildService(
     gateway,
     context,
     { refreshLater: jest.fn() } as unknown as CoachMemory,
+    new CoachActions(repository, creator, logger),
     logger,
   );
-  return new CoachService(repository, quota, availability, admissions, context, turns, logger);
+  const actionTurns = new CoachActionTurn(repository, quota, creator, logger);
+  return new CoachService(
+    repository,
+    quota,
+    availability,
+    admissions,
+    context,
+    turns,
+    actionTurns,
+    logger,
+  );
 }
 
 /**
@@ -312,6 +343,119 @@ describe('CoachService.sendMessage', () => {
     ]);
   });
 
+  it('une séance demandée : le modèle reçoit les exercices lus, de quoi la composer à coup sûr', async () => {
+    const stubs = buildStubs();
+    stubs.tools.run.mockImplementation((_user: string, calls: { id: string; name: string }[]) =>
+      Promise.resolve(
+        calls.map((call) => ({
+          id: call.id,
+          content:
+            call.name === 'search_exercises'
+              ? JSON.stringify([
+                  { id: `${call.id}-a`, name: 'A', muscle: 'quadriceps', equipment: [] },
+                  { id: `${call.id}-b`, name: 'B', muscle: 'fessiers', equipment: [] },
+                ])
+              : '{}',
+        })),
+      ),
+    );
+
+    await buildService(stubs).sendMessage(
+      USER,
+      CONVERSATION,
+      MESSAGE,
+      'tu me conseilles, quoi en séance quad fessiers ?',
+    );
+
+    expect(stubs.model.reply.mock.calls[0]?.[0].compose?.candidates.map((item) => item.id)).toEqual(
+      ['lecture03-a', 'lecture03-b', 'lecture04-a', 'lecture04-b'],
+    );
+  });
+
+  it('« Ok crée-la » : la DERNIÈRE proposition enregistrée, sans appeler le modèle', async () => {
+    const stubs = buildStubs();
+    const proposed = {
+      ...storedMessage('ASSISTANT', 'Tu as 25 minutes.'),
+      proposal: { id: 'proposition-1' },
+    };
+    stubs.repository.findConversation.mockResolvedValue(
+      conversationWith([storedMessage('USER', 'J’ai seulement 25 minutes aujourd’hui.'), proposed]),
+    );
+    stubs.repository.findOwnProposal.mockResolvedValue({
+      id: 'proposition-1',
+      name: 'Haut du corps, format court',
+      estimatedMinutes: 25,
+      items: [
+        {
+          id: 'serie-1',
+          exercisePosition: 0,
+          setPosition: 0,
+          exerciseId: 'couche',
+          exerciseName: 'Développé couché',
+          kind: 'NORMAL',
+          targetReps: 6,
+          targetWeightKg: null,
+          restSeconds: 120,
+        },
+      ],
+    });
+    const shown: string[] = [];
+
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Ok crée-la.', {
+      onText: (text) => shown.push(text),
+    });
+
+    expect(stubs.model.reply).not.toHaveBeenCalled();
+    expect(stubs.templates.saveTemplate).toHaveBeenCalledWith(
+      USER,
+      'proposition-1',
+      expect.objectContaining({ name: 'Haut du corps, format court' }),
+    );
+    expect(stubs.repository.saveAssistantMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        createdTemplateId: 'proposition-1',
+        steps: ['J’enregistre ta séance'],
+      }),
+    );
+    expect(shown.join('')).toContain('C’est enregistré');
+    // Un tour comme un autre : décompté.
+    expect(stubs.quota.consume).toHaveBeenCalled();
+  });
+
+  it('« Ok crée-la » au plafond du jour : refusé, rien de créé', async () => {
+    const stubs = buildStubs();
+    const proposed = {
+      ...storedMessage('ASSISTANT', 'Tu as 25 minutes.'),
+      proposal: { id: 'proposition-1' },
+    };
+    stubs.repository.findConversation.mockResolvedValue(
+      conversationWith([storedMessage('USER', 'J’ai 25 minutes.'), proposed]),
+    );
+    stubs.quota.consume.mockResolvedValue(null);
+
+    await expect(
+      buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Ok crée-la.'),
+    ).rejects.toBeInstanceOf(CoachQuotaExceededError);
+    expect(stubs.templates.saveTemplate).not.toHaveBeenCalled();
+    expect(stubs.repository.saveUserMessage).not.toHaveBeenCalled();
+  });
+
+  it('« Ok crée-la » sans séance en vue : UNE question précise, rien de créé', async () => {
+    const stubs = buildStubs();
+
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Ok crée-la.');
+
+    expect(stubs.model.reply).not.toHaveBeenCalled();
+    expect(stubs.templates.saveTemplate).not.toHaveBeenCalled();
+    // Une question de précision ne coûte rien.
+    expect(stubs.quota.consume).not.toHaveBeenCalled();
+    const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [
+      { content: string; createdTemplateId: string | null },
+    ];
+    expect(saved.content).toMatch(/\?$/);
+    expect(saved.createdTemplateId).toBeNull();
+  });
+
   it('un programme proposé pendant le tour s’archive avec la réponse', async () => {
     const stubs = buildStubs();
     stubs.model.reply.mockImplementation(async (input: CoachTurnInput) => {
@@ -378,16 +522,17 @@ describe('CoachService.sendMessage', () => {
 
     const steps = [
       'Je regarde tes records',
-      // « une séance » demandée : le profil, lu d'avance (coach-prefetch.ts).
+      // « une séance » demandée : le profil et ses exercices, lus d'avance
+      // (coach-prefetch.ts) — les recherches du modèle n'en font pas une autre.
       'Je relis ton profil d’entraînement',
+      'Je relis tes dernières séances',
       'Je cherche des exercices',
       'Je prépare ta séance',
     ];
     expect(shown).toEqual(steps);
     // Les lectures faites d'avance finissent ; la séance, retenue sans être
-    // exécutée, l'est dès qu'elle est demandée ; la recherche, jamais lancée
-    // par ce faux modèle, non.
-    expect(finished).toEqual([steps[0], steps[1], steps[3]]);
+    // exécutée, l'est dès qu'elle est demandée.
+    expect(finished).toEqual(steps);
     const [saved] = stubs.repository.saveAssistantMessage.mock.calls[0] as [
       { steps: string[]; thinkingSeconds: number | null },
     ];
@@ -395,7 +540,7 @@ describe('CoachService.sendMessage', () => {
     expect(saved.thinkingSeconds).toBeNull();
     // Aucune séance n'a survécu à la validation : son « Je prépare… » ne
     // s'archive pas, alors qu'il a été montré pendant qu'il se faisait.
-    expect(saved.steps).toEqual(steps.slice(0, 3));
+    expect(saved.steps).toEqual(steps.slice(0, 4));
   });
 
   it('le fil n’est relu que sur une FENÊTRE, jamais en entier', async () => {

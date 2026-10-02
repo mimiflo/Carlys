@@ -2,22 +2,29 @@ import { type CoachReply } from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { CoachProviderUnavailableException } from '../domain/coach-model.port';
+import {
+  type CoachComposition,
+  CoachProviderUnavailableException,
+} from '../domain/coach-model.port';
 import {
   type ConversationWithMessages,
   CoachRepository,
   type MessageWithProposal,
 } from '../infrastructure/coach.repository';
 import { frenchExerciseNames, frenchExerciseNamesStream } from './coach-exercise-names';
-import { prefetchFor } from './coach-prefetch';
+import { prefetchFor, withResults } from './coach-prefetch';
+import { CoachActions, isWorkout, requirementOf } from './coach-actions';
+import { type CoachIntent } from './coach-intent';
+import { compositionFor } from './coach-session';
 import { coachReflection } from './coach-steps';
+import { type CoachStream } from './coach-stream';
 import { CoachContextBuilder } from './coach-context.builder';
 import { type CoachAdmission } from './coach-admissions';
 import { CoachGateway } from './coach-gateway';
 import { CoachMemory } from './coach-memory';
 import { presentMessage } from './coach.presenter';
 import { COACH_SYSTEM_PROMPT } from './coach.prompt';
-import { acceptableSessionProposal, collectProgramProposal } from './coach.proposals';
+import { collectProgramProposal } from './coach.proposals';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { COACH_TOOLS } from './coach.tool-definitions';
 import { CoachTools } from './coach.tools';
@@ -25,19 +32,6 @@ import { titleFrom } from './coach.turn';
 
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
 const CONVERSATION_NOT_FOUND = 'Conversation introuvable.';
-
-/** Ce que la route EN FLUX donne au tour : texte, file, annulation. */
-export interface CoachStream {
-  onText?: (delta: string) => void;
-  /** Attentes devant cette demande, à chaque changement. */
-  onQueued?: (ahead: number) => void;
-  /** Son tour est venu, après avoir attendu. */
-  onStarted?: () => void;
-  /** Une étape de sa réflexion, commencée puis finie (coach-steps.ts). */
-  onStep?: (label: string, done: boolean, elapsedMs: number) => void;
-  /** Écran fermé, « Arrêter », réseau coupé : la génération s'arrête. */
-  signal?: AbortSignal;
-}
 
 /**
  * Le tour proprement dit, une fois la place obtenue dans la passerelle :
@@ -54,6 +48,7 @@ export class CoachTurnRunner {
     private readonly gateway: CoachGateway,
     private readonly context: CoachContextBuilder,
     private readonly memory: CoachMemory,
+    private readonly actions: CoachActions,
     @InjectPinoLogger(CoachTurnRunner.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -63,6 +58,7 @@ export class CoachTurnRunner {
     admission: CoachAdmission,
     content: string,
     stream: CoachStream,
+    intent: CoachIntent,
   ): Promise<CoachReply> {
     const conversationId = conversation.id;
     const { messageId } = admission;
@@ -81,6 +77,9 @@ export class CoachTurnRunner {
     // Ce qu'il fait avant d'écrire, et combien de temps : montré en direct,
     // archivé avec la réponse (coach-steps.ts).
     const reflection = coachReflection(stream.onStep);
+    // Une séance exigée : de quoi la composer, et la séance à modifier (ADR 0014).
+    let composition: CoachComposition | null = null;
+    const base = await this.actions.baseOf(userId, intent);
     const output = await this.gateway
       .generate(
         admission,
@@ -98,7 +97,7 @@ export class CoachTurnRunner {
           }
           // Ses données, lues AVANT que le modèle n'écrive (coach-prefetch.ts),
           // PENDANT que la question s'écrit : deux allers-retours, une attente.
-          const reads = prefetchFor(content);
+          const reads = prefetchFor(content, intent);
           reflection.start(reads);
           const [userMessage, results] = await Promise.all([
             this.repository.saveUserMessage(conversationId, messageId, content),
@@ -110,6 +109,8 @@ export class CoachTurnRunner {
             throw new NotFoundException(CONVERSATION_NOT_FOUND);
           }
           turn = { now, remaining, userMessage };
+          const prefetched = withResults(reads, results);
+          if (isWorkout(intent)) composition = compositionFor(intent, prefetched, base, content);
           return {
             system: COACH_SYSTEM_PROMPT,
             // Après la césure de cache : le préfixe partagé reste identique
@@ -117,11 +118,9 @@ export class CoachTurnRunner {
             systemPerUser: context.systemPerUser,
             tools: COACH_TOOLS,
             history: context.history,
-            // `CoachTools.run` rend un résultat par lecture, dans l'ordre.
-            prefetched: reads.flatMap((call, i) => {
-              const result = results[i];
-              return result === undefined ? [] : [{ call, result }];
-            }),
+            prefetched,
+            compose: composition ?? undefined,
+            requires: requirementOf(intent),
             runTools: reflection.track(programs.runTools),
             onToolCalls: (calls) => reflection.begin(calls),
             onText: names && ((delta) => (reflection.wrote(), names.push(delta))),
@@ -148,8 +147,12 @@ export class CoachTurnRunner {
     }
     names?.flush();
     const { remaining, userMessage } = turn;
-
-    const proposal = await acceptableSessionProposal(output.proposal, this.repository, this.logger);
+    // Le contrat du tour : ce que la base prouve, pas ce que le modèle dit.
+    const settled = await this.actions.settle(userId, intent, output, composition, {
+      messageId,
+      onStep: (step, done) => (done ? reflection.end : reflection.begin)([{ name: step }]),
+    });
+    const { proposal, createdTemplateId } = settled;
     const programProposal = programs.proposal();
 
     this.logger.info(
@@ -159,9 +162,12 @@ export class CoachTurnRunner {
         inputTokens: output.usage.inputTokens,
         outputTokens: output.usage.outputTokens,
         cacheReadTokens: output.usage.cacheReadTokens,
+        intent: intent.kind,
         proposed: proposal !== null,
+        createdTemplateId,
         programProposed: programProposal !== null,
         refused: output.refused,
+        composed: output.composed,
       },
       'Tour de coach',
     );
@@ -169,20 +175,14 @@ export class CoachTurnRunner {
     const assistantMessage = await this.repository.saveAssistantMessage({
       conversationId,
       id: randomUUID(),
-      content: frenchExerciseNames(output.text),
+      content: frenchExerciseNames(settled.text),
       inputTokens: output.usage.inputTokens,
       outputTokens: output.usage.outputTokens,
-      proposal:
-        proposal === null
-          ? null
-          : {
-              ...proposal,
-              id: randomUUID(),
-              itemIds: proposal.items.map(() => randomUUID()),
-            },
+      proposal,
       programProposal: programProposal === null ? null : { ...programProposal, id: randomUUID() },
       steps: reflection.all({ session: proposal !== null, program: programProposal !== null }),
       thinkingSeconds: reflection.seconds(),
+      createdTemplateId,
       title: conversation.title ?? titleFrom(content),
     });
 

@@ -21,6 +21,7 @@ const PROPOSITION_ORDONNEE = {
     include: { items: { orderBy: [{ exercisePosition: 'asc' }, { setPosition: 'asc' }] } },
   },
   programProposal: true,
+  createdTemplate: { select: { id: true, name: true, deletedAt: true } },
 } satisfies Prisma.CoachMessageInclude;
 
 /** Fil avec ses messages et les propositions rattachées. */
@@ -190,6 +191,8 @@ export class CoachRepository {
     /** Les étapes de sa réflexion (coach-steps.ts), et sa durée. */
     steps: string[];
     thinkingSeconds: number | null;
+    /** La séance enregistrée par ce tour (coach-workout-creator.ts). */
+    createdTemplateId?: string | null;
     title: string | null;
   }): Promise<MessageWithProposal> {
     return this.prisma.$transaction(async (tx) => {
@@ -203,6 +206,7 @@ export class CoachRepository {
           outputTokens: input.outputTokens,
           steps: input.steps,
           thinkingSeconds: input.thinkingSeconds,
+          createdTemplateId: input.createdTemplateId ?? null,
         },
       });
 
@@ -304,6 +308,17 @@ export class CoachRepository {
       data: { acceptedSessionId: sessionId },
     });
     return result.count > 0;
+  }
+
+  /**
+   * Une proposition de séance de CETTE personne, ses séries dans l'ordre ;
+   * `null` si elle n'existe pas ou appartient à autrui (« Ok crée-la »).
+   */
+  findOwnProposal(userId: string, proposalId: string) {
+    return this.prisma.coachSessionProposal.findFirst({
+      where: { id: proposalId, message: { conversation: { userId, deletedAt: null } } },
+      include: PROPOSITION_ORDONNEE.proposal.include,
+    });
   }
 
   /** Marque le programme proposé comme accepté, et par quel programme. */

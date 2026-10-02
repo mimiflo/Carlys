@@ -1,6 +1,11 @@
 import { type CoachToolCall } from '../domain/coach-model.port';
 import { PROPOSE_PROGRAM_TOOL, PROPOSE_SESSION_TOOL } from './coach.tool-definitions';
 
+/** Les étapes des actions du SERVEUR, montrées comme celles du modèle. */
+export const CREATE_WORKOUT_STEP = 'create_workout';
+/** Composer la séance exigée (session-composer.ts) : en cours tant qu'il écrit. */
+export const COMPOSE_STEP = 'compose_session';
+
 /**
  * La RÉFLEXION montrée à la personne : ce que le coach fait vraiment avant de
  * répondre — lire ses records, chercher des exercices, préparer sa séance.
@@ -23,6 +28,9 @@ const LABELS: ReadonlyMap<string, string> = new Map([
   ['search_exercises', 'Je cherche des exercices'],
   [PROPOSE_SESSION_TOOL, 'Je prépare ta séance'],
   [PROPOSE_PROGRAM_TOOL, 'Je prépare ton programme'],
+  // Pas un outil du modèle : une action du serveur (coach-actions.ts).
+  [CREATE_WORKOUT_STEP, 'J’enregistre ta séance'],
+  [COMPOSE_STEP, 'Je prépare ta séance'],
 ]);
 
 /**

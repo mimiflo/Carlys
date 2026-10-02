@@ -60,7 +60,7 @@ describe('probeFor', () => {
       claimed,
       "J'ai préparé un programme de trois séances par semaine. Bon courage !",
     ]) {
-      const probe = probeFor(answer, 'Salut', false)?.text;
+      const probe = probeFor(answer, null, false)?.text;
       expect(probe).toContain('propose_session');
       expect(probe).toContain('search_exercises');
       expect(probe).not.toContain('FIN');
@@ -71,36 +71,28 @@ describe('probeFor', () => {
     // Constaté : « L'adaptation est faite pour t'offrir une séance réaliste »,
     // sans carte — aucune tournure à reconnaître, la demande suffit.
     const answer = 'L’adaptation est faite pour t’offrir une séance réaliste, sans excès.';
-    expect(
-      probeFor(answer, 'Je veux une séance haut du corps avec haltères', false)?.text,
-    ).toContain('propose_session');
+    expect(probeFor(answer, 'session', false)?.text).toContain('propose_session');
     // Une question posée en retour rend la main : pas d'ordre.
-    expect(probeFor('Combien de temps as-tu ?', 'Fais-moi une séance', false)).toBeNull();
+    expect(probeFor('Combien de temps as-tu ?', 'session', false)).toBeNull();
   });
 
   it('l’ordre nomme ce qui a été demandé : une séance n’appelle pas un programme', () => {
     // Constaté le 2 octobre 2026 : à l'ordre qui citait les deux, une séance
     // demandée revenait avec la séance ET un programme.
-    const session = probeFor('Pont fessier.', 'je dois faire une séance quad fessiers', true)?.text;
+    const session = probeFor('Pont fessier.', 'session', true)?.text;
     expect(session).toContain('propose_session');
     expect(session).not.toContain('propose_program');
-    const program = probeFor('Trois séances.', 'Je veux un programme de 4 semaines', true)?.text;
+    const program = probeFor('Trois séances.', 'program', true)?.text;
     expect(program).toContain('propose_program');
     expect(program).not.toContain('propose_session');
     // Un conseil autour de la séance n'appelle aucune séance.
-    expect(
-      probeFor(
-        'Mange léger, deux heures avant.',
-        'Tu me conseilles de manger avant la séance ?',
-        true,
-      ),
-    ).toBeNull();
+    expect(probeFor('Mange léger, deux heures avant.', null, true)).toBeNull();
   });
 
   it('une fin qui parle d’une suite reçoit une question qui CITE cette fin', () => {
     const probe = probeFor(
       'Premier paragraphe. Deuxième. On commence par le squat. Je vais t’adapter les charges.',
-      'Comment progresser ?',
+      null,
       false,
     )?.text;
     expect(probe).toContain('« On commence par le squat. Je vais t’adapter les charges. »');
@@ -111,11 +103,11 @@ describe('probeFor', () => {
   it('ses données citées sans lecture : l’ordre de les lire, et la réponse sera REMPLACÉE', () => {
     // Constaté : « Tu as déjà des records de soulevé de terre », rien lu.
     const answer = 'Tu as déjà des records de soulevé de terre, j’ajuste le volume.';
-    const probe = probeFor(answer, 'Par quoi je commence ?', false);
+    const probe = probeFor(answer, null, false);
     expect(probe?.keep).toBe(false);
     expect(probe?.text).toContain('sans les avoir lues');
     // Lues dans le tour (avant lui ou par lui) : rien à redire sur ce point.
-    expect(probeFor('Ton record au squat est de 80 kg. Bravo.', 'Mon record ?', true)).toBeNull();
+    expect(probeFor('Ton record au squat est de 80 kg. Bravo.', null, true)).toBeNull();
     // Des conseils, pas des données inventées : l'objectif et le niveau lui sont donnés.
     for (const advice of [
       'Selon ton objectif, vise 3 séries de 10.',
@@ -125,7 +117,7 @@ describe('probeFor', () => {
       'Si tu as fait 3 séances, repose-toi.',
       'Basée sur ce que tu as déjà soulevé, la charge monte doucement.',
     ]) {
-      expect(probeFor(advice, 'Des conseils ?', false)?.keep).not.toBe(false);
+      expect(probeFor(advice, null, false)?.keep).not.toBe(false);
     }
   });
 
@@ -137,7 +129,7 @@ describe('probeFor', () => {
       'Je t’adapte une séance avec des mouvements que tu as récemment faits.',
       'Commence par le squat gobelet en 4×8, puis les fentes. Bon courage !',
     ]) {
-      expect(probeFor(answer, 'Des idées ?', true)?.text).toContain('propose_session');
+      expect(probeFor(answer, null, true)?.text).toContain('propose_session');
     }
     // Des chiffres qui ne prescrivent rien.
     for (const answer of [
@@ -147,12 +139,12 @@ describe('probeFor', () => {
       // Une offre posée en question rend la main.
       'Tu veux que je te prépare une séance ?',
     ]) {
-      expect(probeFor(answer, 'Des chiffres ?', true)).toBeNull();
+      expect(probeFor(answer, null, true)).toBeNull();
     }
   });
 
   it('une réponse complète, sans demande de séance : rien', () => {
-    expect(probeFor('Bois de l’eau et dors bien.', 'Des conseils de récup ?', false)).toBeNull();
+    expect(probeFor('Bois de l’eau et dors bien.', null, false)).toBeNull();
   });
 });
 

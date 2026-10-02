@@ -31,12 +31,11 @@ export class CoachAdmissions {
     private readonly config: AppConfigService,
   ) {}
 
-  async admit(
-    userId: string,
-    conversationId: string,
-    messageId: string,
-    content: string,
-  ): Promise<CoachAdmission> {
+  /**
+   * Taille et rythme : ce que TOUT tour respecte, même servi sans le modèle
+   * (« Ok crée-la », coach-action-turn.ts).
+   */
+  async precheck(userId: string, content: string): Promise<void> {
     const { maxMessageChars } = this.config.coachGateway;
     if (content.length > maxMessageChars) {
       throw new BadRequestException(`Ton message dépasse ${maxMessageChars} caractères.`);
@@ -47,6 +46,15 @@ export class CoachAdmissions {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+  }
+
+  async admit(
+    userId: string,
+    conversationId: string,
+    messageId: string,
+    content: string,
+  ): Promise<CoachAdmission> {
+    await this.precheck(userId, content);
     const requestId = randomUUID();
     const entry = await this.gate.enter(requestId, userId);
     if (entry === 'user_busy') {

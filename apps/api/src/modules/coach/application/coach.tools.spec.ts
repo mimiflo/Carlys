@@ -160,6 +160,40 @@ describe('CoachTools', () => {
     ]);
   });
 
+  it('search_exercises : `limit` borne la liste (lectures d’avance d’une séance)', async () => {
+    const exercise = (id: string) => ({
+      id,
+      slug: id,
+      name: id,
+      difficulty: 'BEGINNER',
+      type: 'STRENGTH',
+      isPremium: false,
+      primaryMuscleGroup: { id: 'g-1', slug: 'pectoraux', name: 'Pectoraux' },
+      equipment: [],
+      imageUrl: null,
+    });
+    const exercises = {
+      muscleGroups: jest.fn().mockResolvedValue([{ slug: 'pectoraux', name: 'Pectoraux' }]),
+      equipment: jest.fn().mockResolvedValue([]),
+      list: jest.fn().mockResolvedValue({
+        items: ['a', 'b', 'c'].map(exercise),
+        hasMore: false,
+        total: 3,
+        nextCursor: null,
+      }),
+    };
+    const tools = buildTools(buildStubs(), exercises);
+
+    const [bounded, unbounded] = await tools.run(USER, [
+      { id: 'c1', name: 'search_exercises', input: { muscleGroupSlug: 'pectoraux', limit: 2 } },
+      { id: 'c2', name: 'search_exercises', input: { muscleGroupSlug: 'pectoraux', limit: 999 } },
+    ]);
+
+    expect(JSON.parse(bounded?.content ?? '')).toHaveLength(2);
+    // Jamais au-delà du plafond ordinaire.
+    expect(JSON.parse(unbounded?.content ?? '')).toHaveLength(3);
+  });
+
   it('search_exercises : un groupe inconnu revient au modèle avec les valeurs possibles', async () => {
     const exercises = {
       muscleGroups: jest.fn().mockResolvedValue([{ slug: 'pectoraux', name: 'Pectoraux' }]),

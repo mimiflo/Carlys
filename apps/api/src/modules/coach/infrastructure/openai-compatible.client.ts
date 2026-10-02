@@ -17,6 +17,7 @@ import { type CoachWorkerPool } from './coach-worker-pool';
 import { CoachWorkerRequests } from './coach-worker-requests';
 import { probeFor, probeForAction } from './announced-action';
 import { ContextBudget } from './context-budget';
+import { composeSession } from './session-composer';
 import { endOfError } from './generation-end';
 import { runToolRound, WRAP_UP_ROUNDS } from './tool-round';
 import {
@@ -71,6 +72,16 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     }));
     const { maxOutputTokens, maxContinuations, contextTokens } = this.config.coachGateway;
     const maxTokens = input.maxOutputTokens ?? maxOutputTokens;
+    if (input.compose !== undefined) {
+      // Une séance demandée : un seul appel, à sortie contrainte (session-composer.ts).
+      const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+      const budget = new ContextBudget(contextTokens, []);
+      const composed = await composeSession(this.requests.complete.bind(this.requests), input, {
+        composition: input.compose,
+        turn: { signal, maxTokens, budget, usage },
+      });
+      return { ...composed, usage, refused: false, model: this.config.coachProvider.model };
+    }
     // La place de la réponse, et d'une reprise, toujours gardée : l'historique
     // le plus ancien cède (context-budget.ts).
     const budget = new ContextBudget(contextTokens, tools);
@@ -130,8 +141,6 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     let probes = 0;
     // Une séance ou un programme proposé : la suite promise est là.
     let proposed = false;
-    const request =
-      [...input.history].reverse().find((turn) => turn.role === 'user')?.content ?? '';
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
       spoke = false;
       // Les résultats d'outils s'accumulent : l'historique cède encore, pas
@@ -191,7 +200,9 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         // proposer s'ajoute à la réponse déjà écrite, rendue à la fin des tours.
         input.tools.length > 0;
       const wrapUp = round >= COACH_MAX_TOOL_ROUNDS - WRAP_UP_ROUNDS;
-      const probe = mayProbe ? probeFor(textOf(choice?.message?.content), request, read) : null;
+      const probe = mayProbe
+        ? probeFor(textOf(choice?.message?.content), input.requires ?? null, read)
+        : null;
       // Plus de lecture possible : une vérification des données (`keep:
       // false`) écarterait la réponse sans pouvoir en écrire une autre.
       const question = probe !== null && (probe.keep || !wrapUp) ? probe : null;

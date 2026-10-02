@@ -16,6 +16,10 @@ export function presentMessage(message: MessageWithProposal): CoachMessage {
     proposal: message.proposal === null ? null : presentProposal(message.proposal),
     programProposal:
       message.programProposal === null ? null : presentProgramProposal(message.programProposal),
+    createdWorkout:
+      message.createdTemplate === null || message.createdTemplate.deletedAt !== null
+        ? null
+        : { templateId: message.createdTemplate.id, name: message.createdTemplate.name },
     createdAt: message.createdAt.toISOString(),
   };
 }

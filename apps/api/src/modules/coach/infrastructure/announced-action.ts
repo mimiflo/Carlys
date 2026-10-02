@@ -1,6 +1,7 @@
-import { fold } from '../application/coach-exercise-search';
-import { asksForPlan } from '../application/coach-prefetch';
-import { type CoachTurnUsage } from '../domain/coach-model.port';
+import { type CoachTurnInput, type CoachTurnUsage } from '../domain/coach-model.port';
+
+/** Ce que l'orchestration exige du tour (coach-intent.ts) : rien, une séance, un programme. */
+type ProposalRequired = NonNullable<CoachTurnInput['requires']> | null;
 import { type CoachWorkerRequests } from './coach-worker-requests';
 import { type ChatCompletion } from './chat-completion-stream';
 import { addUsage } from './openai-compatible.helpers';
@@ -126,14 +127,14 @@ function endingOf(text: string): string {
  */
 export function probeFor(
   answer: string,
-  request: string,
+  required: ProposalRequired,
   read: boolean,
 ): { text: string; keep: boolean } | null {
   // Des données citées sans lecture : la réponse est fausse, sa version
   // corrigée la REMPLACE (`keep: false`).
   if (!read && citesUserData(answer)) return { text: DATA_PROBE, keep: false };
-  const asks = !endingOf(answer).endsWith('?') && asksForPlan(request);
-  if (asks || claimsUnproposed(answer)) return { text: proposalProbe(request), keep: true };
+  const asks = !endingOf(answer).endsWith('?') && required !== null;
+  if (asks || claimsUnproposed(answer)) return { text: proposalProbe(required), keep: true };
   if (!mayAnnounceAction(answer)) return null;
   const text =
     `(Message automatique, pas de l'utilisateur.) Ton message se termine ainsi : « ${endingOf(answer)} ». ` +
@@ -181,16 +182,13 @@ const PROPOSE_PROGRAM = 'un programme avec propose_program, après avoir lu get_
  * deux, une séance demandée revenait avec la séance ET un programme
  * (constaté le 2 octobre 2026). Rien de demandé, ou les deux : les deux.
  */
-function proposalProbe(request: string): string {
-  const asked = fold(request);
-  const program = /\b(programme|plan)s?\b/.test(asked);
-  const session = /\b(seance|entrainement|routine)s?\b/.test(asked);
+function proposalProbe(required: ProposalRequired): string {
   const what =
-    program === session
-      ? `${PROPOSE_SESSION} ; ${PROPOSE_PROGRAM}`
-      : session
-        ? PROPOSE_SESSION
-        : PROPOSE_PROGRAM;
+    required === 'session'
+      ? PROPOSE_SESSION
+      : required === 'program'
+        ? PROPOSE_PROGRAM
+        : `${PROPOSE_SESSION} ; ${PROPOSE_PROGRAM}`;
   return (
     "(Message automatique, pas de l'utilisateur.) Aucune séance ni aucun programme n'a été " +
     "proposé avec l'outil : l'utilisateur ne peut ni le voir ni le lancer. Propose maintenant " +

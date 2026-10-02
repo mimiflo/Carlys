@@ -1,0 +1,378 @@
+{
+  "_comment": "Formulations réelles ou plausibles et l'intention attendue. Partagé par coach-intent.spec.ts et le banc Qwen3-4B. `context: \"proposal\"` : la réplique précédente porte une proposition de séance ; `context: \"asked\"` : une séance a été demandée plus haut, sans carte (la capture du 2 octobre 2026).",
+  "session": [
+    {
+      "message": "Fais-moi une séance pecs.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux une séance haut du corps.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J’ai 20 minutes, je fais quoi ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Que me conseilles-tu aujourd’hui ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Par où je commence ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Prépare-moi quelque chose de rapide.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "tu me conseilles, quoi en séance quad fessiers ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "je dois faire une séance quad fessiers que me conseilles tu?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J’ai peu de temps aujourd’hui, que me conseilles-tu ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J’ai seulement 25 minutes aujourd’hui.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Une séance pour ce soir ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux travailler le haut du corps.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Propose-moi une séance jambes.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Quelle séance je peux faire ce soir ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Une séance full body rapide au poids du corps ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Fais-moi une séance de 30 minutes.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux muscler mes bras aujourd’hui.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Séance dos ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Donne-moi une séance pour les épaules.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Tu me proposes une séance abdos ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J’aimerais une petite séance ce soir.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je fais quoi aujourd’hui ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Qu’est-ce que je fais comme séance aujourd’hui ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Une séance express de 15 minutes ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je n’ai que 30 min, une idée de séance ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux bosser les fessiers.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Prépare-moi une séance pour demain matin.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Il me faut une séance jambes.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Tu peux me faire une séance pectoraux ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je débute, tu me conseilles quoi ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Une séance sans matériel ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J’ai 45 minutes, propose-moi un truc.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Une séance mollets et abdos ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux m’entraîner ce soir, une idée ?",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je voudrais une séance pour le dos et les biceps.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Crée-moi une séance jambes.",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Crée-moi une séance pecs pour aujourd’hui.",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Crée-moi une séance de 25 minutes.",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Ajoute cette séance.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Ok crée-la.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Mets-la pour aujourd’hui.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Enregistre ça.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Ajoute-la à mon programme.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Enregistre cette séance.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Tu peux la créer ?",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Crée-la stp",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Sauvegarde-la.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Ça me rend fou ton truc, ça fait 5 fois que je te demande de créer une séance.",
+      "context": "asked",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Garde-la dans mes séances.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Crée une séance haut du corps et enregistre-la.",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    }
+  ],
+  "other": [
+    {
+      "message": "Quelle est la différence entre squat et presse ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Quelle est la durée idéale d’une séance ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Quel échauffement avant une séance de pecs ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Je fais ma séance jambes demain, je mange quoi avant ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Tu me conseilles de manger avant la séance ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Combien de protéines après la séance pour récupérer ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Je peux faire des abdos à chaque séance ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Comment bien faire un soulevé de terre ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Quel est mon record au squat ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Est-ce que je progresse ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Merci beaucoup !",
+      "expected": "GENERAL_CHAT"
+    },
+    {
+      "message": "Je reprends le sport après une blessure, des conseils ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Après une séance de jambes, j’ai mal aux cuisses, c’est normal ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Combien de séries faire par séance pour les pecs ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "C’est quoi la surcharge progressive ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Je mets combien de temps de repos entre les séries ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Comment créer une séance dans l’application ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Je veux un programme de 4 semaines",
+      "expected": "PROGRAM"
+    },
+    {
+      "message": "Le squat, ça travaille les fessiers ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Pourquoi j’ai des courbatures ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Ok crée-la.",
+      "expected": "CLARIFICATION_REQUIRED"
+    },
+    {
+      "message": "Remplace le développé couché par des pompes.",
+      "context": "proposal",
+      "expected": "WORKOUT_MODIFICATION_REQUIRED"
+    },
+    {
+      "message": "Fais-la plus courte.",
+      "context": "proposal",
+      "expected": "WORKOUT_MODIFICATION_REQUIRED"
+    },
+    {
+      "message": "Et si je n’ai que 20 minutes ?",
+      "context": "proposal",
+      "expected": "WORKOUT_MODIFICATION_REQUIRED"
+    },
+    {
+      "message": "Enlève les fentes.",
+      "context": "proposal",
+      "expected": "WORKOUT_MODIFICATION_REQUIRED"
+    },
+    {
+      "message": "Non, ne la crée pas, change plutôt les exercices.",
+      "context": "proposal",
+      "expected": "WORKOUT_MODIFICATION_REQUIRED"
+    },
+    {
+      "message": "Tu peux m’expliquer comment créer une séance ?",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Je n’arrive pas à créer une séance dans l’appli.",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Est-ce que je dois ajouter une séance de cardio ?",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Mets-le sur quel cran ?",
+      "context": "proposal",
+      "expected": "GENERAL_CHAT"
+    },
+    {
+      "message": "Je le garde combien de temps, le gainage ?",
+      "context": "proposal",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Je fais des squats 3 fois par semaine, c’est assez ?",
+      "context": "asked",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Pourquoi tu as enlevé les fentes ?",
+      "context": "proposal",
+      "expected": "KNOWLEDGE"
+    },
+    {
+      "message": "Ça change quoi ?",
+      "context": "proposal",
+      "expected": "GENERAL_CHAT"
+    },
+    {
+      "message": "2 min de repos entre les séries, c’est bien ?",
+      "context": "proposal",
+      "expected": "WORKOUT_ADVICE"
+    },
+    {
+      "message": "Crée-la en 30 min.",
+      "context": "proposal",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Est-ce que tu peux créer une séance jambes ?",
+      "expected": "WORKOUT_CREATION_REQUIRED"
+    }
+  ]
+}

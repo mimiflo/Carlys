@@ -14,7 +14,10 @@ import { CoachContextBuilder } from './application/coach-context.builder';
 import { CoachGateway } from './application/coach-gateway';
 import { CoachHealth } from './application/coach-health';
 import { CoachMemory } from './application/coach-memory';
+import { CoachActionTurn } from './application/coach-action-turn';
+import { CoachActions } from './application/coach-actions';
 import { CoachTurnRunner } from './application/coach-turn.runner';
+import { CoachWorkoutCreator } from './application/coach-workout-creator';
 import { CoachQuota } from './application/coach.quota';
 import { CoachAvailability } from './application/coach.availability';
 import { CoachService } from './application/coach.service';
@@ -85,6 +88,10 @@ export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): 
     CoachContextBuilder,
     CoachTurnRunner,
     CoachMemory,
+    // Les actions exigées : proposer, modifier, créer (ADR 0014).
+    CoachActions,
+    CoachActionTurn,
+    CoachWorkoutCreator,
     CoachHealth,
     {
       // UN pool par exemplaire de l'API : le client et l'état de santé le partagent.

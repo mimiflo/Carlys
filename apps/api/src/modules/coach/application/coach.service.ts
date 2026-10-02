@@ -8,7 +8,11 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type ConversationWithMessages, CoachRepository } from '../infrastructure/coach.repository';
 import { CoachContextBuilder } from './coach-context.builder';
 import { CoachAdmissions } from './coach-admissions';
-import { type CoachStream, CoachTurnRunner } from './coach-turn.runner';
+import { intentTurns } from './coach-actions';
+import { CoachActionTurn, isDirect } from './coach-action-turn';
+import { resolveIntent } from './coach-intent';
+import { type CoachStream } from './coach-stream';
+import { CoachTurnRunner } from './coach-turn.runner';
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
@@ -33,6 +37,7 @@ export class CoachService {
     private readonly admissions: CoachAdmissions,
     private readonly context: CoachContextBuilder,
     private readonly turns: CoachTurnRunner,
+    private readonly actionTurns: CoachActionTurn,
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -165,9 +170,16 @@ export class CoachService {
     if ((await this.quota.remaining(userId)) === 0) {
       throw new CoachQuotaExceededError();
     }
+    // Ce que le tour DOIT produire, décidé ici et pas par le modèle (ADR
+    // 0014) ; « Ok crée-la » n'a pas besoin de lui : ni file, ni attente.
+    const intent = resolveIntent(content, intentTurns(conversation, messageId));
+    if (isDirect(intent)) {
+      await this.admissions.precheck(userId, content);
+      return this.actionTurns.run(userId, conversation, messageId, content, intent, stream);
+    }
     const admission = await this.admissions.admit(userId, conversationId, messageId, content);
     try {
-      return await this.turns.run(userId, conversation, admission, content, stream);
+      return await this.turns.run(userId, conversation, admission, content, stream, intent);
     } finally {
       await admission
         .release()

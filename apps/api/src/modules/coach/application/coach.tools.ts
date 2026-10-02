@@ -160,6 +160,9 @@ export class CoachTools {
    * avec chacun de ses matériels.
    */
   private async searchExercises(input: Record<string, unknown>) {
+    // Hors du schéma montré au modèle : les lectures d'avance d'une séance
+    // (coach-prefetch.ts) bornent chaque groupe, pour tenir dans le contexte.
+    const limit = asBoundedInteger(input.limit, SEARCH_LIMIT, SEARCH_LIMIT);
     const [muscleGroups, equipment] = await Promise.all([
       this.exercises.muscleGroups(),
       this.exercises.equipment(),
@@ -173,7 +176,7 @@ export class CoachTools {
     const onlyFilters = pulled !== null && pulled.search === undefined;
     if (exact.search !== undefined && !onlyFilters) {
       const found = (await this.exercises.list(exact, SEARCH_LIMIT)).items;
-      if (found.length > 0) return this.shown(found, exact.muscleGroupSlug);
+      if (found.length > 0) return this.shown(found, exact.muscleGroupSlug, limit);
     }
     // D'abord le nom ENTIER (« Face Pull à la barre » se fait à la poulie :
     // en tirer le filtre « barre » l'écarterait), puis le groupe ou le
@@ -190,17 +193,17 @@ export class CoachTools {
       }
       pool = page.items;
       const named = filters.search === undefined ? pool : matchByName(pool, filters.search);
-      if (named.length > 0) return this.shown(named, muscleGroupSlug);
+      if (named.length > 0) return this.shown(named, muscleGroupSlug, limit);
     }
     // Ni nom ni filtre qui tienne : rien, plutôt que des exercices au hasard.
     const last = pulled ?? exact;
     const filtered = last.muscleGroupSlug !== undefined || last.equipmentSlug !== undefined;
-    return filtered ? this.shown(pool, last.muscleGroupSlug) : [];
+    return filtered ? this.shown(pool, last.muscleGroupSlug, limit) : [];
   }
 
   /** Muscle principal seul s'il y en a, borné, dans la vue du coach. */
-  private shown(items: readonly ExerciseSummary[], muscle: string | undefined) {
-    return primaryOnly(items, muscle).slice(0, SEARCH_LIMIT).map(coachExerciseView);
+  private shown(items: readonly ExerciseSummary[], muscle: string | undefined, limit: number) {
+    return primaryOnly(items, muscle).slice(0, limit).map(coachExerciseView);
   }
 }
 

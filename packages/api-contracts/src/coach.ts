@@ -79,6 +79,11 @@ export const coachMessageSchema = z.object({
   proposal: coachSessionProposalSchema.nullable(),
   /** Programme proposé dans ce message, quand le coach en a formulé un. */
   programProposal: coachProgramProposalSchema.nullable(),
+  /**
+   * La séance que ce tour a ENREGISTRÉE (« Ok crée-la ») : un modèle de
+   * séance, prouvé par la base. `null` sinon, ou une fois ce modèle supprimé.
+   */
+  createdWorkout: z.object({ templateId: z.string(), name: z.string() }).nullable(),
   createdAt: z.string(),
 });
 export type CoachMessage = z.infer<typeof coachMessageSchema>;

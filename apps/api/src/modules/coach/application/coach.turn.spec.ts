@@ -19,6 +19,8 @@ function message(
     createdAt,
     proposal: null,
     programProposal: null,
+    createdTemplateId: null,
+    createdTemplate: null,
   };
 }
 
