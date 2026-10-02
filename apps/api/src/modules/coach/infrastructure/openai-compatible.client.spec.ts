@@ -418,7 +418,11 @@ describe('OpenAiCompatibleCoachClient', () => {
       });
       expect(probe[1]).toMatchObject({
         role: 'user',
-        content: probeFor('Commence par le squat. Je vais t’adapter une séance.', 'Mes records ?'),
+        content: probeFor(
+          'Commence par le squat. Je vais t’adapter une séance.',
+          'Mes records ?',
+          false,
+        )?.text,
       });
       expect(String(probe[1]?.content)).toContain(
         '« Commence par le squat. Je vais t’adapter une séance. »',
@@ -461,6 +465,49 @@ describe('OpenAiCompatibleCoachClient', () => {
         input({ history: [{ role: 'user', content: 'Fais-moi un programme' }] }),
       );
       expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('ses données lues AVANT lui arrivent comme des outils déjà appelés', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(completion({ content: 'Ton record : 80 kg.' }));
+      global.fetch = fetchMock;
+
+      await client().reply(
+        input({
+          prefetched: [
+            {
+              call: { id: 'lecture_0', name: 'get_personal_records', input: {} },
+              result: { id: 'lecture_0', content: '{"squat":80}' },
+            },
+          ],
+        }),
+      );
+      const messages = sent(fetchMock).body.messages.slice(-2);
+      expect(messages[0]).toMatchObject({
+        role: 'assistant',
+        tool_calls: [{ id: 'lecture_0', function: { name: 'get_personal_records' } }],
+      });
+      expect(messages[1]).toMatchObject({
+        role: 'tool',
+        tool_call_id: 'lecture_0',
+        content: '{"squat":80}',
+      });
+    });
+
+    it('des données inventées : il lit, réécrit, et la réponse corrigée REMPLACE la fausse', async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(
+          completion({ content: 'Tes records sont excellents : 120 kg au squat.' }),
+        )
+        .mockResolvedValueOnce(streamed([toolCallDelta('call00001', 'get_personal_records', '{}')]))
+        .mockResolvedValueOnce(completion({ content: 'Ton record au squat : 80 kg.' }));
+      global.fetch = fetchMock;
+
+      await expect(client().reply(input())).resolves.toMatchObject({
+        text: 'Ton record au squat : 80 kg.',
+      });
     });
 
     it('l’occasion d’agir répond « FIN » : la réponse reste telle quelle', async () => {

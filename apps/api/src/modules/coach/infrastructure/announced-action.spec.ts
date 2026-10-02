@@ -59,7 +59,7 @@ describe('probeFor', () => {
       claimed,
       "J'ai préparé un programme de trois séances par semaine. Bon courage !",
     ]) {
-      const probe = probeFor(answer, 'Salut');
+      const probe = probeFor(answer, 'Salut', false)?.text;
       expect(probe).toContain('propose_session');
       expect(probe).toContain('search_exercises');
       expect(probe).not.toContain('FIN');
@@ -70,25 +70,36 @@ describe('probeFor', () => {
     // Constaté : « L'adaptation est faite pour t'offrir une séance réaliste »,
     // sans carte — aucune tournure à reconnaître, la demande suffit.
     const answer = 'L’adaptation est faite pour t’offrir une séance réaliste, sans excès.';
-    expect(probeFor(answer, 'Je veux une séance haut du corps avec haltères')).toContain(
-      'propose_session',
-    );
+    expect(
+      probeFor(answer, 'Je veux une séance haut du corps avec haltères', false)?.text,
+    ).toContain('propose_session');
     // Une question posée en retour rend la main : pas d'ordre.
-    expect(probeFor('Combien de temps as-tu ?', 'Fais-moi une séance')).toBeNull();
+    expect(probeFor('Combien de temps as-tu ?', 'Fais-moi une séance', false)).toBeNull();
   });
 
   it('une fin qui parle d’une suite reçoit une question qui CITE cette fin', () => {
     const probe = probeFor(
       'Premier paragraphe. Deuxième. On commence par le squat. Je vais t’adapter les charges.',
       'Comment progresser ?',
-    );
+      false,
+    )?.text;
     expect(probe).toContain('« On commence par le squat. Je vais t’adapter les charges. »');
     expect(probe).not.toContain('Premier paragraphe');
     expect(probe).toContain('FIN');
   });
 
+  it('ses données citées sans lecture : l’ordre de les lire, et la réponse sera REMPLACÉE', () => {
+    // Constaté : « Tu as déjà des records de soulevé de terre », rien lu.
+    const answer = 'Tu as déjà des records de soulevé de terre, j’ajuste le volume.';
+    const probe = probeFor(answer, 'Par quoi je commence ?', false);
+    expect(probe?.keep).toBe(false);
+    expect(probe?.text).toContain('sans les avoir lues');
+    // Lues dans le tour (avant lui ou par lui) : rien à redire sur ce point.
+    expect(probeFor('Ton record au squat est de 80 kg. Bravo.', 'Mon record ?', true)).toBeNull();
+  });
+
   it('une réponse complète, sans demande de séance : rien', () => {
-    expect(probeFor('Bois de l’eau et dors bien.', 'Des conseils de récup ?')).toBeNull();
+    expect(probeFor('Bois de l’eau et dors bien.', 'Des conseils de récup ?', false)).toBeNull();
   });
 });
 

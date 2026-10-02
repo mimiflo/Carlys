@@ -53,6 +53,30 @@ export class AnthropicCoachClient implements CoachModelPort {
       role: turn.role,
       content: turn.content,
     }));
+    // Les lectures faites avant lui, comme s'il les avait demandées.
+    const prefetched = input.prefetched ?? [];
+    if (prefetched.length > 0) {
+      messages.push(
+        {
+          role: 'assistant',
+          content: prefetched.map(({ call }) => ({
+            type: 'tool_use' as const,
+            id: call.id,
+            name: call.name,
+            input: call.input,
+          })),
+        },
+        {
+          role: 'user',
+          content: prefetched.map(({ result }) => ({
+            type: 'tool_result' as const,
+            tool_use_id: result.id,
+            content: result.content,
+            is_error: result.isError ?? false,
+          })),
+        },
+      );
+    }
 
     // Le préfixe partagé porte la césure de cache ; le bloc par utilisateur
     // (profil Carlys) vient APRÈS, sans cache_control — sinon le préfixe se

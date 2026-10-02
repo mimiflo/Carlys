@@ -9,6 +9,7 @@ import {
   type MessageWithProposal,
 } from '../infrastructure/coach.repository';
 import { frenchExerciseNames, frenchExerciseNamesStream } from './coach-exercise-names';
+import { prefetchFor } from './coach-prefetch';
 import { CoachContextBuilder } from './coach-context.builder';
 import { type CoachAdmission } from './coach-admissions';
 import { CoachGateway } from './coach-gateway';
@@ -99,6 +100,9 @@ export class CoachTurnRunner {
             throw new NotFoundException(CONVERSATION_NOT_FOUND);
           }
           turn = { now, remaining, userMessage };
+          // Ses données, lues AVANT que le modèle n'écrive (coach-prefetch.ts).
+          const reads = prefetchFor(content);
+          const results = reads.length === 0 ? [] : await this.tools.run(userId, reads);
           return {
             system: COACH_SYSTEM_PROMPT,
             // Après la césure de cache : le préfixe partagé reste identique
@@ -106,6 +110,14 @@ export class CoachTurnRunner {
             systemPerUser: context.systemPerUser,
             tools: COACH_TOOLS,
             history: context.history,
+            prefetched: reads.map((call) => ({
+              call,
+              result: results.find((result) => result.id === call.id) ?? {
+                id: call.id,
+                content: 'Lecture indisponible.',
+                isError: true,
+              },
+            })),
             runTools: programs.runTools,
             onText: names?.push,
             signal: stream.signal,

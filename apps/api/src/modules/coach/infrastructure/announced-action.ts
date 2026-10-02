@@ -121,17 +121,50 @@ export function asksForPlan(request: string): boolean {
  *   vaut réponse complète ; tout autre texte aussi (le client l'interrompt
  *   dès qu'il dépasse « FIN »).
  */
-export function probeFor(answer: string, request: string): string | null {
+export function probeFor(
+  answer: string,
+  request: string,
+  read: boolean,
+): { text: string; keep: boolean } | null {
+  // Des données citées sans lecture : la réponse est fausse, sa version
+  // corrigée la REMPLACE (`keep: false`).
+  if (!read && citesUserData(answer)) return { text: DATA_PROBE, keep: false };
   const asks = !endingOf(answer).endsWith('?') && asksForPlan(request);
-  if (asks || claimsUnproposed(answer)) return PROPOSAL_PROBE;
+  if (asks || claimsUnproposed(answer)) return { text: PROPOSAL_PROBE, keep: true };
   if (!mayAnnounceAction(answer)) return null;
-  return (
+  const text =
     `(Message automatique, pas de l'utilisateur.) Ton message se termine ainsi : « ${endingOf(answer)} ». ` +
     "Si cette fin annonce une action que tu n'as pas faite, fais-la maintenant avec l'outil. " +
     "Sinon — réponse complète, ou question posée à l'utilisateur —, réponds seulement : FIN. " +
-    "N'ajoute aucune recherche que tu n'as pas annoncée."
-  );
+    "N'ajoute aucune recherche que tu n'as pas annoncée.";
+  return { text, keep: true };
 }
+
+/**
+ * Ses données citées comme lues (« Tu as déjà des records de soulevé de
+ * terre », « j'ai vu tes dernières séances » — constaté, sans aucune
+ * lecture) : avoir « vu », ou un chiffre à son sujet. Pas une simple
+ * mention (« basée sur ce que tu as déjà soulevé ») : mesuré, celle-ci
+ * relançait trois réponses complètes sur neuf. Le client ne le demande que
+ * si rien n'a été lu dans le tour.
+ */
+const CITES_DATA = [
+  // Avoir « vu » ses données : « J'ai vu tes dernières séances et tes records ».
+  /(?<!\p{L})(j['’]ai (vu|regardé|lu|consulté|vérifié)|d['’]après|selon) (tes|ton|ta)(?!\p{L})/iu,
+  /(?<!\p{L})tu as (déjà )?des records(?!\p{L})/iu,
+  // Un CHIFFRE à son sujet : « Tes records sont excellents : 120 kg au squat ».
+  /(?<!\p{L})(tu (as )?(soulevé|fait|réalisé|couru|pèses|pesais)|(ton|tes) (records?|poids|volume|max))(?!\p{L})[^.!?\n]{0,60}\d+([,.]\d+)? ?(kg|kilos?|séances?|km|kcal|reps|répétitions)(?!\p{L})/iu,
+];
+
+function citesUserData(answer: string): boolean {
+  return CITES_DATA.some((pattern) => pattern.test(answer));
+}
+
+const DATA_PROBE =
+  "(Message automatique, pas de l'utilisateur.) Ta réponse parle de ses données (séances, " +
+  "records, poids, repas) sans les avoir lues : tu ne connais que ce que les outils t'ont " +
+  "rendu. Lis maintenant ce dont tu parles avec l'outil adapté, puis réécris ta réponse " +
+  'avec les vrais chiffres, sans rien inventer.';
 
 const PROPOSAL_PROBE =
   "(Message automatique, pas de l'utilisateur.) Aucune séance ni aucun programme n'a été " +

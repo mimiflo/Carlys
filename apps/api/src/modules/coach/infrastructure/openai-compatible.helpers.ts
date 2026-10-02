@@ -13,6 +13,32 @@ import { type ChatCompletion, readChatStream } from './chat-completion-stream';
  * lecture d'une réponse, erreurs, appels d'outils.
  */
 
+/**
+ * Les lectures faites avant le modèle (coach-prefetch.ts), sous la forme
+ * d'un appel d'outils et de leurs résultats.
+ */
+export function prefetchedMessages(
+  prefetched: readonly { call: CoachToolCall; result: CoachToolResult }[],
+): Record<string, unknown>[] {
+  if (prefetched.length === 0) return [];
+  return [
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: prefetched.map(({ call }) => ({
+        id: call.id,
+        type: 'function',
+        function: { name: call.name, arguments: JSON.stringify(call.input) },
+      })),
+    },
+    ...prefetched.map(({ call, result }) => ({
+      role: 'tool',
+      tool_call_id: call.id,
+      content: toolReply(call, [result]),
+    })),
+  ];
+}
+
 /** Ajoute à `usage` les jetons qu'une complétion déclare. */
 export function addUsage(usage: CoachTurnUsage, completion: ChatCompletion): void {
   usage.inputTokens += completion.usage?.prompt_tokens ?? 0;

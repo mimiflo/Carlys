@@ -19,6 +19,7 @@ import { probeFor, probeForAction } from './announced-action';
 import {
   addUsage,
   parseArguments,
+  prefetchedMessages,
   readCompletion,
   refusalReason,
   textOf,
@@ -58,7 +59,8 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     const messages: Record<string, unknown>[] = [
       { role: 'system', content: input.system },
       ...(input.systemPerUser ? [{ role: 'system', content: input.systemPerUser }] : []),
-      ...input.history,
+      ...input.history.map((turn) => ({ role: turn.role, content: turn.content })),
+      ...prefetchedMessages(input.prefetched ?? []),
     ];
     const tools = input.tools.map((tool) => ({
       type: 'function',
@@ -73,11 +75,15 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     // elle reste en tête de la réplique archivée, déjà lue à l'écran.
     let before = '';
     let lastKept = '';
+    // Une réponse écartée (données inventées) : elle ne revient qu'à défaut d'autre.
+    let discarded = '';
     // Ce qui est déjà écrit, plus ce qui s'y ajoute depuis.
     const reply = () =>
-      said !== '' && said !== lastKept
+      (said !== '' && said !== lastKept
         ? [before, said].filter(Boolean).join('\n\n')
-        : before || said;
+        : before || said) || discarded;
+    // Des données de la personne lues dans ce tour, avant lui ou par lui.
+    let read = (input.prefetched?.length ?? 0) > 0;
     // En flux : du texte déjà montré (`shown`), et dans CE tour (`spoke`). Un
     // tour d'outils qui parlait ne se colle pas au suivant : un saut de
     // paragraphe les sépare, le temps que la réplique archivée les remplace.
@@ -110,7 +116,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       ).catch((error: unknown) => {
         // Le modèle a agi après une réponse déjà affichée : une panne
         // ensuite (échéance, 5xx) rend cette réponse, plutôt que rien.
-        if (before !== '' && input.signal?.aborted !== true) return null;
+        if (before + discarded !== '' && input.signal?.aborted !== true) return null;
         return unavailable(error, usage, shown);
       });
       if (served === null) return this.output(reply(), proposal, usage, worker);
@@ -136,11 +142,11 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         !proposed &&
         round < COACH_MAX_TOOL_ROUNDS - 1 &&
         input.tools.length > 0;
-      const question = mayProbe ? probeFor(textOf(choice?.message?.content), request) : null;
+      const question = mayProbe ? probeFor(textOf(choice?.message?.content), request, read) : null;
       if (question !== null) {
         probes += 1;
         const answer = { role: 'assistant', content: choice?.message?.content ?? '' };
-        const asked = { role: 'user', content: question };
+        const asked = { role: 'user', content: question.text };
         const acted = await probeForAction(this.complete.bind(this), [...messages, answer, asked], {
           tools,
           signal,
@@ -151,8 +157,13 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         }).catch((error: unknown) => unavailable(error, usage, shown));
         if (acted !== null) {
           messages.push(answer, asked);
-          before = reply();
-          lastKept = said;
+          if (question.keep) {
+            before = reply();
+            lastKept = said;
+          } else {
+            discarded = said;
+            said = '';
+          }
           choice = acted.choices?.[0];
           toolCalls = choice?.message?.tool_calls ?? [];
         }
@@ -171,6 +182,9 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
       // `propose_session` n'est pas exécutée : elle est RETENUE, puis validée
       // par le serveur avant d'exister.
       proposal = calls.find((call) => call.name === PROPOSE_SESSION_TOOL)?.input ?? proposal;
+      read ||= calls.some(
+        (c) => c.name !== PROPOSE_SESSION_TOOL && c.name !== PROPOSE_PROGRAM_TOOL,
+      );
       proposed ||= calls.some(
         (c) => c.name === PROPOSE_SESSION_TOOL || c.name === PROPOSE_PROGRAM_TOOL,
       );

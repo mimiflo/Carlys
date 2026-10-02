@@ -50,6 +50,11 @@ export interface CoachTurnInput {
   tools: CoachToolDefinition[];
   history: CoachTurn[];
   /**
+   * Lectures DÉJÀ faites pour cette question (coach-prefetch.ts) : présentées
+   * au modèle comme des outils appelés, avant qu'il n'écrive un mot.
+   */
+  prefetched?: { call: CoachToolCall; result: CoachToolResult }[];
+  /**
    * Exécute les outils demandés par le modèle. Fournie par le service : le
    * port ignore tout du domaine, il ne sait qu'appeler.
    */

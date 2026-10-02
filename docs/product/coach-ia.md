@@ -564,6 +564,23 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   offrir l'occasion à toute réponse sans outil (il fouillait ses données et
   gâchait une explication complète). Elle part au worker qui a servi le
   début du tour : lui seul garde la conversation en cache.
+- **Ses données, lues avant de répondre.** Le modèle appelait ses outils de
+  lecture quand il y pensait, et inventait sinon (« Tu as déjà des records
+  de soulevé de terre », « j'ai vu tes dernières séances », sans rien lire).
+  Deux étages :
+  1. **Lire d'abord** (`application/coach-prefetch.ts`). Quand la question
+     porte sur ses données (« mon record », « est-ce que je progresse »,
+     « j'ai maigri », « mes calories », « par où je commence »), le serveur
+     lit les bonnes vues AVANT que le modèle n'écrive, et les lui présente
+     comme des outils déjà appelés. Une question de savoir (« explique-moi
+     la surcharge progressive ») ne lit rien et ne coûte rien.
+  2. **Le filet.** Une réponse qui affirme avoir « vu » ses données, ou cite
+     un chiffre à son sujet, sans aucune lecture dans le tour, reçoit l'ordre
+     de lire puis de réécrire : la version corrigée REMPLACE la fausse.
+  Mesuré sur Qwen3-4B le 2 octobre 2026 : record, progression, poids,
+  protéines et dernières séances cités tels que l'appli les connaît, en un
+  seul tour ; le filet ne retient aucune des neuf réponses complètes du
+  banc et attrape les cinq inventions types.
 - **Les noms du catalogue.** « Le deadlift », « le press de poitrine » : la
   consigne demande les noms du catalogue, et `coach-exercise-names.ts` les
   garantit pour les termes connus (« soulevé de terre », « développé

@@ -66,6 +66,50 @@ describe('AnthropicCoachClient', () => {
     );
   });
 
+  it('ses données lues AVANT lui arrivent comme des outils déjà appelés', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse(200, {
+        id: 'msg_1',
+        type: 'message',
+        role: 'assistant',
+        model: 'claude-opus-5',
+        content: [{ type: 'text', text: 'Ton record : 80 kg.' }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 12, output_tokens: 3 },
+      }),
+    );
+    global.fetch = fetchMock;
+
+    await client().reply({
+      ...INPUT,
+      prefetched: [
+        {
+          call: { id: 'lecture_0', name: 'get_personal_records', input: {} },
+          result: { id: 'lecture_0', content: '{"squat":80}' },
+        },
+      ],
+    });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as { messages: unknown[] };
+    expect(body.messages.slice(-2)).toEqual([
+      {
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: 'lecture_0', name: 'get_personal_records', input: {} }],
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'lecture_0',
+            content: '{"squat":80}',
+            is_error: false,
+          },
+        ],
+      },
+    ]);
+  });
+
   it('l’échéance du tour est bien passée au SDK : échue, aucun appel ne part et le tour rend 503', async () => {
     // Sans elle, le SDK attendrait 10 min : bien au-delà des 60 s de nginx.
     const timeout = jest.spyOn(AbortSignal, 'timeout').mockReturnValue(AbortSignal.abort());
