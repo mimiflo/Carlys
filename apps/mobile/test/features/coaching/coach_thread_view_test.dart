@@ -54,10 +54,13 @@ void main() {
     await pump(
       tester,
       const [],
+      // L'horloge du widget est la vraie : sous charge, le temps de monter
+      // l'arbre dépassait l'attente et le bonjour arrivait déjà écrit. Une
+      // ouverture un peu à venir garde l'attente, quelle que soit la machine.
       greeting: CoachGreeting(
         text: 'Bonjour Florian !',
         after: 0,
-        at: DateTime.now(),
+        at: DateTime.now().add(const Duration(seconds: 5)),
       ),
     );
 
