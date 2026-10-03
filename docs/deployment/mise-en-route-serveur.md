@@ -1219,6 +1219,19 @@ embarquée dans l'image API :
 sudo /srv/carlys/repo/scripts/server/carlysctl admin-create staging vous@exemple.fr
 ```
 
+La commande affiche aussi, **une seule fois**, le QR code de la **double
+authentification** : le scanner avec une appli d'authentification (Google
+Authenticator, Microsoft Authenticator…) avant de quitter le terminal — sa clé
+est imprimée dessous pour qui ne peut pas scanner. Ensuite, chaque connexion
+au back-office demande le mot de passe PUIS le code à 6 chiffres de l'appli.
+La page de connexion ne montre jamais de QR code : qui volerait le mot de
+passe ne pourrait pas s'enrôler à votre place.
+
+Compte créé avant la double authentification, téléphone perdu, ou 20 codes
+faux d'affilée (2FA gelée) : `sudo /srv/carlys/repo/scripts/server/carlysctl
+admin-create staging vous@exemple.fr --reset-2fa` émet un nouveau secret et
+affiche son QR code (docs/security/authentication.md, § 4.7).
+
 Le mot de passe est **saisi sans écho, puis confirmé** — il ne passe ni en
 argument (lisible dans `/proc/<pid>/cmdline` par tout utilisateur local) ni en
 variable d'environnement. Laissez la saisie vide pour qu'il soit engendré et

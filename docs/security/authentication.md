@@ -306,12 +306,57 @@ rédigés par la configuration Pino de l'Étape 1. L'adresse saisie lors d'un
 l'audit survit à la suppression et à la purge du compte, l'adresse ne doit
 pas y survivre avec lui.
 
-### 4.7 2FA — extensibilité
+### 4.7 Double authentification
 
-Le modèle réserve l'ajout ultérieur d'un second facteur (TOTP en premier
-candidat) : table dédiée, étape intermédiaire au login (jeton de défi court
-avant émission des tokens), codes de récupération hashés. **Non implémenté à
-l'Étape 2** — l'architecture ne doit simplement pas l'empêcher.
+**Back-office : OBLIGATOIRE** (3 octobre 2026). Le mot de passe juste n'ouvre
+plus de session ; il ouvre la seconde étape, le code à 6 chiffres d'une appli
+d'authentification (TOTP, RFC 6238 : HMAC-SHA1, pas de 30 s, ±1 pas toléré —
+`modules/admin/application/totp.ts`, bibliothèque standard seule).
+
+0. **Le secret s'émet sur le serveur, jamais à la page.** `admin-bootstrap`
+   (via `carlysctl admin-create`) l'engendre à la création du compte, ou au
+   `--reset-2fa`, et affiche son QR code UNE SEULE FOIS sur le terminal de
+   l'opérateur (avec la clé base32, pour qui ne peut pas scanner). Pourquoi :
+   un QR code montré par la page de connexion irait au premier qui connaît
+   le mot de passe — un intrus compris, qui enrôlerait SON téléphone et
+   tiendrait le propriétaire dehors. Le terminal exige la clé SSH du serveur.
+1. `POST /admin/auth/login` (mot de passe) rend un **défi**,
+   `{ challengeToken }` : un JWT d'audience `carlys-admin-mfa`, valable
+   5 minutes, qui n'ouvre RIEN au back-office. Sans secret émis : 403, avec
+   la commande que l'opérateur doit lancer (audit `admin.totp_not_issued`).
+2. `POST /admin/auth/totp` (`challengeToken`, `code`) rend la session. Le
+   jeton porte `mfa: true`, et `AdminAuthGuard` l'**exige** : une session
+   ouverte au seul mot de passe, d'avant la 2FA, est refusée. Le premier code
+   juste confirme l'enrôlement (audit `admin.totp_enrolled`).
+
+Garde-fous :
+
+- **Secret chiffré** en base (AES-256-GCM, clé dérivée par HKDF du secret JWT,
+  identifiant du compte en donnée authentifiée — `totp-vault.ts`) : une copie
+  de la base ne suffit pas à fabriquer des codes, un secret recopié sur la
+  ligne d'un autre compte ne s'ouvre pas. Changer `JWT_ACCESS_SECRET` rend
+  les secrets illisibles : chaque administrateur repasse par `--reset-2fa`.
+- **Anti-rejeu** : le dernier pas accepté est gardé (`totpLastStep`) ; un code
+  déjà servi est refusé, y compris par deux requêtes simultanées (écriture
+  conditionnelle, qui exige aussi que le secret n'ait pas été remplacé
+  entre-temps).
+- **Essais ralentis** par compte dans Redis (`admin-totp:<id>`, même politique
+  que le mot de passe) en plus du débit strict de la route (10 / 60 s).
+- **Essais PLAFONNÉS** en base (`totpFailedAttempts`, réservé avant chaque
+  vérification, remis à zéro par un code juste) : 20 codes faux d'affilée
+  gèlent la double authentification (403, audit `admin.totp_frozen`) jusqu'au
+  `--reset-2fa`. Le verrou Redis cède si Redis tombe ; celui-ci non. Un
+  intrus qui gèle un compte connaît son mot de passe : on le change au passage.
+
+**Premier enrôlement d'un compte d'avant la 2FA, téléphone perdu, ou 2FA
+gelée** : sur le serveur, `carlysctl admin-create <env> <email> --reset-2fa`
+émet un NOUVEAU secret (l'ancien ne vaut plus rien ; ni mot de passe ni rôle
+touchés ; audit `admin.totp_issued`) et affiche son QR code. Pas de codes de
+secours : le serveur EST le secours, et seul son opérateur y accède. Les
+sessions déjà ouvertes vivent jusqu'à leur échéance (12 h au plus).
+
+**Comptes mobiles** : pas de second facteur (non demandé à ce jour) ; le
+modèle ne l'empêche pas.
 
 ---
 
