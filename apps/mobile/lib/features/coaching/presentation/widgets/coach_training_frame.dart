@@ -7,12 +7,15 @@ import '../../../../design_system/design_system.dart';
 import '../../../exercises/presentation/providers/exercise_catalog_providers.dart';
 import '../../../workout_program/presentation/providers/training_goal_providers.dart';
 import '../../../workout_program/presentation/providers/training_profile_providers.dart';
+import '../utils/coach_frame.dart';
 import 'coach_card_frame.dart';
 
 /// Le CADRE du coach, en tête du fil : ton objectif et ton matériel.
 ///
 /// Rien de choisi : une carte le demande d'emblée et ouvre l'écran de
-/// préparation — sans eux, il compose à l'aveugle, et on l'oublie. Tout
+/// préparation — sans eux, il compose à l'aveugle, et on l'oublie. Et la
+/// première question envoyée sans eux ouvre ce même écran AVANT que le
+/// coach ne réfléchisse (`CoachPage._send`). Tout
 /// choisi : une ligne le rappelle (« Objectif : Perte de gras · avec
 /// haltères, barre »), qu'un appui permet de changer.
 ///
@@ -30,11 +33,7 @@ class CoachTrainingFrame extends ConsumerWidget {
       if (catalog != null)
         for (final item in catalog) item.slug: item.name.toLowerCase(),
     };
-    final missing = [
-      if (goal == null) 'ton objectif',
-      if (profile.experience == null) 'ton niveau',
-      if (profile.equipmentSlugs.isEmpty) 'ton matériel',
-    ];
+    final missing = coachFrameMissing(profile, goal);
     void open() => context.push(AppRoutes.programSetup);
 
     if (missing.isNotEmpty) {
@@ -54,7 +53,7 @@ class CoachTrainingFrame extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Dis-moi ${_list(missing)} : je composerai tes séances avec '
+              'Dis-moi ${coachFrameList(missing)} : je composerai tes séances avec '
               'ce que tu vises et ce que tu as vraiment.',
               style: AppTypography.label.copyWith(
                 color: AppColors.darkTextSecondary,
@@ -129,9 +128,4 @@ class CoachTrainingFrame extends ConsumerWidget {
       ),
     );
   }
-
-  /// « ton objectif, ton niveau et ton matériel ».
-  static String _list(List<String> items) => items.length == 1
-      ? items.single
-      : '${items.take(items.length - 1).join(', ')} et ${items.last}';
 }

@@ -93,6 +93,17 @@ l'objectif, le niveau et le matériel qui manquent, et ouvre l'écran de
 préparation ; tout choisi, une ligne les rappelle (« Objectif : Prise de
 muscle · avec haltères, banc ») et « Modifier » y ramène.
 
+**Demandé AVANT de réfléchir** (3 octobre 2026, à la demande du
+propriétaire). La carte ne suffisait pas : on l'ignorait, on écrivait, et
+le coach réfléchissait sans objectif. Désormais la première question
+envoyée sans eux ouvre l'écran de préparation (« Avant de réfléchir :
+dis-moi ton objectif… Je réponds dès ton retour ») ; elle attend dans le
+champ et part au retour — c'est seulement là que le coach réfléchit. Une
+fois par visite : qui revient sans choisir n'est pas relancé, sa question
+part. Sans compte, ou profil pas encore lu (hors ligne), rien ne retient
+une question (`coachFrameMissingProvider`, même règle que la carte :
+`utils/coach_frame.dart`).
+
 ### Séance demandée : composée à coup sûr (2 octobre 2026)
 
 **Le besoin.** « Il ne propose pas de séance, il parle juste » : signalé cinq

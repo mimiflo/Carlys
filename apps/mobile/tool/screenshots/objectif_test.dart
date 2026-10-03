@@ -230,4 +230,50 @@ void main() {
     await tester.pumpAndSettle();
     await capture(tester, 'objectif-06-rapport');
   });
+
+  testWidgets('le coach demande l’objectif AVANT de réfléchir', (tester) async {
+    telephone(tester);
+    // Rien de choisi : ce que voit qui écrit au coach sans objectif.
+    final repo = FakeTrainingProfileRepository(
+      initial: const TrainingProfile(
+        goal: null,
+        experience: null,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: [],
+      ),
+    );
+    final exercises = FakeExercisesRepository(const [])
+      ..equipmentRefs = const [
+        EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
+        EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
+        EquipmentRef(id: 'e6', slug: 'poids-du-corps', name: 'Poids du corps'),
+      ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trainingProfileRepositoryProvider.overrideWithValue(repo),
+          exercisesRepositoryProvider.overrideWithValue(exercises),
+          programRepositoryProvider.overrideWithValue(FakeProgramRepository()),
+          currentTrainingGoalProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const TrainingSetupScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Le message du coach, tel que la page l'affiche en ouvrant cet écran.
+    AppNotices.of(tester.element(find.byType(TrainingSetupScreen))).show(
+      'Avant de réfléchir : dis-moi ton objectif, ton niveau et ton '
+      'matériel. Je réponds dès ton retour.',
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await capture(tester, 'objectif-07-coach-demande');
+    // Le message s'efface seul : son minuteur doit finir avant le test.
+    await tester.pump(const Duration(seconds: 10));
+  });
 }

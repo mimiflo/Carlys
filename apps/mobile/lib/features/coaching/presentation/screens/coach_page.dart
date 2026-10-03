@@ -13,8 +13,10 @@ import '../../../workout_template/presentation/providers/workout_template_provid
 import '../../domain/entities/coach.dart';
 import '../../domain/services/coach_greeting.dart';
 import '../controllers/coach_controllers.dart';
+import '../providers/coach_frame_providers.dart';
 import '../providers/coach_program_actions.dart';
 import '../providers/coach_saved_workouts.dart';
+import '../utils/coach_frame.dart';
 import '../widgets/coach_page_states.dart';
 import '../widgets/coach_training_frame.dart';
 import 'coach_screen.dart';
@@ -62,6 +64,31 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   }
 
   Future<void> _send(String content) async {
+    // Un second appui pendant que l'écran de préparation s'ouvre : la
+    // question attend déjà, elle ne partira pas deux fois.
+    if (_cadreEnCours) return;
+    // L'objectif, le niveau, le matériel d'abord : le coach les DEMANDE
+    // avant de réfléchir, au lieu de composer à l'aveugle. La question
+    // attend dans le champ, et part au retour de l'écran de préparation —
+    // une fois par visite : qui revient sans choisir n'est pas relancé.
+    final missing = _cadreAsked
+        ? const <String>[]
+        : ref.read(coachFrameMissingProvider);
+    if (missing.isNotEmpty) {
+      _cadreAsked = true;
+      _cadreEnCours = true;
+      final router = GoRouter.of(context);
+      AppNotices.of(context).show(
+        'Avant de réfléchir : dis-moi ${coachFrameList(missing)}. '
+        'Je réponds dès ton retour.',
+      );
+      try {
+        await router.push(AppRoutes.programSetup);
+      } finally {
+        _cadreEnCours = false;
+      }
+      if (!mounted) return;
+    }
     // La question quitte le champ tout de suite : elle s'affiche dans le fil,
     // au-dessus de la réponse qui s'écrit. Sur un refus, elle y revient,
     // prête à repartir — rien n'est perdu.
@@ -69,6 +96,9 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     final sent = await ref.read(coachThreadProvider.notifier).send(content);
     if (!sent && _composer.text.isEmpty) _composer.text = content;
   }
+
+  bool _cadreAsked = false;
+  bool _cadreEnCours = false;
 
   Future<void> _openProposal(CoachSessionProposal proposal) async {
     final router = GoRouter.of(context);

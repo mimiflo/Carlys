@@ -3,6 +3,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
+import 'package:carlys_mobile/features/coaching/presentation/providers/coach_frame_providers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_greeting_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
@@ -51,6 +52,9 @@ void main() {
             displayName: 'Florian Mottet',
             style: null,
           )),
+          // Objectif, niveau, matériel : tout est choisi — la demande qui
+          // les précède a son propre test (coach_frame_before_thinking).
+          coachFrameMissingProvider.overrideWithValue(const []),
         ],
         child: MaterialApp(theme: AppTheme.dark(), home: const CoachPage()),
       ),
