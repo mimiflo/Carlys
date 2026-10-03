@@ -63,7 +63,7 @@ export class AppConfigService {
   }
 
   get swaggerEnabled(): boolean {
-    return this.config.get('SWAGGER_ENABLED', { infer: true }) ?? !this.isProduction;
+    return !this.isProduction && (this.config.get('SWAGGER_ENABLED', { infer: true }) ?? true);
   }
 
   get metricsToken(): string | undefined {

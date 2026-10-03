@@ -295,6 +295,18 @@ describe('validateEnv en production', () => {
     ).toThrow(/S3_SECRET_ACCESS_KEY.*carlys-dev/);
   });
 
+  it('refuse un gabarit CHANGE_MOI_ resté en place, secret JWT en tête', () => {
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        JWT_ACCESS_SECRET: 'CHANGE_MOI_SECRET_JWT_PRODUCTION_OPENSSL_RAND_HEX_32',
+      }),
+    ).toThrow(/JWT_ACCESS_SECRET.*gabarit/);
+    expect(() =>
+      validateEnv({ ...productionEnv, METRICS_TOKEN: 'CHANGE_MOI_JETON_METRIQUES' }),
+    ).toThrow(/METRICS_TOKEN.*gabarit/);
+  });
+
   it('hors production, les défauts de développement restent acceptés', () => {
     for (const nodeEnv of ['development', 'test', 'staging']) {
       const env = validateEnv({ ...validEnv, NODE_ENV: nodeEnv });

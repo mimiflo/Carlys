@@ -55,6 +55,7 @@ const HTTPS_KEYS: readonly ProductionKey[] = ['S3_PUBLIC_BASE_URL', 'PUBLIC_APP_
 const CREDENTIAL_KEYS: readonly ProductionKey[] = ['S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
 
 const LOOPBACK = /localhost|127\.0\.0\.1/i;
+const PLACEHOLDER = 'CHANGE_MOI';
 const DEVELOPMENT_CREDENTIAL_PREFIX = 'carlys-dev';
 
 /**
@@ -73,6 +74,19 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
     refused.add(key);
     ctx.addIssue({ code: 'custom', path: [key], message });
   };
+
+  // Un gabarit (`CHANGE_MOI_…`) resté en place est PUBLIÉ dans le dépôt :
+  // avec lui en JWT_ACCESS_SECRET, n'importe qui forge une session à
+  // n'importe quel compte. Toute variable lue par l'API, sans exception.
+  for (const [key, value] of Object.entries(env as Record<string, unknown>)) {
+    if (typeof value === 'string' && value.includes(PLACEHOLDER)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [key],
+        message: `valeur de gabarit (${PLACEHOLDER}…) refusée en production : à remplacer`,
+      });
+    }
+  }
 
   for (const key of Object.keys(DEVELOPMENT_DEFAULTS) as ProductionKey[]) {
     if (env[key] === DEVELOPMENT_DEFAULTS[key]) {

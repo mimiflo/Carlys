@@ -27,6 +27,6 @@ pnpm prisma:seed        # seed de développement
 | `GET /health/live`  | Liveness                                |
 | `GET /health/ready` | Readiness                               |
 | `GET /metrics`  | Prometheus (protégé en production)          |
-| `GET /api/docs` | Swagger (désactivé par défaut en production)|
+| `GET /api/docs` | Swagger (jamais sur un serveur, recette comprise)|
 
 Les routes métier sont versionnées sous `/api/v1`.

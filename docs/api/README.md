@@ -173,7 +173,7 @@ construire.
 | `/health/live` | GET | Liveness : le processus répond. Toujours `200`, sans dépendance externe — prouvé par le projet Jest `sans-infra`, qui n'amorce que le contrôleur de santé et fait lever les sondes si on les consulte. |
 | `/health/ready` | GET | Readiness : PostgreSQL + Redis joignables. `200` ou `503`. Pilote la bascule de trafic au déploiement. |
 | `/metrics` | GET | Métriques Prometheus. Métriques par défaut de prom-client, **plus** le débit et la latence HTTP (par processus, à sommer sur les exemplaires) et les utilisateurs en ligne (`carlys_api_online_users`, comptés dans Redis donc **globaux** — jamais à sommer). Libre hors production ; en production, exige `Authorization: Bearer <METRICS_TOKEN>` (`401` sinon) et répond `404` si le token n'est pas configuré. |
-| `/api/docs` | GET | Swagger UI. Activé partout **sauf en production** (surchargeable par `SWAGGER_ENABLED`). |
+| `/api/docs` | GET | Swagger UI. Jamais servi sur un serveur (`NODE_ENV=production`, recette comprise) ; en développement, actif sauf `SWAGGER_ENABLED=false`. |
 
 Exemple de réponse `/health` :
 
