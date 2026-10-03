@@ -1,6 +1,6 @@
 # Conditions d’utilisation de Carlys
 
-Dernière mise à jour : 29 septembre 2026.
+Dernière mise à jour : 3 octobre 2026.
 
 Ces conditions encadrent l’utilisation de l’application mobile Carlys et de
 ses pages web. En créant un compte, que ce soit avec ton adresse e-mail ou
@@ -73,9 +73,11 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
   partent chez aucun prestataire d’intelligence artificielle. La politique de
   confidentialité dit toujours où il tourne. Le coach peut se tromper, mal comprendre ta demande ou proposer
   quelque chose d’inadapté : garde ton jugement.
-- Le coach lit tes données d’entraînement pour te répondre, mais **il
-  n’écrit rien** dans ton compte : une séance proposée n’existe que si tu
-  l’acceptes.
+- Le coach lit tes données d’entraînement pour te répondre. Il **n’écrit
+  dans ton compte que des séances** : celles qu’il propose, gardées dans tes
+  modèles (catégorie « Coach »), et celles que tu lui demandes de créer. Tu
+  les modifies ou les supprimes comme les tiennes ; il ne touche à rien
+  d’autre.
 - Le coach peut refuser de répondre à certaines demandes, et un plafond
   quotidien de messages s’applique à chaque compte.
 - N’utilise pas le coach pour obtenir un avis médical, et ne lui confie pas

@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 30 septembre 2026.
+Dernière mise à jour : 3 octobre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -362,8 +362,11 @@ de tes messages : l’heure de la demande, le temps d’attente et de générati
 le volume traité, le serveur qui a répondu, et si la réponse a abouti. Elles
 servent à dimensionner le service et s’effacent avec ton compte.
 
-Le coach ne peut rien écrire dans ton compte : les séances qu’il propose ne
-sont enregistrées que si tu les acceptes. Les conversations sont conservées
+Le coach n’écrit dans ton compte que des séances : chaque séance qu’il te
+propose est gardée dans tes modèles, catégorie « Coach », pour que tu la
+retrouves, et il en crée une quand tu le lui demandes. Tu peux les modifier
+ou les supprimer comme les tiennes ; il ne touche à rien d’autre (ni tes
+séances faites, ni tes mesures, ni ton profil). Les conversations sont conservées
 sur nos serveurs, jusqu’à l’effacement de ton compte, pour que tu puisses
 les relire et les reprendre. L’application te montre tes 30 conversations
 les plus récentes, que tu peux toujours relire, même sans abonnement ou
@@ -378,6 +381,10 @@ téléphone jusqu’à l’un de ces moments. Sur Android, l’application est e
 des sauvegardes du téléphone ; sur iPhone, cette copie peut figurer dans ses
 sauvegardes, chiffrées par Apple. Écrire au coach demande un abonnement qui
 l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
+
+Quand le Mentor ou le coach te parle à voix haute, c’est ton téléphone qui
+lit le texte, par sa propre synthèse vocale : rien de plus n’est envoyé, ni à
+Carlys ni à un prestataire.
 
 Si Carlys confiait un jour le coach à un prestataire extérieur, cette
 politique serait mise à jour, en le nommant, avant que tes messages ne lui
