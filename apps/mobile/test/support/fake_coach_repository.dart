@@ -58,6 +58,9 @@ class FakeCoachRepository implements CoachRepository {
   /// serveur, et deux tentatives d'une même question doivent la partager.
   final List<String> sentIds = [];
   final List<String> createdConversations = [];
+
+  /// Les messages dont « Arrêter » a demandé la fin AU SERVEUR.
+  final List<String> cancelled = [];
   final List<({String proposalId, String sessionId})> accepted = [];
   final List<({String proposalId, String programId})> acceptedPrograms = [];
 
@@ -146,6 +149,14 @@ class FakeCoachRepository implements CoachRepository {
           ),
           remainingToday: 29,
         );
+  }
+
+  @override
+  Future<void> cancelMessage({
+    required String conversationId,
+    required String messageId,
+  }) async {
+    cancelled.add(messageId);
   }
 
   @override

@@ -85,7 +85,8 @@ class CoachRepositoryImpl implements CoachRepository {
     void Function(CoachStep step)? onStep,
     Future<void>? cancel,
   }) {
-    // Fermer la requête, c'est arrêter la génération côté serveur.
+    // Fermer la requête n'arrête que l'écoute : le serveur finit et archive
+    // sa réponse (`cancelMessage` pour l'arrêter vraiment).
     final cancelToken = CancelToken();
     cancel?.then((_) => cancelToken.cancel('Arrêté par la personne'));
     return _guard(() async {
@@ -112,6 +113,18 @@ class CoachRepositoryImpl implements CoachRepository {
         ]),
       );
     });
+  }
+
+  @override
+  Future<void> cancelMessage({
+    required String conversationId,
+    required String messageId,
+  }) {
+    return _guard(
+      () => _dio.post<void>(
+        '/coach/conversations/$conversationId/messages/$messageId/cancel',
+      ),
+    );
   }
 
   @override

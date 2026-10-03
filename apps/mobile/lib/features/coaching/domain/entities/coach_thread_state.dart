@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_exception.dart';
 import 'coach.dart';
 
 /// État du fil affiché : la conversation, plus ce que l'écran doit savoir
@@ -39,6 +40,34 @@ class CoachThreadState {
   /// Message court affiché au-dessus du composeur (plafond atteint, coach
   /// momentanément coupé…). Toujours issu d'un refus RÉEL du serveur.
   final String? notice;
+
+  /// La réponse arrivée : la question et la réplique rejoignent le fil, le
+  /// tour en cours et l'avis éventuel s'effacent. Une question déjà dans le
+  /// fil (reprise au retour) n'y figure qu'une fois.
+  CoachThreadState withReply(CoachReply reply) => copyWith(
+    conversation: CoachConversation(
+      id: conversation.id,
+      title: conversation.title,
+      messages: [
+        for (final message in conversation.messages)
+          if (message.id != reply.userMessage.id) message,
+        reply.userMessage,
+        reply.assistantMessage,
+      ],
+    ),
+    clearNotice: true,
+    clearLive: true,
+  );
+
+  /// L'envoi a échoué : le tour s'efface et le fil dit pourquoi. Hors
+  /// ligne, le composeur le dit ; 403, le droit au coach est parti et le fil
+  /// reste à relire, sans avis.
+  CoachThreadState failed(AppException exception, {String? notice}) => copyWith(
+    clearLive: true,
+    isOffline: exception is NetworkException,
+    isReadOnly: exception is ForbiddenException,
+    notice: exception is ForbiddenException ? null : notice,
+  );
 
   CoachThreadState copyWith({
     CoachConversation? conversation,

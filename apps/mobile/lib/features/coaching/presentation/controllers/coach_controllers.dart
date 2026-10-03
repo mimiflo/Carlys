@@ -10,11 +10,11 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/logging/app_logger.dart';
-import '../../../subscription/data/repositories/subscription_repository_impl.dart';
+import '../../data/coach_pending_store.dart';
 import '../../data/repositories/coach_repository_impl.dart';
-import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
-import '../../domain/repositories/coach_repository.dart';
+import '../../domain/services/coach_reply_awaiter.dart';
+import '../providers/coach_thread_loader.dart';
 import '../utils/coach_notice.dart';
 
 // L'état du fil vit dans le domaine, les amorces dans `providers/` (sans
@@ -49,8 +49,13 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   /// la question précédente.
   ({String id, String content})? _pending;
 
-  /// Se termine quand la personne arrête la réponse en cours.
-  Completer<void>? _cancel;
+  /// Le tour en cours se termine quand on cesse d'ÉCOUTER sa réponse :
+  /// `true` pour « Arrêter » (le serveur cesse aussi), `false` pour la page
+  /// quittée ou le fil reconstruit (le serveur finit, la question reste à
+  /// reprendre). Propre à CHAQUE tour : l'instance survit aux reconstructions.
+  Completer<bool>? _cancel;
+
+  static const _pendingStore = CoachPendingStore();
 
   /// Le fil affiché est la copie gardée sur l'appareil, lue hors ligne.
   bool _fromCache = false;
@@ -63,8 +68,15 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   Future<CoachThreadState> build() async {
     final repository = ref.watch(coachRepositoryProvider);
     _fromCache = false;
+    // Page quittée : on cesse d'écouter, le serveur finit sa réponse.
+    ref.onDispose(() {
+      final cancel = _cancel;
+      if (cancel != null && !cancel.isCompleted) cancel.complete(false);
+    });
     try {
-      return await _load(repository);
+      final loaded = await loadCoachThread(ref, repository);
+      _created = loaded.created;
+      return _resumeIfPending(loaded.state);
     } on NetworkException {
       // Hors ligne : le dernier fil relu sur cet appareil. Le composeur dit
       // « hors ligne », et « Réessayer » relira le serveur.
@@ -76,49 +88,20 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     }
   }
 
-  Future<CoachThreadState> _load(CoachRepository repository) async {
-    // Le droit se lit PENDANT la liste et le fil (deux allers-retours au
-    // lieu de trois) ; `_mayWrite` ne lève jamais, rien ne fuit.
-    final mayWrite = _mayWrite();
-    final threads = await repository.conversations();
-
-    if (threads.isEmpty) {
-      // Rien à relire ni à écrire : l'invitation, pas un fil qui refuserait.
-      if (!await mayWrite) {
-        throw const ForbiddenException(_reserved, statusCode: 403);
-      }
-      _created = false;
-      return CoachThreadState(
-        conversation: CoachConversation(id: _uuid.v4(), messages: const []),
-      );
-    }
-
-    _created = true;
-    final conversation = await repository.conversation(threads.first.id);
-    return CoachThreadState(
-      conversation: conversation,
-      isReadOnly: !await mayWrite,
+  /// Une question partie avant qu'on quitte la page, ou ferme l'appli, et
+  /// dont la réponse n'est pas dans le fil : le coach l'écrit encore, ou l'a
+  /// finie entre-temps. On la remet en cours, et on va la chercher.
+  Future<CoachThreadState> _resumeIfPending(CoachThreadState loaded) async {
+    final pending = await _pendingStore.unansweredIn(loaded.conversation);
+    if (pending == null) return loaded;
+    _pending = (id: pending.id, content: pending.content);
+    final cancel = _cancel = Completer<bool>();
+    unawaited(
+      Future.microtask(() => _converse(pending.id, pending.content, cancel)),
     );
-  }
-
-  static const _reserved = 'Le coach est réservé aux abonnés.';
-
-  /// Le droit au coach, tel que le SERVEUR l'a décidé (`GET /entitlements`).
-  /// Inconnu (hors ligne, panne) : on laisse écrire, et l'envoi rapportera
-  /// le vrai refus, s'il y en a un.
-  Future<bool> _mayWrite() async {
-    try {
-      final droits = await ref
-          .read(subscriptionRepositoryProvider)
-          .entitlements();
-      return droits.any((d) => d.key == 'ai_coaching' && d.isActive);
-    } on Object catch (error) {
-      _logger.warning(
-        'Droit au coach inconnu : écriture permise',
-        error: error,
-      );
-      return true;
-    }
+    return loaded.copyWith(
+      live: CoachLiveTurn(question: pending.content, since: pending.since),
+    );
   }
 
   /// Envoie une question et attend la réplique.
@@ -131,86 +114,102 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     if (trimmed.isEmpty || current == null || current.isSending) return false;
 
     // La question s'affiche aussitôt ; la réponse viendra s'écrire dessous.
+    final since = DateTime.now();
     state = AsyncData(
       current.copyWith(
-        live: CoachLiveTurn(question: trimmed, since: DateTime.now()),
+        live: CoachLiveTurn(question: trimmed, since: since),
         isOffline: false,
         clearNotice: true,
       ),
     );
+    final pending = _pending;
+    final messageId = (pending != null && pending.content == trimmed)
+        ? pending.id
+        : _uuid.v4();
+    _pending = (id: messageId, content: trimmed);
+    final cancel = _cancel = Completer<bool>();
+    // Gardée sur l'appareil : appli fermée, la réponse se reprend au retour.
+    await _pendingStore.save((
+      conversationId: current.conversation.id,
+      id: messageId,
+      content: trimmed,
+      since: since,
+    ));
+    return _converse(messageId, trimmed, cancel);
+  }
 
+  /// Le tour : la réponse, attendue même si le serveur l'écrit encore
+  /// (renvoi après un retour), jusqu'à ce qu'elle arrive ou qu'on arrête.
+  Future<bool> _converse(
+    String messageId,
+    String content,
+    Completer<bool> cancel,
+  ) async {
+    // Reprise : lancée depuis `build`, avant que son état ne soit posé.
+    final current = state.valueOrNull ?? await future;
     final repository = ref.read(coachRepositoryProvider);
-    final cancel = _cancel = Completer<void>();
     try {
       if (!_created) {
         await repository.createConversation(current.conversation.id);
         _created = true;
       }
-
-      final pending = _pending;
-      final messageId = (pending != null && pending.content == trimmed)
-          ? pending.id
-          : _uuid.v4();
-      _pending = (id: messageId, content: trimmed);
-
-      final reply = await repository.sendMessage(
-        conversationId: current.conversation.id,
-        messageId: messageId,
-        content: trimmed,
-        onText: (text) => _updateLive((live) => live.append(text)),
-        onQueued: (ahead) => _updateLive((live) => live.queued(ahead)),
-        onStarted: () => _updateLive((live) => live.started()),
-        onStep: (step) => _updateLive((live) => live.step(step)),
-        cancel: cancel.future,
-      );
-
-      _pending = null;
-      state = AsyncData(
-        current.copyWith(
-          conversation: CoachConversation(
-            id: current.conversation.id,
-            title: current.conversation.title,
-            messages: [
-              ...current.conversation.messages,
-              reply.userMessage,
-              reply.assistantMessage,
-            ],
-          ),
-          // `current` est l'état d'AVANT l'envoi : il porte encore le refus
-          // précédent, que l'affichage optimiste venait justement d'effacer.
-          // Sans ce drapeau, « Tu as atteint le nombre de messages du jour »
-          // réapparaissait sous la réponse qu'on venait de recevoir.
-          clearNotice: true,
-          clearLive: true,
+      final reply = await awaitCoachReply(
+        () => repository.sendMessage(
+          conversationId: current.conversation.id,
+          messageId: messageId,
+          content: content,
+          onText: (text) => _updateLive((live) => live.append(text)),
+          onQueued: (ahead) => _updateLive((live) => live.queued(ahead)),
+          onStarted: () => _updateLive((live) => live.started()),
+          onStep: (step) => _updateLive((live) => live.step(step)),
+          cancel: cancel.future,
         ),
+        stopped: () => cancel.isCompleted,
       );
+      _pending = null;
+      await _pendingStore.clear();
+      // Fil reconstruit entre-temps : c'est SON tour qui affichera la réponse.
+      if (cancel.isCompleted) return true;
+      state = AsyncData(current.withReply(reply));
       return true;
     } on AppException catch (exception) {
-      if (cancel.isCompleted) {
+      final stopped = cancel.isCompleted ? await cancel.future : null;
+      // Page quittée, fil reconstruit : rien à afficher, la question reste
+      // à reprendre.
+      if (stopped == false) return false;
+      if (stopped == true || exception is! NetworkException) {
+        // Arrêtée, ou refusée pour de bon : plus rien à reprendre au retour.
+        // (Hors ligne, elle reste : le serveur a peut-être sa réponse.)
+        await _pendingStore.clear();
+      }
+      if (stopped == true) {
         // Arrêtée par la personne : ni avis ni hors ligne, la question reste
         // dans le champ, et son identifiant pour un renvoi sans doublon.
         state = AsyncData(current.copyWith(clearLive: true));
         return false;
       }
       state = AsyncData(
-        current.copyWith(
-          clearLive: true,
-          isOffline: exception is NetworkException,
-          // 403 : le droit au coach est parti. Le fil reste à relire.
-          isReadOnly: exception is ForbiddenException,
-          notice: exception is ForbiddenException
-              ? null
-              : coachNoticeFor(exception),
-        ),
+        current.failed(exception, notice: coachNoticeFor(exception)),
       );
       return false;
     }
   }
 
-  /// Arrête la réponse en cours : le serveur cesse de générer.
+  /// « Arrêter » : on cesse d'écouter, et le SERVEUR cesse d'écrire.
   void stop() {
     final cancel = _cancel;
-    if (cancel != null && !cancel.isCompleted) cancel.complete();
+    if (cancel == null || cancel.isCompleted) return;
+    cancel.complete(true);
+    final conversationId = state.valueOrNull?.conversation.id;
+    final messageId = _pending?.id;
+    if (conversationId == null || messageId == null) return;
+    ref
+        .read(coachRepositoryProvider)
+        .cancelMessage(conversationId: conversationId, messageId: messageId)
+        .catchError(
+          (Object error) =>
+              _logger.warning('Arrêt non transmis au serveur', error: error),
+        );
   }
 
   /// Le tour en cours avance : file, étape, premier mot, morceau de texte.

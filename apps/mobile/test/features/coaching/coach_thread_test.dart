@@ -6,8 +6,10 @@ import 'package:carlys_mobile/features/coaching/data/repositories/coach_session_
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_coach_repository.dart';
 import '../../support/fake_subscription_repository.dart';
@@ -32,6 +34,10 @@ class _CountingLauncher implements CoachSessionLauncher {
 /// facturer deux fois la même question ; et le refus précédent revenait se
 /// coller sous la réponse qu'on venait tout juste de recevoir.
 void main() {
+  // La question en cours se garde sur l'appareil (reprise au retour).
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   ProviderContainer containerWith(
     FakeCoachRepository repository, {
     bool abonne = true,
@@ -318,24 +324,38 @@ void main() {
   });
 
   test(
-    'question déjà en cours : le même avis, que le refus arrive par HTTP ou par le flux',
-    () async {
-      // Par HTTP, un 409 devient une ValidationException ; dans le flux,
-      // une ServerException. C'est le cas courant : le verrou de la
-      // question est vérifié avant le premier octet.
+    'question déjà en cours (409, par HTTP ou par le flux) : on attend sa réponse, sans avis',
+    () {
+      // Le serveur l'écrit encore (page quittée puis rouverte) : la MÊME
+      // question se redemande jusqu'à ce que sa réponse archivée revienne.
       for (final refus in const <AppException>[
         ValidationException('déjà en cours', statusCode: 409),
         ServerException('déjà en cours', statusCode: 409),
       ]) {
-        final container = containerWith(FakeCoachRepository(sendError: refus));
-        await container.read(coachThreadProvider.future);
+        fakeAsync((async) {
+          final repository = FakeCoachRepository(sendError: refus);
+          final container = containerWith(repository);
+          container.listen(coachThreadProvider, (_, __) {});
+          container.read(coachThreadProvider.future);
+          async.flushMicrotasks();
 
-        await container.read(coachThreadProvider.notifier).send('Demain ?');
+          bool? parti;
+          container
+              .read(coachThreadProvider.notifier)
+              .send('Demain ?')
+              .then((value) => parti = value);
+          async.elapse(const Duration(seconds: 7));
+          var etat = container.read(coachThreadProvider).valueOrNull;
+          expect(etat?.isSending, isTrue);
+          expect(etat?.notice, isNull);
 
-        expect(
-          container.read(coachThreadProvider).valueOrNull?.notice,
-          'Le coach termine sa réponse. Réessaie dans un instant.',
-        );
+          repository.sendError = null;
+          async.elapse(const Duration(seconds: 3));
+          etat = container.read(coachThreadProvider).valueOrNull;
+          expect(parti, isTrue);
+          expect(etat?.conversation.messages.last.content, 'Bien reçu.');
+          expect(repository.sentIds.toSet(), hasLength(1));
+        });
       }
     },
   );

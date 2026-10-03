@@ -35,8 +35,9 @@ abstract interface class CoachRepository {
   /// demandes qui passent avant, [onStarted] dit que c'est son tour. [onStep]
   /// reçoit chaque étape de sa réflexion (« Je regarde tes records »), quand
   /// elle commence puis quand elle finit (`done`). Quand
-  /// [cancel] se termine (« Arrêter »), la requête est abandonnée et le
-  /// serveur arrête de générer ; l'envoi échoue alors.
+  /// [cancel] se termine, la requête est abandonnée ICI — l'envoi échoue —
+  /// mais le serveur, lui, finit et archive sa réponse : pour l'arrêter
+  /// vraiment, [cancelMessage].
   Future<CoachReply> sendMessage({
     required String conversationId,
     required String messageId,
@@ -46,6 +47,13 @@ abstract interface class CoachRepository {
     void Function()? onStarted,
     void Function(CoachStep step)? onStep,
     Future<void>? cancel,
+  });
+
+  /// « Arrêter » : le serveur cesse d'écrire la réponse à ce message. La
+  /// seule façon de l'arrêter — fermer la connexion ne le fait plus.
+  Future<void> cancelMessage({
+    required String conversationId,
+    required String messageId,
   });
 
   /// Signale qu'une proposition a été lancée. N'écrit **aucune** séance : la
