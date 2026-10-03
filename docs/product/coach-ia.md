@@ -933,27 +933,33 @@ démarrage.
 | `COACH_WORKER_COOLDOWN_MS` | Mise à l'écart d'un worker en panne (30 000) |
 | `COACH_CLOUD_FALLBACK` | Repli sur Anthropic quand aucun worker ne répond, seulement avec `ANTHROPIC_API_KEY` ; **éteint** par défaut (`false`) |
 
-## État : le socle serveur est construit
+## État au 3 octobre 2026
 
 Tout ce qui précède existe dans `apps/api/src/modules/coach/` : schéma et
-migration, port du modèle, neuf outils de lecture, validateur, quota, dépôt,
-contrôleur, deux clients de modèle (compatible OpenAI et Anthropic). Le droit `ai_coaching` est accordé par le plan
-premium.
+migrations, port du modèle, **onze outils de lecture** (profil, séances,
+modèles, records, progression, poids, nutrition, catalogue…) et deux de
+proposition (`propose_session`, `propose_program`), validateur, quota,
+dépôt, contrôleur, passerelle (file Redis, workers, annulation — ADR 0013),
+orchestration des actions (ADR 0014), et deux clients de modèle : compatible
+OpenAI (Ollama sur notre serveur, Mistral) et Anthropic, possible en repli
+cloud mais NON activé tant que les textes légaux ne le prévoient pas
+(section « Modèle »). Le droit `ai_coaching`
+est accordé par le plan premium.
 
-**Deux limites de l'environnement de développement, à connaître.**
+**Vérifié, pas seulement écrit.** Les e2e tournent en local comme en CI
+(PostgreSQL et Redis sous Docker) : `test/coach.e2e-spec.ts` (18 scénarios),
+`coach-actions.e2e-spec.ts` (6) et `coach-gate.e2e-spec.ts` (7). Le banc de
+bout en bout sur Qwen3-4B (87 formulations, section « Séance demandée »)
+fait foi pour le comportement du modèle réel.
 
-*La migration a été écrite sans base.* Docker n'était pas disponible, donc
-`prisma migrate dev` n'a pas pu tourner. Le SQL n'a pas pour autant été écrit à
-la main : il a été obtenu par différence entre deux rendus complets
-(`prisma migrate diff --from-empty` avant et après le changement de schéma),
-puis vérifié par `prisma validate` et `prisma generate`. La CI rejoue le
-contrôle de dérive contre un vrai PostgreSQL — c'est elle qui fait foi.
+**Ce qui reste ouvert**, sans être un défaut :
 
-*Les tests e2e n'ont pas pu être exécutés ici*, pour la même raison : ils
-demandent PostgreSQL et Redis. Ils sont écrits (`test/coach.e2e-spec.ts`,
-sept scénarios : droit absent, réponse nominale, proposition validée, exercice
-inventé, propriété du fil, plafond atteint, coach coupé) et la CI les exécute.
-Les tests **unitaires**, eux, tournent : validateur, quota, préfixe de cache.
+- la capacité se mesure sur le serveur cible (`carlysctl coach-bench`), pas
+  sur la machine de développement : ≈ 3 réponses par minute sur 4 cœurs ;
+- le client Anthropic répond d'un bloc, pas en flux (section « Modèle ») ;
+- le résumé de conversation cède sa place à la file (section « La
+  passerelle », limite connue) ;
+- la voix et les notifications proactives restent hors tranche.
 
 ## Mobile
 
@@ -1179,9 +1185,9 @@ un exercice inconnu — la réponse doit rester utilisable.
    tests widget (le mode démo, construit à cette étape, a été retiré depuis). Les puces de suggestion sont calculées depuis
    l'état réel dès cette étape (elles n'ont pas d'endpoint : la règle vit sur
    l'appareil, dans `CoachContext`).
-3. **Finitions** — suggestions calculées depuis l'état réel, acceptation de
-   proposition branchée sur la création de séance, documentation Swagger et
-   `docs/`.
+3. ~~**Finitions**~~ — **fait** : suggestions calculées depuis l'état réel,
+   proposition acceptée puis créée en séance (et gardée d'office dans la
+   catégorie « Coach »), documentation Swagger et `docs/`.
 
 Le streaming est venu ensuite (ADR 0012).
 
