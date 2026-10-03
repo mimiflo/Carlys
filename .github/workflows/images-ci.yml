@@ -205,6 +205,7 @@ jobs:
             -e DATABASE_URL=postgresql://carlys:carlys@127.0.0.1:5432/carlys_images
             -e REDIS_URL=redis://127.0.0.1:6379
             -e JWT_ACCESS_SECRET=secret-ci-uniquement-32-caracteres-minimum-x
+            -e TRUST_PROXY_HOPS=2
             -e CORS_ORIGINS=https://admin.carlys.example
             -e PUBLIC_APP_URL=https://admin.carlys.example
             -e SMTP_HOST=smtp.carlys.example
