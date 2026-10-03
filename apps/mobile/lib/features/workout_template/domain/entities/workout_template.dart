@@ -99,6 +99,7 @@ class WorkoutTemplateInfo {
     required this.syncState,
     this.estimatedDurationMinutes,
     this.lastUsedAt,
+    this.fromCoach = false,
   });
 
   final String id;
@@ -112,6 +113,9 @@ class WorkoutTemplateInfo {
 
   /// Dernier lancement (UTC), `null` si le modèle n'a jamais été lancé.
   final DateTime? lastUsedAt;
+
+  /// Composé par le coach : rangé dans la catégorie « Coach ».
+  final bool fromCoach;
 
   /// Dernière modification (UTC) — tri de la liste, plus récent d'abord.
   final DateTime updatedAt;

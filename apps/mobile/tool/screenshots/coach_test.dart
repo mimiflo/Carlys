@@ -10,10 +10,23 @@ import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_sta
 import 'package:carlys_mobile/features/coaching/domain/services/coach_greeting.dart';
 import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_training_frame.dart';
+import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/providers/training_goal_providers.dart';
+import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
+import 'package:carlys_mobile/features/workout_template/domain/entities/workout_template.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/providers/workout_template_providers.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/screens/templates_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_training_profile_repository.dart';
 import 'capture_test.dart' show loadRealFonts;
 
 /// Aujourd'hui à 18 h, en heure locale : les séparateurs de jour se lisent
@@ -52,6 +65,8 @@ final List<CoachMessage> _conversation = [
       'Je prépare ta séance',
     ],
     thinkingSeconds: 32,
+    // Toute séance proposée est gardée dans « Mes modèles », catégorie Coach.
+    createdWorkout: (templateId: 'p1', name: 'Haut du corps, format court'),
     proposal: const CoachSessionProposal(
       id: 'p1',
       name: 'Haut du corps, format court',
@@ -88,6 +103,8 @@ void main() {
     bool isOffline = false,
     CoachLiveTurn? live,
     CoachGreeting? greeting,
+    TrainingProfile? profile,
+    TrainingGoal? goal,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -97,30 +114,55 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark(),
-        home: CoachScreen(
-          messages: messages,
-          // La règle de la page : les amorces s'effacent dès la première
-          // question du jour.
-          suggestions: live != null || coachWroteToday(messages, DateTime.now())
-              ? const []
-              : _suggestions,
-          composerController: controller,
-          onSend: (_) {},
-          onOpenProposal: (_) {},
-          onOpenProgram: (_) {},
-          onRetry: () {},
-          // Comme dans l'appli : pendant une réponse, l'envoi devient « Arrêter ».
-          onStop: () {},
-          isOffline: isOffline,
-          live: live,
-          greeting: greeting,
+      ProviderScope(
+        overrides: [
+          if (profile != null)
+            trainingProfileRepositoryProvider.overrideWithValue(
+              FakeTrainingProfileRepository(initial: profile),
+            ),
+          exercisesRepositoryProvider.overrideWithValue(
+            FakeExercisesRepository(const [])
+              ..equipmentRefs = const [
+                EquipmentRef(id: 'e1', slug: 'halteres', name: 'Haltères'),
+                EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
+              ],
+          ),
+          currentTrainingGoalProvider.overrideWithValue(goal),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: CoachScreen(
+            frame: profile == null ? null : const CoachTrainingFrame(),
+            messages: messages,
+            // La règle de la page : les amorces s'effacent dès la première
+            // question du jour.
+            suggestions:
+                live != null || coachWroteToday(messages, DateTime.now())
+                ? const []
+                : _suggestions,
+            composerController: controller,
+            onSend: (_) {},
+            onOpenProposal: (_) {},
+            onOpenProgram: (_) {},
+            onRetry: () {},
+            // Comme dans l'appli : pendant une réponse, l'envoi devient « Arrêter ».
+            onStop: () {},
+            isOffline: isOffline,
+            live: live,
+            greeting: greeting,
+          ),
         ),
       ),
     );
     await tester.pump();
+    // La réflexion déroule ses étapes une à une, une seconde chacune.
+    if (live != null) {
+      for (var i = 0; i <= live.steps.length; i++) {
+        await tester.pump(AppMotion.reflectionStep);
+      }
+    }
+    if (profile != null) await tester.pumpAndSettle();
   }
 
   Future<void> capture(WidgetTester tester, String name) async {
@@ -241,6 +283,39 @@ void main() {
     await capture(tester, 'coach-11-seance-enregistree');
   });
 
+  // Le cadre : sans objectif ni matériel, il les demande d'emblée…
+  testWidgets('coach — objectif et matériel à choisir', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      profile: const TrainingProfile(
+        goal: null,
+        experience: null,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: [],
+      ),
+    );
+    await capture(tester, 'coach-12-objectif-a-choisir');
+  });
+
+  // … puis, choisis, une ligne les rappelle.
+  testWidgets('coach — objectif rappelé', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      goal: TrainingGoal.muscleGain,
+      profile: const TrainingProfile(
+        goal: TrainingGoal.muscleGain,
+        experience: TrainingExperience.intermediate,
+        weeklySessionsTarget: 3,
+        sessionMinutesTarget: 45,
+        equipmentSlugs: ['halteres', 'banc'],
+      ),
+    );
+    await capture(tester, 'coach-13-objectif-rappel');
+  });
+
   testWidgets('coach — sa réflexion, dépliée sous la réponse', (tester) async {
     await pumpCoach(tester, messages: _conversation);
     await tester.tap(find.text('Réflexion en 32 s · 3 étapes'));
@@ -309,5 +384,69 @@ void main() {
       ],
     );
     await capture(tester, 'coach-06-programme');
+  });
+
+  // Toute séance proposée par le coach est gardée : « Mes modèles », Coach.
+  testWidgets('séances — la catégorie Coach', (tester) async {
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    WorkoutTemplateInfo modele(
+      String id,
+      String nom,
+      List<String> exercices, {
+      bool coach = false,
+      int minutes = 45,
+    }) => WorkoutTemplateInfo(
+      id: id,
+      name: nom,
+      exercisesCount: exercices.length,
+      plannedSetsCount: exercices.length * 3,
+      estimatedDurationMinutes: minutes,
+      previewExerciseNames: exercices,
+      updatedAt: _today,
+      syncState: LocalSyncState.synced,
+      fromCoach: coach,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workoutTemplatesProvider.overrideWith(
+            (ref) => Stream.value([
+              modele(
+                'a',
+                'Haut du corps, format court',
+                [
+                  'Développé couché',
+                  'Tirage horizontal',
+                  'Développé militaire',
+                ],
+                coach: true,
+                minutes: 25,
+              ),
+              modele('b', 'Push A', ['Développé couché', 'Dips', 'Élévations']),
+              modele(
+                'c',
+                'Jambes, quadriceps et fessiers',
+                ['Squat', 'Fentes', 'Hip thrust'],
+                coach: true,
+                minutes: 40,
+              ),
+              modele('d', 'Pull B', ['Tractions', 'Rowing', 'Curl']),
+            ]),
+          ),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const TemplatesScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'coach-14-mes-seances');
+    await tester.tap(find.text('Coach').first);
+    await tester.pumpAndSettle();
+    await capture(tester, 'coach-15-mes-seances-coach');
   });
 }

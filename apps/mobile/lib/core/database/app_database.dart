@@ -140,6 +140,10 @@ class LocalWorkoutTemplates extends Table {
 
   /// Dernier lancement — miroir local de la valeur serveur.
   DateTimeColumn get lastUsedAt => dateTime().nullable()();
+
+  /// Composé par le coach : rangé dans la catégorie « Coach » — miroir de la
+  /// valeur serveur, jamais posé par l'appareil.
+  BoolColumn get fromCoach => boolean().withDefault(const Constant(false))();
   DateTimeColumn get updatedAt => dateTime()();
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
@@ -340,8 +344,9 @@ class AppDatabase extends _$AppDatabase {
   ///    se stockent pas.
   /// 8. La RÉVISION serveur sur la séance : le rapatriement saute une séance
   ///    inchangée au lieu de relire et réécrire les 60 à chaque lancement.
+  /// 9. L'ORIGINE du modèle : `fromCoach`, pour la catégorie « Coach ».
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -354,8 +359,9 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  /// Migration locale : les colonnes ajoutées sont toutes **nullables** et les
-  /// index se créent à côté des données, donc la montée de version ne réécrit
+  /// Migration locale : les colonnes ajoutées sont toutes **nullables** ou
+  /// munies d'une valeur par défaut (`fromCoach`), et les index se créent à
+  /// côté des données, donc la montée de version ne réécrit
   /// ni ne perd aucune donnée déjà saisie — une séance en cours au moment de
   /// la mise à jour reste intacte.
   @override
@@ -473,6 +479,16 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(
           localWorkoutSessions,
           localWorkoutSessions.revision,
+        );
+      }
+      // Les modèles sont nés en v2 (`from < 2` les crée avec leur définition
+      // ACTUELLE) : seule une base de la v2 à la v8 est à compléter. Les
+      // modèles déjà là reçoivent `false`, et le prochain rapatriement relit
+      // ceux que le serveur dit composés par le coach.
+      if (from >= 2 && from < 9) {
+        await migrator.addColumn(
+          localWorkoutTemplates,
+          localWorkoutTemplates.fromCoach,
         );
       }
     },

@@ -7,20 +7,30 @@ import 'coach_card_frame.dart';
 /// Séance proposée par le coach, avec sa seule sortie : la lancer.
 ///
 /// C'est la pièce qui sépare un coach d'un robot de conversation — l'échange
-/// ne se termine pas par un conseil mais par une **action exécutable**. Rien
-/// n'est écrit tant que l'utilisateur n'a pas appuyé : la carte est un
-/// document, pas une séance.
+/// ne se termine pas par un conseil mais par une **action exécutable**. La
+/// carte est un document, pas une séance lancée : rien ne démarre tant que
+/// l'utilisateur n'a pas appuyé. Elle est en revanche GARDÉE d'office comme
+/// modèle (« Mes modèles », catégorie Coach — [saved]), pour ne pas se
+/// perdre avec le fil ; [onOpenSaved] y mène.
 class CoachProposalCard extends StatelessWidget {
   const CoachProposalCard({
     required this.proposal,
     required this.onOpen,
     required this.maxWidth,
+    this.saved = false,
+    this.onOpenSaved,
     super.key,
   });
 
   final CoachSessionProposal proposal;
   final VoidCallback onOpen;
   final double maxWidth;
+
+  /// Sa copie existe dans les modèles, sur la preuve du serveur.
+  final bool saved;
+
+  /// Ouvre cette copie dans l'éditeur de modèles.
+  final VoidCallback? onOpenSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +76,42 @@ class CoachProposalCard extends StatelessWidget {
           isExpanded: true,
           icon: AppIcons.play,
         ),
+        if (saved) ...[
+          const SizedBox(height: AppSpacing.xs),
+          InkWell(
+            onTap: onOpenSaved,
+            borderRadius: AppRadius.smAll,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: kMinInteractiveDimension,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    AppIcons.coachSavedWorkout,
+                    size: CoachCardHeader.iconSize,
+                    color: AppColors.primaryLight,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      'Gardée dans Mes modèles · Coach',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextSecondary,
+                      ),
+                    ),
+                  ),
+                  if (onOpenSaved != null)
+                    const Icon(
+                      AppIcons.chevronRight,
+                      size: CoachCardHeader.iconSize,
+                      color: AppColors.primaryLight,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

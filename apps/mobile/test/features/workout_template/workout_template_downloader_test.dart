@@ -58,6 +58,24 @@ void main() {
 
     expect(serveur.details, ['push']);
   });
+
+  test(
+    'un modèle rangé AVANT la catégorie Coach est relu pour la recevoir',
+    () async {
+      await downloader.run();
+      serveur.details.clear();
+
+      serveur.duCoach('jambes');
+      await downloader.run();
+
+      expect(serveur.details, ['jambes']);
+      final rows = await db.select(db.localWorkoutTemplates).get();
+      expect(
+        {for (final r in rows) r.id: r.fromCoach},
+        {'push': false, 'jambes': true},
+      );
+    },
+  );
 }
 
 class _Serveur implements WorkoutTemplateRemoteDataSource {
@@ -83,10 +101,13 @@ class _Serveur implements WorkoutTemplateRemoteDataSource {
   void lancer(String id, DateTime quand) =>
       _modeles[id] = _copie(_modeles[id]!, lastUsedAt: quand);
 
+  void duCoach(String id) => _modeles[id] = _copie(_modeles[id]!, coach: true);
+
   static WorkoutTemplateInfo _copie(
     WorkoutTemplateInfo info, {
     DateTime? updatedAt,
     DateTime? lastUsedAt,
+    bool? coach,
   }) => WorkoutTemplateInfo(
     id: info.id,
     name: info.name,
@@ -95,6 +116,7 @@ class _Serveur implements WorkoutTemplateRemoteDataSource {
     previewExerciseNames: info.previewExerciseNames,
     updatedAt: updatedAt ?? info.updatedAt,
     lastUsedAt: lastUsedAt ?? info.lastUsedAt,
+    fromCoach: coach ?? info.fromCoach,
     syncState: info.syncState,
   );
 

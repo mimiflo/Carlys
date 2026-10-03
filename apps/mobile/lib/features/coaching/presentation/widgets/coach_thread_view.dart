@@ -142,6 +142,10 @@ class CoachThreadView extends StatelessWidget {
                 proposal: proposal,
                 maxWidth: maxBubbleWidth,
                 onOpen: () => onOpenProposal(proposal),
+                saved: created?.templateId == proposal.id,
+                onOpenSaved: created == null || onOpenCreated == null
+                    ? null
+                    : () => onOpenCreated?.call(created),
               ),
             ],
             if (program != null) ...[
@@ -153,7 +157,9 @@ class CoachThreadView extends StatelessWidget {
                 onOpen: () => onOpenProgram(program),
               ),
             ],
-            if (created != null) ...[
+            // Une carte de séance dit déjà qu'elle est gardée : la carte
+            // « enregistrée » ne vient seule que pour « Ok crée-la ».
+            if (created != null && proposal == null) ...[
               const SizedBox(height: AppSpacing.xs),
               CoachCreatedWorkoutCard(
                 workout: created,

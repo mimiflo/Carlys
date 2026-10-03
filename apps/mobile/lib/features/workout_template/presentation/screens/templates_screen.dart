@@ -15,11 +15,21 @@ import '../widgets/templates_header.dart';
 /// La liste vient de la base locale : elle s'affiche **hors ligne** comme en
 /// ligne, et l'état de synchronisation de chaque modèle est signalé par une
 /// pastille, jamais par un écran d'erreur.
-class TemplatesScreen extends ConsumerWidget {
+///
+/// Les séances que le coach a proposées y sont toutes gardées : un onglet
+/// « Coach » les isole, dès qu'il y en a une.
+class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TemplatesScreen> createState() => _TemplatesScreenState();
+}
+
+class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
+  bool _coachOnly = false;
+
+  @override
+  Widget build(BuildContext context) {
     final templates = ref.watch(workoutTemplatesProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
@@ -48,48 +58,85 @@ class TemplatesScreen extends ConsumerWidget {
                   message: 'Tes modèles n’ont pas pu être lus sur l’appareil.',
                   onRetry: () => ref.invalidate(workoutTemplatesProvider),
                 ),
-                data: (list) => RefreshIndicator(
-                  // Rapatrie les modèles du serveur : utile après une
-                  // réinstallation ou un changement d'appareil. Ne touche
-                  // jamais à une modification locale non acquittée.
-                  onRefresh: () =>
-                      ref.read(workoutTemplateActionsProvider).refresh(),
-                  child: list.isEmpty
-                      ? _EmptyList(onCreate: () => _create(context, ref))
-                      : ListView.separated(
-                          // L'anneau doit pouvoir se saisir même quand la
-                          // liste tient dans l'écran : sous les physiques
-                          // par défaut d'Android, une liste qui ne déborde
-                          // pas ne se laisse pas tirer, et le geste était
-                          // mort exactement là où il sert — après une
-                          // réinstallation, quand la liste locale est
-                          // courte. `_EmptyList` le savait déjà, la liste
-                          // garnie non.
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
+                data: (all) {
+                  final coach = all.where((t) => t.fromCoach).length;
+                  final list = _coachOnly && coach > 0
+                      ? all.where((t) => t.fromCoach).toList()
+                      : all;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (coach > 0)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
                             AppSpacing.gutter,
                             0,
                             AppSpacing.gutter,
-                            bottomInset + AppSpacing.gapSection,
+                            AppSpacing.md,
                           ),
-                          itemCount: list.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: AppSpacing.gapTile),
-                          itemBuilder: (context, index) {
-                            final template = list[index];
-                            return TemplateCard(
-                              template: template,
-                              onOpen: () => context.push(
-                                AppRoutes.templateEditor(template.id),
-                              ),
-                              onStart: () => _start(context, ref, template.id),
-                              onDelete: () => ref
-                                  .read(workoutTemplateActionsProvider)
-                                  .delete(template.id),
-                            );
-                          },
+                          child: AppSegmentedTabs(
+                            segments: [
+                              AppSegment('Tous', count: all.length),
+                              AppSegment('Coach', count: coach),
+                            ],
+                            selectedIndex: _coachOnly ? 1 : 0,
+                            onSelected: (index) =>
+                                setState(() => _coachOnly = index == 1),
+                          ),
                         ),
-                ),
+                      Expanded(
+                        child: RefreshIndicator(
+                          // Rapatrie les modèles du serveur : utile après une
+                          // réinstallation ou un changement d'appareil. Ne touche
+                          // jamais à une modification locale non acquittée.
+                          onRefresh: () => ref
+                              .read(workoutTemplateActionsProvider)
+                              .refresh(),
+                          child: list.isEmpty
+                              ? _EmptyList(
+                                  onCreate: () => _create(context, ref),
+                                )
+                              : ListView.separated(
+                                  // L'anneau doit pouvoir se saisir même quand la
+                                  // liste tient dans l'écran : sous les physiques
+                                  // par défaut d'Android, une liste qui ne déborde
+                                  // pas ne se laisse pas tirer, et le geste était
+                                  // mort exactement là où il sert — après une
+                                  // réinstallation, quand la liste locale est
+                                  // courte. `_EmptyList` le savait déjà, la liste
+                                  // garnie non.
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.fromLTRB(
+                                    AppSpacing.gutter,
+                                    0,
+                                    AppSpacing.gutter,
+                                    bottomInset + AppSpacing.gapSection,
+                                  ),
+                                  itemCount: list.length,
+                                  separatorBuilder: (_, __) => const SizedBox(
+                                    height: AppSpacing.gapTile,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final template = list[index];
+                                    return TemplateCard(
+                                      template: template,
+                                      onOpen: () => context.push(
+                                        AppRoutes.templateEditor(template.id),
+                                      ),
+                                      onStart: () =>
+                                          _start(context, ref, template.id),
+                                      onDelete: () => ref
+                                          .read(workoutTemplateActionsProvider)
+                                          .delete(template.id),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

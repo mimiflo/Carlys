@@ -59,6 +59,7 @@ WorkoutTemplateInfo templateInfoFromJson(Map<String, dynamic> json) {
             .whereType<String>()
             .toList(),
     lastUsedAt: _utcOrNull(json['lastUsedAt'] as String?),
+    fromCoach: json['fromCoach'] == true,
     updatedAt:
         _utcOrNull(json['updatedAt'] as String?) ?? DateTime.now().toUtc(),
     syncState: LocalSyncState.synced,

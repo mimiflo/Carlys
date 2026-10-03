@@ -48,13 +48,13 @@ class CoachCardHeader extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  static const double _iconSize = 14;
+  static const double iconSize = 14;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: _iconSize, color: AppColors.primaryLight),
+        Icon(icon, size: iconSize, color: AppColors.primaryLight),
         const SizedBox(width: AppSpacing.xxs + 2),
         Text(
           label,

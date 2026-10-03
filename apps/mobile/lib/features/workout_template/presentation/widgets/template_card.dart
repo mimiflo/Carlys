@@ -70,6 +70,12 @@ class TemplateCard extends StatelessWidget {
                       spacing: AppSpacing.xs,
                       runSpacing: AppSpacing.xs,
                       children: [
+                        if (template.fromCoach)
+                          const AppPill(
+                            label: 'Coach',
+                            icon: AppIcons.coach,
+                            tone: AppPillTone.primary,
+                          ),
                         for (final fact in facts)
                           AppPill(label: fact, mono: true),
                         ..._syncPills(),

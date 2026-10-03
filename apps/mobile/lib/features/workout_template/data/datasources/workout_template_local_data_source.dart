@@ -127,6 +127,7 @@ class WorkoutTemplateLocalDataSource {
           .map((exercise) => exercise.exerciseName)
           .toList(growable: false),
       lastUsedAt: row.lastUsedAt,
+      fromCoach: row.fromCoach,
       updatedAt: row.updatedAt,
       syncState: LocalSyncState.fromDb(row.syncStatus),
     );
@@ -188,11 +189,13 @@ class WorkoutTemplateLocalDataSource {
 
   /// Écrit l'en-tête du modèle. [lastUsedAt] est un miroir de la valeur
   /// serveur : il n'est jamais remis à `null` par un enregistrement.
+  /// [fromCoach] aussi : `null` (une saisie de l'appareil) n'y touche pas.
   Future<void> upsertHeader({
     required WorkoutTemplateDetail template,
     required DateTime updatedAt,
     required String syncStatus,
     DateTime? lastUsedAt,
+    bool? fromCoach,
   }) {
     return _db
         .into(_db.localWorkoutTemplates)
@@ -205,6 +208,7 @@ class WorkoutTemplateLocalDataSource {
               template.info.estimatedDurationMinutes,
             ),
             lastUsedAt: Value(lastUsedAt),
+            fromCoach: Value.absentIfNull(fromCoach),
             updatedAt: updatedAt,
             deleted: const Value(false),
             syncStatus: Value(syncStatus),

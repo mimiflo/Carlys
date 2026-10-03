@@ -98,6 +98,32 @@ void main() {
     expect(opened?.templateId, 'modele-1');
   });
 
+  testWidgets(
+    'une séance PROPOSÉE est gardée : sa carte le dit, sans doublon',
+    (tester) async {
+      await pumpCoach(
+        tester,
+        messages: const [
+          CoachMessage(id: 'q', role: CoachRole.user, content: 'Séance pecs ?'),
+          CoachMessage(
+            id: 'r',
+            role: CoachRole.assistant,
+            content: 'Voilà ta séance.',
+            proposal: proposal,
+            createdWorkout: (
+              templateId: 'p1',
+              name: 'Haut du corps, format court',
+            ),
+          ),
+        ],
+      );
+
+      expect(find.text('Gardée dans Mes modèles · Coach'), findsOneWidget);
+      expect(find.text('Voir la séance'), findsOneWidget);
+      expect(find.text('SÉANCE ENREGISTRÉE'), findsNothing);
+    },
+  );
+
   testWidgets('on voit qui parle sans lire le texte', (tester) async {
     await pumpCoach(tester);
 

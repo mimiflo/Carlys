@@ -78,7 +78,9 @@ import 'package:carlys_mobile/features/subscription/presentation/screens/subscri
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_calendar_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_detail_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/programs_screen.dart';
@@ -104,6 +106,7 @@ import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_push_messenger.dart';
 import '../../test/support/fake_subscription_repository.dart';
+import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_water_store.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
@@ -684,6 +687,19 @@ void main() {
           ),
           programRepositoryProvider.overrideWithValue(
             InMemoryProgramRepository(),
+          ),
+          // Le coach rappelle l'objectif et le matériel en tête de son fil :
+          // sans doublure, le profil partirait au réseau (minuteur Dio).
+          trainingProfileRepositoryProvider.overrideWithValue(
+            FakeTrainingProfileRepository(
+              initial: const TrainingProfile(
+                goal: TrainingGoal.muscleGain,
+                experience: TrainingExperience.intermediate,
+                weeklySessionsTarget: 3,
+                sessionMinutesTarget: 45,
+                equipmentSlugs: ['halteres', 'banc'],
+              ),
+            ),
           ),
           // L'accueil compte les modèles enregistrés : sans dépôt local, le
           // compte partirait au réseau et laisserait un minuteur en vol.

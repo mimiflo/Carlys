@@ -35,6 +35,7 @@ class CoachScreen extends StatelessWidget {
     this.notice,
     this.onUnlock,
     this.greeting,
+    this.frame,
     super.key,
   });
 
@@ -76,6 +77,9 @@ class CoachScreen extends StatelessWidget {
   /// Le bonjour du coach à l'ouverture : il remplace l'encart d'un fil vide.
   final CoachGreeting? greeting;
 
+  /// Sous l'en-tête : le cadre du coach (objectif, matériel).
+  final Widget? frame;
+
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
   /// face pour comprendre qui parle.
@@ -101,6 +105,7 @@ class CoachScreen extends StatelessWidget {
         child: Column(
           children: [
             const CoachHeader(),
+            ?frame,
             Expanded(
               child: messages.isEmpty && live == null
                   ? _CoachIntro(

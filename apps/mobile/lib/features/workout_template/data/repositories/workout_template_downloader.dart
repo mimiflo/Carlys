@@ -45,6 +45,7 @@ class WorkoutTemplateDownloader {
             updatedAt: detail.info.updatedAt,
             syncStatus: 'synced',
             lastUsedAt: detail.info.lastUsedAt,
+            fromCoach: detail.info.fromCoach,
           );
           await _local.replaceContent(detail);
         });
@@ -71,7 +72,9 @@ class WorkoutTemplateDownloader {
     WorkoutTemplateInfo summary,
   ) =>
       _sameSecond(local.updatedAt, summary.updatedAt) &&
-      _sameSecond(local.lastUsedAt, summary.lastUsedAt);
+      _sameSecond(local.lastUsedAt, summary.lastUsedAt) &&
+      // Rangé avant que la catégorie existe : relu une fois pour la recevoir.
+      local.fromCoach == summary.fromCoach;
 
   static bool _sameSecond(DateTime? a, DateTime? b) {
     if (a == null || b == null) return a == b;

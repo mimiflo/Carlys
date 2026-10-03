@@ -5,6 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_template/domain/entities/workout_template.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -105,6 +106,31 @@ void main() {
     expect(pending.single.entityId, templateId);
     // L'id de l'entité EST la clé d'idempotence.
     expect(pending.single.idempotencyKey, templateId);
+  });
+
+  test('retoucher une séance du COACH sur l’appareil la garde dans sa '
+      'catégorie', () async {
+    // Rapatriée du serveur, marquée composée par le coach.
+    await db
+        .into(db.localWorkoutTemplates)
+        .insert(
+          LocalWorkoutTemplatesCompanion.insert(
+            id: 'seance-coach',
+            name: 'Jambes du coach',
+            updatedAt: DateTime.utc(2026, 10, 3),
+            fromCoach: const Value(true),
+            syncStatus: const Value('synced'),
+          ),
+        );
+
+    await repository.saveTemplate(pushInput(id: 'seance-coach'));
+
+    final row = await (db.select(
+      db.localWorkoutTemplates,
+    )..where((t) => t.id.equals('seance-coach'))).getSingle();
+    expect(row.fromCoach, isTrue);
+    expect(row.syncStatus, 'pending');
+    expect(row.name, 'Push force');
   });
 
   test('ré-enregistrer remplace INTÉGRALEMENT le contenu local', () async {

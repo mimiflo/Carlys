@@ -13,7 +13,9 @@ import '../../domain/entities/coach.dart';
 import '../../domain/services/coach_greeting.dart';
 import '../controllers/coach_controllers.dart';
 import '../providers/coach_program_actions.dart';
+import '../providers/coach_saved_workouts.dart';
 import '../widgets/coach_header.dart';
+import '../widgets/coach_training_frame.dart';
 import 'coach_screen.dart';
 
 /// Onglet Coach : branche l'écran sur ses données.
@@ -136,6 +138,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   @override
   Widget build(BuildContext context) {
     final thread = ref.watch(coachThreadProvider);
+    keepCoachWorkoutsOnDevice(ref);
 
     return thread.when(
       loading: () => const _CoachShell(
@@ -143,6 +146,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
       ),
       error: (error, _) => _CoachShell(child: _errorState(error)),
       data: (state) => CoachScreen(
+        frame: const CoachTrainingFrame(),
         greeting: _openingGreeting(state),
         messages: state.conversation.messages,
         suggestions: coachVisibleSuggestions(ref, state),
