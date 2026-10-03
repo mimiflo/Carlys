@@ -47,5 +47,8 @@ fi
 # reconstructions suivantes incrémentales.
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"
 graphify update . || true
+# 5. La carte du code (graphify-out/carte.html), tirée de ce graphe : la page
+# que l'assistant republie en Artifact « Carte du code Carlys ».
+python3 scripts/carte_du_code.py >/dev/null || true
 
 exit 0

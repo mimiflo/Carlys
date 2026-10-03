@@ -1,0 +1,193 @@
+<title>Carte du code Carlys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
+        integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
+        crossorigin="anonymous"></script>
+<style>
+/* Mise en page : bandeau violet (titre, applis à filtrer), puis la carte et son panneau côte à côte ; empilés sur téléphone. */
+:root {
+  --bg: #f6f3fb; --surface: #ffffff; --ink: #1d1530; --muted: #6a6080; --line: #e3dcef;
+  --violet: #9b30ff; --violet-ink: #7b1fd6; --band-a: #6a1bd1; --band-b: #9b30ff;
+  --api: #8a2be2; --mobile: #e8642f; --admin: #0f8f7c; --paquets: #5b6478;
+  --edge: rgba(70, 50, 110, 0.18); --label: #1d1530;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #120d1d; --surface: #1b1429; --ink: #eee8f8; --muted: #a79cbd; --line: #2e2442;
+  --violet: #b56bff; --violet-ink: #c98dff; --band-a: #3c0f7a; --band-b: #6a1bd1;
+  --api: #b06cff; --mobile: #ff8a5c; --admin: #3cc7ad; --paquets: #94a0b8;
+  --edge: rgba(200, 180, 240, 0.16); --label: #eee8f8; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #120d1d; --surface: #1b1429; --ink: #eee8f8; --muted: #a79cbd; --line: #2e2442;
+  --violet: #b56bff; --violet-ink: #c98dff; --band-a: #3c0f7a; --band-b: #6a1bd1;
+  --api: #b06cff; --mobile: #ff8a5c; --admin: #3cc7ad; --paquets: #94a0b8;
+  --edge: rgba(200, 180, 240, 0.16); --label: #eee8f8; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); display: flex; flex-direction: column; }
+header { background: linear-gradient(120deg, var(--band-a), var(--band-b)); color: #fff; padding-block: 14px; padding-inline: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+h1 { font: 800 1.45rem/1.1 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
+.meta { font: 0.78rem var(--mono); opacity: 0.85; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-inline-start: auto; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.12); color: #fff; border-radius: 999px; padding: 4px 12px 4px 8px; font: 500 0.85rem var(--body); cursor: pointer; }
+.chip[aria-pressed="false"] { opacity: 0.5; text-decoration: line-through; }
+.chip:focus-visible, button:focus-visible, input:focus-visible, .lien:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.pastille { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(255,255,255,0.8); }
+.chip .n { font-family: var(--mono); font-size: 0.78rem; opacity: 0.85; }
+main { flex: 1; min-height: 0; display: flex; }
+#carte { flex: 1; min-width: 0; background: var(--bg); }
+aside { width: 340px; flex-shrink: 0; background: var(--surface); border-inline-start: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.recherche { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.recherche input { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+#panneau { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+h2 { font: 700 1.2rem/1.2 var(--display); }
+h3 { font: 600 0.72rem var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
+.chiffres { display: flex; gap: 18px; font-variant-numeric: tabular-nums; }
+.chiffres b { display: block; font: 500 1.3rem var(--mono); }
+.chiffres span { font-size: 0.8rem; color: var(--muted); }
+ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.lien { width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; text-align: start; background: none; border: 0; color: var(--ink); font: inherit; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.lien:hover { background: var(--bg); }
+.lien .nom { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.lien .nom::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+.lien .n { font: 0.8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.appli { display: inline-block; font: 600 0.72rem var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c); }
+details summary { cursor: pointer; color: var(--violet-ink); font-weight: 500; }
+details ul { margin-top: 6px; font: 0.78rem/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+p.aide { color: var(--muted); font-size: 0.9rem; max-width: 60ch; }
+.vide { color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 760px) {
+  main { flex-direction: column; }
+  #carte { flex: none; height: 62vh; }
+  aside { width: auto; border-inline-start: 0; border-top: 1px solid var(--line); }
+  .chips { margin-inline-start: 0; }
+}
+</style>
+
+<header>
+  <div>
+    <h1>Carte du code Carlys</h1>
+    <div class="meta" id="meta"></div>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Applications affichées"></div>
+</header>
+<main>
+  <div id="carte" role="img" aria-label="Carte des modules du projet et de leurs dépendances"></div>
+  <aside>
+    <div class="recherche">
+      <label for="cherche" class="appli" style="--c: var(--muted)">Chercher un module</label>
+      <input id="cherche" type="search" placeholder="coach, auth, nutrition…" autocomplete="off">
+    </div>
+    <div id="panneau" aria-live="polite"></div>
+  </aside>
+</main>
+
+<script>
+const DONNEES = /*DONNEES*/null;
+const APPLIS = { api: "API", mobile: "Mobile", admin: "Admin", paquets: "Paquets" };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const parId = new Map(DONNEES.modules.map((m) => [m.id, m]));
+const sortants = new Map(), entrants = new Map();
+for (const l of DONNEES.liens) {
+  (sortants.get(l.de) ?? sortants.set(l.de, []).get(l.de)).push(l);
+  (entrants.get(l.vers) ?? entrants.set(l.vers, []).get(l.vers)).push(l);
+}
+const masquees = new Set();
+const nf = new Intl.NumberFormat("fr-FR");
+
+document.getElementById("meta").textContent =
+  `${DONNEES.modules.length} modules · ${DONNEES.liens.length} liens · commit ${DONNEES.commit} · ${DONNEES.genere_le}`;
+
+const chips = document.getElementById("chips");
+for (const [cle, nom] of Object.entries(APPLIS)) {
+  const n = DONNEES.modules.filter((m) => m.appli === cle).length;
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.setAttribute("aria-pressed", "true");
+  b.style.setProperty("--c", `var(--${cle})`);
+  b.innerHTML = `<span class="pastille"></span>${nom}<span class="n">${n}</span>`;
+  b.addEventListener("click", () => {
+    masquees.has(cle) ? masquees.delete(cle) : masquees.add(cle);
+    b.setAttribute("aria-pressed", String(!masquees.has(cle)));
+    noeuds.update(DONNEES.modules.map((m) => ({ id: m.id, hidden: masquees.has(m.appli) })));
+  });
+  chips.append(b);
+}
+
+const habiller = (m) => ({
+  id: m.id, label: m.nom, value: m.lignes, title: `${APPLIS[m.appli]} · ${m.nom} — ${m.fichiers.length} fichiers`,
+  color: { background: css(`--${m.appli}`), border: css(`--${m.appli}`), highlight: { background: css("--violet"), border: css("--ink") } },
+  font: { color: css("--label"), face: "IBM Plex Sans", size: 14, strokeWidth: 3, strokeColor: css("--bg") },
+});
+const noeuds = new vis.DataSet(DONNEES.modules.map(habiller));
+const aretes = new vis.DataSet(DONNEES.liens.map((l, i) => ({
+  id: i, from: l.de, to: l.vers, value: l.imports, arrows: { to: { enabled: true, scaleFactor: 0.4 } },
+  color: { color: css("--edge"), highlight: css("--violet") }, title: `${l.imports} import(s)`,
+})));
+const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reseau = new vis.Network(document.getElementById("carte"), { nodes: noeuds, edges: aretes }, {
+  nodes: { shape: "dot", scaling: { min: 8, max: 46, label: { enabled: false } } },
+  edges: { smooth: false, scaling: { min: 0.5, max: 6 }, selectionWidth: 2 },
+  physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -90, springLength: 120, avoidOverlap: 0.6 },
+             stabilization: { iterations: reduit ? 600 : 300, fit: true } },
+  interaction: { hover: true, tooltipDelay: 120, keyboard: false },
+});
+reseau.once("stabilizationIterationsDone", () => reseau.setOptions({ physics: false }));
+
+const panneau = document.getElementById("panneau");
+const ligneModule = (id, n, suffixe) => {
+  const m = parId.get(id);
+  return `<li><button class="lien" type="button" data-id="${id}" style="--c: var(--${m.appli})">
+    <span class="nom">${m.nom}<span class="n">${APPLIS[m.appli]}</span></span><span class="n">${n} ${suffixe}</span></button></li>`;
+};
+const liste = (titre, items, suffixe) => `<section><h3>${titre}</h3>${items.length
+  ? `<ul>${items.map(([id, n]) => ligneModule(id, n, suffixe)).join("")}</ul>`
+  : `<p class="vide">Aucun.</p>`}</section>`;
+
+function accueil() {
+  const gros = [...DONNEES.modules].sort((a, b) => b.lignes - a.lignes).slice(0, 10);
+  panneau.innerHTML = `<p class="aide">Chaque rond est un module : sa taille suit son nombre de lignes, sa couleur son application.
+    Une flèche va d'un module vers un module qu'il importe. Touche un rond, ou un nom ci-dessous, pour voir ses dépendances.</p>
+    ${liste("Les plus gros modules", gros.map((m) => [m.id, nf.format(m.lignes)]), "lignes")}`;
+}
+function montrer(id) {
+  const m = parId.get(id);
+  const de = (sortants.get(id) ?? []).sort((a, b) => b.imports - a.imports).map((l) => [l.vers, l.imports]);
+  const par = (entrants.get(id) ?? []).sort((a, b) => b.imports - a.imports).map((l) => [l.de, l.imports]);
+  panneau.innerHTML = `<section><span class="appli" style="--c: var(--${m.appli})">${APPLIS[m.appli]}</span><h2>${m.nom}</h2></section>
+    <div class="chiffres"><div><b>${m.fichiers.length}</b><span>fichiers</span></div><div><b>${nf.format(m.lignes)}</b><span>lignes</span></div>
+    <div><b>${par.length}</b><span>modules l'utilisent</span></div></div>
+    ${liste("Dépend de", de, "imp.")}${liste("Utilisé par", par, "imp.")}
+    <details><summary>Ses ${m.fichiers.length} fichiers</summary><ul>${m.fichiers.map((f) => `<li>${f}</li>`).join("")}</ul></details>
+    <button class="lien" type="button" id="retour" style="--c: transparent"><span class="nom">← Toute la carte</span></button>`;
+  reseau.selectNodes([id]);
+  reseau.focus(id, { scale: 1.1, animation: reduit ? false : { duration: 500, easingFunction: "easeInOutQuad" } });
+}
+panneau.addEventListener("click", (e) => {
+  const b = e.target.closest("button.lien");
+  if (!b) return;
+  if (b.id === "retour") { reseau.unselectAll(); reseau.fit({ animation: !reduit }); accueil(); }
+  else if (b.dataset.id) montrer(b.dataset.id);
+});
+reseau.on("click", (p) => (p.nodes.length ? montrer(p.nodes[0]) : null));
+
+document.getElementById("cherche").addEventListener("input", (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return accueil();
+  const trouves = DONNEES.modules.filter((m) => m.nom.toLowerCase().includes(q) || m.fichiers.some((f) => f.toLowerCase().includes(q))).slice(0, 15);
+  panneau.innerHTML = liste(`${trouves.length} résultat(s)`, trouves.map((m) => [m.id, m.fichiers.length]), "fichiers");
+});
+
+// Le thème du visiteur peut changer en cours de route : la carte repeint ses couleurs.
+const repeindre = () => {
+  noeuds.update(DONNEES.modules.map(habiller));
+  aretes.update(DONNEES.liens.map((l, i) => ({ id: i, color: { color: css("--edge"), highlight: css("--violet") } })));
+};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", repeindre);
+new MutationObserver(repeindre).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+accueil();
+</script>

@@ -100,6 +100,15 @@ graphify explain "<nœud>"                   # un nœud et ses voisins
 graphify path "A" "B"                       # le chemin le plus court entre deux nœuds
 ```
 
+**La carte du code, pour le propriétaire.** `python3 scripts/carte_du_code.py`
+(rejoué par le hook) écrit `graphify-out/carte.html` : les modules de l'API, du
+mobile, de l'admin et des paquets, reliés par leurs imports, cliquables, en
+français et au thème violet. Elle se publie en Artifact privé **« Carte du
+code Carlys »** (`Artifact list` pour retrouver son lien), à republier au
+MÊME lien après un chantier qui ajoute, supprime ou recâble des modules, ou
+quand le propriétaire demande la carte. Les imports Dart y sont relus dans les
+sources : le graphe ne les résout pas (ci-dessous).
+
 **Le graphe est dense côté TypeScript, plat côté Dart.** Mesuré le 16 septembre
 2026 sur `graphify-out/graph.json` (13 014 nœuds, 21 035 arêtes) :
 
