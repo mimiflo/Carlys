@@ -29,7 +29,6 @@
     "coach:bench": "node dist/cli/coach-bench"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.116.0",
     "@aws-sdk/client-s3": "^3.1106.0",
     "@carlys/api-contracts": "workspace:*",
     "@carlys/shared-config": "workspace:*",

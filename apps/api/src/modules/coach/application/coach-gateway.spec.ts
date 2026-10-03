@@ -299,12 +299,10 @@ describe('CoachGateway — génération', () => {
 });
 
 describe('CoachGateway — travail de fond', () => {
-  it('personne n’attend : lancé, sur nos workers seulement, puis la place est rendue', async () => {
+  it('personne n’attend : lancé avec son échéance, puis la place est rendue', async () => {
     const { gateway, gate, model } = setup();
     await expect(gateway.background(INPUT, 60_000)).resolves.toBe(OUTPUT);
-    expect(model.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ localOnly: true, timeoutMs: 60_000 }),
-    );
+    expect(model.reply).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 60_000 }));
     expect(gate.leave).toHaveBeenCalledTimes(1);
   });
 

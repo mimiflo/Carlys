@@ -49,10 +49,10 @@ vers l'ADR qui la remplace).
 | [0007](0007-use-riverpod.md) | Riverpod pour l'état et l'injection de dépendances Flutter | Acceptée — 2026-08 |
 | [0008](0008-use-drift.md) | Drift (SQLite) pour la persistance locale mobile | Acceptée — 2026-08 |
 | [0009](0009-use-object-storage-for-media.md) | Stockage objet pour les médias, administrés depuis le back-office | Acceptée — 2026-08 |
-| [0010](0010-coach-fournisseur-compatible-openai.md) | Fournisseur du coach IA : un réglage, Mistral gratuit par défaut | Acceptée — 2026-09 (décision 2 remplacée par 0011) |
+| [0010](0010-coach-fournisseur-compatible-openai.md) | Fournisseur du coach IA : un réglage, Mistral gratuit par défaut | Acceptée — 2026-09 (décision 2 remplacée par 0011 ; Anthropic retiré le 2026-10-03) |
 | [0011](0011-coach-qwen3-sur-le-serveur.md) | Coach IA : Qwen3-4B sur notre serveur, servi par Ollama | Acceptée — 2026-09 |
 | [0012](0012-coach-reponse-en-flux.md) | Coach IA : la réponse s'écrit en direct (SSE) | Acceptée — 2026-09 |
-| [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 |
+| [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 (repli cloud retiré le 2026-10-03) |
 | [0014](0014-coach-actions-garanties.md) | Coach IA : proposer et créer une séance, garanti par l'orchestration | Acceptée — 2026-10 |
 
 ## Ajouter un ADR

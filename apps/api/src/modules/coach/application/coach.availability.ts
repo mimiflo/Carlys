@@ -41,12 +41,13 @@ export class CoachAvailability {
   }
 
   /**
-   * Un worker au moins : il lui faut un modèle (la clé, elle, manque
-   * légitimement à un Ollama interne). Sinon : la clé Anthropic.
+   * Un worker au moins, et son modèle (la clé, elle, manque légitimement à
+   * un Ollama interne). Aucun autre fournisseur n'existe.
    */
   private providerConfigured(): boolean {
-    return this.config.coachGateway.workerUrls.length === 0
-      ? this.config.anthropicApiKey !== undefined
-      : this.config.coachProvider.model !== undefined;
+    return (
+      this.config.coachGateway.workerUrls.length > 0 &&
+      this.config.coachProvider.model !== undefined
+    );
   }
 }

@@ -67,14 +67,6 @@ export const coachGatewayEnv = {
     ),
   /** Mise à l'écart d'un worker en panne avant de le réessayer. */
   COACH_WORKER_COOLDOWN_MS: int(1_000, 600_000, 30_000),
-  /**
-   * Repli sur le fournisseur cloud (Anthropic) quand aucun worker ne répond.
-   * ÉTEINT par défaut : payant, et les textes légaux doivent le nommer avant.
-   */
-  COACH_CLOUD_FALLBACK: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((value) => value === 'true'),
 };
 
 export interface CoachGatewaySettings {
@@ -93,7 +85,6 @@ export interface CoachGatewaySettings {
   historyMessages: number;
   workerUrls: string[];
   workerCooldownMs: number;
-  cloudFallback: boolean;
 }
 
 /** Les réglages lus, et la liste des workers dépliée. */
@@ -120,6 +111,5 @@ export function coachGatewaySettings(config: ConfigService<Env, true>): CoachGat
     historyMessages: get('COACH_HISTORY_MESSAGES'),
     workerUrls: listed.length > 0 ? listed : fallbackBaseUrl === undefined ? [] : [fallbackBaseUrl],
     workerCooldownMs: get('COACH_WORKER_COOLDOWN_MS'),
-    cloudFallback: get('COACH_CLOUD_FALLBACK'),
   };
 }

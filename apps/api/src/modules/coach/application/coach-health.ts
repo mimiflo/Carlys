@@ -35,7 +35,7 @@ export class CoachHealth {
   ) {}
 
   async report(now = new Date()): Promise<CoachHealthReport> {
-    const { maxConcurrent, queueMaxSize, cloudFallback } = this.config.coachGateway;
+    const { maxConcurrent, queueMaxSize } = this.config.coachGateway;
     const [queue, lastHour, workers] = await Promise.all([
       this.gate.snapshot(now.getTime()),
       this.generations.statsSince(new Date(now.getTime() - 3_600_000)),
@@ -46,13 +46,8 @@ export class CoachHealth {
       ),
     ]);
     const enabled = this.config.coachEnabled;
-    const cloud = cloudFallback && this.config.anthropicApiKey !== undefined;
     return {
-      available:
-        enabled &&
-        (this.pool.size === 0
-          ? this.config.anthropicApiKey !== undefined
-          : workers.some((w) => w.healthy && w.reachable) || cloud),
+      available: enabled && workers.some((w) => w.healthy && w.reachable),
       enabled,
       workers,
       queue: { ...queue, maxConcurrent, maxQueued: queueMaxSize },

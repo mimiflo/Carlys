@@ -151,12 +151,8 @@ proposée ni créée pour les 29 questions qui n'en demandaient pas (médiane
 33 s). Sur les tours dont le journal a été gardé, la carte était composée
 par le modèle lui-même : le repli serveur n'a pas servi.
 
-Le repli cloud (ADR 0013) ne sert donc pas ces tours-là : un worker en panne
-donne la séance composée par le serveur plutôt qu'un appel à Anthropic. Le
-fournisseur de repli, lui, ignore `compose` et garde la boucle d'outils, où
-il appelle `propose_session` de lui-même. Mistral parle aussi
-`response_format: json_schema`, mais n'a pas été essayé sur ce chemin : son
-éventuel refus se lirait dans `failure`.
+Un worker en panne donne la séance composée par le serveur : aucun appel ne
+part ailleurs, il n'existe aucun autre fournisseur.
 
 ### Programme proposé par le coach
 
@@ -325,14 +321,15 @@ apps/api/src/modules/coach/
     coach.quota.ts               # compteur Redis + garde
   infrastructure/
     coach.repository.ts          # Prisma
-    openai-compatible.client.ts  # CoachModelPort, API compatible OpenAI (Mistral…)
-    anthropic.client.ts          # CoachModelPort, Anthropic
+    openai-compatible.client.ts  # CoachModelPort, API compatible OpenAI (nos Ollama)
 ```
 
-Le fournisseur est un **réglage** (`coachModelFor`, dans `coach.module.ts`) :
-`COACH_API_BASE_URL` posée, le client compatible OpenAI ; absente, le client
-Anthropic. Voir
-[l'ADR 0010](../decisions/0010-coach-fournisseur-compatible-openai.md).
+Un seul fournisseur (`coachModelFor`, dans `coach.module.ts`) : nos workers,
+par le client compatible OpenAI. Le client Anthropic et le repli cloud ont
+été retirés le 3 octobre 2026, à la demande du propriétaire : les messages
+ne quittent jamais le serveur. Voir
+[l'ADR 0010](../decisions/0010-coach-fournisseur-compatible-openai.md) et
+[l'ADR 0013](../decisions/0013-coach-passerelle-ia.md).
 
 `coach.service.ts` dépasserait 300 lignes s'il portait tout : le prompt, les
 outils, la validation et le quota sont donc quatre fichiers, chacun testable
@@ -445,8 +442,7 @@ l'interdit explicitement pour les deux axes, et la composition rend la
 chaîne vide (pas un saut de ligne orphelin) quand rien n'est choisi.
 Voir [mentor.md](mentor.md) pour le personnage complet.
 
-Vérification, chez Anthropic : `usage.cache_read_input_tokens` doit être
-non nul dès le deuxième tour. Chez un fournisseur compatible OpenAI, il n'y a
+Chez un fournisseur compatible OpenAI, il n'y a
 pas de césure explicite : `cacheReadTokens` vaut ce qu'il déclare (souvent
 0), ce n'est pas un préfixe cassé. La règle du préfixe stable reste gardée,
 elle ne coûte rien ailleurs. Un test d'assemblage vérifie qu'aucune donnée volatile
@@ -464,22 +460,10 @@ ni facture, et sans que les messages quittent la machine. Réglage :
 `COACH_MODEL=qwen3:4b-instruct-2507-q4_K_M` (pas à pas dans
 [mise-en-route-serveur.md](../deployment/mise-en-route-serveur.md), « Coach
 IA sur le serveur »). Mistral Free mode, retenu le 27 septembre, a refusé
-toutes les demandes dès le lendemain. Mistral ou Anthropic restent possibles
-(`COACH_MODEL` facultatif pour Anthropic, `claude-opus-5-5` par défaut), mais
-**les textes légaux passent d'abord** : ils disent aujourd'hui qu'aucun
-prestataire d'IA ne reçoit les messages, et `privacy.md` promet d'être mis
-à jour AVANT que les messages partent chez un prestataire. Dans l'ordre : `privacy.md` (nommer Anthropic PBC, le remettre parmi les
-traitements hors de l'Union européenne, des marqueurs pour sa conservation
-et l'entraînement) et `terms.md`, redéploiement de l'admin, et seulement
-ensuite retirer `COACH_API_BASE_URL` et poser `ANTHROPIC_API_KEY`. Chez
-Anthropic, le client pose l'effort `medium` (le défaut de Claude Opus 5.5,
-écrit pour qu'un changement de modèle ne le déplace pas en silence) et le
-repli serveur sur refus (`fallbacks: "default"`) : un faux positif d'un
-classifieur de sécurité — compléments, blessure — est repris par un autre
-modèle dans le même appel au lieu de rendre « Je ne peux pas répondre ».
-Rien de tel n'est envoyé au fournisseur compatible OpenAI. Chez Anthropic, la
-réponse arrive d'un bloc (≈ 5 à 15 s), pas mot à mot : le client n'écrit pas
-encore en flux.
+toutes les demandes dès le lendemain. **Le 3 octobre 2026, le propriétaire a
+tranché : son modèle, et lui seul.** Le client Anthropic et le repli cloud
+sont retirés du code ; aucun prestataire d'IA ne reçoit les messages, ce que
+les textes légaux disent déjà.
 
 **Ce que « sur le serveur » implique.** Plus de quota de fournisseur : la
 limite, c'est le processeur. Une réponse à la fois (`OLLAMA_NUM_PARALLEL=1`),
@@ -529,11 +513,6 @@ le serveur, seule la proportion se transpose. Le modèle est aussi PRÉCHARGÉ
 au démarrage du service `ollama`
 (`compose.yml`) : la première question après un redémarrage n'attend plus
 le chargement des 2,5 Go.
-
-**Ordre de grandeur, si Anthropic est réglé** : un tour avec préfixe caché
-coûte environ **un à deux centimes**, l'essentiel part dans la sortie. Un
-quota de 30 messages par jour plafonne donc un utilisateur intensif autour de
-50 centimes par jour, à comparer au prix de l'abonnement.
 
 **Streaming : fait** (septembre 2026, ADR 0012). La question s'affiche
 aussitôt, une bulle « Réfléchit… » attend le premier mot, puis la réponse
@@ -726,7 +705,7 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   message, 6 000 en tout, 300 jetons de sortie, 2 min au plus). Écrit après
   une réponse, **seulement si personne n'attend**, et il **cède sa place**
   dès qu'une personne entre dans la file (contrôle toutes les 2 s). Nos
-  workers seulement, jamais le repli cloud. Raté, la conversation est
+  workers seulement, comme tout le reste. Raté, la conversation est
   laissée en paix 10 min. Relu comme une DONNÉE entre balises `<memoire>`,
   jamais comme une consigne.
 - **Cache** : Ollama ne relit pas le début d'un texte qu'il a déjà calculé
@@ -885,11 +864,9 @@ Ce qu'elle dit :
 - **Interrupteur global** : `COACH_ENABLED=false` coupe la fonctionnalité sans
   déploiement, en renvoyant `SERVICE_UNAVAILABLE`.
 - **Refus du modèle** : un refus se traite comme un contenu, pas comme une
-  panne — message clair à l'utilisateur, jamais une erreur 500. Seul le
-  client Anthropic en reçoit (`stop_reason: refusal`) : Mistral n'émet ni
-  `finish_reason: content_filter` ni champ `refusal` (enum de son OpenAPI :
-  `stop`, `length`, `model_length`, `error`, `tool_calls`), le client
-  compatible OpenAI n'en guette donc aucun.
+  panne — message clair à l'utilisateur, jamais une erreur 500. Ollama
+  n'émet ni `finish_reason: content_filter` ni champ `refusal` : le client
+  compatible OpenAI n'en guette aucun, un refus arrive comme un texte.
 - **Garde-fous santé du prompt**, pour tout fournisseur : renvoi vers un
   professionnel face à une douleur ou un symptôme ; aucun apport sous les
   planchers de l'application (1200 kcal femme, 1500 homme, lus dans
@@ -910,11 +887,10 @@ démarrage.
 
 | Variable | Rôle |
 | --- | --- |
-| `COACH_API_BASE_URL` | Posée : API compatible OpenAI (`http://ollama:11434/v1` sur le serveur, ou `https://api.mistral.ai/v1`). Absente : Anthropic |
+| `COACH_API_BASE_URL` | Notre modèle, par son API compatible OpenAI (`http://ollama:11434/v1` sur le serveur). Absente : coach indisponible |
 | `COACH_API_KEY` | Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide |
-| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`qwen3:4b-instruct-2507-q4_K_M` sur le serveur) ; sinon `claude-opus-5-5` |
+| `COACH_MODEL` | Exigé (`qwen3:4b-instruct-2507-q4_K_M` sur le serveur) ; absent : coach indisponible |
 | `CARLYS_OLLAMA_REPLICAS` | Serveur : 1 allume le service `ollama` (profil compose activé par `dc`) ; absent ou 0, le service n'existe pas |
-| `ANTHROPIC_API_KEY` | Lue seulement sans `COACH_API_BASE_URL` |
 | `COACH_DAILY_MESSAGE_LIMIT` | Plafond par personne et par jour (30) |
 | `COACH_ENABLED` | Interrupteur global |
 | `COACH_MAX_CONCURRENT_REQUESTS` | Générations simultanées, tous exemplaires de l'API confondus (1). Égale la somme des `OLLAMA_NUM_PARALLEL` des workers |
@@ -924,14 +900,13 @@ démarrage.
 | `COACH_STREAM_IDLE_TIMEOUT_MS` | Silence toléré d'un flux déjà commencé avant de le tenir pour mort (60 000) |
 | `COACH_MAX_OUTPUT_TOKENS` | Jetons de sortie par appel au modèle ; une reprise est un autre appel (2 048) |
 | `COACH_MAX_CONTINUATIONS` | Reprises d'une réponse coupée, au plus, par appel (2) |
-| `COACH_CONTEXT_TOKENS` | Contexte du modèle en jetons : celui des workers (`OLLAMA_CONTEXT_LENGTH`, que le compose du serveur reprend par défaut), ou celui du fournisseur distant (Mistral : à relever) ; l'historique le plus ancien cède pour garder la place de la réponse (8 192) |
+| `COACH_CONTEXT_TOKENS` | Contexte du modèle en jetons : celui des workers (`OLLAMA_CONTEXT_LENGTH`, que le compose du serveur reprend par défaut) ; l'historique le plus ancien cède pour garder la place de la réponse (8 192) |
 | `COACH_MAX_CONCURRENT_PER_USER` | Générations simultanées pour une personne, file comprise (1) |
 | `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
 | `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |
 | `COACH_HISTORY_MESSAGES` | Messages relus tels quels, au plus ; au-delà, la mémoire résumée absorbe les plus anciens et en garde la moitié (20) |
 | `COACH_WORKER_URLS` | Adresses `…/v1` des workers, séparées par des virgules ; absente, le seul worker est `COACH_API_BASE_URL` |
 | `COACH_WORKER_COOLDOWN_MS` | Mise à l'écart d'un worker en panne (30 000) |
-| `COACH_CLOUD_FALLBACK` | Repli sur Anthropic quand aucun worker ne répond, seulement avec `ANTHROPIC_API_KEY` ; **éteint** par défaut (`false`) |
 
 ## État au 3 octobre 2026
 
@@ -940,10 +915,8 @@ migrations, port du modèle, **onze outils de lecture** (profil, séances,
 modèles, records, progression, poids, nutrition, catalogue…) et deux de
 proposition (`propose_session`, `propose_program`), validateur, quota,
 dépôt, contrôleur, passerelle (file Redis, workers, annulation — ADR 0013),
-orchestration des actions (ADR 0014), et deux clients de modèle : compatible
-OpenAI (Ollama sur notre serveur, Mistral) et Anthropic, possible en repli
-cloud mais NON activé tant que les textes légaux ne le prévoient pas
-(section « Modèle »). Le droit `ai_coaching`
+orchestration des actions (ADR 0014), et UN client de modèle, compatible
+OpenAI, vers nos Ollama : aucun prestataire extérieur. Le droit `ai_coaching`
 est accordé par le plan premium.
 
 **Vérifié, pas seulement écrit.** Les e2e tournent en local comme en CI
@@ -956,10 +929,9 @@ fait foi pour le comportement du modèle réel.
 
 - la capacité se mesure sur le serveur cible (`carlysctl coach-bench`), pas
   sur la machine de développement : ≈ 3 réponses par minute sur 4 cœurs ;
-- le client Anthropic répond d'un bloc, pas en flux (section « Modèle ») ;
 - le résumé de conversation cède sa place à la file (section « La
   passerelle », limite connue) ;
-- la voix et les notifications proactives restent hors tranche.
+- les notifications proactives restent hors tranche.
 
 ## Mobile
 

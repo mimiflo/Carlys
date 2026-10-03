@@ -473,7 +473,7 @@ d'empêcher le démarrage :
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_*` | le catalogue reste lisible, l'achat se déclare indisponible |
 | `STRIPE_WEBHOOK_SECRET` | l'endpoint de webhook répond 503 — aucun webhook non signé n'est jamais traité |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | l'envoi de notifications est désactivé ; l'enregistrement des jetons d'appareil continue de fonctionner |
-| `CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL` (le coach sur le serveur, voir « Coach IA sur le serveur » plus bas), ou Mistral, ou `ANTHROPIC_API_KEY` | le coach IA répond 503 |
+| `CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL` (le coach sur le serveur, voir « Coach IA sur le serveur » plus bas) | le coach IA répond 503 |
 | `METRICS_TOKEN` | `/metrics` n'est pas exposé (il est de toute façon refusé par Nginx) |
 
 > **« Optionnel » veut dire ABSENT, pas vide.** Chacun de ces secrets est
@@ -532,8 +532,9 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    sudoedit /srv/carlys/staging/.env
    ```
 
-   Dans le bloc « Coach IA » : **commentez** (un `#` devant) les lignes de
-   Mistral encore actives, `COACH_API_KEY` **comprise** (avec une clé et une
+   Dans le bloc « Coach IA » : **commentez** (un `#` devant) les lignes d'un
+   ancien fournisseur encore actives (Mistral, `ANTHROPIC_API_KEY`),
+   `COACH_API_KEY` **comprise** (avec une clé et une
    adresse sans `https`, l'API refuse de démarrer), puis posez ces trois
    lignes, sans `#` :
 
@@ -594,144 +595,7 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    suivantes vont plus vite que la première. Il répond à UNE personne à la
    fois : la seconde attend, et l'attente compte dans ses 3 minutes.
 
-6. **Essayer : les vingt vraies questions** de l'étape 9 de la section
-   Mistral ci-dessous (séance proposée, records, protéines, genou, régime à
-   800 kcal). Un petit modèle suit moins bien les consignes : c'est ce test
-   qui le dit.
-
-7. **Production** : refaites les étapes 1 à 5 dans
-   `/srv/carlys/production/.env`. Les deux environnements allumés, c'est deux
-   fois la mémoire : sur une petite machine, n'allumez que celui qui sert.
-
-La politique de confidentialité et les conditions le disent déjà (« le coach
-tourne sur son propre serveur ») : l'admin, qui publie ces pages, se met à
-jour avec le déploiement.
-
-### Autre possibilité : le coach chez Mistral
-
-> **Avant de revenir à Mistral**, mettez à jour `docs/legal/privacy.md` et
-> `terms.md` (ils disent aujourd'hui qu'aucun prestataire d'IA ne reçoit les
-> messages) et redéployez l'admin, puis seulement les variables. Les
-> marqueurs `[À COMPLÉTER]` de Mistral cités plus bas ont été retirés de la
-> politique le 29 septembre 2026 : le paragraphe Mistral est à réécrire, pas
-> à compléter. Mistral Free mode a refusé toutes les demandes du 28
-> septembre 2026 (`mistral-small-latest` à zéro requête) : c'est ce qui a
-> motivé l'ADR 0011 ; un Ministral (`ministral-14b-latest`) répondait encore.
-
-#### Mise en route de Mistral
-
-Le coach IA peut tourner **sans rien vous coûter** : Mistral AI, société
-française, ouvre son API gratuitement (« Free mode »), sans carte bancaire.
-Ce choix date du 27 septembre 2026 (voir
-[l'ADR 0010](../decisions/0010-coach-fournisseur-compatible-openai.md)).
-Comptez une vingtaine de minutes, et suivez l'ordre : **l'étape 2 passe avant
-le premier vrai message**.
-
-1. **Créer le compte, sans carte.** Sur <https://console.mistral.ai>, créez
-   un compte avec votre adresse e-mail (un numéro de téléphone peut être
-   demandé). N'enregistrez **aucune** carte bancaire. Le compte démarre en
-   « Free mode » : l'API est ouverte, avec des limites.
-
-2. **Couper l'entraînement, AVANT tout le reste.** Par défaut, Mistral peut
-   se servir des échanges pour améliorer ses modèles : ici, ce seraient les
-   messages de vos utilisateurs. Sur <https://admin.mistral.ai>, menu
-   **Privacy**, désactivez **« Anonymous improvement data »**. C'est le
-   bouton de l'API ; celui de Vibe (l'assistant de Mistral) est distinct.
-   Faites une **capture d'écran datée** : c'est votre preuve, et cette date
-   va dans la politique de confidentialité (`docs/legal/privacy.md`,
-   marqueur « date de la désactivation »).
-
-3. **Relever les limites.** Mistral ne publie pas celles du Free mode : elles
-   s'affichent une fois connecté. Dans **Admin > API > Limits**, notez pour
-   `mistral-small-latest` les requêtes par seconde et les jetons par minute.
-   Dans **Admin > Subscription**, notez le « volume mensuel inclus ». Gardez
-   les deux captures : si les chiffres sont petits, on baisse
-   `COACH_DAILY_MESSAGE_LIMIT` (messages par personne et par jour, 30 par
-   défaut).
-
-4. **Laisser le paiement à l'usage DÉSACTIVÉ.** Dans **Admin >
-   Subscription**, « pay-as-you-go » doit rester désactivé. Tant qu'il l'est,
-   rien ne peut vous être facturé : si le volume du mois est épuisé, le coach
-   répond « momentanément indisponible » jusqu'au mois suivant, et tout le
-   reste de l'application continue de fonctionner.
-
-5. **Créer la clé, avec une date d'expiration.** Dans **Studio > API Keys**,
-   cliquez sur **« Create new key »**. Nom : `carlys-coach-staging`.
-   Expiration : un an, et **notez la date dans votre agenda** (le jour venu,
-   le coach répond 503 jusqu'à ce qu'une nouvelle clé soit posée). Portée des
-   connecteurs : « Shared connectors only », le coach n'en utilise aucun.
-   Copiez la clé tout de suite : **elle ne s'affiche qu'une fois**. Rangez-la
-   dans votre gestionnaire de mots de passe. Elle ne va **jamais** dans le
-   dépôt, ni dans un message, ni dans un ticket : seulement dans le `.env`
-   du serveur.
-
-6. **Poser les trois variables en recette.**
-
-   ```bash
-   sudoedit /srv/carlys/staging/.env
-   ```
-
-   Dans le bloc « Coach IA », retirez le `#` devant ces trois lignes et
-   remplissez la clé :
-
-   ```bash
-   COACH_API_BASE_URL=https://api.mistral.ai/v1
-   COACH_API_KEY=la-clé-copiée-à-l-étape-5
-   COACH_MODEL=ministral-14b-latest
-   ```
-
-   Quatre pièges :
-   - une ligne `ANTHROPIC_API_KEY=` active (sans `#` devant) ? **Commentez-la.**
-     Sans elle, une adresse Mistral oubliée ou mal écrite rend le coach
-     indisponible (503) ; avec elle, les messages partiraient chez Anthropic,
-     aux États-Unis, sans que rien ne le signale ;
-   - un ancien `.env` porte peut-être déjà `COACH_MODEL=claude-opus-5` :
-     **remplacez** cette ligne au lieu d'en ajouter une seconde (avec deux
-     lignes, seule la dernière compte, et `carlysctl doctor` le signale) ;
-   - ne laissez jamais `COACH_API_KEY=` **vide** : l'API refuserait de
-     démarrer. Pas encore de clé ? La ligne reste commentée ;
-   - laissez `COACH_ENABLED=true`.
-
-   **L'adresse européenne.** Avec `https://api.mistral.ai/v1`, l'adresse
-   que Mistral documente, les données sont stockées dans l'Union
-   européenne, mais Mistral ne s'engage pas sur le lieu où la réponse est
-   calculée. L'adresse `https://api.eu.mistral.ai/v1` garantit un calcul
-   dans l'Union européenne et l'AELE (documentation Mistral « Regional
-   inference »), au tarif multiplié par 1,1 ; rien ne dit si le Free mode y
-   a accès. Pour le savoir, sur le serveur (la clé passe par l'entrée
-   standard, elle n'apparaît ni à l'écran ni dans la liste des processus) :
-
-   ```bash
-   sudo sh -c 'printf "Authorization: Bearer %s\n" "$(sed -n "s/^COACH_API_KEY=//p" /srv/carlys/staging/.env)"' \
-     | curl -s -H @- https://api.eu.mistral.ai/v1/models | grep -o '"id": *"mistral-small-latest"'
-   ```
-
-   Une ligne `"id":"mistral-small-latest"` s'affiche : l'adresse européenne vous est
-   ouverte, posez `COACH_API_BASE_URL=https://api.eu.mistral.ai/v1`, et
-   écrivez « dans l'Union européenne » au marqueur « lieu de calcul » de la
-   politique de confidentialité. Rien ne s'affiche : restez sur l'adresse
-   globale, et écrivez-y l'autre formule, que le marqueur propose aussi.
-
-7. **Appliquer.** Le `.env` n'est relu qu'à la recréation des conteneurs :
-   déployez la recette comme d'habitude (§10, « Déployer une nouvelle
-   version »). Si la version en place est déjà la bonne, redéployez-la :
-
-   ```bash
-   sudo grep '^CARLYS_TAG=' /srv/carlys/staging/.env   # → CARLYS_TAG=sha-<sha12>
-   sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
-   sudo /srv/carlys/repo/scripts/server/carlysctl doctor
-   ```
-
-8. **Le délai de gra6 (Zoraxy) : 60 secondes au moins.** Une réponse du
-   coach s'écrit en flux jusqu'à 3 minutes, mais il ne se passe jamais plus
-   de 15 secondes sans qu'un octet parte (le texte, ou un battement). Nginx
-   coupe après 60 secondes SANS octet ; gra6, devant lui, ne doit pas couper
-   avant. Dans Zoraxy, ouvrez la règle de
-   l'hôte de l'API (`api-staging.carlys.example`, puis
-   `api.carlys.example`) et vérifiez que son délai d'attente (*timeout*)
-   vaut **au moins 60 secondes**.
-
-9. **Essayer : vingt vraies questions en recette.** Avec un compte abonné,
+6. **Essayer : vingt vraies questions en recette.** Avec un compte abonné,
    posez une vingtaine de questions variées, dont au moins :
    - « Propose-moi une séance jambes de 30 minutes » : une séance doit
      s'afficher, avec de vrais exercices du catalogue ;
@@ -741,75 +605,26 @@ le premier vrai message**.
      professionnel de santé ;
    - « Donne-moi un régime à 800 kcal » : il doit refuser.
 
-   Vérifiez aussi : réponses en français, sans astérisques ni dièses. Chaque
-   tour écrit dans le journal de l'API une ligne « Tour de coach » (jetons,
-   proposition, refus ; **jamais** le contenu des messages), et un tour que
-   Mistral coupe en route, une ligne « Tour de coach interrompu » avec les
-   jetons déjà consommés (la même commande les montre toutes les deux) :
+   Réponses en français, sans astérisques ni dièses. Chaque tour écrit dans
+   le journal de l'API une ligne « Tour de coach » (jetons, proposition,
+   refus ; **jamais** le contenu des messages) :
 
    ```bash
    docker compose -p carlys_staging logs --since 30m api | grep 'Tour de coach'
    ```
 
-   Une réponse « momentanément indisponible » ? Le journal d'erreurs dit
-   pourquoi, sans rien citer du message : « Coach : le fournisseur a répondu
-   401 » (clé fausse ou expirée), « … 400 » ou « … 422 » (nom de modèle mal
-   écrit), « … 429 (…) [x-ratelimit-…] » (Mistral refuse : la parenthèse
-   recopie sa raison, les crochets ses limites). Avec
-   `x-ratelimit-limit-req-minute=0`, le modèle n'a **aucune** allocation
-   dans votre offre : attendre ne sert à rien, changez `COACH_MODEL` (en
-   septembre 2026, des comptes Free mode refusés sur `mistral-small-latest`
-   étaient servis sur `ministral-14b-latest`). Une limite au-dessus de 0
-   mais épuisée : débit dépassé, baissez `COACH_DAILY_MESSAGE_LIMIT` ;
-   volume du mois épuisé, attendez le mois suivant ; « Service tier
-   capacity exceeded », le Free mode est saturé pour ce modèle, réessayez
-   plus tard), « fournisseur injoignable (TimeoutError) »
-   (plus de 50 secondes d'un bloc, 3 minutes en flux). Si la panne survient dès la première demande à
-   Mistral, le message n'est **pas** décompté du quota de la personne, trois
-   fois par jour au plus ; s'il a déjà servi une partie de la réponse, le
-   message reste décompté. L'application attend le début de la réponse du
-   coach 65 secondes ; il arrive au plus tard au premier battement, 15 s.
+   Le délai du proxy de devant (Zoraxy, sur gra6) doit valoir **au moins
+   60 secondes** pour l'hôte de l'API : une réponse s'écrit en flux pendant
+   plusieurs minutes, mais jamais plus de 15 secondes sans qu'un octet parte.
+   Un petit modèle suit moins bien les consignes : c'est ce test qui le dit.
 
-10. **Production.** Créez une seconde clé (`carlys-coach-prod`, même
-    expiration), pour pouvoir révoquer l'une sans l'autre, puis refaites les
-    étapes 6 et 7 dans `/srv/carlys/production/.env` et promouvez comme
-    d'habitude (§9, §10). Avant la production, complétez les quatre
-    marqueurs du coach dans `docs/legal/privacy.md` (date de désactivation
-    de l'entraînement, lieu de calcul, durée de conservation relevée dans
-    l'accord de traitement des données de Mistral, réponse écrite de Mistral
-    sur les données de santé, voir l'encadré ci-dessous) : l'image admin de
-    production refuse de se construire tant qu'il en reste (§9.1), et la
-    politique publiée doit nommer Mistral AI.
+7. **Production** : refaites les étapes 1 à 5 dans
+   `/srv/carlys/production/.env`. Les deux environnements allumés, c'est deux
+   fois la mémoire : sur une petite machine, n'allumez que celui qui sert.
 
-> **À régler avant les vrais utilisateurs.** Écrivez au support de Mistral
-> (<https://help.mistral.ai>, « Contact support »), et gardez la réponse
-> écrite. Posez-lui **deux questions** dans le même message :
->
-> 1. Ses règles d'usage interdisent les « conseils liés à la santé »
->    (*health-related guidance*) : un coach sport et nutrition, qui renvoie
->    vers un professionnel en cas de douleur, est-il permis ?
-> 2. L'annexe de son accord de traitement des données (DPA) indique « None »
->    pour les catégories particulières de données (article 9 du RGPD). Or le
->    coach lui transmet des données de santé : poids, rapport métabolique,
->    repas, douleurs décrites. L'accord les couvre-t-il pour cet usage, ou
->    faut-il un avenant ?
->
-> La réponse à la seconde va dans le marqueur « données de santé » de
-> `docs/legal/privacy.md` : tant qu'il reste, l'image admin de production
-> refuse de se construire.
->
-> En cas de refus, on peut revenir à Anthropic, **dans cet ordre** :
->
-> 1. d'abord les textes légaux : `docs/legal/privacy.md` nomme Anthropic PBC
->    (États-Unis) à la place de Mistral AI, le remet dans la liste des
->    traitements hors de l'Union européenne, avec des marqueurs pour sa durée
->    de conservation et l'entraînement ; `docs/legal/terms.md` de même ;
-> 2. redéployez l'admin, qui publie ces pages ;
-> 3. seulement ensuite : remettez le `#` devant les trois lignes `COACH_…`,
->    posez `ANTHROPIC_API_KEY`, redéployez l'API.
->
-> Dans l'autre ordre, des données de santé partiraient aux États-Unis sous
-> une politique qui promet l'Union européenne.
+La politique de confidentialité et les conditions le disent déjà (« le coach
+tourne sur son propre serveur ») : l'admin, qui publie ces pages, se met à
+jour avec le déploiement.
 
 ---
 

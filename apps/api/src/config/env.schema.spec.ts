@@ -84,8 +84,7 @@ describe('validateEnv', () => {
 
   it('coach : le fournisseur est un réglage, absent = 503, jamais un refus de démarrer', () => {
     const minimal = validateEnv({ ...validEnv });
-    // Rien de posé : Anthropic par défaut, sans modèle imposé par le schéma
-    // (le défaut vit dans le client Anthropic, le seul à qui il a un sens).
+    // Rien de posé : l'API démarre, le coach est simplement indisponible.
     expect(minimal.COACH_API_BASE_URL).toBeUndefined();
     expect(minimal.COACH_API_KEY).toBeUndefined();
     expect(minimal.COACH_MODEL).toBeUndefined();

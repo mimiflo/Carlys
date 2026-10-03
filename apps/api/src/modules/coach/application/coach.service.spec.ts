@@ -155,10 +155,9 @@ function buildService(
   };
   const config = {
     coachEnabled: acces.coachEnabled,
-    anthropicApiKey: 'cle-factice-de-test-32-caracteres',
-    coachProvider: {},
+    coachProvider: { model: 'modele-factice' },
     coachGateway: {
-      workerUrls: [],
+      workerUrls: ['http://127.0.0.1:1/v1'],
       historyMessages: 20,
       maxMessageChars: 2000,
       queueTimeoutMs: 120_000,

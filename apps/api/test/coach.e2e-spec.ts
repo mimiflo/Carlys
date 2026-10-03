@@ -3,7 +3,10 @@ process.env.LOG_LEVEL = 'silent';
 process.env.DATABASE_URL ??= 'postgresql://carlys:carlys@localhost:5432/carlys_test';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
-process.env.ANTHROPIC_API_KEY ??= 'sk-ant-cle-factice-pour-les-tests-e2e';
+// Un worker et son modèle : le coach est configuré ; le modèle lui-même est
+// remplacé par un faux (COACH_MODEL_PORT), rien ne part sur le réseau.
+process.env.COACH_API_BASE_URL ??= 'http://127.0.0.1:1/v1';
+process.env.COACH_MODEL ??= 'modele-factice-e2e';
 process.env.COACH_ENABLED = 'true';
 // Un seul compte envoie ici des dizaines de messages en rafale : le rythme
 // par minute (défaut 6, couvert par les tests unitaires de la passerelle et

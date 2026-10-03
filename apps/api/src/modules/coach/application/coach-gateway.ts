@@ -116,7 +116,7 @@ export class CoachGateway {
    * personne arrive dans la file. `null` : rien n'a été lancé, ou il a cédé.
    */
   async background(
-    input: Omit<CoachTurnInput, 'signal' | 'localOnly' | 'timeoutMs'>,
+    input: Omit<CoachTurnInput, 'signal' | 'timeoutMs'>,
     timeoutMs: number,
   ): Promise<CoachTurnOutput | null> {
     const requestId = randomUUID();
@@ -131,7 +131,6 @@ export class CoachGateway {
         ...input,
         signal: yieldPlace.signal,
         timeoutMs,
-        localOnly: true,
       });
       this.metrics.tokens.inc(output.usage.outputTokens);
       return output;

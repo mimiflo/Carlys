@@ -23,31 +23,24 @@ import { CoachAvailability } from './application/coach.availability';
 import { CoachService } from './application/coach.service';
 import { CoachTools } from './application/coach.tools';
 import { COACH_MODEL_PORT, type CoachModelPort } from './domain/coach-model.port';
-import { ANTHROPIC_DEFAULT_MODEL, AnthropicCoachClient } from './infrastructure/anthropic.client';
 import { CoachGate } from './infrastructure/coach-gate';
 import { CoachGenerationRepository } from './infrastructure/coach-generation.repository';
 import { CoachMetrics } from './infrastructure/coach-metrics';
 import { CoachRepository } from './infrastructure/coach.repository';
 import { CoachWorkerPool } from './infrastructure/coach-worker-pool';
-import { FallbackCoachModel } from './infrastructure/fallback-coach-model';
 import { OpenAiCompatibleCoachClient } from './infrastructure/openai-compatible.client';
 import { CoachController } from './presentation/http/coach.controller';
 import { CoachInternalController } from './presentation/http/coach-internal.controller';
 
 /**
- * Le fournisseur est un RÉGLAGE, pas du code : un worker au moins
- * (`COACH_WORKER_URLS` ou `COACH_API_BASE_URL`), nos Ollama par le client
- * compatible OpenAI ; aucun, Anthropic. Le repli cloud n'existe que si on
- * l'allume ET qu'une clé est posée (ADR 0010, 0013).
+ * Un seul fournisseur : NOS workers (`COACH_WORKER_URLS` ou
+ * `COACH_API_BASE_URL`), par le client compatible OpenAI. Aucun repli vers un
+ * prestataire : les messages ne quittent jamais le serveur (décision du
+ * 3 octobre 2026, ADR 0013). Sans worker, le coach est indisponible
+ * (`CoachAvailability`), il n'appelle rien.
  */
 export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): CoachModelPort {
-  if (pool.size === 0) {
-    return new AnthropicCoachClient(config);
-  }
-  const local = new OpenAiCompatibleCoachClient(config, pool);
-  return config.coachGateway.cloudFallback && config.anthropicApiKey !== undefined
-    ? new FallbackCoachModel(local, new AnthropicCoachClient(config, ANTHROPIC_DEFAULT_MODEL))
-    : local;
+  return new OpenAiCompatibleCoachClient(config, pool);
 }
 
 /**

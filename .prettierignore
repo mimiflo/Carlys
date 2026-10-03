@@ -13,3 +13,7 @@ apps/api/prisma/migrations/
 # scripts/vendoriser_plugins_claude.sh) : les reformater les écarterait de
 # l'amont et rendrait chaque montée de version illisible.
 .claude/ponytail/
+
+# Gabarit de la carte du code : `/*DONNEES*/null` y est remplacé tel quel par
+# scripts/carte_du_code.py ; un reformatage le décalerait et casserait la carte.
+scripts/carte_du_code.html

@@ -101,11 +101,6 @@ export interface CoachTurnInput {
   /** Plafond de sortie propre à cet appel (un résumé est court). */
   maxOutputTokens?: number;
   /**
-   * Nos workers seulement, jamais le repli cloud : un résumé de mémoire ne
-   * quitte pas le serveur (politique de confidentialité).
-   */
-  localOnly?: boolean;
-  /**
    * Une SÉANCE demandée (application/coach-session.ts) : le fournisseur qui
    * sait contraindre sa sortie la compose parmi ces exercices seulement, au
    * lieu de la boucle d'outils ; les autres l'ignorent.
@@ -169,9 +164,9 @@ export interface CoachTurnOutput {
   refused: boolean;
   /** Worker qui a servi le tour (hôte seul) : mesure, jamais secret. */
   worker?: string;
-  /** Modèle qui a répondu (repli cloud compris). */
+  /** Modèle qui a répondu. */
   model?: string;
-  /** Absent : le fournisseur ne le mesure pas (Anthropic). */
+  /** Absent : le fournisseur ne le mesure pas. */
   generation?: CoachGeneration;
   /** Une séance demandée (`compose`) : choisie par le modèle, ou par le serveur seul. */
   composed?: { by: 'model' } | { by: 'server'; failure: string };

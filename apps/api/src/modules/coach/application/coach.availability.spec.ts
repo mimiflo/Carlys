@@ -9,7 +9,6 @@ const ABONNE = {
 } as unknown as EntitlementsService;
 
 function porte(config: {
-  anthropicApiKey?: string;
   coachProvider: { baseUrl?: string; apiKey?: string; model?: string };
 }): CoachAvailability {
   const { baseUrl } = config.coachProvider;
@@ -21,31 +20,19 @@ function porte(config: {
 }
 
 /**
- * Le fournisseur est un RÉGLAGE : une adresse compatible OpenAI (Mistral…)
- * choisit ce client, son absence garde Anthropic. Dans les deux cas, un
- * réglage incomplet ferme la porte (503) avant toute dépense, sans empêcher
- * l'API de démarrer.
+ * Un seul fournisseur, nos workers : un réglage incomplet ferme la porte
+ * (503) avant toute dépense, sans empêcher l'API de démarrer.
  */
 describe('CoachAvailability, le fournisseur configuré', () => {
-  it('Anthropic (aucune adresse) : ouvert avec sa clé, fermé sans', async () => {
-    await expect(
-      porte({ anthropicApiKey: 'sk-ant-factice', coachProvider: {} }).assertAvailable('u'),
-    ).resolves.toBeUndefined();
+  it('aucun worker : fermé — il n’existe aucun autre fournisseur', async () => {
     await expect(porte({ coachProvider: {} }).assertAvailable('u')).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
   });
 
-  it('adresse compatible OpenAI : il faut aussi un modèle, et la clé Anthropic ne compte plus', async () => {
-    const mistral = { baseUrl: 'https://api.mistral.ai/v1', apiKey: 'cle-factice' };
-
+  it('un worker sans modèle : fermé, rien à lui demander', async () => {
     await expect(
-      porte({ coachProvider: { ...mistral, model: 'mistral-small-latest' } }).assertAvailable('u'),
-    ).resolves.toBeUndefined();
-    // Sans modèle, rien à demander au fournisseur : fermé, même avec une clé
-    // Anthropic restée dans le .env.
-    await expect(
-      porte({ anthropicApiKey: 'sk-ant-factice', coachProvider: mistral }).assertAvailable('u'),
+      porte({ coachProvider: { baseUrl: 'http://ollama:11434/v1' } }).assertAvailable('u'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 

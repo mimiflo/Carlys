@@ -5,6 +5,11 @@
 Acceptée — 2026-09-30. Complète l'ADR 0011 (le modèle reste Qwen3-4B, sur nos
 machines) et l'ADR 0012 (la réponse reste en flux SSE).
 
+**Mise à jour du 3 octobre 2026.** Le repli cloud (décision 11) est RETIRÉ, à
+la demande du propriétaire : plus de `COACH_CLOUD_FALLBACK`, plus de client
+Anthropic. Un worker en panne donne « momentanément indisponible », ou la
+séance composée par le serveur, jamais un appel ailleurs.
+
 ## Contexte
 
 Le propriétaire veut que « plusieurs utilisateurs puissent utiliser le coach
@@ -76,9 +81,8 @@ processeur, ≈ 8 jetons/s en écriture (mesuré le 30 septembre 2026).
    attente, un message n'a rien coûté.
 10. **Chaque génération laisse une ligne** (`CoachGeneration`) : identifiants,
    instants, statut, jetons, worker. Aucun contenu de conversation.
-11. **Repli cloud prévu, éteint** : `COACH_CLOUD_FALLBACK=false` par défaut.
-    Allumé, il ne sert qu'avec `ANTHROPIC_API_KEY` posée, et seulement après
-    la mise à jour des textes légaux (voir `coach-ia.md`).
+11. ~~**Repli cloud prévu, éteint**~~ — retiré le 3 octobre 2026 (voir le
+    statut) : aucun repli, nos workers seulement.
 
 ## Conséquences
 

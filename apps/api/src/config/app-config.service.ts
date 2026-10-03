@@ -207,10 +207,6 @@ export class AppConfigService {
 
   // ── Coach IA ───────────────────────────────────────────────────────────
 
-  get anthropicApiKey(): string | undefined {
-    return this.config.get('ANTHROPIC_API_KEY', { infer: true });
-  }
-
   get coachProvider(): { baseUrl?: string; apiKey?: string; model?: string } {
     return {
       baseUrl: this.config.get('COACH_API_BASE_URL', { infer: true }),

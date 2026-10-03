@@ -6,6 +6,12 @@ Acceptée — 2026-09. Sa décision 2 (Mistral Free mode en production) est
 remplacée par l'ADR 0011 (Qwen3-4B sur notre serveur) : le Free mode a
 refusé toutes les demandes le 28 septembre 2026. Le reste tient.
 
+**Mise à jour du 3 octobre 2026.** Le propriétaire garde son modèle, et lui
+seul : le client Anthropic, la variable `ANTHROPIC_API_KEY` et la dépendance
+`@anthropic-ai/sdk` sont retirés. Il ne reste qu'un fournisseur, nos workers,
+par le client compatible OpenAI ; sans `COACH_API_BASE_URL` et `COACH_MODEL`,
+le coach est indisponible (503). Ce qui suit est l'historique de la décision.
+
 ## Contexte
 
 Le coach IA ne parlait qu'à Anthropic, par son SDK, dans un seul fichier
