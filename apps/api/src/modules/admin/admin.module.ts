@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ExercisesModule } from '../exercises/exercises.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AdminAccessModule } from './admin-access.module';
+import { AdminTotpService } from './application/admin-totp.service';
 import { AdminAuthService } from './application/admin-auth.service';
 import { AdminCatalogService } from './application/admin-catalog.service';
 import { AdminCategoriesService } from './application/admin-categories.service';
@@ -34,6 +35,7 @@ import { AdminUsersController } from './presentation/http/admin-users.controller
   ],
   providers: [
     AdminAuthService,
+    AdminTotpService,
     AdminUsersService,
     AdminPlatformService,
     AdminCatalogService,

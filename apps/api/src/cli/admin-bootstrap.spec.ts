@@ -3,6 +3,7 @@ import {
   UsageError,
   generatePassword,
   parseArgs,
+  totpEnrollmentText,
   validatePassword,
 } from './admin-bootstrap';
 
@@ -24,7 +25,17 @@ describe('admin-bootstrap — arguments', () => {
       displayName: 'ops',
       resetPassword: false,
       roleExplicite: false,
+      resetTotp: false,
     });
+  });
+
+  it('--reset-2fa : la double authentification seule, rien d’autre', () => {
+    const args = parseArgs(['a@b.fr', '--reset-2fa']);
+    expect(args.resetTotp).toBe(true);
+    expect(args.resetPassword).toBe(false);
+    expect(() => parseArgs(['a@b.fr', '--reset-2fa', '--reset-password'])).toThrow(UsageError);
+    expect(() => parseArgs(['a@b.fr', '--reset-2fa', '--role', 'support'])).toThrow(UsageError);
+    expect(args.roleExplicite).toBe(false);
   });
 
   it('accepte un rôle connu et refuse un rôle inconnu', () => {
@@ -66,5 +77,12 @@ describe('admin-bootstrap — mot de passe', () => {
   it('refuse un mot de passe plus court que le minimum', () => {
     expect(validatePassword('a'.repeat(PASSWORD_MIN_LENGTH - 1))).toMatch(/trop court/);
     expect(validatePassword('a'.repeat(PASSWORD_MIN_LENGTH))).toBeNull();
+  });
+
+  it('2FA : le QR code au terminal et la clé groupée par 4, à afficher une seule fois', async () => {
+    const text = await totpEnrollmentText(Buffer.alloc(20, 0), 'a@b.fr');
+    expect(text).toContain('UNE SEULE FOIS');
+    expect(text).toContain('AAAA AAAA AAAA AAAA AAAA AAAA AAAA AAAA');
+    expect(text).toMatch(/[█▀▄]/);
   });
 });

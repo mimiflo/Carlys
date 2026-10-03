@@ -1,5 +1,14 @@
 /**
  * `node dist/cli/admin-bootstrap <email> [--role <slug>] [--display-name <nom>] [--reset-password]`
+ * `node dist/cli/admin-bootstrap <email> --reset-2fa` — premier enrôlement
+ * d'un compte d'avant la 2FA, téléphone perdu, ou 2FA gelée : un NOUVEAU
+ * secret remplace l'ancien. Ni le mot de passe ni les rôles ne bougent.
+ *
+ * LE SECRET DE DOUBLE AUTHENTIFICATION NAÎT ICI, jamais à la page de
+ * connexion : à la création comme au `--reset-2fa`, son QR code s'affiche
+ * UNE SEULE FOIS sur le terminal de l'opérateur, à scanner avant la première
+ * connexion. Une page qui le montrerait le donnerait au premier qui connaît
+ * le mot de passe — un intrus compris, qui verrouillerait le propriétaire.
  *
  * Crée un compte d'administration — LE SEUL moyen d'en créer un sur un
  * serveur. L'API n'expose aucune route de création (par choix : un
@@ -23,6 +32,7 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
+import { toString as qrCode } from 'qrcode';
 import { z } from 'zod';
 import { AppConfigService } from '../config/app-config.service';
 import { type Env, validateEnv } from '../config/env.schema';
@@ -31,6 +41,8 @@ import {
   adminRoleBySlug,
   syncAdminRbac,
 } from '../modules/admin/application/admin-rbac';
+import { base32Encode, newTotpSecret, otpauthUri } from '../modules/admin/application/totp';
+import { sealTotpSecret, totpVaultKey } from '../modules/admin/application/totp-vault';
 import { PasswordService } from '../modules/auth/application/password.service';
 import { runCli } from './run-cli';
 
@@ -50,6 +62,8 @@ export interface BootstrapArgs {
    * admin support dont on voulait seulement changer le mot de passe.
    */
   readonly roleExplicite: boolean;
+  /** `--reset-2fa` : émettre un nouveau secret de double authentification, rien d'autre. */
+  readonly resetTotp: boolean;
 }
 
 export class UsageError extends Error {}
@@ -71,6 +85,7 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
   let roleExplicite = false;
   let displayName = '';
   let resetPassword = false;
+  let resetTotp = false;
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
     switch (arg) {
@@ -98,9 +113,17 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
       case '--reset-password':
         resetPassword = true;
         break;
+      case '--reset-2fa':
+        resetTotp = true;
+        break;
       default:
         throw new UsageError(`Option inconnue : « ${arg ?? ''}».`);
     }
+  }
+  if (resetTotp && (resetPassword || roleExplicite || displayName !== '')) {
+    throw new UsageError(
+      '--reset-2fa se lance seul : il ne touche ni au mot de passe ni aux rôles.',
+    );
   }
   return {
     email: email.data,
@@ -108,6 +131,7 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
     displayName: displayName === '' ? (email.data.split('@')[0] ?? email.data) : displayName,
     resetPassword,
     roleExplicite,
+    resetTotp,
   };
 }
 
@@ -146,6 +170,7 @@ export function readPasswordFromStdin(): string | null {
 function usage(): string {
   return [
     'Usage : node dist/cli/admin-bootstrap <email> [--role <slug>] [--display-name <nom>] [--reset-password]',
+    '        node dist/cli/admin-bootstrap <email> --reset-2fa',
     `  rôles : ${ADMIN_ROLES.map((r) => r.slug).join(' | ')}   (défaut : superadmin)`,
     '  Le mot de passe se lit sur l’entrée standard ; vide = engendré et affiché une fois.',
   ].join('\n');
@@ -209,6 +234,51 @@ export async function bootstrapAdmin(
   };
 }
 
+/**
+ * Émet un NOUVEAU secret de double authentification, chiffré, et le rend
+ * pour l'affichage : l'ancien cesse aussitôt de valoir, les codes faux
+ * repartent de zéro. L'audit en garde la trace.
+ */
+export async function issueAdminTotp(
+  email: string,
+  prisma: PrismaClient,
+  vaultKey: Buffer,
+): Promise<Buffer> {
+  const admin = await prisma.adminUser.findUnique({ where: { email } });
+  if (admin === null) throw new UsageError(`Aucun compte d'administration pour ${email}.`);
+  const secret = newTotpSecret();
+  await prisma.$transaction([
+    prisma.adminUser.update({
+      where: { id: admin.id },
+      data: {
+        totpSecret: sealTotpSecret(secret, vaultKey, admin.id),
+        totpEnabledAt: null,
+        totpLastStep: null,
+        totpFailedAttempts: 0,
+      },
+    }),
+    prisma.auditLog.create({
+      data: { action: 'admin.totp_issued', actorType: 'SYSTEM', adminUserId: admin.id },
+    }),
+  ]);
+  return secret;
+}
+
+/** Le QR code à scanner, et sa clé pour qui ne peut pas scanner. */
+export async function totpEnrollmentText(secret: Buffer, email: string): Promise<string> {
+  const uri = otpauthUri(secret, email, 'Carlys Admin');
+  return [
+    '',
+    '  DOUBLE AUTHENTIFICATION — affichée UNE SEULE FOIS. Scanne ce QR code avec',
+    '  une appli d’authentification (Google Authenticator, Microsoft Authenticator…) :',
+    '',
+    await qrCode(uri, { type: 'terminal', small: true }),
+    `  Impossible de scanner ? Clé à saisir : ${base32Encode(secret).replace(/(.{4})(?=.)/g, '$1 ')}`,
+    '  Puis connecte-toi au back-office : mot de passe, puis le code à 6 chiffres.',
+    '',
+  ].join('\n');
+}
+
 async function main(argv: readonly string[]): Promise<number> {
   let args: BootstrapArgs;
   try {
@@ -217,6 +287,7 @@ async function main(argv: readonly string[]): Promise<number> {
     process.stderr.write(`${(error as Error).message}\n\n${usage()}\n`);
     return 2;
   }
+  if (args.resetTotp) return issueTotpOnly(args.email);
 
   let password = readPasswordFromStdin();
   let generated = false;
@@ -240,6 +311,15 @@ async function main(argv: readonly string[]): Promise<number> {
       prisma,
       new PasswordService(config),
     );
+    // Un compte NEUF part avec son secret : il n'a jamais à passer par une
+    // page qui l'émettrait. Un mot de passe remplacé ne touche pas la 2FA.
+    const enrollment =
+      outcome === 'created'
+        ? await totpEnrollmentText(
+            await issueAdminTotp(args.email, prisma, totpVaultKey(config.jwtAccessSecret)),
+            args.email,
+          )
+        : '';
     process.stdout.write(
       [
         outcome === 'created' ? 'Compte créé.' : 'Mot de passe remplacé.',
@@ -255,6 +335,7 @@ async function main(argv: readonly string[]): Promise<number> {
               `  ${password}`,
             ]
           : []),
+        enrollment,
         '',
       ].join('\n'),
     );
@@ -266,6 +347,24 @@ async function main(argv: readonly string[]): Promise<number> {
     }
     process.stderr.write(`Échec : ${(error as Error).message}\n`);
     return 1;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function issueTotpOnly(email: string): Promise<number> {
+  const env: Env = validateEnv(process.env);
+  const config = new AppConfigService(new ConfigService<Env, true>(env));
+  const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
+  try {
+    const secret = await issueAdminTotp(email, prisma, totpVaultKey(config.jwtAccessSecret));
+    process.stdout.write(
+      `Nouveau secret de double authentification pour ${email} — l'ancien ne vaut plus rien.\n${await totpEnrollmentText(secret, email)}\n`,
+    );
+    return 0;
+  } catch (error) {
+    process.stderr.write(`${(error as Error).message}\n`);
+    return error instanceof UsageError ? 3 : 1;
   } finally {
     await prisma.$disconnect();
   }

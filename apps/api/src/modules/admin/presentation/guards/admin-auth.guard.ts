@@ -22,6 +22,8 @@ export type AdminRequest = Request & { adminPrincipal?: AdminPrincipal };
 interface AdminTokenPayload {
   sub: string;
   adm?: boolean;
+  /** Ouverte par un code de double authentification juste. */
+  mfa?: boolean;
 }
 
 /**
@@ -56,7 +58,7 @@ export class AdminAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Session administrateur expirée ou invalide.');
     }
-    if (payload.adm !== true || typeof payload.sub !== 'string') {
+    if (payload.adm !== true || payload.mfa !== true || typeof payload.sub !== 'string') {
       throw new UnauthorizedException('Session administrateur expirée ou invalide.');
     }
 

@@ -11,7 +11,6 @@ process.env.S3_PUBLIC_BASE_URL ??= 'http://localhost:9000/carlys-media';
 
 import {
   ADMIN_PERMISSIONS,
-  type AdminLoginResult,
   type ApiSuccessEnvelope,
   type AuthResult,
   type ExerciseDetail,
@@ -24,6 +23,7 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
@@ -118,14 +118,7 @@ describe('Médias (e2e)', () => {
     }
 
     const login = async (email: string) =>
-      data<AdminLoginResult>(
-        (
-          await server()
-            .post('/api/v1/admin/auth/login')
-            .send({ email, password: ADMIN_PASSWORD })
-            .expect(200)
-        ).body,
-      ).accessToken;
+      (await adminSession(server, email, ADMIN_PASSWORD)).accessToken;
     mediaToken = await login(mediaEmail);
     readOnlyToken = await login(readOnlyEmail);
 

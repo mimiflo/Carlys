@@ -1,4 +1,8 @@
-import { type AdminLoginResult, type AdminMe } from '@carlys/api-contracts';
+import {
+  type AdminLoginChallenge,
+  type AdminLoginResult,
+  type AdminMe,
+} from '@carlys/api-contracts';
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -8,7 +12,7 @@ import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { AdminAuthService } from '../../application/admin-auth.service';
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
-import { AdminLoginDto } from './dto/admin.dto';
+import { AdminLoginDto, AdminTotpDto } from './dto/admin.dto';
 
 /** Limites renforcées : la connexion admin est une cible d'abus évidente. */
 const STRICT_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
@@ -27,9 +31,21 @@ export class AdminAuthController {
   @Post('login')
   @Throttle(STRICT_THROTTLE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Connexion administrateur (comptes séparés du mobile)' })
-  login(@Body() dto: AdminLoginDto, @Req() request: RequestWithId): Promise<AdminLoginResult> {
+  @ApiOperation({
+    summary: 'Connexion administrateur, étape 1 : le mot de passe ouvre la double authentification',
+  })
+  login(@Body() dto: AdminLoginDto, @Req() request: RequestWithId): Promise<AdminLoginChallenge> {
     return this.adminAuth.login(dto, clientContextOf(request));
+  }
+
+  @Post('totp')
+  @Throttle(STRICT_THROTTLE)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Connexion administrateur, étape 2 : le code à 6 chiffres ouvre la session',
+  })
+  verifyTotp(@Body() dto: AdminTotpDto, @Req() request: RequestWithId): Promise<AdminLoginResult> {
+    return this.adminAuth.verifySecondFactor(dto, clientContextOf(request));
   }
 
   @Get('me')

@@ -2,6 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { type AuditLog, type Prisma, UserStatus, WorkoutSessionStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
+/**
+ * Codes faux d'affilée avant que la double authentification ne se gèle :
+ * 20 essais sur un million de codes (trois admis par fenêtre) laissent
+ * moins d'une chance sur 15 000 à qui devine.
+ */
+export const TOTP_MAX_FAILED_ATTEMPTS = 20;
+
 export type AdminWithAccess = Prisma.AdminUserGetPayload<{
   include: {
     roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } };
@@ -43,6 +50,45 @@ export class AdminRepository {
       where: { id },
       include: this.accessInclude(),
     });
+  }
+
+  /**
+   * RÉSERVE un essai de code, AVANT de le vérifier : `false` une fois
+   * [TOTP_MAX_FAILED_ATTEMPTS] essais ratés d'affilée — la double
+   * authentification est alors gelée jusqu'à `--reset-2fa`. En base, donc
+   * sans dépendre de Redis ; conditionnel, donc atomique sous une rafale.
+   */
+  reserveTotpAttempt(adminUserId: string): Promise<boolean> {
+    return this.prisma.adminUser
+      .updateMany({
+        where: { id: adminUserId, totpFailedAttempts: { lt: TOTP_MAX_FAILED_ATTEMPTS } },
+        data: { totpFailedAttempts: { increment: 1 } },
+      })
+      .then(({ count }) => count === 1);
+  }
+
+  /**
+   * Consomme un pas de 30 s accepté, remet les essais à zéro — et confirme
+   * l'enrôlement s'il était en attente. Conditionnel : deux requêtes
+   * simultanées avec le même code ne passent pas toutes les deux, et un
+   * secret remplacé entre-temps (`--reset-2fa`) ne s'active pas (`false`).
+   */
+  claimTotpStep(
+    adminUserId: string,
+    sealedSecret: string,
+    step: number,
+    enabledAt: Date,
+  ): Promise<boolean> {
+    return this.prisma.adminUser
+      .updateMany({
+        where: {
+          id: adminUserId,
+          totpSecret: sealedSecret,
+          OR: [{ totpLastStep: null }, { totpLastStep: { lt: step } }],
+        },
+        data: { totpLastStep: step, totpEnabledAt: enabledAt, totpFailedAttempts: 0 },
+      })
+      .then(({ count }) => count === 1);
   }
 
   markLogin(adminUserId: string): Promise<void> {

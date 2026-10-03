@@ -1025,16 +1025,28 @@ enum AdminUserStatus {
 
 /// Compte d'administration — JAMAIS confondu avec User (comptes mobiles).
 model AdminUser {
-  id           String          @id @default(uuid()) @db.Uuid
+  id                 String          @id @default(uuid()) @db.Uuid
   /// Normalisé en minuscules par la couche application avant écriture.
-  email        String          @unique
+  email              String          @unique
   /// Hash Argon2id — jamais le mot de passe, jamais loggé, jamais retourné.
-  passwordHash String
-  displayName  String
-  status       AdminUserStatus @default(ACTIVE)
-  lastLoginAt  DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  passwordHash       String
+  displayName        String
+  status             AdminUserStatus @default(ACTIVE)
+  lastLoginAt        DateTime?
+  /// Secret de double authentification (TOTP), CHIFFRÉ (AES-256-GCM, clé
+  /// dérivée du secret JWT) — jamais en clair, jamais retourné. Émis par
+  /// l'opérateur (`admin-bootstrap`, sur le terminal du serveur), jamais
+  /// par la page de connexion.
+  totpSecret         String?
+  /// Enrôlement confirmé par un premier code juste : sans lui, le secret
+  /// n'est qu'émis.
+  totpEnabledAt      DateTime?
+  /// Dernier pas de 30 s accepté : un code déjà servi ne rouvre rien.
+  totpLastStep       Int?
+  /// Codes faux d'affilée : au plafond, la 2FA est gelée jusqu'à `--reset-2fa`.
+  totpFailedAttempts Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   roles       AdminUserRole[]
   auditLogs   AuditLog[]

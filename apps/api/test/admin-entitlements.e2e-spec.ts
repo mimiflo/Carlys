@@ -5,7 +5,6 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
 import {
-  type AdminLoginResult,
   type ApiSuccessEnvelope,
   type AuthResult,
   type EntitlementsResponse,
@@ -19,6 +18,7 @@ import { Test } from '@nestjs/testing';
 import { PaymentProvider, PrismaClient, SubscriptionStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
@@ -63,14 +63,7 @@ describe('Administration — origine des droits et retour à l’abonnement (e2e
     return entitlement;
   };
   const login = async (email: string): Promise<string> =>
-    data<AdminLoginResult>(
-      (
-        await server()
-          .post('/api/v1/admin/auth/login')
-          .send({ email, password: ADMIN_PASSWORD })
-          .expect(200)
-      ).body,
-    ).accessToken;
+    (await adminSession(server, email, ADMIN_PASSWORD)).accessToken;
 
   beforeAll(async () => {
     prisma = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });

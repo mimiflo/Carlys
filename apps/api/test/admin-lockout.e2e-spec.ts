@@ -18,6 +18,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { issueTestTotp } from './support/admin-session';
 
 const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
 
@@ -62,6 +63,8 @@ describe('Verrouillage de la connexion admin (e2e)', () => {
         { email: witnessEmail, displayName: 'Admin témoin E2E', passwordHash },
       ],
     });
+    // Le témoin a sa double authentification : son mot de passe juste ouvre la seconde étape.
+    await issueTestTotp(witnessEmail);
   });
 
   afterAll(async () => {

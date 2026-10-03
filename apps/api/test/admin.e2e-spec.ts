@@ -9,7 +9,6 @@ import {
   type AdminAuditLog,
   type AdminExerciseSummary,
   type AdminMuscleGroup,
-  type AdminLoginResult,
   type AdminMe,
   type AdminOverview,
   type ApiSuccessEnvelope,
@@ -27,6 +26,7 @@ import * as argon2 from 'argon2';
 import { Redis } from 'ioredis';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -173,26 +173,12 @@ describe('Administration (e2e)', () => {
       .send({ email: superEmail, password: 'MauvaisMotDePasse1!' })
       .expect(401);
 
-    const login = data<AdminLoginResult>(
-      (
-        await server()
-          .post('/api/v1/admin/auth/login')
-          .send({ email: superEmail, password: ADMIN_PASSWORD })
-          .expect(200)
-      ).body,
-    );
+    const login = await adminSession(server, superEmail, ADMIN_PASSWORD);
     superToken = login.accessToken;
     expect(login.admin.roles).toContain('superadmin');
     expect(login.admin.permissions).toEqual(expect.arrayContaining([...ADMIN_PERMISSIONS]));
 
-    supportToken = data<AdminLoginResult>(
-      (
-        await server()
-          .post('/api/v1/admin/auth/login')
-          .send({ email: supportEmail, password: ADMIN_PASSWORD })
-          .expect(200)
-      ).body,
-    ).accessToken;
+    supportToken = (await adminSession(server, supportEmail, ADMIN_PASSWORD)).accessToken;
 
     const me = data<AdminMe>(
       (await asAdmin(superToken).get('/api/v1/admin/auth/me').expect(200)).body,

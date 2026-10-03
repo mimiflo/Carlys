@@ -4,18 +4,14 @@ process.env.DATABASE_URL ??= 'postgresql://carlys:carlys@localhost:5432/carlys_t
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
-import {
-  type AdminLoginResult,
-  type ApiSuccessEnvelope,
-  type AuthResult,
-  type AuthSession,
-} from '@carlys/api-contracts';
+import { type ApiSuccessEnvelope, type AuthResult, type AuthSession } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
@@ -185,14 +181,7 @@ describe('Jetons push rattachés à la session (e2e)', () => {
       roleSlug: 'e2e-push-suspension',
       permissions: ['user:read', 'user:update'],
     });
-    const admin = data<AdminLoginResult>(
-      (
-        await server()
-          .post('/api/v1/admin/auth/login')
-          .send({ email: adminEmail, password: ADMIN_PASSWORD })
-          .expect(200)
-      ).body,
-    );
+    const admin = await adminSession(server, adminEmail, ADMIN_PASSWORD);
 
     await server()
       .patch(`/api/v1/admin/users/${u.user.id}/status`)

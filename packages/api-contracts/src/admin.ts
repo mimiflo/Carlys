@@ -47,6 +47,15 @@ export const adminLoginResultSchema = z.object({
 });
 export type AdminLoginResult = z.infer<typeof adminLoginResultSchema>;
 
+/**
+ * Le mot de passe juste n'ouvre PAS la session : il ouvre la seconde étape,
+ * le code de l'appli d'authentification (double authentification). Le
+ * `challengeToken` vit cinq minutes. Le secret ne passe jamais par ici : il
+ * s'émet sur le terminal du serveur (`admin-bootstrap`).
+ */
+export const adminLoginChallengeSchema = z.object({ challengeToken: z.string() });
+export type AdminLoginChallenge = z.infer<typeof adminLoginChallengeSchema>;
+
 /** Utilisateur GÉRÉ (compte mobile), vu du back-office. */
 export const managedUserStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']);
 export type ManagedUserStatus = z.infer<typeof managedUserStatusSchema>;

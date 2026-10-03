@@ -34,7 +34,7 @@ function adminRow(status: AdminUserStatus = AdminUserStatus.ACTIVE): unknown {
 
 function buildStubs(): Stubs {
   return {
-    jwt: { verifyAsync: jest.fn().mockResolvedValue({ sub: 'admin-1', adm: true }) },
+    jwt: { verifyAsync: jest.fn().mockResolvedValue({ sub: 'admin-1', adm: true, mfa: true }) },
     admins: { findAdminById: jest.fn().mockResolvedValue(adminRow()) },
   };
 }
@@ -93,6 +93,15 @@ describe('AdminAuthGuard', () => {
     const guard = buildGuard(stubs);
 
     await expect(guard.canActivate(contextFor(bearer))).rejects.toThrow(UnauthorizedException);
+    expect(stubs.admins.findAdminById).not.toHaveBeenCalled();
+  });
+
+  it('refuse une session ouverte au SEUL mot de passe (sans mfa) : d’avant la double authentification', async () => {
+    const stubs = buildStubs();
+    stubs.jwt.verifyAsync.mockResolvedValue({ sub: 'admin-1', adm: true });
+    await expect(buildGuard(stubs).canActivate(contextFor(bearer))).rejects.toThrow(
+      UnauthorizedException,
+    );
     expect(stubs.admins.findAdminById).not.toHaveBeenCalled();
   });
 

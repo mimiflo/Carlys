@@ -15,6 +15,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -32,6 +33,21 @@ export class AdminLoginDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+}
+
+/** Seconde étape de la connexion : le code à 6 chiffres de l'appli. */
+export class AdminTotpDto {
+  @ApiProperty({ description: 'Jeton de la première étape (5 min).' })
+  @IsString()
+  @MaxLength(2048)
+  challengeToken!: string;
+
+  @ApiProperty({ example: '123456' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/\s/g, '') : value,
+  )
+  @Matches(/^\d{6}$/, { message: 'Le code compte six chiffres.' })
+  code!: string;
 }
 
 /**

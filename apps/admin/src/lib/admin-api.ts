@@ -1,6 +1,7 @@
 import {
   adminAuditLogSchema,
   adminExerciseSummarySchema,
+  adminLoginChallengeSchema,
   adminLoginResultSchema,
   adminMeSchema,
   adminMuscleGroupSchema,
@@ -12,6 +13,7 @@ import {
   PREMIUM_ENTITLEMENT_KEYS,
   type AdminAuditLog,
   type AdminExerciseSummary,
+  type AdminLoginChallenge,
   type AdminLoginResult,
   type AdminMe,
   type AdminMuscleGroup,
@@ -80,10 +82,20 @@ export const adminApi = {
    * Sans jeton, jamais : un jeton périmé resté dans l'onglet ferait lire le
    * 401 d'un mot de passe faux comme une fin de session.
    */
-  async login(email: string, password: string): Promise<AdminLoginResult> {
+  async login(email: string, password: string): Promise<AdminLoginChallenge> {
     const body = await requestJson(
       '/admin/auth/login',
       { method: 'POST', body: JSON.stringify({ email, password }) },
+      null,
+    );
+    return parseData(body, adminLoginChallengeSchema);
+  },
+
+  /** Seconde étape : le code à 6 chiffres de l'appli ouvre la session. */
+  async verifyTotp(challengeToken: string, code: string): Promise<AdminLoginResult> {
+    const body = await requestJson(
+      '/admin/auth/totp',
+      { method: 'POST', body: JSON.stringify({ challengeToken, code }) },
       null,
     );
     return parseData(body, adminLoginResultSchema);

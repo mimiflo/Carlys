@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import type { AdminLoginChallenge, AdminLoginResult } from '@carlys/api-contracts';
 import { useState, useSyncExternalStore, type FormEvent } from 'react';
 import { firstAllowedRoute } from '@/components/admin-shell';
+import { LoginSecondFactor } from '@/components/login-second-factor';
 import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';
 
@@ -19,6 +21,9 @@ function loginFailureMessage(cause: unknown): string {
   if (cause instanceof AdminApiError && cause.status === 401) {
     return 'E-mail ou mot de passe incorrect.';
   }
+  // 403 : mot de passe juste, mais aucune double authentification émise —
+  // le serveur dit quelle commande l'opérateur doit lancer.
+  if (cause instanceof AdminApiError && cause.status === 403) return cause.message;
   if (cause instanceof AdminApiError && cause.status === 429) {
     return 'Trop de tentatives : patiente quelques minutes avant de réessayer.';
   }
@@ -29,7 +34,9 @@ function loginFailureMessage(cause: unknown): string {
 }
 
 /**
- * Connexion administrateur (comptes séparés des comptes mobiles).
+ * Connexion administrateur (comptes séparés des comptes mobiles), en DEUX
+ * étapes : le mot de passe, puis le code de l'appli d'authentification
+ * (double authentification) — la première fois, son QR code à scanner.
  * Le jeton vit en sessionStorage : fermer l'onglet clôt la session locale ;
  * chaque requête reste revérifiée côté serveur.
  */
@@ -39,6 +46,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [challenge, setChallenge] = useState<AdminLoginChallenge | null>(null);
   // Arrivé ici parce que le serveur a refusé le jeton (`adminToken.expire`) :
   // le dire, sinon la page de connexion surgit sans explication.
   const expired = useSyncExternalStore(adminToken.subscribe, adminToken.wasExpired, () => false);
@@ -48,16 +56,21 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await adminApi.login(email, password);
-      adminToken.set(result.accessToken);
-      // La réponse de connexion porte DÉJÀ les permissions : elles étaient
-      // jetées, et la navigation était en dur.
-      adminPermissions.set(result.admin.permissions);
-      router.replace(firstAllowedRoute(result.admin.permissions));
+      // Le mot de passe juste n'ouvre pas la session : il ouvre l'étape du code.
+      setChallenge(await adminApi.login(email, password));
+      setPassword('');
     } catch (cause) {
       setError(loginFailureMessage(cause));
-      setSubmitting(false);
     }
+    setSubmitting(false);
+  };
+
+  const onSignedIn = (result: AdminLoginResult) => {
+    adminToken.set(result.accessToken);
+    // La réponse de connexion porte DÉJÀ les permissions : elles étaient
+    // jetées, et la navigation était en dur.
+    adminPermissions.set(result.admin.permissions);
+    router.replace(firstAllowedRoute(result.admin.permissions));
   };
 
   return (
@@ -69,45 +82,53 @@ export default function LoginPage() {
             Ta session a expiré : reconnecte-toi pour continuer.
           </p>
         )}
-        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4" noValidate>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Adresse e-mail
-            <input
-              type="email"
-              name="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Mot de passe
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-            />
-          </label>
-          {error !== null && (
-            <p role="alert" className="text-sm font-medium text-danger-ink">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={isSubmitting || email === '' || password.length < 8}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
-          >
-            {isSubmitting ? 'Connexion…' : 'Se connecter'}
-          </button>
-        </form>
+        {challenge !== null ? (
+          <LoginSecondFactor
+            challenge={challenge}
+            onSignedIn={onSignedIn}
+            onRestart={() => setChallenge(null)}
+          />
+        ) : (
+          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4" noValidate>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Adresse e-mail
+              <input
+                type="email"
+                name="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-medium">
+              Mot de passe
+              <input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              />
+            </label>
+            {error !== null && (
+              <p role="alert" className="text-sm font-medium text-danger-ink">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={isSubmitting || email === '' || password.length < 8}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            >
+              {isSubmitting ? 'Connexion…' : 'Se connecter'}
+            </button>
+          </form>
+        )}
         <Link href="/" className="mt-6 inline-block text-sm font-medium text-primary-ink underline">
           ← Retour à l’accueil
         </Link>

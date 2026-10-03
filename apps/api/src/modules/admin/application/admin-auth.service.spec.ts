@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { type JwtService } from '@nestjs/jwt';
 import { AdminUserStatus } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
@@ -7,13 +12,20 @@ import { type PasswordService } from '../../auth/application/password.service';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type AdminRepository } from '../infrastructure/admin.repository';
 import { AdminAuthService } from './admin-auth.service';
+import { type AdminTotpService } from './admin-totp.service';
 
 interface Stubs {
-  admins: { findAdminByEmail: jest.Mock; findAdminById: jest.Mock; markLogin: jest.Mock };
+  admins: {
+    findAdminByEmail: jest.Mock;
+    findAdminById: jest.Mock;
+    markLogin: jest.Mock;
+    reserveTotpAttempt: jest.Mock;
+  };
   passwords: { verify: jest.Mock; hash: jest.Mock };
   jwt: { signAsync: jest.Mock };
   audit: { record: jest.Mock };
   lockout: { reserveAttempt: jest.Mock; reset: jest.Mock };
+  totp: { challengeFor: jest.Mock; adminIdOf: jest.Mock; consumeCode: jest.Mock };
 }
 
 function adminRow(overrides: Record<string, unknown> = {}): unknown {
@@ -24,6 +36,10 @@ function adminRow(overrides: Record<string, unknown> = {}): unknown {
     displayName: 'Admin',
     status: AdminUserStatus.ACTIVE,
     lastLoginAt: null,
+    totpSecret: 'v1.secret-chiffre',
+    totpEnabledAt: new Date('2026-10-01'),
+    totpLastStep: null,
+    totpFailedAttempts: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     roles: [
@@ -60,6 +76,7 @@ function buildStubs(): Stubs {
       findAdminByEmail: jest.fn().mockResolvedValue(adminRow()),
       findAdminById: jest.fn().mockResolvedValue(adminRow()),
       markLogin: jest.fn().mockResolvedValue(undefined),
+      reserveTotpAttempt: jest.fn().mockResolvedValue(true),
     },
     passwords: {
       verify: jest.fn().mockResolvedValue(true),
@@ -70,6 +87,11 @@ function buildStubs(): Stubs {
     lockout: {
       reserveAttempt: jest.fn().mockResolvedValue({ locked: false }),
       reset: jest.fn().mockResolvedValue(undefined),
+    },
+    totp: {
+      challengeFor: jest.fn().mockResolvedValue({ challengeToken: 'defi' }),
+      adminIdOf: jest.fn().mockResolvedValue('admin-1'),
+      consumeCode: jest.fn().mockResolvedValue(true),
     },
   };
 }
@@ -87,13 +109,14 @@ function buildService(stubs: Stubs): AdminAuthService {
     config as unknown as AppConfigService,
     stubs.audit as unknown as AuditService,
     stubs.lockout as unknown as LockoutService,
+    stubs.totp as unknown as AdminTotpService,
   );
 }
 
 const CLIENT = { ipAddress: '127.0.0.1' };
 
 describe('AdminAuthService', () => {
-  it('connexion réussie : jeton à audience dédiée, rôles et permissions, compteur remis à zéro', async () => {
+  it('mot de passe juste : AUCUNE session, la seconde étape (code), compteur remis à zéro', async () => {
     const stubs = buildStubs();
     const service = buildService(stubs);
 
@@ -102,17 +125,98 @@ describe('AdminAuthService', () => {
       CLIENT,
     );
 
-    expect(result.accessToken).toBe('jeton-admin');
-    expect(result.admin.roles).toEqual(['support']);
-    expect(result.admin.permissions).toEqual(['audit:read', 'user:read']);
+    expect(result).toEqual({ challengeToken: 'defi' });
+    expect(stubs.jwt.signAsync).not.toHaveBeenCalled();
+    expect(stubs.admins.markLogin).not.toHaveBeenCalled();
     expect(stubs.admins.findAdminByEmail).toHaveBeenCalledWith('admin@carlys.local');
-    expect(stubs.jwt.signAsync).toHaveBeenCalledWith(
-      { adm: true },
-      expect.objectContaining({ audience: 'carlys-admin', subject: 'admin-1' }),
-    );
     // Compteur PROPRE au back-office : jamais celui d'un compte mobile de même adresse.
     expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin:admin@carlys.local');
     expect(stubs.lockout.reset).toHaveBeenCalledWith('admin:admin@carlys.local');
+  });
+
+  it('code juste : session à audience dédiée, marquée mfa, rôles et permissions', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    const result = await service.verifySecondFactor(
+      { challengeToken: 'defi', code: '123456' },
+      CLIENT,
+    );
+
+    expect(result.accessToken).toBe('jeton-admin');
+    expect(result.admin.roles).toEqual(['support']);
+    expect(result.admin.permissions).toEqual(['audit:read', 'user:read']);
+    expect(stubs.jwt.signAsync).toHaveBeenCalledWith(
+      { adm: true, mfa: true },
+      expect.objectContaining({ audience: 'carlys-admin', subject: 'admin-1' }),
+    );
+    expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin-totp:admin-1');
+    expect(stubs.admins.markLogin).toHaveBeenCalledWith('admin-1');
+  });
+
+  it('code faux ou déjà servi : 401, audité, aucune session', async () => {
+    const stubs = buildStubs();
+    stubs.totp.consumeCode.mockResolvedValue(false);
+    const service = buildService(stubs);
+
+    await expect(
+      service.verifySecondFactor({ challengeToken: 'defi', code: '000000' }, CLIENT),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(stubs.jwt.signAsync).not.toHaveBeenCalled();
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.totp_failed', adminUserId: 'admin-1' }),
+    );
+  });
+
+  it('trop d’essais de code : 429 avant même de lire le compte', async () => {
+    const stubs = buildStubs();
+    stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 600 });
+    const service = buildService(stubs);
+
+    await expect(
+      service.verifySecondFactor({ challengeToken: 'defi', code: '123456' }, CLIENT),
+    ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    expect(stubs.totp.consumeCode).not.toHaveBeenCalled();
+  });
+
+  it('20 codes faux d’affilée : 2FA gelée en base (403), plus aucun code vérifié', async () => {
+    const stubs = buildStubs();
+    stubs.admins.reserveTotpAttempt.mockResolvedValue(false);
+    const service = buildService(stubs);
+
+    await expect(
+      service.verifySecondFactor({ challengeToken: 'defi', code: '123456' }, CLIENT),
+    ).rejects.toThrow(ForbiddenException);
+    expect(stubs.totp.consumeCode).not.toHaveBeenCalled();
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.totp_frozen', adminUserId: 'admin-1' }),
+    );
+  });
+
+  it('aucun secret émis : refus audité, pointe vers l’opérateur', async () => {
+    const stubs = buildStubs();
+    stubs.admins.findAdminByEmail.mockResolvedValue(adminRow({ totpSecret: null }));
+    stubs.totp.challengeFor.mockRejectedValue(new ForbiddenException());
+    const service = buildService(stubs);
+
+    await expect(
+      service.login({ email: 'admin@carlys.local', password: 'MotDePasseSolide42' }, CLIENT),
+    ).rejects.toThrow(ForbiddenException);
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.totp_not_issued', adminUserId: 'admin-1' }),
+    );
+  });
+
+  it('premier code juste : l’enrôlement est audité', async () => {
+    const stubs = buildStubs();
+    stubs.admins.findAdminById.mockResolvedValue(adminRow({ totpEnabledAt: null }));
+    const service = buildService(stubs);
+
+    await service.verifySecondFactor({ challengeToken: 'defi', code: '123456' }, CLIENT);
+
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.totp_enrolled', adminUserId: 'admin-1' }),
+    );
   });
 
   it('compte inconnu : hachage factice quand même (anti-énumération), message uniforme', async () => {

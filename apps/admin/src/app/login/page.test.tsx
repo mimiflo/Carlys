@@ -41,6 +41,15 @@ function connecte(): void {
   fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
 }
 
+const DEFI_CODE = { challengeToken: 'defi' } as const;
+
+async function saisitCode(code = '123456'): Promise<void> {
+  fireEvent.change(await screen.findByLabelText('Code à 6 chiffres'), {
+    target: { value: code },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   routerReplace.mockClear();
@@ -58,6 +67,48 @@ describe('Page Connexion', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Ta session a expiré');
   });
 
+  it('le mot de passe juste N’OUVRE PAS la session : il demande le code', async () => {
+    vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
+    const verify = vi.spyOn(adminApi, 'verifyTotp');
+
+    render(<LoginPage />);
+    connecte();
+
+    expect(await screen.findByLabelText('Code à 6 chiffres')).toBeInTheDocument();
+    expect(adminToken.get()).toBeNull();
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('2FA pas encore émise : la commande de l’opérateur, aucune étape de code', async () => {
+    vi.spyOn(adminApi, 'login').mockRejectedValue(
+      new AdminApiError('Double authentification pas encore configurée pour ce compte.', 403),
+    );
+
+    render(<LoginPage />);
+    connecte();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Double authentification pas encore configurée',
+    );
+    expect(screen.queryByLabelText('Code à 6 chiffres')).not.toBeInTheDocument();
+  });
+
+  it('code faux : la phrase du serveur, le champ vidé, aucune session', async () => {
+    vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
+    vi.spyOn(adminApi, 'verifyTotp').mockRejectedValue(
+      new AdminApiError('Code incorrect ou déjà utilisé.', 401),
+    );
+
+    render(<LoginPage />);
+    connecte();
+    await saisitCode('000000');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Code incorrect ou déjà utilisé.');
+    expect(screen.getByLabelText('Code à 6 chiffres')).toHaveValue('');
+    expect(adminToken.get()).toBeNull();
+  });
+
   it('n’annonce rien à qui arrive simplement pour se connecter', () => {
     render(<LoginPage />);
 
@@ -65,12 +116,14 @@ describe('Page Connexion', () => {
   });
 
   it('garde les permissions reçues et ouvre la première page autorisée', async () => {
-    vi.spyOn(adminApi, 'login').mockResolvedValue(
+    vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
+    vi.spyOn(adminApi, 'verifyTotp').mockResolvedValue(
       resultat(['exercise:read', 'exercise:write', 'media:read', 'media:write']),
     );
 
     render(<LoginPage />);
     connecte();
+    await saisitCode();
 
     await waitFor(() => {
       expect(routerReplace).toHaveBeenCalledWith('/exercises');
@@ -88,10 +141,12 @@ describe('Page Connexion', () => {
   // sans quoi la règle « première page autorisée » serait une redirection en dur
   // déplacée ailleurs.
   it('envoie sur /users l’administrateur qui peut lire les comptes', async () => {
-    vi.spyOn(adminApi, 'login').mockResolvedValue(resultat(['user:read', 'audit:read']));
+    vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
+    vi.spyOn(adminApi, 'verifyTotp').mockResolvedValue(resultat(['user:read', 'audit:read']));
 
     render(<LoginPage />);
     connecte();
+    await saisitCode();
 
     await waitFor(() => {
       expect(routerReplace).toHaveBeenCalledWith('/users');

@@ -8,7 +8,6 @@ import {
   ADMIN_PERMISSIONS,
   type AdminAuditLog,
   type AdminCommunityReport,
-  type AdminLoginResult,
   type ApiSuccessEnvelope,
   type AuthResult,
   type BlockedUser,
@@ -26,6 +25,7 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -146,14 +146,7 @@ describe('Modération de la communauté (e2e)', () => {
       await prisma.adminUserRole.create({ data: { adminUserId: admin.id, roleId: role.id } });
     }
     const loginAdmin = async (email: string): Promise<string> =>
-      data<AdminLoginResult>(
-        (
-          await server()
-            .post('/api/v1/admin/auth/login')
-            .send({ email, password: ADMIN_PASSWORD })
-            .expect(200)
-        ).body,
-      ).accessToken;
+      (await adminSession(server, email, ADMIN_PASSWORD)).accessToken;
     superToken = await loginAdmin(superEmail);
     readerToken = await loginAdmin(readerEmail);
   });

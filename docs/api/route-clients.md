@@ -249,6 +249,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | --- | --- | --- |
 | `GET /admin/audit-logs` | **admin** | apps/admin (back-office) |
 | `POST /admin/auth/login` | **admin** | apps/admin (back-office) |
+| `POST /admin/auth/totp` | **admin** | apps/admin (back-office) |
 | `GET /admin/auth/me` | **admin** | apps/admin (back-office) |
 | `GET /admin/community/reports` | **admin** | apps/admin (back-office) |
 | `PATCH /admin/community/reports/{id}` | **admin** | apps/admin (back-office) |
