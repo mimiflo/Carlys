@@ -16,7 +16,6 @@ import '../controllers/coach_controllers.dart';
 import '../providers/coach_frame_providers.dart';
 import '../providers/coach_program_actions.dart';
 import '../providers/coach_saved_workouts.dart';
-import '../utils/coach_frame.dart';
 import '../widgets/coach_page_states.dart';
 import '../widgets/coach_training_frame.dart';
 import 'coach_screen.dart';
@@ -68,26 +67,22 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     // question attend déjà, elle ne partira pas deux fois.
     if (_cadreEnCours) return;
     // L'objectif, le niveau, le matériel d'abord : le coach les DEMANDE
-    // avant de réfléchir, au lieu de composer à l'aveugle. La question
-    // attend dans le champ, et part au retour de l'écran de préparation —
-    // une fois par visite : qui revient sans choisir n'est pas relancé.
+    // sur sa page à lui, avant de réfléchir, au lieu de composer à
+    // l'aveugle. La question attend dans le champ : « C'est parti » l'envoie,
+    // revenir sans valider l'y laisse. Une fois par visite.
     final missing = _cadreAsked
         ? const <String>[]
         : ref.read(coachFrameMissingProvider);
     if (missing.isNotEmpty) {
       _cadreAsked = true;
       _cadreEnCours = true;
-      final router = GoRouter.of(context);
-      AppNotices.of(context).show(
-        'Avant de réfléchir : dis-moi ${coachFrameList(missing)}. '
-        'Je réponds dès ton retour.',
-      );
+      final bool? valide;
       try {
-        await router.push(AppRoutes.programSetup);
+        valide = await GoRouter.of(context).push<bool>(AppRoutes.coachGoal);
       } finally {
         _cadreEnCours = false;
       }
-      if (!mounted) return;
+      if (!mounted || valide != true) return;
     }
     // La question quitte le champ tout de suite : elle s'affiche dans le fil,
     // au-dessus de la réponse qui s'écrit. Sur un refus, elle y revient,

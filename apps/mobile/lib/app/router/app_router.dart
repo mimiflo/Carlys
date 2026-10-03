@@ -14,6 +14,7 @@ import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
 import '../../features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
+import '../../features/coaching/presentation/screens/coach_goal_screen.dart';
 import '../../features/coaching/presentation/screens/coach_page.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/community/presentation/screens/community_screen.dart';
@@ -211,6 +212,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.coach,
                 name: 'coach',
                 builder: (context, state) => const CoachPage(),
+                routes: [
+                  GoRoute(
+                    path: 'objectif',
+                    name: 'coach-goal',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const CoachGoalScreen(),
+                  ),
+                ],
               ),
             ],
           ),

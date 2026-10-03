@@ -12,10 +12,10 @@ import 'coach_card_frame.dart';
 
 /// Le CADRE du coach, en tête du fil : ton objectif et ton matériel.
 ///
-/// Rien de choisi : une carte le demande d'emblée et ouvre l'écran de
-/// préparation — sans eux, il compose à l'aveugle, et on l'oublie. Et la
-/// première question envoyée sans eux ouvre ce même écran AVANT que le
-/// coach ne réfléchisse (`CoachPage._send`). Tout
+/// Rien de choisi : une carte le demande d'emblée et ouvre la
+/// page du coach (« Avant que je réfléchisse ») — sans eux, il compose à
+/// l'aveugle, et on l'oublie. Et la première question envoyée sans eux
+/// ouvre cette même page AVANT qu'il ne réfléchisse (`CoachPage._send`). Tout
 /// choisi : une ligne le rappelle (« Objectif : Perte de gras · avec
 /// haltères, barre »), qu'un appui permet de changer.
 ///
@@ -34,7 +34,7 @@ class CoachTrainingFrame extends ConsumerWidget {
         for (final item in catalog) item.slug: item.name.toLowerCase(),
     };
     final missing = coachFrameMissing(profile, goal);
-    void open() => context.push(AppRoutes.programSetup);
+    void open() => context.push(AppRoutes.coachGoal);
 
     if (missing.isNotEmpty) {
       return Padding(

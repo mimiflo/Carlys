@@ -51,19 +51,10 @@ class _TrainingGoalSheet extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final goal in TrainingGoal.values) ...[
-                    // La carte de choix du design system : la feuille
-                    // n'apporte que le contenu de l'objectif.
-                    AppChoiceCard(
-                      icon: trainingGoalIcon(goal),
-                      title: goal.label,
-                      description: goal.description,
-                      selected: goal == current,
-                      selectedSemantics: 'Objectif actuel.',
-                      onTap: () => _choisir(context, ref, goal),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                  ],
+                  TrainingGoalChoices(
+                    current: current,
+                    onChoose: (goal) => _choisir(context, ref, goal),
+                  ),
                 ],
               ),
             ),
@@ -96,5 +87,40 @@ class _TrainingGoalSheet extends ConsumerWidget {
     } on AppException catch (exception) {
       notices.show(exception.message, tone: AppNoticeTone.error);
     }
+  }
+}
+
+/// Les huit objectifs en cartes de choix, l'actuel marqué : la feuille et
+/// la page « Avant que je réfléchisse » du coach les montrent à l'identique.
+class TrainingGoalChoices extends StatelessWidget {
+  const TrainingGoalChoices({
+    required this.current,
+    required this.onChoose,
+    super.key,
+  });
+
+  final TrainingGoal? current;
+  final ValueChanged<TrainingGoal> onChoose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final goal in TrainingGoal.values) ...[
+          // La carte de choix du design system : on n'apporte que le
+          // contenu de l'objectif.
+          AppChoiceCard(
+            icon: trainingGoalIcon(goal),
+            title: goal.label,
+            description: goal.description,
+            selected: goal == current,
+            selectedSemantics: 'Objectif actuel.',
+            onTap: () => onChoose(goal),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+      ],
+    );
   }
 }

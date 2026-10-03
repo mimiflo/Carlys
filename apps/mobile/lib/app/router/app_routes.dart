@@ -17,6 +17,10 @@ abstract final class AppRoutes {
   static const String home = '/home';
   static const String exercises = '/exercises';
   static const String coach = '/coach';
+
+  /// « Avant que je réfléchisse » : objectif, niveau, matériel — demandés
+  /// par le coach, plein écran, avant sa première réponse.
+  static const String coachGoal = '/coach/objectif';
   static const String progress = '/progress';
   static const String nutrition = '/nutrition';
 

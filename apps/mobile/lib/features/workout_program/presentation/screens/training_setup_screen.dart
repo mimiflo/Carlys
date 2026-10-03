@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../exercises/presentation/providers/exercise_catalog_providers.dart';
 import '../../domain/entities/training_goal.dart';
 import '../../domain/entities/training_profile.dart';
 import '../providers/training_goal_providers.dart';
 import '../providers/training_profile_providers.dart';
 import '../widgets/generate_program_card.dart';
+import '../widgets/training_equipment_section.dart';
 import '../widgets/training_goal_sheet.dart';
 import '../widgets/training_setup_sections.dart';
 
@@ -95,7 +95,7 @@ class TrainingSetupScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.gapSection),
               const AppSectionLabel('Ton matériel'),
               const SizedBox(height: AppSpacing.sm),
-              _Materiel(profile: value),
+              TrainingEquipmentSection(profile: value),
               const SizedBox(height: AppSpacing.gapSection),
               GenerateProgramCard(profile: value),
             ],
@@ -201,47 +201,5 @@ class _Bandeau extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Le bloc matériel, avec ses états : la taxonomie vient du serveur.
-class _Materiel extends ConsumerWidget {
-  const _Materiel({required this.profile});
-
-  final TrainingProfile profile;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final catalog = ref.watch(equipmentCatalogProvider);
-
-    return switch (catalog) {
-      AsyncData(:final value) when value.isEmpty => const AppEmptyState(
-        icon: AppIcons.exercises,
-        title: 'Catalogue vide',
-        message: 'Le matériel du catalogue n’est pas encore chargé.',
-      ),
-      AsyncData(:final value) => EquipmentChecklist(
-        catalog: value,
-        ownedSlugs: profile.equipmentSlugs.toSet(),
-        // La bascule vit dans les actions, SÉRIALISÉE : l'écran ne
-        // calcule pas la liste — deux coches rapides se courraient après.
-        onToggle: (equipment) async {
-          final notices = AppNotices.of(context);
-          try {
-            await ref
-                .read(trainingProfileActionsProvider)
-                .toggleEquipment(equipment.slug);
-          } on AppException catch (exception) {
-            notices.show(exception.message, tone: AppNoticeTone.error);
-          }
-        },
-      ),
-      AsyncError() => AppErrorState(
-        title: 'Matériel indisponible',
-        message: 'Impossible de lire la liste du matériel.',
-        onRetry: () => ref.invalidate(equipmentCatalogProvider),
-      ),
-      _ => const AppLoadingIndicator(),
-    };
   }
 }

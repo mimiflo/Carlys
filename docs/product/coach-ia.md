@@ -89,20 +89,23 @@ jamais de double. La copie échoue (base indisponible) : la carte reste, le
 tour n'échoue pas. Une séance supprimée de « Mes modèles » ne revient pas.
 
 **Le cadre du fil.** En tête du coach, une carte demande d'emblée
-l'objectif, le niveau et le matériel qui manquent, et ouvre l'écran de
-préparation ; tout choisi, une ligne les rappelle (« Objectif : Prise de
+l'objectif, le niveau et le matériel qui manquent, et ouvre la page du
+coach ; tout choisi, une ligne les rappelle (« Objectif : Prise de
 muscle · avec haltères, banc ») et « Modifier » y ramène.
 
-**Demandé AVANT de réfléchir** (3 octobre 2026, à la demande du
-propriétaire). La carte ne suffisait pas : on l'ignorait, on écrivait, et
-le coach réfléchissait sans objectif. Désormais la première question
-envoyée sans eux ouvre l'écran de préparation (« Avant de réfléchir :
-dis-moi ton objectif… Je réponds dès ton retour ») ; elle attend dans le
-champ et part au retour — c'est seulement là que le coach réfléchit. Une
-fois par visite : qui revient sans choisir n'est pas relancé, sa question
-part. Sans compte, ou profil pas encore lu (hors ligne), rien ne retient
-une question (`coachFrameMissingProvider`, même règle que la carte :
-`utils/coach_frame.dart`).
+**Demandé AVANT de réfléchir, sur SA page** (3 octobre 2026, à la demande
+du propriétaire). La carte ne suffisait pas : on l'ignorait, on écrivait,
+et le coach réfléchissait sans objectif. Désormais la première question
+envoyée sans eux ouvre la page du coach, « Avant que je réfléchisse »
+(`CoachGoalScreen`, route `/coach/objectif`) — pas l'écran des programmes :
+l'objectif, le niveau et le matériel, rien d'autre (ni rythme, ni durée,
+ni génération de programme). « C'est parti » ne s'allume qu'une fois les
+trois choisis ; il envoie la question, et c'est alors seulement que le
+coach réfléchit. Revenir sans valider laisse la question dans le champ,
+rien n'est envoyé. Une fois par visite ; sans compte, ou profil pas encore
+lu (hors ligne), rien ne retient une question (`coachFrameMissingProvider`,
+même règle que la carte : `utils/coach_frame.dart`). La carte du fil
+(« Choisir maintenant », « Modifier ») ouvre la même page.
 
 ### Séance demandée : composée à coup sûr (2 octobre 2026)
 

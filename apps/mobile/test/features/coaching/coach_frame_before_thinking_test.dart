@@ -18,8 +18,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../support/fake_coach_repository.dart';
 import '../../support/fake_subscription_repository.dart';
 
-/// L'objectif AVANT la réflexion : sans lui, la première question ouvre
-/// l'écran de préparation, et ne part — le coach ne réfléchit — qu'au retour.
+/// L'objectif AVANT la réflexion : sans lui, la première question ouvre la
+/// page du coach, et ne part — le coach ne réfléchit — que sur « C'est
+/// parti ». Revenir sans valider la laisse dans le champ.
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -38,11 +39,19 @@ void main() {
       routes: [
         GoRoute(path: '/', builder: (_, _) => const CoachPage()),
         GoRoute(
-          path: AppRoutes.programSetup,
+          path: AppRoutes.coachGoal,
           builder: (context, _) => Scaffold(
-            body: TextButton(
-              onPressed: () => context.pop(),
-              child: const Text('Préparation choisie'),
+            body: Column(
+              children: [
+                TextButton(
+                  onPressed: () => context.pop(true),
+                  child: const Text('C’est parti'),
+                ),
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Retour'),
+                ),
+              ],
             ),
           ),
         ),
@@ -75,18 +84,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('pas d’objectif : il le DEMANDE d’abord, et répond au retour', (
+  testWidgets('pas d’objectif : il le DEMANDE d’abord, puis répond', (
     tester,
   ) async {
     final repository = FakeCoachRepository(threads: [thread]);
     await monter(tester, repository, manque: const ['ton objectif']);
 
     await envoyer(tester, 'Une séance jambes ?');
-    // L'écran de préparation, et rien d'envoyé : il ne réfléchit pas encore.
-    expect(find.text('Préparation choisie'), findsOneWidget);
+    // Sa page, et rien d'envoyé : il ne réfléchit pas encore.
+    expect(find.text('C’est parti'), findsOneWidget);
     expect(repository.sent, isEmpty);
 
-    await tester.tap(find.text('Préparation choisie'));
+    await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
     expect(repository.sent, ['Une séance jambes ?']);
   });
@@ -101,25 +110,33 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Envoyer'));
     await tester.tap(find.bySemanticsLabel('Envoyer'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Préparation choisie'));
+    await tester.tap(find.text('C’est parti'));
     await tester.pumpAndSettle();
 
     expect(repository.sent, ['Une fois ?']);
   });
 
-  testWidgets('une fois par visite : revenir sans choisir ne relance pas', (
+  testWidgets('revenir sans valider : rien ne part, la question attend', (
     tester,
   ) async {
     final repository = FakeCoachRepository(threads: [thread]);
     await monter(tester, repository, manque: const ['ton objectif']);
 
-    await envoyer(tester, 'Première ?');
-    await tester.tap(find.text('Préparation choisie'));
+    await envoyer(tester, 'Plus tard ?');
+    await tester.tap(find.text('Retour'));
     await tester.pumpAndSettle();
-    await envoyer(tester, 'Seconde ?');
 
-    expect(find.text('Préparation choisie'), findsNothing);
-    expect(repository.sent, ['Première ?', 'Seconde ?']);
+    expect(repository.sent, isEmpty);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'Plus tard ?',
+    );
+
+    // Une fois par visite : le second envoi part sans redemander.
+    await tester.tap(find.bySemanticsLabel('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(find.text('C’est parti'), findsNothing);
+    expect(repository.sent, ['Plus tard ?']);
   });
 
   testWidgets('tout est choisi : la question part tout de suite', (
@@ -129,7 +146,7 @@ void main() {
     await monter(tester, repository, manque: const []);
 
     await envoyer(tester, 'Où j’en suis ?');
-    expect(find.text('Préparation choisie'), findsNothing);
+    expect(find.text('C’est parti'), findsNothing);
     expect(repository.sent, ['Où j’en suis ?']);
   });
 

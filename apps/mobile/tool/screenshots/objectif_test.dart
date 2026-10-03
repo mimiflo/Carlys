@@ -13,6 +13,7 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/coaching/presentation/screens/coach_goal_screen.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
@@ -231,49 +232,81 @@ void main() {
     await capture(tester, 'objectif-06-rapport');
   });
 
-  testWidgets('le coach demande l’objectif AVANT de réfléchir', (tester) async {
+  // La page du coach, « Avant que je réfléchisse » : en haut rien de
+  // choisi, en bas tout prêt et « C'est parti » allumé.
+  Future<void> pageDuCoach(
+    WidgetTester tester,
+    TrainingProfile profil,
+    TrainingGoal? objectif,
+  ) async {
     telephone(tester);
-    // Rien de choisi : ce que voit qui écrit au coach sans objectif.
-    final repo = FakeTrainingProfileRepository(
-      initial: const TrainingProfile(
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trainingProfileRepositoryProvider.overrideWithValue(
+            FakeTrainingProfileRepository(initial: profil),
+          ),
+          exercisesRepositoryProvider.overrideWithValue(
+            FakeExercisesRepository(const [])
+              ..equipmentRefs = const [
+                EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
+                EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
+                EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
+                EquipmentRef(id: 'e5', slug: 'kettlebell', name: 'Kettlebell'),
+                EquipmentRef(
+                  id: 'e6',
+                  slug: 'poids-du-corps',
+                  name: 'Poids du corps',
+                ),
+              ],
+          ),
+          currentTrainingGoalProvider.overrideWithValue(objectif),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const CoachGoalScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('coach : « Avant que je réfléchisse », rien de choisi', (
+    tester,
+  ) async {
+    await pageDuCoach(
+      tester,
+      const TrainingProfile(
         goal: null,
         experience: null,
         weeklySessionsTarget: null,
         sessionMinutesTarget: null,
         equipmentSlugs: [],
       ),
+      null,
     );
-    final exercises = FakeExercisesRepository(const [])
-      ..equipmentRefs = const [
-        EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
-        EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
-        EquipmentRef(id: 'e6', slug: 'poids-du-corps', name: 'Poids du corps'),
-      ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          trainingProfileRepositoryProvider.overrideWithValue(repo),
-          exercisesRepositoryProvider.overrideWithValue(exercises),
-          programRepositoryProvider.overrideWithValue(FakeProgramRepository()),
-          currentTrainingGoalProvider.overrideWithValue(null),
-        ],
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.dark(),
-          home: const TrainingSetupScreen(),
-        ),
+    await capture(tester, 'objectif-07-coach-demande');
+  });
+
+  testWidgets('coach : tout choisi, « C’est parti »', (tester) async {
+    await pageDuCoach(
+      tester,
+      const TrainingProfile(
+        goal: TrainingGoal.hyrox,
+        experience: TrainingExperience.intermediate,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: ['halteres', 'kettlebell', 'poids-du-corps'],
       ),
+      TrainingGoal.hyrox,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Poids du corps'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-
-    // Le message du coach, tel que la page l'affiche en ouvrant cet écran.
-    AppNotices.of(tester.element(find.byType(TrainingSetupScreen))).show(
-      'Avant de réfléchir : dis-moi ton objectif, ton niveau et ton '
-      'matériel. Je réponds dès ton retour.',
-    );
-    await tester.pump(const Duration(milliseconds: 400));
-    await capture(tester, 'objectif-07-coach-demande');
-    // Le message s'efface seul : son minuteur doit finir avant le test.
-    await tester.pump(const Duration(seconds: 10));
+    await capture(tester, 'objectif-08-coach-pret');
   });
 }
