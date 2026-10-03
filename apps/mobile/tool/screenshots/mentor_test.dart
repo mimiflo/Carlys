@@ -10,14 +10,19 @@
 // Ce fichier EST un harnais de test (exécuté via `flutter test`), simplement
 // rangé hors de test/ — l'avertissement visible_for_testing est donc infondé :
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+import 'dart:async';
+
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/for_you_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/section_title_bar.dart';
+import 'package:carlys_mobile/features/mentor/data/flutter_tts_mentor_speaker.dart';
 import 'package:carlys_mobile/features/mentor/data/mentor_prefs_store.dart';
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_prefs.dart';
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_style.dart';
+import 'package:carlys_mobile/features/mentor/domain/mentor_speaker.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_tour.dart';
+import 'package:carlys_mobile/features/mentor/domain/mentor_voice.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
 import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_settings_section.dart';
@@ -32,6 +37,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'capture_test.dart' show loadRealFonts;
+
+/// Une voix muette qui « parle » sans fin : la feuille ouverte montre donc
+/// le Mentor EN TRAIN de dire son mot (le bouton devient « Arrêter »).
+class _VoixMuette implements MentorSpeaker {
+  @override
+  Future<void> speak(String text, MentorVoice voice) =>
+      Completer<void>().future;
+
+  @override
+  Future<void> stop() async {}
+}
 
 /// Une récompense fraîchement gagnée : ce que le Mentor fête.
 final _fraiche = EarnedReward(
@@ -82,6 +98,7 @@ void main() {
         overrides: [
           currentMentorStyleProvider.overrideWithValue(style),
           earnedRewardsProvider.overrideWith((ref) async => const []),
+          mentorSpeakerProvider.overrideWithValue(_VoixMuette()),
           ...overrides,
         ],
         child: MaterialApp(

@@ -13,6 +13,7 @@ import 'package:carlys_mobile/features/coaching/presentation/screens/coach_scree
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_training_frame.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_speak_button.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
@@ -134,6 +135,13 @@ void main() {
           theme: AppTheme.dark(),
           home: CoachScreen(
             frame: profile == null ? null : const CoachTrainingFrame(),
+            // Comme la page : « Écouter » sous chaque réponse du coach.
+            replyFooter: (reply) => MentorSpeakButton(
+              speechKey: 'coach.${reply.id}',
+              text: reply.content,
+              size: 18,
+              compact: true,
+            ),
             messages: messages,
             // La règle de la page : les amorces s'effacent dès la première
             // question du jour.

@@ -21,6 +21,7 @@ class MentorPrefsStore {
   /// Clés des préférences locales.
   static const String interventionsKey = 'mentor.interventions';
   static const String frequenceKey = 'mentor.frequence';
+  static const String voixParleeKey = 'mentor.voix.parlee';
   static const String visiteVuesKey = 'mentor.visite.vues';
   static const String celebrationsDitesKey = 'mentor.celebrations.dites';
 
@@ -35,6 +36,8 @@ class MentorPrefsStore {
             prefs.getBool(interventionsKey) ??
             MentorPrefs.defauts.interventionsActives,
         frequence: MentorFrequency.fromWire(prefs.getString(frequenceKey)),
+        voixParlee:
+            prefs.getBool(voixParleeKey) ?? MentorPrefs.defauts.voixParlee,
       );
     } catch (_) {
       return MentorPrefs.defauts;
@@ -49,6 +52,11 @@ class MentorPrefsStore {
   Future<void> setFrequence(MentorFrequency frequence) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(frequenceKey, frequence.wire);
+  }
+
+  Future<void> setVoixParlee({required bool active}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(voixParleeKey, active);
   }
 
   // ── Visite guidée : les étapes déjà vues ───────────────────────────────

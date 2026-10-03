@@ -30,6 +30,7 @@ class MentorPrefs {
   const MentorPrefs({
     required this.interventionsActives,
     required this.frequence,
+    this.voixParlee = true,
   });
 
   /// Activées par défaut : même règle que les catégories de notification,
@@ -42,4 +43,10 @@ class MentorPrefs {
 
   final bool interventionsActives;
   final MentorFrequency frequence;
+
+  /// Le Mentor dit son mot À VOIX HAUTE quand on ouvre sa feuille. Coupé,
+  /// il ne parle plus que sur demande (le bouton « Écouter »). Actif par
+  /// défaut : une voix qu'on a choisie et qu'on n'entend jamais ne sert à
+  /// rien.
+  final bool voixParlee;
 }

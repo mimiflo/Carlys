@@ -39,10 +39,14 @@ class CoachThreadView extends StatelessWidget {
     this.busyProgramId,
     this.busyCreatedId,
     this.greeting,
+    this.replyFooter,
     super.key,
   });
 
   final List<CoachMessage> messages;
+
+  /// Ce que la page pose sous chaque réponse du coach (« Écouter »).
+  final Widget Function(CoachMessage reply)? replyFooter;
   final CoachLiveTurn? live;
   final double maxBubbleWidth;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
@@ -135,7 +139,11 @@ class CoachThreadView extends StatelessWidget {
           children: [
             if (day != null)
               CoachDaySeparator(label: formatSpokenDay(day, now)),
-            CoachMessageBubble(message: message, maxWidth: maxBubbleWidth),
+            CoachMessageBubble(
+              message: message,
+              maxWidth: maxBubbleWidth,
+              footer: replyFooter?.call(message),
+            ),
             if (proposal != null) ...[
               const SizedBox(height: AppSpacing.xs),
               CoachProposalCard(

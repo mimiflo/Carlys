@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_prefs.dart';
 import '../../domain/mentor_word.dart';
+import 'mentor_speak_button.dart';
+
+/// La phrase « le mot du moment », pour le bouton comme pour la lecture à
+/// l'ouverture de la feuille : une seule clé, un seul bouton « Arrêter ».
+const String mentorWordSpeechKey = 'mentor.mot';
 
 /// Le bandeau du Mentor : qui parle, et ce qu'il dit.
 ///
@@ -83,9 +88,24 @@ class MentorBandeau extends StatelessWidget {
           ),
           if (mot != null) ...[
             const SizedBox(height: AppSpacing.md),
-            Text(
-              mot!.message,
-              style: AppTypography.quote.copyWith(color: AppColors.neutral0),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    mot!.message,
+                    style: AppTypography.quote.copyWith(
+                      color: AppColors.neutral0,
+                    ),
+                  ),
+                ),
+                MentorSpeakButton(
+                  speechKey: mentorWordSpeechKey,
+                  text: mot!.message,
+                  color: AppColors.neutral0,
+                  size: 24,
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(

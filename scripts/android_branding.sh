@@ -2,7 +2,7 @@
 # Applique l'identité Carlys au dossier android/ GÉNÉRÉ par flutter create :
 # nom affiché (« Carlys »), icône de lanceur (le sceau de la marque, déclinée
 # dans apps/mobile/launcher/), permission de notification Android 13+,
-# appareil photo FACULTATIF ; et, côté ios/ s'il existe, le nom et les motifs
+# appareil photo FACULTATIF, accès au moteur de synthèse vocale ; et, côté ios/ s'il existe, le nom et les motifs
 # d'accès à l'appareil photo et aux photos.
 #
 # android/ et ios/ ne sont pas versionnés : l'identité vit ICI et dans
@@ -55,6 +55,31 @@ fi
 if ! grep -q 'android.hardware.camera"' "$MANIFEST"; then
   sed -i.bak 's|<application|<uses-feature android:name="android.hardware.camera" android:required="false"/>\
     <application|' "$MANIFEST"
+  rm -f "$MANIFEST.bak"
+fi
+
+# ── Synthèse vocale : la voix parlée du Mentor ──────────────────────────────
+#
+# Depuis Android 11, une application ne VOIT un service d'un autre paquet que
+# s'il est déclaré dans <queries> : sans ceci, flutter_tts ne trouve aucun
+# moteur de synthèse et le Mentor reste muet sur la plupart des téléphones.
+# Le greffon ne le déclare pas lui-même (son manifeste est vide).
+# Le gabarit de `flutter create` porte déjà un <queries> (PROCESS_TEXT) :
+# l'intention s'y ajoute plutôt que d'ouvrir un second bloc.
+if ! grep -q 'android.intent.action.TTS_SERVICE' "$MANIFEST"; then
+  if grep -q '<queries>' "$MANIFEST"; then
+    sed -i.bak 's|<queries>|<queries>\
+        <intent>\
+            <action android:name="android.intent.action.TTS_SERVICE"/>\
+        </intent>|' "$MANIFEST"
+  else
+    sed -i.bak 's|<application|<queries>\
+        <intent>\
+            <action android:name="android.intent.action.TTS_SERVICE"/>\
+        </intent>\
+    </queries>\
+    <application|' "$MANIFEST"
+  fi
   rm -f "$MANIFEST.bak"
 fi
 
@@ -152,4 +177,4 @@ if [ -f "$PLIST" ]; then
     "Carlys n’envoie que la photo de repas que tu choisis : le reste de ta photothèque reste sur ton téléphone."
 fi
 
-echo "Identité Carlys appliquée : nom, icône, notifications, appareil photo facultatif, sans sauvegarde Android, motifs iOS."
+echo "Identité Carlys appliquée : nom, icône, notifications, appareil photo facultatif, synthèse vocale, sans sauvegarde Android, motifs iOS."

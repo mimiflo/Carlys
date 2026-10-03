@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/mentor_tour.dart';
 import '../providers/mentor_providers.dart';
+import 'mentor_speak_button.dart';
 import 'mentor_tour_chemin.dart';
 
 /// Où chaque étape emmène. La table vit ICI, pas dans le manifeste : le
@@ -99,6 +100,10 @@ class _Etape extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(etape.titre, style: theme.textTheme.titleLarge),
+            ),
+            MentorSpeakButton(
+              speechKey: 'mentor.visite.${etape.id}',
+              text: '${etape.titre}. ${etape.corps}',
             ),
           ],
         ),

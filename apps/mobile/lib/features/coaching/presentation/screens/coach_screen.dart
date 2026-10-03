@@ -36,6 +36,7 @@ class CoachScreen extends StatelessWidget {
     this.onUnlock,
     this.greeting,
     this.frame,
+    this.replyFooter,
     super.key,
   });
 
@@ -79,6 +80,10 @@ class CoachScreen extends StatelessWidget {
 
   /// Sous l'en-tête : le cadre du coach (objectif, matériel).
   final Widget? frame;
+
+  /// Sous chaque réponse du coach : la page y pose « Écouter ». L'écran
+  /// reste présentationnel, il ne fait que le transmettre.
+  final Widget Function(CoachMessage reply)? replyFooter;
 
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
@@ -124,6 +129,7 @@ class CoachScreen extends StatelessWidget {
                         busyProgramId: busyProgramId,
                         busyCreatedId: busyCreatedId,
                         greeting: greeting,
+                        replyFooter: replyFooter,
                       ),
                     ),
             ),

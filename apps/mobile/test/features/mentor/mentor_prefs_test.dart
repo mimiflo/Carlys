@@ -39,6 +39,17 @@ void main() {
     expect(prefs.frequence, MentorFrequency.quotidienne);
   });
 
+  test(
+    '« à voix haute » : actif par défaut, et gardé une fois coupé',
+    () async {
+      expect(MentorPrefs.defauts.voixParlee, isTrue);
+      expect((await store.read()).voixParlee, isTrue);
+
+      await store.setVoixParlee(active: false);
+      expect((await store.read()).voixParlee, isFalse);
+    },
+  );
+
   test('une fréquence inconnue retombe sur le cran discret', () {
     expect(MentorFrequency.fromWire('minute'), MentorFrequency.hebdomadaire);
     expect(MentorFrequency.fromWire(null), MentorFrequency.hebdomadaire);

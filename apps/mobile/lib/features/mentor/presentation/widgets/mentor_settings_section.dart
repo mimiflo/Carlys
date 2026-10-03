@@ -7,8 +7,8 @@ import '../providers/mentor_providers.dart';
 import 'mentor_style_sheet.dart';
 import 'mentor_tour_sheet.dart';
 
-/// Groupe « MENTOR CARLYS » du profil : sa voix, ses interventions, leur
-/// fréquence.
+/// Groupe « MENTOR CARLYS » du profil : sa voix, s'il la dit à voix haute,
+/// ses interventions, leur fréquence.
 ///
 /// La voix vit sur le profil SERVEUR (elle teinte le coach partout) ; les
 /// interventions et leur fréquence sont locales à l'appareil, comme le
@@ -31,6 +31,13 @@ class MentorSettingsSection extends ConsumerWidget {
           label: 'Sa voix',
           value: style?.label ?? 'À choisir',
           onTap: () => showMentorStyleSheet(context),
+        ),
+        AppSettingsRow(
+          icon: AppIcons.listen,
+          label: 'À voix haute',
+          toggleValue: prefs.voixParlee,
+          onToggle: (value) =>
+              ref.read(mentorActionsProvider).setVoixParlee(active: value),
         ),
         AppSettingsRow(
           icon: AppIcons.tour,

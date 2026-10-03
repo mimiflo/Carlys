@@ -7,6 +7,8 @@ changera que des libellés, jamais des identifiants.
 Le Mentor n'est pas un écran : c'est une VOIX et une présence.
 
 - Sa voix teinte le coach IA, côté serveur, à chaque tour.
+- Il PARLE : son mot, l'aperçu de ses voix, la visite et les réponses du
+  coach s'écoutent, à voix haute (section « La voix parlée »).
 - Son mot paraît sur l'accueil (section « Pour toi »), à sa voix.
 - Il fait visiter l'application, une pièce à la fois.
 - Il fête un cap franchi, à sa voix, une seule fois.
@@ -25,6 +27,43 @@ verrouillées par `coach.prompt.spec.ts` : moins de 400 caractères, AUCUN
 chiffre (les chiffres viennent des outils), aucun tiret long, aucun nom de
 style dans le préfixe partagé (le cache du prompt se fragmenterait en
 quatre), chaîne vide quand rien n'est choisi — jamais une voix devinée.
+
+## La voix parlée (3 octobre 2026)
+
+Le style choisissait ce que le Mentor ÉCRIT ; on pouvait le sélectionner, et
+rien ne parlait. Il parle désormais, par la synthèse vocale du TÉLÉPHONE
+(`flutter_tts` : TextToSpeech d'Android, AVSpeechSynthesizer d'iOS) — hors
+ligne, gratuite, et le texte ne quitte pas l'appareil.
+
+- **Une voix par style** (`domain/mentor_voice.dart`, fonction pure) : la
+  hauteur et le débit se combinent — Bienveillant chaleureux et posé,
+  Exigeant ferme et net, Athlète rapide, Philosophe grave et lent — et un
+  « timbre » choisit parmi les voix françaises du téléphone, rangées par
+  nom, pour que deux styles proches n'aient pas aussi la même voix. Sans
+  style choisi, la voix du moteur au débit normal.
+- **Où il parle** : « Écouter » (`MentorSpeakButton`) sur son mot (bandeau
+  violet), sur l'exemple de chaque voix (on l'entend AVANT de choisir), sur
+  chaque étape de la visite, et sous chaque réponse du coach — à la voix du
+  Mentor. Pendant qu'il parle, le même bouton devient « Arrêter ». Une
+  seule phrase à la fois (`MentorSpeechController`).
+- **De lui-même** : ouvrir sa feuille, c'est venir l'écouter — il dit son
+  mot ; choisir une voix, il dit son exemple de la nouvelle voix. Fermer la
+  feuille le fait taire. Le réglage local **« À voix haute »** (profil,
+  groupe « Mentor Carlys », actif par défaut) coupe ces lectures
+  spontanées ; les boutons, eux, restent. Avec un lecteur d'écran actif, il
+  ne parle jamais de lui-même : deux voix se couvriraient.
+- **Sans voix française** sur le téléphone, le bouton le dit (« installe-la
+  dans ses réglages de synthèse vocale ») au lieu de rester muet ; la
+  préparation se retente à la demande suivante. Des voix françaises qui
+  exigent le réseau ne comptent pas : plutôt indisponible que du texte
+  envoyé en ligne (la politique de confidentialité promet l'appareil seul).
+- **La fin d'une phrase** s'attend dans l'adaptateur, sur les signaux du
+  moteur (fin, annulation, erreur) ou sur un arrêt — jamais sur
+  `awaitSpeakCompletion`, qu'un arrêt ne libère pas sur iOS. Un compteur
+  écarte une phrase arrêtée pendant la préparation des voix, ou remplacée.
+- **Android 11+** ne laisse voir le moteur de synthèse que s'il est déclaré
+  (`<queries>` … `TTS_SERVICE`) : `scripts/android_branding.sh` l'ajoute au
+  manifeste engendré.
 
 ## La persistance : le même chemin que le profil Carlys
 
@@ -112,3 +151,15 @@ célébration, à sa voix. Trois gardes, toutes héritées de règles écrites :
   mutation), célébration dite une fois, première lecture muette.
 - `home_screen_test.dart` : le mot dans « Pour toi », la feuille du
   Mentor, la visite qui s'ouvre et avance.
+- `mentor_voice_test.dart` : cinq voix distinctes à l'oreille, réglages
+  dans les bornes des moteurs, timbres séparés pour les voix proches.
+- `mentor_speech_controller_test.dart` : la voix choisie ou celle de
+  l'aperçu, écouter puis arrêter, une phrase qui remplace l'autre, pas de
+  voix française → `false` et le silence.
+- `flutter_tts_mentor_speaker_test.dart` : voix françaises hors réseau,
+  rangées, choisies par timbre ; refus nommé puis nouvel essai.
+- `mentor_voice_widgets_test.dart` : « Écouter »/« Arrêter », le message
+  sans voix française, la feuille qui dit son mot puis se tait, « À voix
+  haute » coupé, lecteur d'écran, réglage écrit sur l'appareil.
+- `coach_reply_footer_test.dart` : « Écouter » sous la réponse du coach,
+  jamais sous la question.

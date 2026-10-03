@@ -48,6 +48,11 @@ class MentorActions {
     _ref.invalidate(mentorPrefsProvider);
   }
 
+  Future<void> setVoixParlee({required bool active}) async {
+    await _ref.read(mentorPrefsStoreProvider).setVoixParlee(active: active);
+    _ref.invalidate(mentorPrefsProvider);
+  }
+
   Future<void> marquerEtapeVue(String stepId) async {
     await _ref.read(mentorPrefsStoreProvider).marquerEtapeVue(stepId);
     _ref.invalidate(mentorTourVuesProvider);

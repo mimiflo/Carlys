@@ -110,6 +110,13 @@ dependencies:
   # Utilitaires
   uuid: ^4.5.1
 
+  # La voix PARLÉE du Mentor : la synthèse vocale du téléphone (TextToSpeech
+  # d'Android, AVSpeechSynthesizer d'iOS), sur l'appareil, hors ligne,
+  # gratuite — le texte ne quitte pas le téléphone. Flutter n'en expose
+  # aucune : ce greffon (MIT) est la passerelle standard. Il reste derrière
+  # le port `MentorSpeaker` : aucun test n'appelle de greffon.
+  flutter_tts: ^4.2.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -173,6 +173,12 @@ abstract final class AppIcons {
   static const IconData voiceAthlete = Icons.fitness_center_rounded;
   static const IconData voicePhilosophe = Icons.self_improvement_rounded;
 
+  /// Écouter le Mentor : sa voix, dite à voix haute.
+  static const IconData listen = Icons.volume_up_rounded;
+
+  /// Le faire taire, pendant qu'il parle.
+  static const IconData stopListening = Icons.stop_circle_rounded;
+
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
   static const IconData send = Icons.arrow_upward_rounded;

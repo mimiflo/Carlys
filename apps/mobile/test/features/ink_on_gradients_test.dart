@@ -105,13 +105,16 @@ void main() {
       ('avec son mot', const MentorWord(message: 'Regarde ta semaine.')),
     ]) {
       testWidgets('Mentor, $nom', (tester) async {
+        // Le bandeau porte « Écouter », un widget Riverpod : sa portée.
         await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.dark(),
-            home: Scaffold(
-              body: MentorBandeau(
-                mot: mot,
-                frequence: MentorFrequency.hebdomadaire,
+          ProviderScope(
+            child: MaterialApp(
+              theme: AppTheme.dark(),
+              home: Scaffold(
+                body: MentorBandeau(
+                  mot: mot,
+                  frequence: MentorFrequency.hebdomadaire,
+                ),
               ),
             ),
           ),

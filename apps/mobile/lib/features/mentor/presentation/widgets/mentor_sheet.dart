@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../data/flutter_tts_mentor_speaker.dart';
+import '../../domain/mentor_speaker.dart';
+import '../controllers/mentor_speech_controller.dart';
 import '../providers/mentor_providers.dart';
 import 'mentor_bandeau.dart';
 import 'mentor_style_sheet.dart';
@@ -17,11 +20,48 @@ Future<void> showMentorSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorSheet());
 }
 
-class _MentorSheet extends ConsumerWidget {
+class _MentorSheet extends ConsumerStatefulWidget {
   const _MentorSheet();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MentorSheet> createState() => _MentorSheetState();
+}
+
+/// Ouvrir la feuille, c'est venir écouter le Mentor : il DIT son mot, à sa
+/// voix — sauf « à voix haute » coupé, ou un lecteur d'écran actif (les deux
+/// voix se couvriraient ; le bouton « Écouter » reste là). Fermer la
+/// feuille le fait taire.
+class _MentorSheetState extends ConsumerState<_MentorSheet> {
+  late final MentorSpeechController _speech;
+  late final MentorSpeaker _speaker;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = ref.read(mentorSpeechControllerProvider.notifier);
+    _speaker = ref.read(mentorSpeakerProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _direSonMot());
+  }
+
+  Future<void> _direSonMot() async {
+    if (!mounted || MediaQuery.of(context).accessibleNavigation) return;
+    final prefs = await ref.read(mentorPrefsProvider.future);
+    final mot = ref.read(mentorWordProvider);
+    if (!mounted || !prefs.voixParlee || mot == null) return;
+    await _speech.say(mentorWordSpeechKey, mot.message);
+  }
+
+  @override
+  void dispose() {
+    // Le moteur se tait tout de suite ; le contrôleur, lui, revient au
+    // silence quand la phrase coupée rend la main — pas pendant le
+    // démontage, où Riverpod refuse qu'on change un état.
+    _speaker.stop();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final mot = ref.watch(mentorWordProvider);
     final style = ref.watch(currentMentorStyleProvider);
     final visite = ref.watch(mentorTourProgressProvider);

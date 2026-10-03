@@ -5,7 +5,9 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_style.dart';
 import '../../domain/mentor_word.dart';
+import '../controllers/mentor_speech_controller.dart';
 import '../providers/mentor_providers.dart';
+import 'mentor_speak_button.dart';
 
 /// L'image de chaque voix — présentation pure, le domaine n'en sait rien.
 IconData mentorVoiceIcon(MentorStyle style) => switch (style) {
@@ -31,7 +33,9 @@ class _MentorStyleSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(currentMentorStyleProvider);
 
-    return Padding(
+    // Quatre cartes et leurs exemples : en grand texte, elles dépassent
+    // l'écran — la feuille défile au lieu de couper la dernière voix.
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.gutter),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -53,14 +57,30 @@ class _MentorStyleSheet extends ConsumerWidget {
           for (final style in MentorStyle.values) ...[
             // La carte est celle du design system ; la feuille n'apporte
             // que le contenu de la voix — et son mot d'exemple en pied.
-            AppChoiceCard(
-              icon: mentorVoiceIcon(style),
-              title: style.label,
-              description: style.description,
-              selected: style == current,
-              selectedSemantics: 'Voix actuelle.',
-              onTap: () => _choisir(context, ref, style),
-              footer: _ExempleDeVoix(style: style),
+            // « Écouter » est posé SUR la carte, pas dedans : la carte fond
+            // son contenu en un seul nœud pour le lecteur d'écran, et un
+            // bouton à l'intérieur y serait introuvable.
+            Stack(
+              children: [
+                AppChoiceCard(
+                  icon: mentorVoiceIcon(style),
+                  title: style.label,
+                  description: style.description,
+                  selected: style == current,
+                  selectedSemantics: 'Voix actuelle.',
+                  onTap: () => _choisir(context, ref, style),
+                  footer: _ExempleDeVoix(style: style),
+                ),
+                Positioned(
+                  right: AppSpacing.xs,
+                  bottom: AppSpacing.xs,
+                  child: MentorSpeakButton(
+                    speechKey: 'mentor.voix.${style.wire}',
+                    text: mentorWordCatalog[style]!.first,
+                    style: style,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.xs),
           ],
@@ -82,6 +102,12 @@ class _MentorStyleSheet extends ConsumerWidget {
     // double-tap : le premier pop rend la route non courante.
     final route = ModalRoute.of(context);
     final navigator = Navigator.of(context);
+    // Capturés AVANT les attentes : la feuille se ferme en route, et ni
+    // `ref` ni `context` ne valent plus rien après. Avec un lecteur d'écran,
+    // pas de seconde voix par-dessus la sienne.
+    final speech = ref.read(mentorSpeechControllerProvider.notifier);
+    final prefs = ref.read(mentorPrefsProvider.future);
+    final lecteurEcran = MediaQuery.of(context).accessibleNavigation;
     try {
       await ref.read(mentorActionsProvider).chooseStyle(style);
       if (context.mounted && (route?.isCurrent ?? false)) {
@@ -91,14 +117,22 @@ class _MentorStyleSheet extends ConsumerWidget {
         'Le Mentor parlera en ${style.label}.',
         tone: AppNoticeTone.success,
       );
+      // Il le DIT aussi, de sa nouvelle voix : le choix s'entend.
+      if ((await prefs).voixParlee && !lecteurEcran) {
+        await speech.say(
+          'mentor.voix.${style.wire}',
+          mentorWordCatalog[style]!.first,
+          style: style,
+        );
+      }
     } on AppException catch (exception) {
       notices.show(exception.message, tone: AppNoticeTone.error);
     }
   }
 }
 
-/// Le mot d'exemple d'une voix, cité tel quel : on ENTEND la voix avant
-/// de la choisir.
+/// Le mot d'exemple d'une voix, cité tel quel — et dit à voix haute, de
+/// CETTE voix, par « Écouter » : on l'entend avant de la choisir.
 class _ExempleDeVoix extends StatelessWidget {
   const _ExempleDeVoix({required this.style});
 
@@ -107,7 +141,7 @@ class _ExempleDeVoix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Icon(AppIcons.quote, size: 14, color: AppColors.primaryLight),
         const SizedBox(width: AppSpacing.xs),
@@ -119,6 +153,8 @@ class _ExempleDeVoix extends StatelessWidget {
             ),
           ),
         ),
+        // La place du bouton « Écouter », posé par-dessus la carte.
+        const SizedBox(width: AppSpacing.xl),
       ],
     );
   }

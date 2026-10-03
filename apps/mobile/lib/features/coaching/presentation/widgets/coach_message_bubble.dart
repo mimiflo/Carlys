@@ -13,10 +13,15 @@ class CoachMessageBubble extends StatelessWidget {
   const CoachMessageBubble({
     required this.message,
     required this.maxWidth,
+    this.footer,
     super.key,
   });
 
   final CoachMessage message;
+
+  /// Sous une réponse du coach, à droite : ce que la page y pose (le bouton
+  /// « Écouter », à la voix du Mentor). La bulle n'en sait rien d'autre.
+  final Widget? footer;
 
   /// Largeur maximale de la bulle. Calculée par l'écran plutôt que déduite de
   /// `MediaQuery` : une bulle doit se plier à la colonne qui la contient, pas
@@ -27,21 +32,30 @@ class CoachMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.role == CoachRole.user;
     final text = CoachBubbleText(message.content, isUser: isUser);
+    final footer = isUser || message.content.trim().isEmpty
+        ? null
+        : this.footer;
+    final hasReflection =
+        message.steps.isNotEmpty || message.thinkingSeconds != null;
     return CoachBubble(
       isUser: isUser,
       maxWidth: maxWidth,
-      // Sa réflexion, repliée au-dessus de la réponse : ce qu'il a lu.
-      child: message.steps.isEmpty && message.thinkingSeconds == null
+      child: !hasReflection && footer == null
           ? text
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CoachReflection(
-                  steps: message.steps,
-                  seconds: message.thinkingSeconds,
-                ),
-                const SizedBox(height: AppSpacing.xs),
+                // Sa réflexion, repliée au-dessus de la réponse : ce qu'il a lu.
+                if (hasReflection) ...[
+                  CoachReflection(
+                    steps: message.steps,
+                    seconds: message.thinkingSeconds,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
                 text,
+                if (footer != null)
+                  Align(alignment: Alignment.centerRight, child: footer),
               ],
             ),
     );

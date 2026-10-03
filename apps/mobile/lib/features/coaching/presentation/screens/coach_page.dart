@@ -8,13 +8,14 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../mentor/presentation/widgets/mentor_speak_button.dart';
 import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/services/coach_greeting.dart';
 import '../controllers/coach_controllers.dart';
 import '../providers/coach_program_actions.dart';
 import '../providers/coach_saved_workouts.dart';
-import '../widgets/coach_header.dart';
+import '../widgets/coach_page_states.dart';
 import '../widgets/coach_training_frame.dart';
 import 'coach_screen.dart';
 
@@ -141,12 +142,19 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     keepCoachWorkoutsOnDevice(ref);
 
     return thread.when(
-      loading: () => const _CoachShell(
+      loading: () => const CoachShell(
         child: AppLoadingIndicator(label: 'Ouverture du coach'),
       ),
-      error: (error, _) => _CoachShell(child: _errorState(error)),
+      error: (error, _) => CoachShell(child: _errorState(error)),
       data: (state) => CoachScreen(
         frame: const CoachTrainingFrame(),
+        // Le coach parle de la voix du Mentor : chaque réponse s'écoute.
+        replyFooter: (reply) => MentorSpeakButton(
+          speechKey: 'coach.${reply.id}',
+          text: reply.content,
+          size: 18,
+          compact: true,
+        ),
         greeting: _openingGreeting(state),
         messages: state.conversation.messages,
         suggestions: coachVisibleSuggestions(ref, state),
@@ -172,7 +180,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   Widget _errorState(Object error) {
     // Le droit est décidé par le SERVEUR : un 403 est la seule source de
     // vérité sur l'accès au coach, jamais un calcul fait ici.
-    if (error is ForbiddenException) return const _CoachPremiumState();
+    if (error is ForbiddenException) return const CoachPremiumState();
 
     if (error is NetworkException) {
       return AppErrorState(
@@ -198,52 +206,6 @@ class _CoachPageState extends ConsumerState<CoachPage> {
       title: 'Coach indisponible',
       message: 'Réessaie dans un instant.',
       onRetry: () => ref.invalidate(coachThreadProvider),
-    );
-  }
-}
-
-/// Le coach fait partie de l'abonnement : sans le droit, on explique et on
-/// mène à l'écran d'abonnement — on ne laisse pas une porte fermée sans clé.
-class _CoachPremiumState extends ConsumerWidget {
-  const _CoachPremiumState();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AppEmptyState(
-      icon: AppIcons.premium,
-      title: 'Le coach est réservé à Premium',
-      message:
-          'Il lit tes séances, tes records et tes mesures pour adapter '
-          'ton entraînement, et te propose une séance prête à lancer.',
-      actionLabel: 'Voir Premium',
-      onAction: () => GoRouter.of(context).go(AppRoutes.subscription),
-    );
-  }
-}
-
-/// Cadre commun des états non conversationnels : même fond, même en-tête et
-/// même réserve sous la barre d'onglets que l'écran plein.
-///
-/// L'en-tête en fait partie, et ce n'est pas décoratif : un coach qui n'a pas
-/// pu s'ouvrir est le moment où l'on veut repartir. Sans sa flèche, il
-/// faudrait ressortir par la barre d'onglets, donc quitter Training pour y
-/// revenir.
-class _CoachShell extends StatelessWidget {
-  const _CoachShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const CoachHeader(),
-            Expanded(child: child),
-          ],
-        ),
-      ),
     );
   }
 }
