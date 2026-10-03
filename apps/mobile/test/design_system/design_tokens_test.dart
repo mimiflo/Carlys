@@ -47,6 +47,7 @@ void main() {
       'ring': AppMotion.ring,
       'reveal': AppMotion.reveal,
       'dashLoop': AppMotion.dashLoop,
+      'reflectionStep': AppMotion.reflectionStep,
     };
 
     test('chaque token a son reflet, à la milliseconde', () {

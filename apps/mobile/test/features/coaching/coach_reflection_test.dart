@@ -20,6 +20,52 @@ void main() {
     );
   }
 
+  /// Le temps que chaque étape apparaisse et mûrisse, une à une.
+  Future<void> reveal(WidgetTester tester) async {
+    for (var i = 0; i <= steps.length; i++) {
+      await tester.pump(AppMotion.reflectionStep);
+    }
+  }
+
+  testWidgets(
+    'une étape à la fois : même lue d’avance, elle reste en cours une seconde',
+    (tester) async {
+      await pump(
+        tester,
+        CoachLiveBubble(text: '', steps: steps, done: steps.toSet()),
+      );
+
+      // Les deux sont finies côté serveur ; l'écran n'en montre qu'une,
+      // en cours.
+      expect(
+        find.bySemanticsLabel('Je regarde tes records, en cours'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Je cherche des exercices'), findsNothing);
+
+      await tester.pump(AppMotion.reflectionStep);
+      expect(
+        find.bySemanticsLabel('Je regarde tes records, fait'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Je cherche des exercices, en cours'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Je réfléchis'), findsNothing);
+
+      await tester.pump(AppMotion.reflectionStep);
+      expect(
+        find.bySemanticsLabel('Je cherche des exercices, fait'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Je réfléchis à ta réponse, en cours'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets(
     'en direct : trois points tant qu’elle se fait, la coche une fois finie',
     (tester) async {
@@ -32,6 +78,7 @@ void main() {
           since: DateTime.now().subtract(const Duration(seconds: 12)),
         ),
       );
+      await reveal(tester);
 
       // Le chrono court, à la seconde.
       expect(find.text('Réflexion · 12 s'), findsOneWidget);
@@ -60,6 +107,7 @@ void main() {
           since: DateTime.now(),
         ),
       );
+      await reveal(tester);
 
       expect(
         find.bySemanticsLabel('Je réfléchis à ta réponse, en cours'),
@@ -81,6 +129,7 @@ void main() {
           thoughtFor: const Duration(seconds: 14),
         ),
       );
+      await reveal(tester);
 
       expect(find.text('Réflexion en 14 s'), findsOneWidget);
       expect(
@@ -104,6 +153,7 @@ void main() {
         thoughtFor: Duration(seconds: 3),
       ),
     );
+    await reveal(tester);
 
     expect(
       find.bySemanticsLabel('Je cherche des exercices, en cours'),

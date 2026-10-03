@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
@@ -7,8 +9,10 @@ import 'coach_reflection_parts.dart';
 /// « Je regarde tes records », « Je cherche des exercices », « Je prépare
 /// ta séance » — et combien de temps.
 ///
-/// En direct ([live]), dépliée : chaque étape a ses trois points animés tant
-/// qu'elle se fait, puis sa coche ([done]) ; ses étapes faites, il réfléchit
+/// En direct ([live]), dépliée : les étapes apparaissent UNE À UNE, chacune
+/// au moins [AppMotion.reflectionStep] avec ses trois points animés avant sa
+/// coche ([done]) — le flux peut annoncer et finir une lecture d'avance dans
+/// la même image, l'écran la laisse lire ; ses étapes faites, il réfléchit
 /// encore (« Je réfléchis à ta réponse »), et le chrono court
 /// (« Réflexion · 12 s ») jusqu'au premier mot (« Réflexion en 14 s »).
 /// Sans étape encore, il réfléchit déjà : le chrono court dès le début,
@@ -55,18 +59,80 @@ class CoachReflection extends StatefulWidget {
 class _CoachReflectionState extends State<CoachReflection> {
   bool _open = false;
 
+  /// En direct : combien d'étapes sont apparues, et lesquelles ont eu leur
+  /// temps à l'écran. Des minuteries seulement, aucune horloge : une étape
+  /// mûrit [AppMotion.reflectionStep] après son apparition.
+  int _shown = 0;
+  final Set<int> _ripe = {};
+  final List<Timer> _timers = [];
+
   static const double _iconSize = CoachReflectionStep.iconSize;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pace();
+  }
+
+  @override
+  void didUpdateWidget(CoachReflection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _pace();
+  }
+
+  @override
+  void dispose() {
+    for (final timer in _timers) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  /// Fait apparaître l'étape suivante quand la précédente a mûri. Une seule
+  /// à la fois : sa minuterie rappelle `_pace` pour la suivante.
+  void _pace() {
+    if (!widget.live) return;
+    if (widget.steps.length < _shown) {
+      for (final timer in _timers) {
+        timer.cancel();
+      }
+      _timers.clear();
+      _shown = 0;
+      _ripe.clear();
+    }
+    if (_shown == widget.steps.length) return;
+    if (_shown > 0 && !_ripe.contains(_shown - 1)) return;
+    final index = _shown++;
+    _timers.add(
+      Timer(AppMotion.resolve(context, AppMotion.reflectionStep), () {
+        if (!mounted) return;
+        setState(() {
+          _ripe.add(index);
+          _pace();
+        });
+      }),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final steps = widget.steps;
+    final steps = widget.live
+        ? widget.steps.take(_shown).toList()
+        : widget.steps;
+    // Cochée à l'écran : finie, ET montrée en cours le temps d'une étape.
+    bool current(int index) =>
+        widget.live &&
+        !(_ripe.contains(index) && widget.done.contains(steps[index]));
     final foldable = !widget.live && steps.isNotEmpty;
     if (!widget.live && !foldable && widget.seconds == null) {
       return const SizedBox.shrink();
     }
     final open = widget.live || _open;
     final thinking =
-        widget.live && !widget.writing && steps.every(widget.done.contains);
+        widget.live &&
+        !widget.writing &&
+        steps.length == widget.steps.length &&
+        !List.generate(steps.length, current).contains(true);
     final header = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -115,12 +181,12 @@ class _CoachReflectionState extends State<CoachReflection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final label in steps)
+                      for (final (index, label) in steps.indexed)
                         CoachReflectionStep(
                           label: label,
                           // Même après le premier mot : il écrit, puis
                           // cherche des exercices.
-                          current: widget.live && !widget.done.contains(label),
+                          current: current(index),
                         ),
                       // Ses lectures faites, il réfléchit encore : la bulle
                       // ne doit pas sembler arrêtée.

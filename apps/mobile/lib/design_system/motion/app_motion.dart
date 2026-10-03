@@ -45,6 +45,11 @@ abstract final class AppMotion {
   /// Un tour complet du segment voyageur d'une bordure animée.
   static const Duration dashLoop = Duration(milliseconds: 3400);
 
+  /// Le temps qu'une étape de la réflexion du coach reste « en cours »
+  /// avant sa coche : une lecture déjà faite ne se coche pas dans la même
+  /// image que son apparition, on a le temps de la lire.
+  static const Duration reflectionStep = Duration(milliseconds: 1000);
+
   static const Curve standard = Curves.easeOutCubic;
   static const Curve decelerate = Curves.decelerate;
   static const Curve accelerate = Curves.easeInCubic;
