@@ -12,7 +12,7 @@
 > - table locale `sync_operations` avec exactement les colonnes décrites plus
 >   bas ; **une opération réussie est supprimée** (l'état `synced` vit sur
 >   l'entité), `failed` est réservé aux refus définitifs du serveur (4xx) ;
-> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v8**)
+> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v9** : `fromCoach` sur les modèles)
 >   sur les colonnes que les requêtes
 >   réelles filtrent : `(status, started_at)` des séances, `session_id` des
 >   séries et du plan, `(status, created_at)` de la file — sans eux, chaque

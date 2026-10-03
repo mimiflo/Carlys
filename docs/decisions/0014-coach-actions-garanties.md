@@ -57,6 +57,11 @@ terminer sans.** Le modèle garde ce qu'il fait bien : choisir et expliquer.
    enregistrée ».
 4. **Proposer ≠ créer.** Une proposition n'écrit rien : carte, « Voir la
    séance », lancement par la personne. Seule une demande de création écrit.
+   *Amendé le 3 octobre 2026* : toute proposition validée est désormais
+   GARDÉE d'office (modèle `fromCoach`, onglet « Coach » de « Mes modèles »),
+   pour ne pas se perdre avec son fil. La création reste distincte dans la
+   réponse — seule elle dit « C'est enregistré » — et ne fait plus que
+   confirmer le même modèle.
 
 ## Alternatives écartées
 

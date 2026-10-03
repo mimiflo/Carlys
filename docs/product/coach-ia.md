@@ -67,7 +67,7 @@ Les cas et leur preuve :
 
 | Message | Intention | Ce qui prouve le résultat |
 | --- | --- | --- |
-| « Fais-moi une séance pecs », « J'ai 20 minutes, je fais quoi ? », « Par où je commence ? » | `WORKOUT_PROPOSAL_REQUIRED` | une proposition validée (`proposal.id`) |
+| « Fais-moi une séance pecs », « J'ai 20 minutes, je fais quoi ? », « Par où je commence ? » | `WORKOUT_PROPOSAL_REQUIRED` | une proposition validée (`proposal.id`), gardée dans « Mes modèles › Coach » |
 | « Fais-la plus courte », « Remplace le développé couché par des pompes » | `WORKOUT_MODIFICATION_REQUIRED` | une nouvelle proposition, d'après la précédente |
 | « Ok crée-la », « Enregistre ça », « Mets-la pour aujourd'hui » | `WORKOUT_CREATION_REQUIRED` + `proposalId` | le modèle de séance écrit (`createdWorkout.templateId`), SANS appel au modèle |
 | « Crée-moi une séance jambes », « ça fait 5 fois que je te demande de créer une séance » | `WORKOUT_CREATION_REQUIRED` + demande | proposition composée, PUIS enregistrée |
@@ -78,6 +78,20 @@ La séance créée est un modèle de séance qui porte l'identifiant de la
 proposition : la redemander, un double appui ou un renvoi redonnent le même,
 jamais réécrit. Côté appli, la carte « Séance enregistrée » rapatrie les
 modèles puis ouvre l'éditeur.
+
+**Toute séance proposée est gardée** (3 octobre 2026, demandé par le
+propriétaire : « si on la perd, on ne la retrouve pas »). Chaque proposition
+validée devient d'office un modèle de séance marqué `fromCoach`, rangé dans
+l'onglet « Coach » de « Mes modèles » ; la carte le dit (« Gardée dans Mes
+séances · Coach ») et l'appli rapatrie les modèles dès que la réponse
+arrive. « Ok crée-la » ne fait plus que le confirmer — même identifiant,
+jamais de double. La copie échoue (base indisponible) : la carte reste, le
+tour n'échoue pas. Une séance supprimée de « Mes modèles » ne revient pas.
+
+**Le cadre du fil.** En tête du coach, une carte demande d'emblée
+l'objectif, le niveau et le matériel qui manquent, et ouvre l'écran de
+préparation ; tout choisi, une ligne les rappelle (« Objectif : Prise de
+muscle · avec haltères, banc ») et « Modifier » y ramène.
 
 ### Séance demandée : composée à coup sûr (2 octobre 2026)
 
@@ -535,8 +549,11 @@ sont gratuites, et vraies.
   se recale (il compte du coach au travail, pas de l'envoi) : ses outils exécutés, ou tout de
   suite pour `propose_session`, retenue sans être exécutée. Deux évènements
   plutôt qu'un drapeau : une appli d'avant `stepDone` l'ignore, sans doubler
-  l'étape. Dans la bulle en cours, une étape a ses trois points animés tant
-  qu'elle se fait, puis sa coche ; ses étapes faites, « Je réfléchis à ta
+  l'étape. Dans la bulle en cours, les étapes apparaissent UNE À UNE :
+  chacune reste au moins `AppMotion.reflectionStep` (1 s) avec ses trois
+  points animés avant sa coche, même si le serveur l'a déjà finie — une
+  lecture d'avance se cochait dans la même image que son apparition
+  (signalé le 3 octobre 2026) ; ses étapes faites, « Je réfléchis à ta
   réponse » s'anime jusqu'au premier mot. Le chrono court (« Réflexion ·
   12 s ») et se fige au premier mot (« Réflexion en 14 s »). Il court DÈS
   le début, avant toute étape (« Je réfléchis à ta réponse ») : un
