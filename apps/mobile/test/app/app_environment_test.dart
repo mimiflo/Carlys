@@ -62,6 +62,26 @@ void main() {
       );
     });
 
+    test(
+      'une adresse publique en clair (http) est refusée hors développement',
+      () {
+        expect(
+          () => environmentOn(
+            AppFlavor.production,
+            publicWeb: 'https://app.exemple.test',
+            api: 'http://api.exemple.test',
+          ).assertUsable(),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              contains('https'),
+            ),
+          ),
+        );
+      },
+    );
+
     test('development garde son défaut local', () {
       for (final flavor in [AppFlavor.development]) {
         expect(

@@ -176,14 +176,14 @@ class AppEnvironment {
     if (flavor == AppFlavor.development) return;
     if (!_isPublicWebAddress(apiBaseUrl)) {
       throw StateError(
-        'CARLYS_API_BASE_URL manque ou pointe en local pour le flavor '
+        'CARLYS_API_BASE_URL manque, pointe en local ou n’est pas en https pour le flavor '
         '${flavor.name} : tous les appels réseau iraient sur « $apiBaseUrl ». '
         'Relance avec --dart-define=CARLYS_API_BASE_URL=https://…',
       );
     }
     if (!_isPublicWebAddress(publicWebBaseUrl)) {
       throw StateError(
-        'CARLYS_PUBLIC_WEB_BASE_URL manque ou pointe en local pour le flavor '
+        'CARLYS_PUBLIC_WEB_BASE_URL manque, pointe en local ou n’est pas en https pour le flavor '
         '${flavor.name} : les liens légaux ouvriraient « $publicWebBaseUrl ». '
         'Relance avec --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=https://…',
       );
@@ -193,10 +193,14 @@ class AppEnvironment {
   /// Une adresse absolue dont l'hôte n'est ni vide ni celui de la machine de
   /// développement. `10.0.2.2` est la boucle locale vue par l'émulateur
   /// Android : elle est aussi morte qu'un `localhost` sur un vrai téléphone.
+  ///
+  /// Et CHIFFRÉE : hors développement, `http://` est refusé — jetons de
+  /// session et données de santé ne voyagent jamais en clair, même si une
+  /// variable de build se trompait de schéma.
   static bool _isPublicWebAddress(String url) {
     const localHosts = {'localhost', '127.0.0.1', '::1', '0.0.0.0', '10.0.2.2'};
     final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return false;
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return false;
     return !localHosts.contains(uri.host);
   }
 }
