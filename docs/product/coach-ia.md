@@ -147,7 +147,7 @@ carte (médiane 96 s, au plus 158 s) ; 15 créations sur 15 écrites en base
 (« Ok crée-la » et ses variantes en 0,1 s, sans le modèle ; « Crée-moi une
 séance jambes » en 70 à 110 s) ; 5 modifications sur 5 avec leur nouvelle
 carte ; aucune réponse en texte seul à une demande de séance, aucune séance
-proposée ni créée pour les 17 questions qui n'en demandaient pas (médiane
+proposée ni créée pour les 29 questions qui n'en demandaient pas (médiane
 33 s). Sur les tours dont le journal a été gardé, la carte était composée
 par le modèle lui-même : le repli serveur n'a pas servi.
 
