@@ -214,6 +214,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `GET /coach/conversations/{id}` | **mobile** | apps/mobile |
 | `POST /coach/conversations/{id}/messages` | **mobile** (versions d'avant le flux, déjà installées ; l'appli actuelle passe par `/stream`) | apps/mobile |
 | `POST /coach/conversations/{id}/messages/stream` | **mobile** | apps/mobile |
+| `POST /coach/conversations/{id}/messages/{messageId}/cancel` | **mobile** (« Arrêter ») | apps/mobile |
 | `POST /coach/proposals/{id}/accepted` | **mobile** | apps/mobile |
 | `POST /coach/program-proposals/{id}/accepted` | **mobile** | apps/mobile |
 

@@ -31,6 +31,9 @@ export class CoachQuotaExceededError extends HttpException {
  * message (`refundIfUnavailable`) : la personne n'a rien reçu, elle ne doit
  * pas le payer (décision du propriétaire, septembre 2026).
  */
+/** Le verrou du tour d'une question : tenu tant que sa réponse s'écrit. */
+export const turnKey = (messageId: string): string => `coach:turn:${messageId}`;
+
 @Injectable()
 export class CoachQuota {
   constructor(
@@ -91,7 +94,7 @@ export class CoachQuota {
    */
   async holdTurn(messageId: string): Promise<(() => Promise<void>) | null> {
     const client = this.redis.getClient();
-    const key = `coach:turn:${messageId}`;
+    const key = turnKey(messageId);
     const token = randomUUID();
     // Attente dans la file PUIS génération : le plus long qu'un tour puisse tenir.
     const { queueTimeoutMs, requestTimeoutMs } = this.config.coachGateway;

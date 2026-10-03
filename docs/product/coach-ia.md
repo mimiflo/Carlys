@@ -692,11 +692,23 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
 - **Le quota se décompte APRÈS la file**, juste avant le modèle : un « très
   sollicité » ou une annulation en attente ne coûte rien. Un plafond du jour
   déjà atteint répond 429 AVANT d'entrer dans la file.
-- **Annulation** : la connexion fermée (écran quitté, « Arrêter », réseau
-  coupé) annule l'attente ou la génération ; le client abandonne l'appel au
-  worker, qui arrête d'écrire. Rien de consommé : le message est rendu (trois
-  fois par jour au plus, comme une panne). Revirement de l'ADR 0012, où le
-  tour continuait pour s'archiver.
+- **La réponse se finit, même seule** (3 octobre 2026) : page quittée,
+  appli fermée ou réseau coupé, la connexion se ferme mais le coach finit sa
+  réponse et l'archive. L'appli garde sur l'appareil la question en cours
+  (`CoachPendingStore`, effacée au changement de compte) ; au retour, si sa
+  réponse manque au fil, la bulle « réfléchit » reprend avec son chrono, et
+  la MÊME question (même identifiant) se redemande toutes les 3 s : 409 tant
+  qu'il écrit, puis la réponse archivée, sans tour de quota ni second appel
+  au modèle (13 min au plus ; plus vieille, la question est oubliée, jamais
+  reposée en douce). Pendant ce temps, la génération garde la place de la
+  personne (`COACH_MAX_CONCURRENT_PER_USER`) : un message dans un autre fil
+  attend qu'elle finisse, ou un « Arrêter ».
+- **Annulation** : seul « Arrêter » arrête — `POST
+  /coach/conversations/:id/messages/:messageId/cancel` (204) pose une marque
+  Redis (`coach:cancel:…`, 15 min) que l'exemplaire qui génère relit chaque
+  seconde ; il abandonne alors l'attente ou l'appel au worker. Rien de
+  consommé : le message est rendu (trois fois par jour au plus, comme une
+  panne).
 - **Workers (`CoachWorkerPool`)** : le moins occupé sert ; une panne réseau
   ou un 5xx l'écarte `COACH_WORKER_COOLDOWN_MS` et la tentative suivante part
   sur un autre. Ajouter une carte graphique : une adresse dans

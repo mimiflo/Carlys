@@ -10,6 +10,15 @@ la demande du propriétaire : plus de `COACH_CLOUD_FALLBACK`, plus de client
 Anthropic. Un worker en panne donne « momentanément indisponible », ou la
 séance composée par le serveur, jamais un appel ailleurs.
 
+**Mise à jour du 3 octobre 2026 (décision 5).** Une connexion fermée
+n'arrête PLUS la génération, à la demande du propriétaire : page quittée ou
+appli fermée, le coach finit sa réponse et l'archive, et l'appli la reprend
+au retour. Seul « Arrêter » arrête, par une demande explicite
+(`POST …/messages/:messageId/cancel`), transmise par Redis à l'exemplaire de
+l'API qui génère. Le coût reconnu : une réponse que personne ne lira tout de
+suite occupe encore un créneau — mais elle sera lue au retour, ce qui la
+distingue de la génération perdue que la décision 5 voulait éviter.
+
 ## Contexte
 
 Le propriétaire veut que « plusieurs utilisateurs puissent utiliser le coach
@@ -53,7 +62,8 @@ processeur, ≈ 8 jetons/s en écriture (mesuré le 30 septembre 2026).
    une panne (réseau, 5xx) le met de côté `COACH_WORKER_COOLDOWN_MS`, et la
    tentative suivante part sur un autre. Ajouter une carte graphique =
    ajouter une adresse et relever `COACH_MAX_CONCURRENT_REQUESTS`.
-5. **Annuler, c'est arrêter.** Une déconnexion (écran fermé, bouton
+5. **Annuler, c'est arrêter.** *(Remplacée le 3 octobre 2026, voir le
+   statut : seul « Arrêter » arrête désormais.)* Une déconnexion (écran fermé, bouton
    « Arrêter », réseau coupé) abandonne l'appel au worker : Ollama arrête de
    générer quand sa connexion tombe. Le tour est noté `CANCELLED`. C'est un
    revirement de l'ADR 0012, où le tour continuait pour s'archiver : sur un

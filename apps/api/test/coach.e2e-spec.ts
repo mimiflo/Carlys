@@ -80,11 +80,12 @@ describe('Coach IA (e2e)', () => {
   let nextProgram: Record<string, unknown> | undefined;
 
   /**
-   * Le prochain tour « génère » jusqu'à ce qu'on l'annule, comme Ollama qui
-   * écrit tant que la connexion tient ; `hanging` dit qu'il a commencé.
+   * Le prochain tour « génère » jusqu'à ce qu'on l'arrête (« Arrêter ») ou
+   * qu'on le laisse finir (`finishHang`) ; `hanging` dit qu'il a commencé.
    */
   let nextHang = false;
   let hanging: (() => void) | undefined;
+  let finishHang: (() => void) | undefined;
 
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
@@ -103,9 +104,11 @@ describe('Coach IA (e2e)', () => {
         nextHang = false;
         input.onText?.('Je commence…');
         hanging?.();
-        await new Promise<void>((resolve) =>
-          input.signal?.addEventListener('abort', () => resolve()),
-        );
+        const finished = await new Promise<boolean>((resolve) => {
+          input.signal?.addEventListener('abort', () => resolve(false));
+          finishHang = () => resolve(true);
+        });
+        if (finished) return textOnly('Je commence… et je finis, même seul.');
         throw new CoachProviderUnavailableException(
           'Coach : fournisseur injoignable (AbortError).',
           {
@@ -753,7 +756,7 @@ describe('Coach IA (e2e)', () => {
       ]);
     });
 
-    it('fermer la connexion ARRÊTE la génération : CANCELLED en base, et la place est rendue', async () => {
+    it('fermer la connexion N’ARRÊTE PAS : il finit, archive, et le renvoi rend sa réponse', async () => {
       await grantCoaching();
       await resetQuota();
       nextHang = true;
@@ -767,20 +770,72 @@ describe('Coach IA (e2e)', () => {
         () => undefined,
       );
       await started;
+      // Page quittée, appli fermée : la connexion tombe…
       pending.abort();
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      // … et le coach écrit toujours. Pendant ce temps, le renvoi le dit.
+      await streamTo(conversationId, 'Une longue question', messageId).expect(409);
+      finishHang?.();
 
-      // La génération se termine CÔTÉ SERVEUR, sans attendre la fin du modèle.
+      let status: string | undefined;
+      for (let i = 0; i < 50 && status !== 'COMPLETED'; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        status = (await prisma.coachGeneration.findFirst({ where: { messageId } }))?.status;
+      }
+      expect(status).toBe('COMPLETED');
+      const fil = data<CoachConversation>(
+        (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`)).body,
+      );
+      expect(fil.messages.map((m) => m.content)).toEqual([
+        'Une longue question',
+        'Je commence… et je finis, même seul.',
+      ]);
+
+      // Le retour : le même message rend la réponse archivée, sans nouveau tour.
+      const retour = await streamTo(conversationId, 'Une longue question', messageId).expect(200);
+      const fin = events(retour.body as string).at(-1);
+      expect(fin?.event).toBe('done');
+      expect(data<CoachReply>(fin?.data).assistantMessage.content).toBe(
+        'Je commence… et je finis, même seul.',
+      );
+    });
+
+    it('« Arrêter » ARRÊTE la génération : CANCELLED en base, et la place est rendue', async () => {
+      await grantCoaching();
+      await resetQuota();
+      nextHang = true;
+      const started = new Promise<void>((resolve) => (hanging = resolve));
+      const messageId = randomUUID();
+      const conversationId = randomUUID();
+
+      const pending = streamTo(conversationId, 'Une question à arrêter', messageId);
+      pending.then(
+        () => undefined,
+        () => undefined,
+      );
+      await started;
+      await authed(accessToken)
+        .post(`/api/v1/coach/conversations/${conversationId}/messages/${messageId}/cancel`)
+        .expect(204);
+
       let status: string | undefined;
       for (let i = 0; i < 50 && status !== 'CANCELLED'; i++) {
         await new Promise((resolve) => setTimeout(resolve, 100));
         status = (await prisma.coachGeneration.findFirst({ where: { messageId } }))?.status;
       }
       expect(status).toBe('CANCELLED');
+      pending.abort();
 
       // La place est rendue : un nouveau message passe aussitôt.
       nextOutput = textOnly('Me revoilà.');
       const next = await streamTo(conversationId, 'Et maintenant ?').expect(200);
       expect(events(next.body as string).at(-1)?.event).toBe('done');
+    });
+
+    it('« Arrêter » le message d’un fil d’autrui : 404', async () => {
+      await authed(accessToken)
+        .post(`/api/v1/coach/conversations/${randomUUID()}/messages/${randomUUID()}/cancel`)
+        .expect(404);
     });
 
     it('un refus AVANT le premier mot garde son statut HTTP (403)', async () => {

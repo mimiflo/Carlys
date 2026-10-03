@@ -16,6 +16,7 @@ import { CoachTurnRunner } from './coach-turn.runner';
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
+import { CoachCancellations } from '../infrastructure/coach-cancellations';
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -38,6 +39,7 @@ export class CoachService {
     private readonly context: CoachContextBuilder,
     private readonly turns: CoachTurnRunner,
     private readonly actionTurns: CoachActionTurn,
+    private readonly cancellations: CoachCancellations,
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -116,9 +118,17 @@ export class CoachService {
     if (release === null) {
       throw new ConflictException('Le coach répond déjà à ce message.');
     }
+    // Le tour ne s'arrête que sur « Arrêter » (demande explicite), jamais
+    // parce que la connexion se ferme : page quittée ou appli fermée, il
+    // finit et archive sa réponse, retrouvée au retour par un renvoi.
+    const stop = this.cancellations.watch(userId, messageId, stream.signal);
     try {
-      return await this.answer(userId, conversation, messageId, content, stream);
+      return await this.answer(userId, conversation, messageId, content, {
+        ...stream,
+        signal: stop.signal,
+      });
     } finally {
+      await stop.dispose();
       // Le verrou expire seul : un Redis qui flanche ici ne doit pas masquer
       // la réponse archivée, ni la panne qui a interrompu le tour.
       await release().catch((error: unknown) =>
@@ -207,6 +217,15 @@ export class CoachService {
     if (!(await this.repository.markProgramProposalAccepted(userId, proposalId, programId))) {
       throw new NotFoundException('Proposition introuvable.');
     }
+  }
+
+  /**
+   * « Arrêter » : la réponse à ce message s'interrompt, où qu'elle tourne.
+   * Le fil doit être le sien ; un message sans tour en cours n'est rien.
+   */
+  async cancelMessage(userId: string, conversationId: string, messageId: string): Promise<void> {
+    await this.requireConversation(userId, conversationId, 0);
+    await this.cancellations.request(userId, messageId);
   }
 
   async remainingToday(userId: string): Promise<number> {

@@ -25,12 +25,18 @@ describe('CoachGate (Redis réel)', () => {
   beforeAll(() => {
     client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
   });
+  const clear = async () => {
+    const keys = await client.keys('coach:gate:*');
+    if (keys.length > 0) await client.del(...keys);
+  };
+  // Nettoyée aussi en partant : une attente datée du futur (bail échu
+  // simulé) resterait sinon dans la file que lit la suite e2e du coach.
   afterAll(async () => {
+    await clear();
     await client.quit();
   });
   beforeEach(async () => {
-    const keys = await client.keys('coach:gate:*');
-    if (keys.length > 0) await client.del(...keys);
+    await clear();
     Object.assign(settings, { maxConcurrent: 1, queueMaxSize: 2, maxConcurrentPerUser: 1 });
   });
 

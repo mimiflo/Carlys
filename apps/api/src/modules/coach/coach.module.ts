@@ -23,6 +23,7 @@ import { CoachAvailability } from './application/coach.availability';
 import { CoachService } from './application/coach.service';
 import { CoachTools } from './application/coach.tools';
 import { COACH_MODEL_PORT, type CoachModelPort } from './domain/coach-model.port';
+import { CoachCancellations } from './infrastructure/coach-cancellations';
 import { CoachGate } from './infrastructure/coach-gate';
 import { CoachGenerationRepository } from './infrastructure/coach-generation.repository';
 import { CoachMetrics } from './infrastructure/coach-metrics';
@@ -76,6 +77,7 @@ export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): 
     CoachAdmissions,
     CoachGateway,
     CoachGate,
+    CoachCancellations,
     CoachGenerationRepository,
     CoachMetrics,
     CoachContextBuilder,

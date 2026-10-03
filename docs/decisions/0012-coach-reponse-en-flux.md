@@ -4,7 +4,9 @@
 
 > **Complétée par l'ADR 0013** (30 septembre 2026) : une connexion fermée
 > ARRÊTE désormais la génération (elle ne continue plus pour s'archiver),
-> et le flux gagne les évènements `queued` et `started`.
+> et le flux gagne les évènements `queued` et `started`. **Puis revenue le
+> 3 octobre 2026** à la règle de cet ADR : la connexion fermée ne l'arrête
+> plus, le tour s'archive ; seul « Arrêter » (route `…/cancel`) l'arrête.
 
 Acceptée — 2026-09. Tranche la décision ouverte n° 1 de
 `docs/product/coach-ia.md` (« streaming en v1 ou en v2 ») : maintenant.

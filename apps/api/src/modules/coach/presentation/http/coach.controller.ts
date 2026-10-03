@@ -31,19 +31,6 @@ import {
 } from './dto/coach.dto';
 
 /**
- * Connexion fermée avant la fin (écran quitté, « Arrêter », réseau coupé) : la
- * génération s'arrête au lieu de tourner pour personne (ADR 0013).
- */
-function cancelOnClose(response: Response): { signal: AbortSignal; dispose: () => void } {
-  const controller = new AbortController();
-  const onClose = () => {
-    if (!response.writableFinished) controller.abort();
-  };
-  response.on('close', onClose);
-  return { signal: controller.signal, dispose: () => response.off('close', onClose) };
-}
-
-/**
  * Un battement toutes les 15 s pendant qu'une réponse en flux se tait : bien
  * sous les 60 s de nginx et les 65 s d'attente du mobile.
  */
@@ -93,16 +80,8 @@ export class CoachController {
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: SendCoachMessageDto,
-    @Res({ passthrough: true }) response: Response,
   ): Promise<CoachReply> {
-    const cancel = cancelOnClose(response);
-    try {
-      return await this.coach.sendMessage(user.userId, id, body.id, body.content, {
-        signal: cancel.signal,
-      });
-    } finally {
-      cancel.dispose();
-    }
+    return this.coach.sendMessage(user.userId, id, body.id, body.content);
   }
 
   @Post('conversations/:id/messages/stream')
@@ -118,8 +97,10 @@ export class CoachController {
       'records » ; elapsedMs, le temps de réflexion écoulé), `stepDone` (la même, finie), `delta` ' +
       '({ text }) à chaque morceau, ' +
       'puis `done` (enveloppe de succès, même `CoachReply`), ou `error` ' +
-      '(enveloppe d’erreur). Fermer la connexion annule la génération. Le ' +
-      'texte archivé est celui de `done`.',
+      '(enveloppe d’erreur). Fermer la connexion n’arrête PAS la génération : ' +
+      'le coach finit et archive sa réponse, qu’un renvoi du même message ' +
+      'rend (409 tant qu’il écrit encore). Arrêter : `…/messages/:messageId/cancel`. ' +
+      'Le texte archivé est celui de `done`.',
   })
   async stream(
     @CurrentUser() user: AuthenticatedPrincipal,
@@ -130,7 +111,6 @@ export class CoachController {
   ): Promise<void> {
     const emit = sseEmitter(response);
     const stopKeepAlive = sseKeepAlive(response, SSE_KEEPALIVE_MS);
-    const cancel = cancelOnClose(response);
     try {
       const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, {
         onText: (text) => emit('delta', { text }),
@@ -138,14 +118,29 @@ export class CoachController {
         onStarted: () => emit('started', {}),
         // Deux évènements : une appli d'avant `stepDone` l'ignore, sans doubler l'étape.
         onStep: (label, done, elapsedMs) => emit(done ? 'stepDone' : 'step', { label, elapsedMs }),
-        signal: cancel.signal,
       });
       emit('done', enveloped(reply, {}, request));
       response.end();
     } finally {
       stopKeepAlive();
-      cancel.dispose();
     }
+  }
+
+  @Post('conversations/:id/messages/:messageId/cancel')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Arrête la réponse du coach à ce message',
+    description:
+      'La SEULE façon d’arrêter une réponse : fermer la connexion (page ' +
+      'quittée, appli fermée) ne l’interrompt plus, le coach la finit et ' +
+      'l’archive. Sans tour en cours, sans effet.',
+  })
+  cancel(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
+  ): Promise<void> {
+    return this.coach.cancelMessage(user.userId, id, messageId);
   }
 
   @Post('proposals/:id/accepted')

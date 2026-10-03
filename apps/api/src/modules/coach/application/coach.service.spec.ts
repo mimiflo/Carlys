@@ -29,6 +29,7 @@ import { CoachWorkoutCreator } from './coach-workout-creator';
 import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { CoachAvailability } from './coach.availability';
+import { type CoachCancellations } from '../infrastructure/coach-cancellations';
 import { CoachService } from './coach.service';
 import { type CoachTools } from './coach.tools';
 
@@ -227,6 +228,13 @@ function buildService(
     context,
     turns,
     actionTurns,
+    // « Arrêter » ne se demande jamais ici : un guet qui ne s'abat pas.
+    {
+      watch: (_u: string, _m: string, outer?: AbortSignal) => ({
+        signal: outer ?? new AbortController().signal,
+        dispose: () => Promise.resolve(),
+      }),
+    } as unknown as CoachCancellations,
     logger,
   );
 }
