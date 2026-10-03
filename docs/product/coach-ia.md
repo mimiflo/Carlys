@@ -140,6 +140,17 @@ Sans « réponds directement par l'objet JSON », le modèle réfléchissait
 d'abord en texte libre et débordait deux fois sur quatre : la consigne le
 dit, et la sortie est plafonnée à 512 jetons.
 
+Puis, le 3 octobre 2026, de bout en bout (API réelle, route en flux, comme
+l'appli) sur les 87 formulations de `test/fixtures/coach-intents.json` :
+intention juste 87 fois sur 87 ; 35 demandes de séance sur 35 avec leur
+carte (médiane 96 s, au plus 158 s) ; 15 créations sur 15 écrites en base
+(« Ok crée-la » et ses variantes en 0,1 s, sans le modèle ; « Crée-moi une
+séance jambes » en 70 à 110 s) ; 5 modifications sur 5 avec leur nouvelle
+carte ; aucune réponse en texte seul à une demande de séance, aucune séance
+proposée ni créée pour les 17 questions qui n'en demandaient pas (médiane
+33 s). Sur les tours dont le journal a été gardé, la carte était composée
+par le modèle lui-même : le repli serveur n'a pas servi.
+
 Le repli cloud (ADR 0013) ne sert donc pas ces tours-là : un worker en panne
 donne la séance composée par le serveur plutôt qu'un appel à Anthropic. Le
 fournisseur de repli, lui, ignore `compose` et garde la boucle d'outils, où
