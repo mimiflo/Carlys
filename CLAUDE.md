@@ -1,5 +1,9 @@
 # CLAUDE.md — Règles de développement Carlys
 
+**Langue : tout message au propriétaire s'écrit en FRANÇAIS**, sans exception
+— rapports, suivis de CI, notes d'attente compris (préférence actée le
+3 octobre 2026).
+
 ## Le projet en cinq lignes
 
 Carlys est une plateforme fitness SaaS : application mobile Flutter (offline-first),
