@@ -74,10 +74,14 @@ export class VerificationRepository {
     return this.prisma.emailVerification.findUnique({ where: { tokenHash } });
   }
 
-  markEmailVerificationUsed(id: string): Promise<void> {
+  /**
+   * Consomme le lien UNE fois : `false` s'il l'a déjà été — deux requêtes
+   * simultanées avec le même jeton ne passent pas toutes les deux.
+   */
+  claimEmailVerification(id: string): Promise<boolean> {
     return this.prisma.emailVerification
-      .update({ where: { id }, data: { usedAt: new Date() } })
-      .then(() => undefined);
+      .updateMany({ where: { id, usedAt: null }, data: { usedAt: new Date() } })
+      .then(({ count }) => count === 1);
   }
 
   /**
@@ -117,10 +121,11 @@ export class VerificationRepository {
     return this.prisma.passwordReset.findUnique({ where: { tokenHash } });
   }
 
-  markPasswordResetUsed(id: string): Promise<void> {
+  /** Même règle que `claimEmailVerification` : un lien, une seule réinitialisation. */
+  claimPasswordReset(id: string): Promise<boolean> {
     return this.prisma.passwordReset
-      .update({ where: { id }, data: { usedAt: new Date() } })
-      .then(() => undefined);
+      .updateMany({ where: { id, usedAt: null }, data: { usedAt: new Date() } })
+      .then(({ count }) => count === 1);
   }
 
   /** Invalide les jetons de réinitialisation encore ouverts d'un utilisateur. */

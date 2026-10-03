@@ -112,6 +112,11 @@ async function seedDevUsers(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // Comptes de démonstration aux mots de passe PUBLIÉS (super-admin compris) :
+  // jamais sur un serveur. Un serveur se garnit par ses commandes dédiées.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Le seed de développement est refusé quand NODE_ENV=production.');
+  }
   await syncCatalog(prisma);
   await syncExerciseMedia(prisma);
   await syncSubscriptionCatalog(prisma, DEV_SUBSCRIPTION_PRODUCTS);

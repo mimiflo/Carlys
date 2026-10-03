@@ -137,6 +137,7 @@ describe('validateEnv en production', () => {
     SMTP_HOST: 'smtp.exemple.invalid',
     EMAIL_FROM: 'Carlys <no-reply@carlys.example>',
     PUBLIC_APP_URL: 'https://app.carlys.example',
+    TRUST_PROXY_HOPS: '2',
   };
 
   it('production sans S3 : démarrage refusé, chaque variable manquante nommée', () => {
@@ -293,6 +294,17 @@ describe('validateEnv en production', () => {
     expect(() =>
       validateEnv({ ...productionEnv, S3_SECRET_ACCESS_KEY: 'carlys-dev-secret-2' }),
     ).toThrow(/S3_SECRET_ACCESS_KEY.*carlys-dev/);
+  });
+
+  it('exige TRUST_PROXY_HOPS ≥ 1 : derrière Nginx, 0 confondrait tous les clients', () => {
+    expect(() => validateEnv({ ...productionEnv, TRUST_PROXY_HOPS: '0' })).toThrow(
+      /TRUST_PROXY_HOPS/,
+    );
+  });
+
+  it('SMTP_SECURE=false reste faux (z.coerce.boolean le lisait vrai)', () => {
+    expect(validateEnv({ ...validEnv, SMTP_SECURE: 'false' }).SMTP_SECURE).toBe(false);
+    expect(validateEnv({ ...validEnv, SMTP_SECURE: 'true' }).SMTP_SECURE).toBe(true);
   });
 
   it('refuse un gabarit CHANGE_MOI_ resté en place, secret JWT en tête', () => {

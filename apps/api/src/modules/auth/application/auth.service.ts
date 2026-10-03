@@ -222,11 +222,11 @@ export class AuthService {
     const record = await this.verifications.findPasswordReset(TokenService.hashToken(token));
     const valid =
       record !== null && record.usedAt === null && record.expiresAt.getTime() > Date.now();
-    if (!valid) {
+    // Consommé AVANT d'agir : de deux requêtes simultanées, une seule passe.
+    if (!valid || !(await this.verifications.claimPasswordReset(record.id))) {
       throw new UnauthorizedException('Lien de réinitialisation invalide ou expiré.');
     }
     await this.users.upsertPasswordHash(record.userId, await this.passwords.hash(newPassword));
-    await this.verifications.markPasswordResetUsed(record.id);
     await this.verifications.invalidateOpenPasswordResets(record.userId);
     // Le mot de passe a pu être compromis : toutes les sessions tombent.
     await this.sessions.revokeAllSessions(record.userId, 'password_reset');

@@ -31,6 +31,7 @@ type ProductionKey = keyof typeof DEVELOPMENT_DEFAULTS;
 /** Ce que le raffinement lit : le sous-ensemble du schéma qui le concerne. */
 export type ProductionSensitiveEnv = {
   NODE_ENV: string;
+  TRUST_PROXY_HOPS: number;
   COACH_API_BASE_URL?: string;
   COACH_API_KEY?: string;
   COACH_WORKER_URLS?: string;
@@ -86,6 +87,17 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
         message: `valeur de gabarit (${PLACEHOLDER}…) refusée en production : à remplacer`,
       });
     }
+  }
+
+  // Derrière Nginx, 0 ferait voir à l'API UNE seule adresse pour tout le
+  // trafic : la limite de connexion (10/min) deviendrait celle de la
+  // plateforme entière, et l'audit noterait l'adresse du proxy.
+  if (env.TRUST_PROXY_HOPS < 1) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['TRUST_PROXY_HOPS'],
+      message: 'doit valoir au moins 1 en production (l’API est derrière un proxy)',
+    });
   }
 
   for (const key of Object.keys(DEVELOPMENT_DEFAULTS) as ProductionKey[]) {

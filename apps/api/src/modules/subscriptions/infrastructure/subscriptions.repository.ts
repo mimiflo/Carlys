@@ -202,6 +202,11 @@ export class SubscriptionsRepository {
     });
   }
 
+  /** Un abonnement a-t-il déjà existé pour ce compte, chez n'importe quel fournisseur ? */
+  async hasEverSubscribed(userId: string): Promise<boolean> {
+    return (await this.prisma.subscription.count({ where: { userId } })) > 0;
+  }
+
   /** Client Stripe connu pour ce compte (le plus récent), ou `null`. */
   async stripeCustomerIdOf(userId: string): Promise<string | null> {
     const subscription = await this.prisma.subscription.findFirst({

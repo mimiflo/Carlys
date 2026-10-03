@@ -122,10 +122,15 @@ export class SubscriptionsService {
     }
 
     const customerId = await this.subscriptions.stripeCustomerIdOf(userId);
+    // L'essai gratuit est UNIQUE par compte : sans ce refus, résilier pendant
+    // l'essai puis souscrire de nouveau rendait Premium gratuit indéfiniment.
+    const trialDays = (await this.subscriptions.hasEverSubscribed(userId))
+      ? 0
+      : this.config.subscriptionTrialDays;
     const url = await this.checkout.createSession({
       userId,
       priceId,
-      trialDays: this.config.subscriptionTrialDays,
+      trialDays,
       idempotencyKey: id,
       ...(customerId === null ? {} : { customerId }),
     });

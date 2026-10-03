@@ -49,6 +49,7 @@ export class AdminAuthGuard implements CanActivate {
     try {
       payload = await this.jwt.verifyAsync<AdminTokenPayload>(token, {
         secret: this.config.jwtAccessSecret,
+        algorithms: ['HS256'],
         issuer: this.config.jwtIssuer,
         audience: ADMIN_JWT_AUDIENCE,
       });

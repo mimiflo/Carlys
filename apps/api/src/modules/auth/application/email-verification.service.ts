@@ -75,10 +75,9 @@ export class EmailVerificationService {
     const record = await this.verifications.findEmailVerification(TokenService.hashToken(token));
     const valid =
       record !== null && record.usedAt === null && record.expiresAt.getTime() > Date.now();
-    if (!valid) {
+    if (!valid || !(await this.verifications.claimEmailVerification(record.id))) {
       throw new UnauthorizedException('Lien de vérification invalide ou expiré.');
     }
-    await this.verifications.markEmailVerificationUsed(record.id);
     await this.users.markEmailVerified(record.userId);
     this.audit.record({ action: 'auth.email_verified', userId: record.userId, ...client });
   }

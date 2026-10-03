@@ -265,7 +265,12 @@ export const envSchema = z
      * STARTTLS, que nodemailer négocie tout seul avec `secure: false` : le
      * défaut reste donc `false`, et ce n'est PAS « sans chiffrement ».
      */
-    SMTP_SECURE: z.coerce.boolean().default(false),
+    // Pas `z.coerce.boolean()` : il lit « false » comme VRAI (chaîne non vide),
+    // et le TLS implicite sur le port 587 faisait échouer tous les e-mails.
+    SMTP_SECURE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     EMAIL_FROM: z.string().min(3).default(DEVELOPMENT_DEFAULTS.EMAIL_FROM),
     /**
      * Base des liens contenus dans les e-mails (vérification,

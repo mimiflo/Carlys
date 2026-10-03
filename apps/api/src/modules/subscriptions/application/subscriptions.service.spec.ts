@@ -63,6 +63,8 @@ const repositoryStub = {
   latestSubscription: jest.fn().mockResolvedValue(null),
   // Par défaut, aucun client Stripe connu : premier achat.
   stripeCustomerIdOf: jest.fn().mockResolvedValue(null),
+  // Par défaut, jamais abonné : l'essai gratuit est dû.
+  hasEverSubscribed: jest.fn().mockResolvedValue(false),
 };
 const entitlementsStub = {
   hasEntitlement: jest.fn().mockResolvedValue(false),
@@ -87,6 +89,7 @@ function buildService(
 beforeEach(() => {
   repositoryStub.latestSubscription.mockClear();
   repositoryStub.stripeCustomerIdOf.mockReset().mockResolvedValue(null);
+  repositoryStub.hasEverSubscribed.mockReset().mockResolvedValue(false);
   // `mockClear` efface les APPELS, pas l'implémentation : sans ce retour à
   // la valeur par défaut, un test qui rend `true` contamine les suivants.
   entitlementsStub.hasEntitlement.mockReset().mockResolvedValue(false);
@@ -108,6 +111,16 @@ describe('SubscriptionsService — chemin d’achat', () => {
       trialDays: 7,
       idempotencyKey: DEVICE_ID,
     });
+  });
+
+  it('l’essai gratuit est UNIQUE : déjà abonné une fois, le paiement repart sans essai', async () => {
+    repositoryStub.hasEverSubscribed.mockResolvedValue(true);
+    const checkout = buildCheckout();
+    const service = buildService(buildConfig(), checkout);
+
+    await service.createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID);
+
+    expect(checkout.createSession).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 0 }));
   });
 
   it('l’offre annuelle mène à SON prix Stripe', async () => {
