@@ -148,9 +148,10 @@ test "$(git rev-parse HEAD)" = "$(python3 -c "import json;print(json.load(open('
 La version du CLI est épinglée dans `.claude/hooks/session-start.sh`
 (`GRAPHIFY_VERSION`) : le hook la réinstalle si le conteneur en a une autre.
 
-## Plugins de l'assistant (ponytail, agent-skills)
+## Plugins de l'assistant (ponytail, agent-skills, claude-skills)
 
-Deux plugins Claude Code sont **recopiés dans `.claude/`** à un commit épinglé
+Deux plugins Claude Code et cinq skills de spécialiste sont **recopiés dans
+`.claude/`** à un commit épinglé
 par `./scripts/vendoriser_plugins_claude.sh`, parce qu'une session web ne
 charge aucun plugin, alors qu'elle charge les skills, agents, commandes et
 hooks du projet :
@@ -163,6 +164,12 @@ hooks du projet :
   `/security-and-hardening`, `/performance-optimization`…), 4 agents
   (`code-reviewer`, `security-auditor`, `test-engineer`,
   `web-performance-auditor`) et 9 commandes `/agent-skills-<phase>`.
+- **claude-skills** (jeffallan, 5 sur 67, choisies le 3 octobre 2026 pour
+  NOTRE pile et parce qu'agent-skills ne les couvre pas) : `flutter-expert`,
+  `nestjs-expert`, `postgres-pro`, `playwright-expert`, `prompt-engineer`.
+  Leurs exemples parlent TypeORM, Bloc, Material, `npm` : ici c'est Prisma,
+  Riverpod, le design system Carlys et pnpm, et les conventions du dépôt
+  l'emportent sur tout exemple.
 
 **Ce fichier prime sur eux.** Tout ce qu'il exige — tests de la section
 « Qualité exigée », migrations, docs, états, design system, couches
@@ -182,9 +189,11 @@ retient. La correspondance à suivre :
 | Logique nouvelle, bogue à corriger | `test-driven-development` : le test qui échoue d'abord (pour un bogue, il reproduit le signalement) |
 | Test, build ou CI rouge, comportement inexpliqué | `debugging-and-error-recovery` : cause racine, pas symptôme |
 | Auth, abonnements et webhooks, données personnelles, envois de fichiers | `security-and-hardening` pendant, agent `security-auditor` sur le diff avant le commit |
-| Lenteur, requêtes, listes, démarrage de l'appli | `performance-optimization` : mesurer avant et après ; agent `web-performance-auditor` pour l'admin |
-| Écran mobile ou page admin | `frontend-ui-engineering`, sous le design system Carlys et le thème violet, qui priment |
-| Route ou contrat d'API | `api-and-interface-design` ; migration qui renomme ou supprime : `deprecation-and-migration` |
+| Lenteur, requêtes, listes, démarrage de l'appli | `performance-optimization` : mesurer avant et après ; `postgres-pro` pour une requête ou un index (`EXPLAIN (ANALYZE, BUFFERS)`) ; agent `web-performance-auditor` pour l'admin |
+| Écran mobile ou page admin | `frontend-ui-engineering` (+ `flutter-expert` côté mobile), sous le design system Carlys et le thème violet, qui priment |
+| Route ou contrat d'API | `api-and-interface-design` et `nestjs-expert` ; migration qui renomme ou supprime : `deprecation-and-migration` |
+| Tests de bout en bout de l'admin | `playwright-expert` (Chromium préinstallé) |
+| Prompts, outils ou évaluation du coach IA | `prompt-engineer` : une modification à la fois, mesurée sur le banc du coach |
 | Workflows GitHub, scripts serveur | `ci-cd-and-automation` ; journaux et métriques : `observability-and-instrumentation` |
 | Décision d'architecture ou comportement visible changé | `documentation-and-adrs` |
 | **Avant tout commit non trivial** | agent `code-reviewer` sur le diff (cinq axes) et `ponytail-review` (sur-ingénierie) ; agent `test-engineer` si les tests paraissent minces. Corriger ce qu'ils trouvent de réel avant de commiter |
