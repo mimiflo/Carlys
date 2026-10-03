@@ -423,3 +423,11 @@ Chaque fonctionnalité livrée comprend :
    bouclé) — jamais un en-tête ordinaire, jamais un écran de réglage. Le
    commentaire d'`app_colors.dart` le disait déjà : le relire avant de
    peindre.
+10. **La CI GitHub se vérifie après CHAQUE poussée, jusqu'au bout**
+    (préférence propriétaire actée le 3 octobre 2026). Le vert local ne
+    suffit pas : suivre les workflows du commit poussé (`api-ci`,
+    `admin-ci`, `mobile-ci`, `images-ci`, `images-publish`, `infra-ci`,
+    `security-ci`…) jusqu'à leur fin. Un rouge se corrige à la cause racine
+    puis se repousse — jamais une tâche close, ni un rapport rendu, sur une
+    CI rouge ou encore en cours. `images-publish` rouge, c'est la recette
+    qui ne reçoit plus rien.
