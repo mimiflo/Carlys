@@ -158,10 +158,38 @@ describe('Coach : proposer et créer une séance, garanti (e2e)', () => {
     }
     // Jamais le « tu peux commencer par des pompes… » seul.
     expect(reply.content).not.toBe(TEXT_ONLY);
-    expect(reply.createdWorkout).toBeNull();
+    // Gardée d'office dans « Mes séances », catégorie Coach.
+    expect(reply.createdWorkout?.templateId).toBe(reply.proposal?.id);
+    const kept = await prisma.workoutTemplate.findUnique({ where: { id: reply.proposal?.id } });
+    expect(kept?.fromCoach).toBe(true);
+
+    // Retouchée depuis l'appareil (PUT complet, sans origine) : elle reste
+    // une séance du coach.
+    const detail = data<WorkoutTemplateDetail>(
+      (await get(`/api/v1/workout-templates/${reply.proposal?.id}`).expect(200)).body,
+    );
+    await request(app.getHttpServer())
+      .put(`/api/v1/workout-templates/${detail.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        name: 'Ma séance retouchée',
+        exercises: detail.exercises.map((exercise) => ({
+          id: exercise.id,
+          exerciseId: exercise.exerciseId,
+          sets: exercise.sets.map((set) => ({
+            id: set.id,
+            kind: set.kind,
+            targetReps: set.targetReps,
+            restSeconds: set.restSeconds,
+          })),
+        })),
+      })
+      .expect(200);
+    const edited = await prisma.workoutTemplate.findUnique({ where: { id: detail.id } });
+    expect(edited).toMatchObject({ name: 'Ma séance retouchée', fromCoach: true });
   });
 
-  it('« Ok crée-la » : la DERNIÈRE proposition enregistrée en base, sans le modèle, une seule fois', async () => {
+  it('« Ok crée-la » : la DERNIÈRE proposition, déjà gardée, confirmée sans le modèle, jamais en double', async () => {
     const conversationId = await openThread();
     const proposed = await say(conversationId, 'J’ai seulement 25 minutes aujourd’hui.');
     const proposalId = proposed.proposal?.id;
@@ -189,10 +217,11 @@ describe('Coach : proposer et créer une séance, garanti (e2e)', () => {
     // Un double appui, un renvoi : le même message rend la même réponse…
     const replayed = await say(conversationId, 'Ok crée-la.', messageId);
     expect(replayed.id).toBe(created.id);
-    // … et le redemander ne crée pas de seconde séance.
+    // … et le redemander ne crée pas de seconde séance : proposée, elle
+    // était déjà gardée ; la créer ne fait que le confirmer.
     const again = await say(conversationId, 'Enregistre ça.');
     expect(again.createdWorkout?.templateId).toBe(proposalId);
-    expect(await prisma.workoutTemplate.count({ where: { userId } })).toBe(before + 1);
+    expect(await prisma.workoutTemplate.count({ where: { userId } })).toBe(before);
   });
 
   it('« Crée-moi une séance jambes » : composée PUIS enregistrée, la carte et la séance', async () => {

@@ -23,6 +23,8 @@ export interface ReplaceTemplateInput {
   name: string;
   notes: string | null;
   estimatedDurationMinutes: number | null;
+  /** Posé à la création seulement : un PUT ultérieur ne le change pas. */
+  fromCoach: boolean;
   exercises: Prisma.WorkoutTemplateExerciseCreateManyInput[];
   sets: Prisma.WorkoutTemplateSetCreateManyInput[];
 }
@@ -84,6 +86,7 @@ export class WorkoutTemplatesRepository {
           name: input.name,
           notes: input.notes,
           estimatedDurationMinutes: input.estimatedDurationMinutes,
+          fromCoach: input.fromCoach,
         },
         update: {
           name: input.name,

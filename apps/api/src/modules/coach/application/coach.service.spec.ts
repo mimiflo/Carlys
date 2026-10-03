@@ -410,6 +410,7 @@ describe('CoachService.sendMessage', () => {
       USER,
       'proposition-1',
       expect.objectContaining({ name: 'Haut du corps, format court' }),
+      { fromCoach: true },
     );
     expect(stubs.repository.saveAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({

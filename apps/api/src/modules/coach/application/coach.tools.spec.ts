@@ -74,10 +74,10 @@ function buildStubs(): Stubs {
   };
 }
 
-function buildTools(stubs: Stubs, exercises: object = {}): CoachTools {
+function buildTools(stubs: Stubs, exercises: object = {}, templates: object = {}): CoachTools {
   return new CoachTools(
     exercises as unknown as ExercisesService,
-    {} as unknown as WorkoutTemplatesService,
+    templates as unknown as WorkoutTemplatesService,
     {} as unknown as WorkoutsService,
     {} as unknown as ProgressService,
     {} as unknown as BodyMetricsService,
@@ -207,6 +207,39 @@ describe('CoachTools', () => {
     expect(result?.isError).toBe(true);
     expect(result?.content).toContain('Valeurs possibles : pectoraux');
     expect(exercises.list).not.toHaveBeenCalled();
+  });
+
+  it('list_workout_templates : les siens d’abord, puis les séances gardées du coach', async () => {
+    const summary = (id: string, fromCoach: boolean) => ({
+      id,
+      name: id,
+      exercisesCount: 1,
+      plannedSetsCount: 3,
+      estimatedDurationMinutes: 30,
+      previewExerciseNames: [],
+      lastUsedAt: null,
+      updatedAt: NOW.toISOString(),
+      fromCoach,
+    });
+    const templates = {
+      listTemplates: jest.fn().mockResolvedValue({
+        items: [
+          ...Array.from({ length: 12 }, (_, i) => summary(`coach-${i}`, true)),
+          summary('push-a', false),
+        ],
+      }),
+    };
+
+    const [result] = await buildTools(buildStubs(), {}, templates).run(USER, [
+      { id: 'appel-1', name: 'list_workout_templates', input: {} },
+    ]);
+
+    const listed = JSON.parse(result?.content ?? '[]') as { id: string; fromCoach?: boolean }[];
+    expect(listed).toHaveLength(10);
+    // Douze propositions plus récentes n'évincent pas « Push A ».
+    expect(listed[0]).toEqual(expect.objectContaining({ id: 'push-a' }));
+    expect(listed[0]?.fromCoach).toBeUndefined();
+    expect(listed[1]?.fromCoach).toBe(true);
   });
 
   it('get_training_profile rend le profil et le programme en cours', async () => {

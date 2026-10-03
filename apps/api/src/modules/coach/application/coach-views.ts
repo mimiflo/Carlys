@@ -86,6 +86,8 @@ export function coachTemplateSummaryView(template: WorkoutTemplateSummary) {
     estimatedDurationMinutes: template.estimatedDurationMinutes,
     previewExerciseNames: template.previewExerciseNames,
     lastUsedAt: template.lastUsedAt === null ? null : toDay(template.lastUsedAt),
+    // Une séance qu'il a lui-même proposée : dit seulement quand c'est le cas.
+    ...(template.fromCoach ? { fromCoach: true } : {}),
   };
 }
 

@@ -33,18 +33,20 @@ const DELETED =
   'Tu avais supprimé cette séance de tes modèles. Dis-moi ce que tu veux travailler, je t’en compose une nouvelle.';
 
 /**
- * CRÉER une séance (« Ok crée-la », « Enregistre ça ») : une proposition du
- * coach devient un MODÈLE de séance, enregistré dans Carlys — la seule
- * séance durable qu'on puisse écrire sans la lancer (une séance, elle, naît
- * sur l'appareil quand on la commence). Le modèle apparaît dans « Mes
- * séances », se relit, se retouche et se lance comme les autres.
+ * GARDER une séance du coach : toute proposition validée (« Ok crée-la »,
+ * « Enregistre ça » ne font plus que le confirmer) devient un MODÈLE de
+ * séance, enregistré dans Carlys — la seule séance durable qu'on puisse
+ * écrire sans la lancer (une séance, elle, naît sur l'appareil quand on la
+ * commence). Le modèle apparaît dans « Mes modèles », se relit, se retouche
+ * et se lance comme les autres.
  *
  * IDEMPOTENT par construction : le modèle prend l'identifiant de la
  * proposition (et ses séries ceux des séries proposées). Le redemander, un
  * double appui, un renvoi de l'appareil : le même modèle, jamais deux — et
  * jamais réécrit, pour ne pas effacer les retouches faites depuis.
  *
- * Proposer n'écrit RIEN ici : seule une demande de création y mène.
+ * Le modèle est marqué `fromCoach` : il se range dans la catégorie « Coach »
+ * de « Mes modèles », et ce marquage ne se pose qu'ici, à la création.
  */
 @Injectable()
 export class CoachWorkoutCreator {
@@ -84,11 +86,16 @@ export class CoachWorkoutCreator {
       return { ok: true, templateId: existing.id, name: existing.name };
     }
     try {
-      const saved = await this.templates.saveTemplate(userId, proposalId, {
-        name: workout.name,
-        estimatedDurationMinutes: workout.estimatedMinutes,
-        exercises: exercisesOf(workout.sets),
-      });
+      const saved = await this.templates.saveTemplate(
+        userId,
+        proposalId,
+        {
+          name: workout.name,
+          estimatedDurationMinutes: workout.estimatedMinutes,
+          exercises: exercisesOf(workout.sets),
+        },
+        { fromCoach: true },
+      );
       this.logger.info({ userId, templateId: proposalId }, 'Séance du coach enregistrée');
       return { ok: true, templateId: saved.template.id, name: saved.template.name };
     } catch (error) {

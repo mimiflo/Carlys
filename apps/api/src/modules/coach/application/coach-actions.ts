@@ -112,20 +112,32 @@ export class CoachActions {
             id: uuidFrom(`${turn.messageId}:proposition`),
             itemIds: proposal.items.map(() => randomUUID()),
           };
-    if (intent.kind !== 'WORKOUT_CREATION_REQUIRED' || withIds === null) {
-      return { text, proposal: withIds, createdTemplateId: null };
-    }
-    onStep?.(CREATE_WORKOUT_STEP, false);
-    const created = await this.creator.save(userId, withIds.id, {
-      name: withIds.name,
-      estimatedMinutes: withIds.estimatedMinutes,
-      sets: withIds.items.map((item, i) => ({ ...item, id: withIds.itemIds[i] ?? randomUUID() })),
-    });
-    onStep?.(CREATE_WORKOUT_STEP, true);
+    if (withIds === null) return { text, proposal: null, createdTemplateId: null };
+    // TOUTE séance proposée est gardée dans « Mes modèles », catégorie
+    // « Coach » : elle ne se perd plus avec son fil. Seule une création
+    // DEMANDÉE le dit dans la réponse ; une proposition le montre sur sa carte.
+    const asked = intent.kind === 'WORKOUT_CREATION_REQUIRED';
+    if (asked) onStep?.(CREATE_WORKOUT_STEP, false);
+    const created = await this.creator
+      .save(userId, withIds.id, {
+        name: withIds.name,
+        estimatedMinutes: withIds.estimatedMinutes,
+        sets: withIds.items.map((item, i) => ({ ...item, id: withIds.itemIds[i] ?? randomUUID() })),
+      })
+      .catch((error: unknown) => {
+        if (asked) throw error;
+        // Une carte sans copie dans les séances reste une carte : le tour
+        // n'échoue pas pour une sauvegarde de confort.
+        this.logger.warn({ userId, err: error }, 'Séance du coach non gardée');
+        return null;
+      });
+    if (asked) onStep?.(CREATE_WORKOUT_STEP, true);
+    const createdTemplateId = created?.ok === true ? created.templateId : null;
+    if (!asked || created === null) return { text, proposal: withIds, createdTemplateId };
     return {
       text: created.ok ? `${text}\n\n${savedLine(created.name)}` : `${text}\n\n${created.reason}`,
       proposal: withIds,
-      createdTemplateId: created.ok ? created.templateId : null,
+      createdTemplateId,
     };
   }
 }

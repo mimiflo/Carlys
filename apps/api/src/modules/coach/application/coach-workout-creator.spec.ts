@@ -55,25 +55,30 @@ describe('CoachWorkoutCreator', () => {
       templateId: PROPOSAL,
       name: 'Haut du corps, format court',
     });
-    expect(templates.saveTemplate).toHaveBeenCalledWith(USER, PROPOSAL, {
-      name: 'Haut du corps, format court',
-      estimatedDurationMinutes: 25,
-      exercises: [
-        {
-          id: expect.any(String) as string,
-          exerciseId: 'couche',
-          sets: [
-            expect.objectContaining({ id: 's1', targetReps: 10, restSeconds: 60 }),
-            expect.objectContaining({ id: 's2' }),
-          ],
-        },
-        {
-          id: expect.any(String) as string,
-          exerciseId: 'tirage',
-          sets: [expect.objectContaining({ id: 's3' })],
-        },
-      ],
-    });
+    expect(templates.saveTemplate).toHaveBeenCalledWith(
+      USER,
+      PROPOSAL,
+      {
+        name: 'Haut du corps, format court',
+        estimatedDurationMinutes: 25,
+        exercises: [
+          {
+            id: expect.any(String) as string,
+            exerciseId: 'couche',
+            sets: [
+              expect.objectContaining({ id: 's1', targetReps: 10, restSeconds: 60 }),
+              expect.objectContaining({ id: 's2' }),
+            ],
+          },
+          {
+            id: expect.any(String) as string,
+            exerciseId: 'tirage',
+            sets: [expect.objectContaining({ id: 's3' })],
+          },
+        ],
+      },
+      { fromCoach: true },
+    );
   });
 
   it('déjà créée : la même, jamais réécrite (ses retouches restent), jamais une seconde', async () => {

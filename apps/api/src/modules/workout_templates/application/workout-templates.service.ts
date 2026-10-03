@@ -95,6 +95,7 @@ export class WorkoutTemplatesService {
     userId: string,
     templateId: string,
     input: SaveTemplateInput,
+    origin: { fromCoach?: boolean } = {},
   ): Promise<SavedTemplate> {
     const existing = await this.templates.findTemplateById(templateId);
     if (existing !== null && existing.userId !== userId) {
@@ -120,6 +121,7 @@ export class WorkoutTemplatesService {
         name,
         notes: input.notes ?? null,
         estimatedDurationMinutes: input.estimatedDurationMinutes ?? null,
+        fromCoach: origin.fromCoach ?? false,
         exercises: rows.exercises,
         sets: rows.sets,
       });

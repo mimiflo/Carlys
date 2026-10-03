@@ -692,6 +692,11 @@ model WorkoutTemplate {
   /// noierait sous des séances qu'elle n'a pas composées et qu'elle ne
   /// saurait pas distinguer des siennes.
   generatedFromProgramId   String?   @db.Uuid
+  /// Composé par le coach : TOUTE séance qu'il propose est gardée ici, sous
+  /// l'identifiant de sa proposition, et rangée dans la catégorie « Coach »
+  /// des séances — une proposition ne se perd plus avec son fil. Posé à la
+  /// création seulement, jamais par un PUT de l'appareil.
+  fromCoach                Boolean   @default(false)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
   deletedAt                DateTime?

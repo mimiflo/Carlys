@@ -98,10 +98,14 @@ export class CoachTools {
       // Les lectures passent par les vues du coach (coach-views.ts) : les
       // contrats d'écran, relus tels quels à chaque tour, coûtaient des
       // secondes de réponse en identifiants que le modèle n'utilise pas.
-      case 'list_workout_templates':
-        return (await this.templates.listTemplates(userId, DEFAULT_LIMIT)).items.map(
-          coachTemplateSummaryView,
-        );
+      // Les siens d'abord : toute séance proposée est gardée (`fromCoach`),
+      // et les dernières du coach évinceraient sinon celles de la personne.
+      case 'list_workout_templates': {
+        const { items } = await this.templates.listTemplates(userId, MAX_LIMIT);
+        return [...items.filter((t) => !t.fromCoach), ...items.filter((t) => t.fromCoach)]
+          .slice(0, DEFAULT_LIMIT)
+          .map(coachTemplateSummaryView);
+      }
 
       case 'get_workout_template':
         return coachTemplateView(

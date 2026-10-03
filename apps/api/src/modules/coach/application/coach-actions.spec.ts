@@ -61,7 +61,7 @@ const asked = {
  * pompes… » n'est PAS une réponse valide à une demande de séance.
  */
 describe('CoachActions.settle', () => {
-  it('une séance exigée, rendue en texte seul : le serveur la compose, la carte arrive', async () => {
+  it('une séance exigée, rendue en texte seul : le serveur la compose, la carte arrive, gardée', async () => {
     const { actions } = build();
 
     const settled = await actions.settle(
@@ -76,6 +76,20 @@ describe('CoachActions.settle', () => {
     expect(settled.proposal?.id).toEqual(expect.any(String));
     // Le message dit la séance de la carte, pas une autre.
     expect(settled.text).toContain('squat');
+    // Gardée dans les séances du coach, sans le dire : la carte le montre.
+    expect(settled.createdTemplateId).toBe(settled.proposal?.id);
+    expect(settled.text).not.toContain('C’est enregistré');
+  });
+
+  it('la copie dans les séances échoue : la carte reste, le tour ne tombe pas', async () => {
+    const { actions, creator } = build();
+    creator.save.mockRejectedValueOnce(new Error('base indisponible'));
+
+    const settled = await actions.settle(USER, asked, output('Voilà.'), composition, {
+      messageId: 'message-2',
+    });
+
+    expect(settled.proposal).not.toBeNull();
     expect(settled.createdTemplateId).toBeNull();
   });
 

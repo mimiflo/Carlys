@@ -89,6 +89,7 @@ describe('vues du coach', () => {
       previewExerciseNames: ['Développé couché'],
       lastUsedAt: null,
       updatedAt: '2026-09-01T00:00:00.000Z',
+      fromCoach: false,
       createdAt: '2026-08-01T00:00:00.000Z',
       notes: null,
       exercises: [

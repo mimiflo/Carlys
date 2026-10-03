@@ -52,6 +52,7 @@ export function presentTemplateSummary(template: TemplateWithCounts): WorkoutTem
       .map((entry) => entry.exerciseName),
     lastUsedAt: template.lastUsedAt?.toISOString() ?? null,
     updatedAt: template.updatedAt.toISOString(),
+    fromCoach: template.fromCoach,
   };
 }
 

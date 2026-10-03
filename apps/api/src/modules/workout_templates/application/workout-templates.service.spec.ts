@@ -19,6 +19,7 @@ function templateRow(overrides: Partial<TemplateWithContent> = {}): TemplateWith
     estimatedDurationMinutes: null,
     lastUsedAt: null,
     generatedFromProgramId: null,
+    fromCoach: false,
     createdAt: new Date('2026-08-01T09:00:00Z'),
     updatedAt: new Date('2026-08-06T09:10:00Z'),
     deletedAt: null,

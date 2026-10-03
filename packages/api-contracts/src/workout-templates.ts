@@ -59,6 +59,8 @@ export const workoutTemplateSummarySchema = z.object({
   previewExerciseNames: z.array(z.string()),
   lastUsedAt: z.string().nullable(),
   updatedAt: z.string(),
+  /** Composé par le coach : rangé dans la catégorie « Coach » des séances. */
+  fromCoach: z.boolean(),
 });
 export type WorkoutTemplateSummary = z.infer<typeof workoutTemplateSummarySchema>;
 
