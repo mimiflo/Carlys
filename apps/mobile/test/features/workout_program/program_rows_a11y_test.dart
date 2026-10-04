@@ -58,6 +58,30 @@ void main() {
     ],
   );
 
+  testWidgets('seule une séance porte le chevron : ni le repos, ni le vide', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      monte(
+        ProgramWeekView(weekNumber: 1, program: programme, onEditDay: (_) {}),
+      ),
+    );
+
+    // Lundi « Push force » : un chevron ; mardi repos et les cinq jours à
+    // planifier : aucun.
+    expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Push force'),
+          matching: find.byType(Row),
+        ),
+        matching: find.byIcon(AppIcons.chevronRight),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('chaque jour de la semaine est un bouton de 48 points', (
     tester,
   ) async {

@@ -105,7 +105,7 @@ class ProgramSettingsCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             AppButton(
               label: 'Voir le calendrier',
-              variant: AppButtonVariant.secondary,
+              icon: AppIcons.calendar,
               isExpanded: true,
               onPressed: onOpenCalendar,
             ),

@@ -58,20 +58,41 @@ class _DayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entry = day;
-    final (String label, Color color, IconData icon) = switch (entry) {
-      null => ('À planifier', AppColors.darkTextTertiary, AppIcons.add),
+    // L'icône dit la NATURE du jour (séance violette, activité libre orange,
+    // repos et case vide éteints) ; le chevron, qu'il y a quelque chose à
+    // faire ce jour-là (séance ou activité libre).
+    final (
+      String label,
+      Color ink,
+      Color tint,
+      IconData icon,
+    ) = switch (entry) {
+      null => (
+        'À planifier',
+        AppColors.darkTextTertiary,
+        AppColors.darkTextTertiary,
+        AppIcons.add,
+      ),
       ProgramDayEntry(isRest: true) => (
         entry.label,
         AppColors.darkTextSecondary,
+        AppColors.darkTextTertiary,
         AppIcons.restDay,
       ),
       ProgramDayEntry(templateId: final id?) when id.isNotEmpty => (
         entry.label,
         AppColors.darkTextPrimary,
+        AppColors.primaryLight,
         AppIcons.workout,
       ),
-      _ => (entry.label, AppColors.darkTextPrimary, AppIcons.trainingDay),
+      _ => (
+        entry.label,
+        AppColors.darkTextPrimary,
+        AppColors.accent,
+        AppIcons.trainingDay,
+      ),
     };
+    final isSession = entry != null && !entry.isRest;
 
     // Une cible de 48 points annoncée comme un bouton : la ligne de 27
     // points qu'elle était se visait mal entre ses deux voisines, et le
@@ -97,16 +118,22 @@ class _DayRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(icon, size: 18, color: color),
+                Icon(icon, size: 18, color: tint),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body.copyWith(color: color),
+                    style: AppTypography.body.copyWith(color: ink),
                   ),
                 ),
+                if (isSession)
+                  const Icon(
+                    AppIcons.chevronRight,
+                    size: 18,
+                    color: AppColors.darkTextTertiary,
+                  ),
               ],
             ),
           ),

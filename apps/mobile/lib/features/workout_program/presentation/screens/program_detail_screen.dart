@@ -133,29 +133,19 @@ class ProgramDetailScreen extends ConsumerWidget {
               AppSpacing.gutter + bottomInset,
             ),
             children: [
-              Row(
-                children: [
-                  const AppBackButton(),
-                  const SizedBox(width: AppSpacing.xxs),
-                  Expanded(
-                    child: Text(
-                      program.name,
-                      style: AppTypography.pageTitle.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _delete(context, ref),
+              AppScreenHeader.centered(
+                title: program.name,
+                tagline: 'Mon programme',
+                actions: [
+                  AppRoundIconButton(
+                    icon: AppIcons.delete,
                     tooltip: 'Supprimer le programme',
-                    icon: const Icon(
-                      AppIcons.delete,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    color: AppColors.danger,
+                    onPressed: () => _delete(context, ref),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.gapRow),
               ProgramSettingsCard(
                 program: program,
                 // `setActive` et `setStartsOn` relisent l'état serveur frais
