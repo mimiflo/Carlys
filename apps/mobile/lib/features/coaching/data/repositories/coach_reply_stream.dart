@@ -115,6 +115,7 @@ const _statusOf = {
   'SERVICE_BUSY': 503,
   'RATE_LIMITED': 429,
   'CONFLICT': 409,
+  'IDENTIFIER_CONFLICT': 409,
   'NOT_FOUND': 404,
   'FORBIDDEN': 403,
 };

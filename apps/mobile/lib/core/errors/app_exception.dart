@@ -51,6 +51,12 @@ sealed class AppException implements Exception {
   /// veut pas dire « pas encore activé », et son texte ne s'affiche pas.
   final bool fromApi;
 
+  /// Code de l'enveloppe d'erreur de l'API (`SERVICE_BUSY`,
+  /// `IDENTIFIER_CONFLICT`…), quand la réponse en portait une : il distingue
+  /// ce que le statut seul confond. Seules [ServerException] et
+  /// [ValidationException] en ont un.
+  String? get code => null;
+
   @override
   String toString() => '$runtimeType: $message';
 }
@@ -100,9 +106,8 @@ final class ServerException extends AppException {
     super.stackTrace,
   });
 
-  /// Code de l'enveloppe d'erreur de l'API (`SERVICE_BUSY`…), quand il y en
-  /// a une : il distingue ce que le statut seul confond — un 503 « très
-  /// sollicité, réessaie » d'un 503 « en panne ».
+  /// Distingue un 503 « très sollicité, réessaie » d'un 503 « en panne ».
+  @override
   final String? code;
 }
 
@@ -172,6 +177,7 @@ final class ValidationException extends AppException {
   const ValidationException(
     super.message, {
     this.fieldErrors = const {},
+    this.code,
     super.statusCode,
     super.requestId,
     super.fromApi,
@@ -181,6 +187,11 @@ final class ValidationException extends AppException {
 
   /// Erreurs par champ, ex. {'email': 'Adresse invalide'}.
   final Map<String, String> fieldErrors;
+
+  /// Distingue un `CONFLICT` passager d'un `IDENTIFIER_CONFLICT` qui ne
+  /// passera pas.
+  @override
+  final String? code;
 }
 
 /// Erreur inattendue, non classifiée.

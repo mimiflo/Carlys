@@ -21,6 +21,7 @@ import {
 } from '../infrastructure/meal-vision.client';
 import { CoachAvailability } from './coach.availability';
 import { CoachGateway } from './coach-gateway';
+import { CoachMetrics } from '../infrastructure/coach-metrics';
 
 /** Un scan se relit pendant une heure : de quoi revenir sur l'écran. */
 const SCAN_TTL_S = 3_600;
@@ -88,6 +89,7 @@ export class MealScansService {
     private readonly foods: FoodsService,
     private readonly redis: RedisService,
     private readonly config: AppConfigService,
+    private readonly metrics: CoachMetrics,
     @InjectPinoLogger(MealScansService.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -147,6 +149,7 @@ export class MealScansService {
   private async run(id: string, model: string, jpeg: Buffer, pending: StoredScan): Promise<void> {
     const { userId, deadline } = pending;
     const signal = AbortSignal.timeout(Math.max(1, deadline - Date.now()));
+    this.metrics.workOpen.inc();
     let result: StoredScan;
     try {
       const seen = await this.gateway.withSlot(userId, signal, () =>
@@ -183,7 +186,8 @@ export class MealScansService {
       .set(this.key(id), JSON.stringify(result), 'EX', SCAN_TTL_S)
       .catch((error: unknown) =>
         this.logger.error({ err: error, scanId: id }, 'Scan d’assiette : résultat perdu'),
-      );
+      )
+      .finally(() => this.metrics.workOpen.dec());
   }
 
   private async present(

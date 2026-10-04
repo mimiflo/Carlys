@@ -17,9 +17,10 @@ const coachReplyPatience = Duration(minutes: 13);
 /// [stopped] dit que la personne a arrêté, ou est partie : on cesse alors de
 /// redemander.
 ///
-/// ponytail: tout 409 attend, y compris la collision d'identifiant — elle
-/// n'arrive que sur un défaut de l'appli (identifiant tiré à neuf à chaque
-/// nouveau texte) ; un code d'erreur distinct le jour où elle arriverait.
+/// Seul ce 409-là attend. La collision d'identifiant (même identifiant,
+/// autre texte : un défaut de l'appli) porte le code `IDENTIFIER_CONFLICT`
+/// et ne passera jamais : elle remonte tout de suite. Un serveur d'avant ce
+/// code rend `CONFLICT` pour les deux : on attend alors, comme avant.
 const Duration _every = Duration(seconds: 3);
 
 Future<CoachReply> awaitCoachReply(
@@ -31,7 +32,9 @@ Future<CoachReply> awaitCoachReply(
     try {
       return await send();
     } on AppException catch (exception) {
-      final stillWriting = exception.statusCode == 409;
+      final stillWriting =
+          exception.statusCode == 409 &&
+          exception.code != 'IDENTIFIER_CONFLICT';
       if (!stillWriting || stopped() || waited >= giveUpAfter) rethrow;
     }
     await Future<void>.delayed(_every);

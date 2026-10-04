@@ -121,6 +121,30 @@ void main() {
       });
     });
 
+    test(
+      'collision d’identifiant (HTTP ou flux) : remonte aussitôt, sans attendre',
+      () async {
+        for (final collision in const <AppException>[
+          ValidationException(
+            'pris',
+            statusCode: 409,
+            code: 'IDENTIFIER_CONFLICT',
+          ),
+          ServerException('pris', statusCode: 409, code: 'IDENTIFIER_CONFLICT'),
+        ]) {
+          var essais = 0;
+          await expectLater(
+            awaitCoachReply(() async {
+              essais++;
+              throw collision;
+            }, stopped: () => false),
+            throwsA(same(collision)),
+          );
+          expect(essais, 1);
+        }
+      },
+    );
+
     test('un autre refus remonte aussitôt', () async {
       var essais = 0;
       await expectLater(

@@ -11,6 +11,11 @@ String? coachNoticeFor(AppException exception) {
     return 'Le coach est très sollicité en ce moment. '
         'Réessaie dans un instant.';
   }
+  // Même identifiant, autre texte : un défaut de l'appli, que réessayer ne
+  // corrigera pas. Rien ne dit d'attendre.
+  if (exception.code == 'IDENTIFIER_CONFLICT') {
+    return 'Le coach n’a pas pu répondre.';
+  }
   // Un 409 arrive en ValidationException par HTTP, en ServerException par
   // le flux : c'est le même refus.
   if (exception is ServerException || exception.statusCode == 409) {

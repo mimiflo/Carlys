@@ -193,6 +193,7 @@ AppException _mapResponse(DioException exception) {
     return ValidationException(
       message,
       fieldErrors: envelope?.fieldErrors ?? const {},
+      code: envelope?.code,
       statusCode: statusCode,
       requestId: requestId,
       fromApi: fromApi,

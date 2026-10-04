@@ -5,6 +5,7 @@ import {
 } from '@carlys/api-contracts';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { IdentifierConflictException } from '../../../common/filters/identifier-conflict.exception';
 import { type ConversationWithMessages, CoachRepository } from '../infrastructure/coach.repository';
 import { CoachContextBuilder } from './coach-context.builder';
 import { CoachAdmissions } from './coach-admissions';
@@ -17,6 +18,7 @@ import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { CoachCancellations } from '../infrastructure/coach-cancellations';
+import { CoachMetrics } from '../infrastructure/coach-metrics';
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -40,6 +42,7 @@ export class CoachService {
     private readonly turns: CoachTurnRunner,
     private readonly actionTurns: CoachActionTurn,
     private readonly cancellations: CoachCancellations,
+    private readonly metrics: CoachMetrics,
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
@@ -122,12 +125,16 @@ export class CoachService {
     // parce que la connexion se ferme : page quittée ou appli fermée, il
     // finit et archive sa réponse, retrouvée au retour par un renvoi.
     const stop = this.cancellations.watch(userId, messageId, stream.signal);
+    this.metrics.workOpen.inc();
     try {
       return await this.answer(userId, conversation, messageId, content, {
         ...stream,
         signal: stop.signal,
       });
     } finally {
+      // En premier : une jauge qui fuit bloquerait pour toujours la
+      // réduction de cet exemplaire (scale_drainer l'attend à zéro).
+      this.metrics.workOpen.dec();
       await stop.dispose();
       // Le verrou expire seul : un Redis qui flanche ici ne doit pas masquer
       // la réponse archivée, ni la panne qui a interrompu le tour.
@@ -159,9 +166,10 @@ export class CoachService {
       // Rejeu d'un message déjà écrit dans CE fil : sa réponse archivée s'il
       // en a une, sans tour consommé ni appel au modèle ; sans réponse (tour
       // interrompu), il reste à le terminer. Un autre contenu sous le même
-      // identifiant est une collision : 409, comme les repas et les séances.
+      // identifiant est une collision : 409, comme les repas et les séances,
+      // sous son propre code, que l'appli n'attend pas de voir passer.
       if (deja.message.content !== content) {
-        throw new ConflictException('Identifiant de message déjà utilisé.');
+        throw new IdentifierConflictException('Identifiant de message déjà utilisé.');
       }
       if (deja.reply !== null) {
         return {

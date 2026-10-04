@@ -98,6 +98,26 @@ void main() {
       },
     );
 
+    test(
+      'un 409 garde son code : la collision d’identifiant n’est pas un conflit passager',
+      () {
+        final collision = mapDioException(
+          reponse(
+            409,
+            body: {
+              'error': {
+                'code': 'IDENTIFIER_CONFLICT',
+                'message': 'Identifiant de message déjà utilisé.',
+                'details': <Object?>[],
+              },
+            },
+          ),
+        );
+        expect(collision, isA<ValidationException>());
+        expect((collision as ValidationException).code, 'IDENTIFIER_CONFLICT');
+      },
+    );
+
     test('le message de l’enveloppe reste celui de l’erreur', () {
       final error = mapDioException(
         reponse(401, body: enveloppe('Jeton Google invalide.')),

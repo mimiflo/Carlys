@@ -14,6 +14,7 @@ process.env.COACH_ENABLED = 'true';
 process.env.COACH_MESSAGES_PER_MINUTE = '120';
 
 import {
+  type ApiErrorEnvelope,
   type ApiSuccessEnvelope,
   type AuthResult,
   type CoachConversation,
@@ -587,8 +588,10 @@ describe('Coach IA (e2e)', () => {
     );
     expect(conversation.messages).toHaveLength(2);
 
-    // Même identifiant, autre contenu : collision, refusée sans tour ni appel.
-    await send('Une autre question.').expect(409);
+    // Même identifiant, autre contenu : collision, refusée sans tour ni appel,
+    // sous son propre code (l'appli n'attend pas de la voir passer).
+    const collision = await send('Une autre question.').expect(409);
+    expect((collision.body as ApiErrorEnvelope).error.code).toBe('IDENTIFIER_CONFLICT');
     expect(await consumedToday(userId)).toBe(1);
     expect(lastInput).toBeUndefined();
   });

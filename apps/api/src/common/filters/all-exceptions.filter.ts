@@ -13,6 +13,7 @@ import {
 import { type Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { requestIdOf, type RequestWithId } from '../types/request-with-id';
+import { IdentifierConflictException } from './identifier-conflict.exception';
 import { UserFacingUnavailableException } from './user-facing-unavailable.exception';
 
 const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {
@@ -107,6 +108,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       code = STATUS_TO_CODE[status] ?? (status >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST');
+      if (exception instanceof IdentifierConflictException) code = 'IDENTIFIER_CONFLICT';
       const payload = exception.getResponse();
 
       if (typeof payload === 'string') {

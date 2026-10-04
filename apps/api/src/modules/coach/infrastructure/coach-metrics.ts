@@ -20,6 +20,7 @@ export class CoachMetrics {
   readonly requests: Counter<'outcome'>;
   readonly active: Gauge<string>;
   readonly queued: Gauge<string>;
+  readonly workOpen: Gauge<string>;
   readonly duration: Histogram<string>;
   readonly queueWait: Histogram<string>;
   readonly timeToFirstToken: Histogram<string>;
@@ -49,6 +50,17 @@ export class CoachMetrics {
     this.queued = new Gauge({
       name: name('requests_queued'),
       help: 'Demandes en attente d’un créneau sur cet exemplaire.',
+      registers,
+    });
+    // L'unité ENTIÈRE, de l'admission à la dernière écriture : un tour du coach
+    // (file, génération, actions, réponse archivée) et une analyse de photo
+    // (file, modèle, rapprochement CIQUAL, résultat écrit). Ni l'un ni l'autre
+    // ne tient forcément de requête ouverte (page quittée, scan relu par
+    // l'appareil) : c'est cette jauge que la supervision attend à zéro avant
+    // de retirer un exemplaire (scripts/server/_scale.sh, scale_drainer).
+    this.workOpen = new Gauge({
+      name: name('work_open'),
+      help: 'Tours du coach et analyses de photo commencés et pas finis, écriture comprise, sur cet exemplaire.',
       registers,
     });
     this.duration = new Histogram({

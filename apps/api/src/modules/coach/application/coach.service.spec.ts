@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../../config/app-config.service';
+import { IdentifierConflictException } from '../../../common/filters/identifier-conflict.exception';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import {
   CoachProviderUnavailableException,
@@ -148,6 +149,7 @@ function buildStubs(): Stubs {
 function buildService(
   stubs: Stubs,
   acces: { abonne: boolean; coachEnabled: boolean } = { abonne: true, coachEnabled: true },
+  workOpen?: { inc: jest.Mock; dec: jest.Mock },
 ): CoachService {
   const entitlements = {
     entitlementsFor: jest
@@ -235,6 +237,7 @@ function buildService(
         dispose: () => Promise.resolve(),
       }),
     } as unknown as CoachCancellations,
+    { workOpen: workOpen ?? gauge } as unknown as CoachMetrics,
     logger,
   );
 }
@@ -292,7 +295,7 @@ describe('CoachService.sendMessage', () => {
 
     await expect(
       service.sendMessage(USER, CONVERSATION, MESSAGE, 'Une autre question.'),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow(IdentifierConflictException);
     expect(stubs.quota.consume).not.toHaveBeenCalled();
     expect(stubs.model.reply).not.toHaveBeenCalled();
     expect(stubs.repository.saveUserMessage).not.toHaveBeenCalled();
@@ -659,14 +662,49 @@ describe('CoachService.sendMessage', () => {
  * Premium reste consultable (CGU), sans abonnement et même coach coupé.
  * Seuls l'ouverture d'un fil et l'envoi d'un message passent la porte.
  */
+describe('CoachService.sendMessage — le travail ouvert, lu par la supervision', () => {
+  // Un tour finit même page quittée : plus aucune requête ne le tient, et la
+  // supervision ne voit que cette jauge avant de retirer un exemplaire.
+  it('ouvert pendant tout le tour, refermé une fois la réponse écrite', async () => {
+    const stubs = buildStubs();
+    const workOpen = { inc: jest.fn(), dec: jest.fn() };
+    stubs.repository.saveAssistantMessage.mockImplementation(() => {
+      expect(workOpen.dec).not.toHaveBeenCalled();
+      return Promise.resolve(storedMessage('ASSISTANT', 'Salut.'));
+    });
+
+    await buildService(stubs, undefined, workOpen).sendMessage(
+      USER,
+      CONVERSATION,
+      MESSAGE,
+      'Salut coach.',
+    );
+    expect(workOpen.inc).toHaveBeenCalledTimes(1);
+    expect(workOpen.dec).toHaveBeenCalledTimes(1);
+  });
+
+  it('refermé aussi quand le tour échoue', async () => {
+    const stubs = buildStubs();
+    const workOpen = { inc: jest.fn(), dec: jest.fn() };
+    stubs.model.reply.mockRejectedValue(new Error('worker tombé'));
+
+    await expect(
+      buildService(stubs, undefined, workOpen).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut.'),
+    ).rejects.toThrow();
+    expect(workOpen.inc).toHaveBeenCalledTimes(1);
+    expect(workOpen.dec).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('CoachService.sendMessage — un tour à la fois, au fil de l’écriture', () => {
   it('une réponse déjà en cours pour cette question : 409, ni quota, ni modèle, ni écriture', async () => {
     const stubs = buildStubs();
     stubs.quota.holdTurn.mockResolvedValue(null);
 
-    await expect(
-      buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    const refus = buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.');
+    await expect(refus).rejects.toBeInstanceOf(ConflictException);
+    // Un CONFLICT passager, que l'appli attend de voir passer : pas une collision.
+    await expect(refus).rejects.not.toBeInstanceOf(IdentifierConflictException);
     expect(stubs.quota.consume).not.toHaveBeenCalled();
     expect(stubs.model.reply).not.toHaveBeenCalled();
     expect(stubs.repository.saveUserMessage).not.toHaveBeenCalled();

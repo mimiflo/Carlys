@@ -14,6 +14,11 @@ export const apiErrorCodeSchema = z.enum([
   'FORBIDDEN',
   'NOT_FOUND',
   'CONFLICT',
+  /**
+   * Identifiant né sur l'appareil déjà porté par un AUTRE contenu : renvoyer
+   * ne servira à rien, contrairement à un `CONFLICT` d'état qui passe.
+   */
+  'IDENTIFIER_CONFLICT',
   'PAYLOAD_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'RATE_LIMITED',

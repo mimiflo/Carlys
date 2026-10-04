@@ -13,6 +13,7 @@ import {
 import { type CoachAvailability } from './coach.availability';
 import { type CoachGateway } from './coach-gateway';
 import { MealScansService } from './meal-scans.service';
+import { type CoachMetrics } from '../infrastructure/coach-metrics';
 
 const PHOTO = readFileSync(
   join(__dirname, '..', '..', '..', '..', 'test', 'fixtures', 'jpeg', 'repas-exif-gps.jpg'),
@@ -48,6 +49,12 @@ describe('MealScansService', () => {
       }),
     };
     const vision = { see: jest.fn(see) };
+    // Le travail ouvert, comme la supervision le lit avant de retirer un exemplaire.
+    const workOpen = {
+      value: 0,
+      inc: () => (workOpen.value += 1),
+      dec: () => (workOpen.value -= 1),
+    };
     const service = new MealScansService(
       {
         assertVisionAvailable: () => Promise.resolve('qwen3-vl:4b-instruct'),
@@ -79,15 +86,16 @@ describe('MealScansService', () => {
           mealScansPerDay: scansPerDay,
         },
       } as unknown as AppConfigService,
+      { workOpen } as unknown as CoachMetrics,
       { info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as PinoLogger,
     );
-    return { service, vision, counters, store };
+    return { service, vision, counters, store, workOpen };
   }
 
   const settle = () => new Promise((resolve) => setImmediate(resolve));
 
   it('en cours, puis les aliments vus, rapprochés de la base', async () => {
-    const { service } = setup(() =>
+    const { service, workOpen } = setup(() =>
       Promise.resolve([
         { name: 'Poulet, filet, grillé', grams: 150 },
         { name: 'Sauce mystère', grams: 30 },
@@ -98,6 +106,7 @@ describe('MealScansService', () => {
     await settle();
     const done = await service.read('u1', SCAN);
     expect(done.scan.status).toBe('DONE');
+    expect(workOpen.value).toBe(0);
     expect(done.scan.items.map((item) => [item.seen, item.grams, item.food?.code ?? null])).toEqual(
       [
         ['Poulet, filet, grillé', 150, 1],
@@ -132,6 +141,20 @@ describe('MealScansService', () => {
     expect(failed.scan.status).toBe('FAILED');
     expect(failed.scan.error).toContain('saisis le repas à la main');
     expect([...counters.values()]).toEqual([0]);
+  });
+
+  it('le travail reste ouvert jusqu’au résultat écrit, même en échec', async () => {
+    // Le scan tourne sans requête ouverte : sans cette jauge, la supervision
+    // retirait l'exemplaire en pleine analyse.
+    let finish: (error: Error) => void = () => undefined;
+    const { service, workOpen } = setup(() => new Promise((_resolve, reject) => (finish = reject)));
+    await service.start('u1', SCAN, upload);
+    await settle();
+    expect(workOpen.value).toBe(1);
+    finish(new Error('worker tombé'));
+    await settle();
+    expect((await service.read('u1', SCAN)).scan.status).toBe('FAILED');
+    expect(workOpen.value).toBe(0);
   });
 
   it('deux envois simultanés du même scan : un seul tour de quota', async () => {

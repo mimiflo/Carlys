@@ -360,6 +360,32 @@ void main() {
     },
   );
 
+  test(
+    'collision d’identifiant (409 IDENTIFIER_CONFLICT) : aussitôt un avis, sans « réessaie »',
+    () async {
+      final repository = FakeCoachRepository(
+        sendError: const ValidationException(
+          'Identifiant de message déjà utilisé.',
+          statusCode: 409,
+          code: 'IDENTIFIER_CONFLICT',
+          fromApi: true,
+        ),
+      );
+      final container = containerWith(repository);
+      await container.read(coachThreadProvider.future);
+
+      expect(
+        await container.read(coachThreadProvider.notifier).send('Demain ?'),
+        isFalse,
+      );
+      expect(
+        container.read(coachThreadProvider).valueOrNull?.notice,
+        'Le coach n’a pas pu répondre.',
+      );
+      expect(repository.sentIds, hasLength(1));
+    },
+  );
+
   group('file d’attente, arrêt, saturation (ADR 0013)', () {
     test('sa réflexion s’affiche en direct, étape par étape', () async {
       final repository = FakeCoachRepository()

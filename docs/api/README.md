@@ -123,6 +123,7 @@ Le champ `code` est un enum fermé (`apiErrorCodeSchema` dans
 | `FORBIDDEN` | 403 | Authentifié mais non autorisé. |
 | `NOT_FOUND` | 404 | Ressource inexistante. |
 | `CONFLICT` | 409 | Conflit d'état (doublon, version obsolète…). |
+| `IDENTIFIER_CONFLICT` | 409 | Identifiant né sur l'appareil déjà porté par un autre contenu (question au coach) : un défaut du client, renvoyer ne servira à rien. À distinguer du `CONFLICT` « le coach répond encore », qui passe en réessayant. |
 | `PAYLOAD_TOO_LARGE` | 413 | Corps trop lourd : JSON > 1 Mo (`MAX_JSON_BODY_SIZE`), mesuré APRÈS décompression (un gzip de 2 Ko qui gonfle à 2 Mo est refusé ici, plus en 500), webhooks compris ; fichier déposé au-delà de son plafond, coupé pendant la réception (photo de repas : 5 Mio, `MEAL_PHOTO_MAX_BYTES` ; média du back-office : `MEDIA_MAX_UPLOAD_BYTES`, 20 Mio par défaut). |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | `Content-Encoding` inconnu du parseur de corps ; type de fichier refusé : type déclaré autre que celui attendu, ou octets qui ne le prouvent pas (photo de repas : un JPEG, signature et structure vérifiées). |
 | `RATE_LIMITED` | 429 | Limite de débit dépassée (100 req / 60 s par défaut). |
