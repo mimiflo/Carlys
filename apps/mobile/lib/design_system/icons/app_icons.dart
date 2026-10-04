@@ -356,6 +356,12 @@ abstract final class AppIcons {
   /// Scanner une assiette : l'IA reconnaît ce qu'elle voit sur la photo.
   static const IconData mealScan = Icons.center_focus_strong_rounded;
 
+  /// Les conseils de prise de vue du scan d'assiette : vue de dessus,
+  /// lumière, aliments visibles.
+  static const IconData scanTipFromAbove = Icons.crop_free_rounded;
+  static const IconData scanTipLight = Icons.wb_sunny_rounded;
+  static const IconData scanTipVisible = Icons.visibility_rounded;
+
   /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
   /// la saisie à la main reste possible.
   static const IconData foodDatabasePending = Icons.hourglass_top_rounded;

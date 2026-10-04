@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
+import 'meal_scan_tips.dart';
 
 /// Avant la photo : ce que fait le scan, et les deux façons de la donner.
 class MealScanIntro extends StatelessWidget {
@@ -41,7 +42,7 @@ class MealScanIntro extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Photographie ton assiette, vue de dessus',
+                'Photographie ton assiette',
                 textAlign: TextAlign.center,
                 style: AppTypography.subheading.copyWith(
                   color: AppColors.darkTextPrimary,
@@ -61,6 +62,8 @@ class MealScanIntro extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        const MealScanTips(),
+        const SizedBox(height: AppSpacing.md),
         AppButton(
           label: 'Prendre la photo',
           icon: AppIcons.mealPhoto,

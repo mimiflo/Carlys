@@ -43,6 +43,7 @@ void main() {
     await tester.tap(find.text('Scanner un aliment'));
     await tester.pumpAndSettle();
     expect(find.text('Scanner mon assiette'), findsOneWidget);
+    await showOnScreen(tester, find.text('Choisir une photo'));
     await tester.tap(find.text('Choisir une photo'));
     await tester.pump();
     return router;

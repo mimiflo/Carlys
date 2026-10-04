@@ -894,7 +894,9 @@ a une. La photo reste privée : routes et stockage plus haut.
 ### Scan d'assiette (`/nutrition/scan`, ADR 0015)
 
 - **Le parcours** : la tuile « Scanner un aliment » ouvre « Scanner mon
-  assiette » ; « Prendre la photo » ou « Choisir une photo » (même port
+  assiette », qui dit d'abord comment prendre une photo lisible pour l'IA
+  (`MealScanTips` : vue de dessus et assiette entière, pleine lumière,
+  chaque aliment visible) ; puis « Prendre la photo » ou « Choisir une photo » (même port
   `MealPhotoPicker` que la photo du plat). L'appareil réduit la photo à
   768 px (`MealBounds.scanPhotoMaxSide`, dans un isolat) et l'envoie avec un
   identifiant né sur lui ; l'écran montre la photo, « L'IA regarde ton

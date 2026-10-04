@@ -258,6 +258,8 @@ void main() {
     ]);
     await capture(tester, 'nutrition-05-scan');
 
+    await tester.ensureVisible(find.text('Choisir une photo'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Choisir une photo'));
     await tester.pump();
     await decodePhotos(tester);
@@ -284,6 +286,8 @@ void main() {
         items: [MealScanItem(seen: 'Bobun', grams: 300)],
       ),
     ]);
+    await tester.ensureVisible(find.text('Choisir une photo'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Choisir une photo'));
     await tester.pumpAndSettle();
     await decodePhotos(tester);
