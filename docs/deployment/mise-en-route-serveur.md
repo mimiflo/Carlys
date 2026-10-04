@@ -552,6 +552,21 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    En recette, `CARLYS_OLLAMA_MEM_LIMIT=6g` plafonne sa mémoire (la
    supervision ajoute la ligne d'elle-même ; sinon, ajoutez-la).
 
+   **Le scan d'assiette** (ADR 0015) demande une quatrième ligne, sans `#` :
+
+   ```bash
+   COACH_VISION_MODEL=qwen3-vl:4b-instruct
+   ```
+
+   Sans elle, le scan répond « Le scan d'assiette est momentanément
+   indisponible » (avant le 4 octobre 2026 : « Une erreur interne est
+   survenue », le message était masqué). `ollama` télécharge ce second
+   modèle (≈ 3,3 Go) au déploiement suivant. Avec la limite de 6 Go, un scan
+   décharge le coach, qui se recharge à la question suivante (plus lente) ;
+   `CARLYS_OLLAMA_MAX_LOADED_MODELS=2` les garde tous deux en mémoire
+   (≈ 6 Go à eux deux : la limite de 6 Go devient trop juste, la relever si
+   la machine le permet).
+
 3. **Déployer** comme d'habitude (§10). Le clone du serveur doit contenir le
    service `ollama` (la supervision l'avance seule ; `git pull` le fait tout
    de suite), et le déploiement tire son image AVANT toute migration : Docker

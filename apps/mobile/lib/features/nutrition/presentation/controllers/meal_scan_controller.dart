@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../data/services/image_picker_meal_photo_picker.dart';
@@ -157,8 +158,15 @@ class MealScanController extends AutoDisposeNotifier<MealScanView> {
           'réseau, ou saisis le repas à la main.',
     ForbiddenException() =>
       'Le scan d’assiette est réservé aux abonnés, comme le coach.',
-    _ when error.fromApi && error.message.isNotEmpty => error.message,
-    _ => _failedMessage,
+    // Un refus de l'API (quota, photo illisible) est écrit pour la personne ;
+    // un 5xx ne l'est que s'il le dit (`refusalSentence`) : sinon il porte la
+    // phrase masquée « Une erreur interne est survenue. », qui ne dit rien.
+    _
+        when error.fromApi &&
+            error.message.isNotEmpty &&
+            (error.statusCode ?? 0) < 500 =>
+      error.message,
+    _ => refusalSentence(error) ?? _failedMessage,
   };
 }
 

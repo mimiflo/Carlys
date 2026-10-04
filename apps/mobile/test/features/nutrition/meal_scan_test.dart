@@ -150,6 +150,38 @@ void main() {
     expect(find.text('Le coach est très sollicité.'), findsOneWidget);
   });
 
+  testWidgets('une erreur serveur masquée ne s’affiche jamais telle quelle', (
+    tester,
+  ) async {
+    // Le signalement du 4 octobre : « Pas de repas reconnu / Une erreur
+    // interne est survenue. » — la phrase du filtre d'erreurs de l'API, qui
+    // ne dit rien à la personne.
+    final nutrition = FakeNutritionRepository()
+      ..scanFailure = const ServerException(
+        'Une erreur interne est survenue.',
+        statusCode: 500,
+        fromApi: true,
+      );
+    await startScan(tester, nutrition);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('erreur interne'), findsNothing);
+    expect(find.textContaining('n’a pas abouti'), findsOneWidget);
+  });
+
+  testWidgets('un 503 écrit pour la personne s’affiche tel quel', (
+    tester,
+  ) async {
+    final nutrition = FakeNutritionRepository()
+      ..scanFailure = const ServerException(
+        'Le scan d’assiette est momentanément indisponible.',
+        statusCode: 503,
+        fromApi: true,
+      );
+    await startScan(tester, nutrition);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('momentanément indisponible'), findsOneWidget);
+  });
+
   testWidgets('sans abonnement, le refus est expliqué', (tester) async {
     final nutrition = FakeNutritionRepository()
       ..scanFailure = const ForbiddenException('forbidden', statusCode: 403);

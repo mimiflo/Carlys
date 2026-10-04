@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { UserFacingUnavailableException } from '../../../common/filters/user-facing-unavailable.exception';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 
@@ -23,13 +24,15 @@ export class CoachAvailability {
   ) {}
 
   /**
-   * Coupé globalement ou fournisseur mal réglé → 503. Sans droit → 403. Dans
+   * Coupé globalement ou fournisseur mal réglé → 503, au message LISIBLE
+   * (`UserFacingUnavailableException`) : un 503 ordinaire arrivait à l'écran
+   * en « Une erreur interne est survenue. ». Sans droit → 403. Dans
    * les deux cas, AVANT toute dépense de jeton : un refus ne coûte jamais un
    * tour de quota ni un appel au modèle.
    */
   async assertAvailable(userId: string): Promise<void> {
     if (!this.config.coachEnabled || !this.providerConfigured()) {
-      throw new ServiceUnavailableException('Le coach est momentanément indisponible.');
+      throw new UserFacingUnavailableException('Le coach est momentanément indisponible.');
     }
     await this.assertEntitled(userId);
   }
@@ -41,7 +44,9 @@ export class CoachAvailability {
   async assertVisionAvailable(userId: string): Promise<string> {
     const model = this.config.coachProvider.visionModel;
     if (!this.config.coachEnabled || this.config.coachGateway.workerUrls.length === 0 || !model) {
-      throw new ServiceUnavailableException('Le scan d’assiette est momentanément indisponible.');
+      throw new UserFacingUnavailableException(
+        'Le scan d’assiette est momentanément indisponible.',
+      );
     }
     await this.assertEntitled(userId);
     return model;
