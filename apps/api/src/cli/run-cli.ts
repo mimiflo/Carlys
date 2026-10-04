@@ -45,6 +45,12 @@ export function readArgs<T extends CliOptions>(
   } catch (error) {
     const code = (error as { code?: unknown }).code;
     const cited = /'(-*[^' ]+)/.exec((error as Error).message)?.[1] ?? '';
+    if (
+      code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' &&
+      /does not take an argument/.test(String(error))
+    ) {
+      throw new UsageError(`${cited} ne prend pas de valeur.`);
+    }
     if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE') {
       const option = cited.replace(/^--/, '') as keyof T;
       throw new UsageError(attentes[option] ?? `${cited} attend une valeur.`);

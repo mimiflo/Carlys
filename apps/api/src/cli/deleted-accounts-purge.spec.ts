@@ -21,6 +21,7 @@ describe('deleted-accounts-purge — arguments', () => {
     expect(() => parseArgs(['--delai-jours'])).toThrow(UsageError);
     expect(() => parseArgs(['--delai-jours', '0'])).toThrow(UsageError);
     expect(() => parseArgs(['--delai-jours', '2.5'])).toThrow(UsageError);
+    expect(() => parseArgs(['--delai-jours='])).toThrow(UsageError);
     expect(() => parseArgs(['--compte', 'tout-le-monde'])).toThrow(UsageError);
     expect(() => parseArgs(['--tout-effacer'])).toThrow(UsageError);
   });

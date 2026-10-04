@@ -91,7 +91,12 @@ export function parseArgs(argv: readonly string[]): PurgeArgs {
   const dryRun = values['a-blanc'] ?? false;
   const delayDays =
     values['delai-jours'] === undefined ? DEFAULT_PURGE_DELAY_DAYS : Number(values['delai-jours']);
-  if (!Number.isInteger(delayDays) || delayDays < 1) throw new UsageError(DELAI);
+  if (
+    (values['delai-jours'] !== undefined && !/^\d+$/.test(values['delai-jours'])) ||
+    delayDays < 1
+  ) {
+    throw new UsageError(DELAI);
+  }
   const accountId = values.compte;
   if (accountId !== undefined && !UUID.test(accountId)) throw new UsageError(COMPTE);
   const activeId = values['compte-actif'];

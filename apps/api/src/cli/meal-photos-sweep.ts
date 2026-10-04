@@ -47,8 +47,10 @@ export function parseArgs(argv: readonly string[]): SweepArgs {
   if (minutes === undefined) {
     return { dryRun: values['a-blanc'] ?? false, graceMs: DEFAULT_SWEEP_GRACE_MS };
   }
+  // Des chiffres, rien d'autre : `--delai-minutes=` vide vaudrait 0, et le
+  // balayage effacerait des photos en cours d'envoi.
+  if (!/^\d+$/.test(minutes)) throw new UsageError(DELAI);
   const value = Number(minutes);
-  if (!Number.isInteger(value) || value < 0) throw new UsageError(DELAI);
   return { dryRun: values['a-blanc'] ?? false, graceMs: value * 60_000 };
 }
 

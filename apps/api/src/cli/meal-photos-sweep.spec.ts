@@ -14,6 +14,9 @@ describe('meal-photos-sweep — arguments', () => {
   it('refuse ce qu’il ne comprend pas, plutôt que de balayer au hasard', () => {
     expect(() => parseArgs(['--delai-minutes'])).toThrow(UsageError);
     expect(() => parseArgs(['--delai-minutes', '-5'])).toThrow(UsageError);
+    // Vide, ce serait 0 : aucune grâce pour les photos en cours d'envoi.
+    expect(() => parseArgs(['--delai-minutes='])).toThrow(UsageError);
+    expect(() => parseArgs(['--a-blanc=oui'])).toThrow(/ne prend pas de valeur/);
     expect(() => parseArgs(['--tout-effacer'])).toThrow(UsageError);
   });
 
