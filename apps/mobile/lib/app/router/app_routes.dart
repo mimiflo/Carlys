@@ -27,6 +27,10 @@ abstract final class AppRoutes {
   /// Recettes : poussée depuis l'onglet Nutrition, dans sa pile.
   static const String recipes = '/nutrition/recettes';
 
+  /// « Mon métabolisme » : la dépense, les macros calculées, le corps et le
+  /// profil qui les fonde — le détail derrière les objectifs du jour.
+  static const String metabolism = '/nutrition/metabolisme';
+
   /// AJOUTER un repas, en plein écran. [day] date le repas du jour qu'affiche
   /// le journal (`?jour=2026-09-12`) : consulter mardi puis ajouter, c'est
   /// ajouter à mardi. Sans jour, aujourd'hui (l'accueil).

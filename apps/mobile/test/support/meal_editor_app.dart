@@ -14,8 +14,11 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/services/image_picker_meal_photo_picker.dart';
 import 'package:carlys_mobile/features/nutrition/domain/services/meal_photo_picker.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/journal_day_provider.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_editor_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/journal_day_chip.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/meal_journal_section.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/nutrition_shortcuts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,9 +33,21 @@ GoRouter _router() => GoRouter(
   routes: [
     GoRoute(
       path: mealHomeRoute,
-      builder: (_, _) => const Scaffold(
+      // Le haut de l'onglet qui touche au journal : le jour, les tuiles
+      // (dont « Ajouter un repas »), puis la liste.
+      builder: (_, _) => Scaffold(
         body: SingleChildScrollView(
-          child: MealJournalSection(targetKcal: 2000),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const JournalDayChip(),
+              Consumer(
+                builder: (_, ref, _) =>
+                    NutritionShortcuts(day: ref.watch(journalDayProvider)),
+              ),
+              const MealJournalSection(),
+            ],
+          ),
         ),
       ),
     ),

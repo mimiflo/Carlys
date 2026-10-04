@@ -344,6 +344,15 @@ abstract final class AppIcons {
   /// Ajouter un aliment à la composition.
   static const IconData addFood = Icons.add_circle_outline_rounded;
 
+  /// Les recettes, rangées pour l'objectif : le livre de cuisine.
+  static const IconData recipes = Icons.menu_book_rounded;
+
+  /// « Mon métabolisme » : la dépense du jour et ce qui la fonde.
+  static const IconData metabolism = Icons.monitor_heart_rounded;
+
+  /// Ouvre le choix d'une valeur dans une liste (le jour du journal).
+  static const IconData choose = Icons.expand_more_rounded;
+
   /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
   /// la saisie à la main reste possible.
   static const IconData foodDatabasePending = Icons.hourglass_top_rounded;

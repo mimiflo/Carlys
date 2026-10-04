@@ -86,7 +86,7 @@ class HomeScreen extends ConsumerWidget {
             // TodaySection, jamais dans un `null` commun.
             _Section(
               child: TodaySection(
-                onStartPrimer: () => context.push(AppRoutes.nutrition),
+                onStartPrimer: () => context.push(AppRoutes.metabolism),
                 onOpenHydration: () => showWaterSheet(context),
                 // La MÊME porte que celle du journal : l'écran plein
                 // « Ajouter un repas », daté d'aujourd'hui.

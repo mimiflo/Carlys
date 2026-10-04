@@ -83,7 +83,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
               goalLabel: profile?.goal?.label,
               // Le plan se règle dans le profil métabolique (onglet
               // Nutrition), seul écrivain de cette donnée.
-              onGoal: () => context.go(AppRoutes.nutrition),
+              onGoal: () => context.go(AppRoutes.metabolism),
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileAppSettings(

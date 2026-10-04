@@ -127,12 +127,14 @@ Règles :
   retrait de composition qui la croise retire aussi la nouvelle. La
   suppression douce et le dépôt d'une photo prennent le même verrou.
 
-- **Le journal se consulte en arrière.** Deux flèches reculent d'un jour
-  civil (jusqu'à un an, la plage que le serveur accepte en une requête) ;
-  celle de demain reste éteinte, un jour à venir n'ayant rien à montrer ni à
-  recevoir. Le jour sélectionné est un ÉCART en jours avec aujourd'hui, jamais
-  une date mémorisée — celle-ci se périmerait à minuit en continuant de
-  s'appeler « Aujourd'hui ».
+- **Le journal se consulte en arrière.** La pastille du jour, en haut de
+  l'onglet (« Aujourd'hui », « Hier »…), ouvre le calendrier : jusqu'à un an
+  en arrière (la plage que le serveur accepte en une requête), jamais après
+  aujourd'hui, un jour à venir n'ayant rien à montrer ni à recevoir. Le jour
+  sélectionné est un ÉCART en jours CIVILS avec aujourd'hui
+  (`joursCivilsEntre`, juste au passage à l'heure d'été), jamais une date
+  mémorisée — celle-ci se périmerait à minuit en continuant de s'appeler
+  « Aujourd'hui ». Objectifs, journal et ajouts suivent ce jour.
 
 ### Le moment de la journée
 
@@ -874,18 +876,29 @@ a une. La photo reste privée : routes et stockage plus haut.
   (données). Les tests remplacent le port par un faux : aucun ne touche de
   greffon. Dépendances et permissions : `docs/development/photo-du-plat.md`.
 
-### Le reste de l'écran Nutrition
+### L'onglet Nutrition (maquette d'octobre 2026)
+
+- **De haut en bas** : le jour (pastille), « Tes objectifs du jour » —
+  l'anneau des calories et une barre par valeur, le MANGÉ du journal sur le
+  VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, quatre
+  tuiles (Ajouter un repas, Mon eau, Mes recettes, Mes besoins), le journal
+  alimentaire (photo du plat ou dessin du moment, heure, calories, quantité,
+  trois macros ; toucher un repas l'ouvre, la suppression se fait dans son
+  écran), puis le bandeau vers le coach. Profil incomplet : l'anneau cède la
+  place à « Compléter mon profil », qui ouvre « Mon métabolisme ».
+- Écarts à la maquette (pas de scanner ni de repas type) :
+  `docs/product/design-conformity.md`.
+
+### « Mon métabolisme » (`/nutrition/metabolisme`)
 
 - **Le hero a deux états**, comme la grille et l'amorçage de l'accueil. Avec
   un métabolisme, la dépense totale en très grand. Sans, il garde son hélice
   et son titre mais ne prétend plus donner un chiffre : une phrase et le
   bouton « Compléter mon profil », qui fait défiler jusqu'au formulaire. Un
   tiret géant en accent servait l'absence comme le fait principal, sans dire
-  comment en sortir ; c'est aussi là qu'arrive le bouton « Calculer mes
-  objectifs » de l'accueil.
-- **L'ordre des sections dépend du profil.** Complet : rapport, journal,
-  profil. Incomplet : champs manquants, **profil**, journal. Le seul geste
-  utile du premier jour n'est jamais le dernier bloc de la page.
+  comment en sortir.
+- **Puis** le rapport (macros, corps) ou les champs manquants, et le profil
+  qui fonde le calcul.
 - Accueil : la tuile Nutrition du « Résumé du jour » montre le consommé réel
   face à l'objectif (`consumedKcalTodayProvider`), et la cellule Hydratation
   ouvre la feuille d'eau (`waterStoreProvider`).

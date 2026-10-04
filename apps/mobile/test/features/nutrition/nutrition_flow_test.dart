@@ -7,8 +7,9 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/metabolism_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/dna_helix.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/meal_tile.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolic_profile_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +57,7 @@ Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
     nutritionRepositoryProvider.overrideWithValue(nutrition),
     waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
   ],
-  child: MaterialApp(theme: AppTheme.dark(), home: const NutritionScreen()),
+  child: MaterialApp(theme: AppTheme.dark(), home: const MetabolismScreen()),
 );
 
 /// Rend visible un élément de l'écran courant.
@@ -87,6 +88,13 @@ Future<void> openNutritionTab(WidgetTester tester) async {
   await navigation.openNutrition(tester);
 }
 
+/// « Mon métabolisme », par sa tuile « Mes besoins » de l'onglet : hélice, macros, profil.
+Future<void> openMetabolism(WidgetTester tester) async {
+  await openNutritionTab(tester);
+  await tester.tap(find.text('Mes besoins'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(() {
     // Parcours de première ouverture déjà terminé.
@@ -111,7 +119,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(appWith(FakeNutritionRepository()));
-      await openNutritionTab(tester);
+      await openMetabolism(tester);
 
       expect(find.text('Informations manquantes'), findsOneWidget);
       expect(find.text('Sexe biologique'), findsWidgets);
@@ -127,26 +135,17 @@ void main() {
       // Le poids manque : l'app renvoie vers les mesures corporelles.
       await reveal(tester, find.textContaining('mesures corporelles'));
       expect(find.textContaining('mesures corporelles'), findsOneWidget);
-
-      // Tant que le profil est incomplet, le formulaire vient AVANT le
-      // journal : le seul geste utile du premier jour n'est pas en bas de
-      // page.
-      await reveal(tester, find.text('Journal'));
-      expect(
-        tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
-        lessThan(tester.getTopLeft(find.text('Journal')).dy),
-      );
     });
 
     testWidgets('profil incomplet : le bouton du hero mène au formulaire', (
       tester,
     ) async {
       await tester.pumpWidget(appWith(FakeNutritionRepository()));
-      await openNutritionTab(tester);
+      await openMetabolism(tester);
 
       // Avant : le formulaire est sous le pli (construit d'avance par la
       // liste paresseuse, mais pas un pixel n'en est visible).
-      final screen = tester.getSize(find.byType(NutritionScreen));
+      final screen = tester.getSize(find.byType(MetabolismScreen));
       expect(
         tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
         greaterThanOrEqualTo(screen.height),
@@ -181,7 +180,7 @@ void main() {
         // lui que le tap sur la barre d'état iOS pilote — un contrôleur
         // privé retirait l'écran de ce geste.
         final primary = PrimaryScrollController.of(
-          tester.element(find.byType(NutritionScreen)),
+          tester.element(find.byType(MetabolismScreen)),
         );
         expect(primary.hasClients, isTrue);
 
@@ -202,7 +201,7 @@ void main() {
     ) async {
       final nutrition = FakeNutritionRepository(weightKg: 80);
       await tester.pumpWidget(appWith(nutrition));
-      await openNutritionTab(tester);
+      await openMetabolism(tester);
 
       await reveal(tester, find.text('Homme'));
       await tester.tap(find.text('Homme'));
@@ -228,8 +227,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(nutrition.updateCount, 1);
-      // La page s'est ALLONGÉE (journal du jour) et la ListView est
-      // paresseuse : chaque zone s'atteste une fois rendue visible.
+      // La page s'est ALLONGÉE et la ListView est paresseuse : chaque zone s'atteste une fois rendue visible.
       // 1. Le hero, en tête : dépense totale et corpulence.
       await reveal(tester, find.text('CORPULENCE NORMALE'));
       expect(
@@ -257,7 +255,7 @@ void main() {
           ),
         ),
       );
-      await openNutritionTab(tester);
+      await openMetabolism(tester);
 
       expect(find.textContaining('OBJECTIF'), findsOneWidget);
       expect(find.text('24,7'), findsOneWidget);
@@ -265,12 +263,6 @@ void main() {
       expect(find.text('Compléter mon profil'), findsNothing);
       await reveal(tester, find.textContaining('2,8'));
       expect(find.textContaining('2,8'), findsWidgets);
-      // Profil complet : le journal garde sa place AVANT le formulaire.
-      await reveal(tester, find.text('Journal'));
-      expect(
-        tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
-        greaterThan(tester.getTopLeft(find.text('Journal')).dy),
-      );
       // L'objectif nutritionnel reste lisible dans le formulaire de profil.
       await reveal(tester, find.text('Maintenir'));
       expect(find.text('Maintenir'), findsWidgets);
@@ -344,11 +336,12 @@ void main() {
       await tester.pumpWidget(appWith(nutrition));
       await openNutritionTab(tester);
 
-      await reveal(tester, find.text('Journal'));
+      await reveal(tester, find.text('Journal alimentaire'));
       expect(find.textContaining('Rien au journal'), findsOneWidget);
 
-      // L'écran plein « Nouveau repas », par-dessus l'onglet.
-      await tester.tap(find.text('Ajouter un repas'));
+      // L'écran plein « Nouveau repas », par-dessus l'onglet : la tuile du
+      // haut de page (le journal vide en offre une seconde).
+      await tester.tap(find.text('Ajouter un repas').first);
       await tester.pumpAndSettle();
       expect(find.text('Nouveau repas'), findsOneWidget);
       await tester.enterText(fieldLabelled('Nom du repas'), 'Skyr, granola');
@@ -358,16 +351,23 @@ void main() {
       await tester.tap(find.text('Ajouter au journal'));
       await tester.pumpAndSettle();
 
-      // Le repas est écrit dans le dépôt ET rendu à l'écran, total en tête.
+      // Le repas est écrit dans le dépôt ET rendu à l'écran ; les
+      // objectifs du jour le comptent.
       expect(nutrition.meals, hasLength(1));
+      await reveal(tester, find.text('Calories'));
+      expect(find.text('654 / 2 759 kcal'), findsOneWidget);
       await reveal(tester, find.text('Skyr, granola'));
-      // L'en-tête de section rend son texte de droite en MAJUSCULES mono.
-      expect(find.text('654 / 2 759 KCAL'), findsOneWidget);
 
-      // Suppression : le journal se vide.
-      await tester.tap(find.byTooltip('Retirer ce repas'));
+      // Suppression, depuis l'écran du repas : le journal se vide.
+      await tester.tap(find.text('Skyr, granola'));
+      await tester.pumpAndSettle();
+      await showOnScreen(tester, find.text('Supprimer ce repas'));
+      await tester.tap(find.text('Supprimer ce repas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
       await tester.pumpAndSettle();
       expect(nutrition.meals, isEmpty);
+      await reveal(tester, find.textContaining('Rien au journal'));
       expect(find.textContaining('Rien au journal'), findsOneWidget);
     });
   });
@@ -439,8 +439,7 @@ void main() {
     ) async {
       await tester.pumpWidget(appWith(nutrition));
       await openNutritionTab(tester);
-      await reveal(tester, find.text('Journal'));
-      await tester.tap(find.text('Ajouter un repas'));
+      await tester.tap(find.text('Ajouter un repas').first);
       await tester.pumpAndSettle();
     }
 
@@ -475,11 +474,29 @@ void main() {
       );
       expect(ajoute.fatG, isNull);
 
-      // Et la ligne du journal ne parle que de ce qu'elle sait.
+      // Et la ligne du journal ne parle que de ce qu'elle sait : les
+      // glucides, rien des deux macros inconnues.
       await reveal(tester, find.text('Riz complet'));
-      expect(find.textContaining('80 g de glucides'), findsOneWidget);
-      expect(find.textContaining('g de protéines'), findsNothing);
-      expect(find.textContaining('g de lipides'), findsNothing);
+      final ligne = find.ancestor(
+        of: find.text('Riz complet'),
+        matching: find.byType(MealTile),
+      );
+      expect(
+        find.descendant(of: ligne, matching: find.text('80 g')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: ligne, matching: find.text('Gluc.')),
+        findsOne,
+      );
+      expect(
+        find.descendant(of: ligne, matching: find.text('Prot.')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: ligne, matching: find.text('Lip.')),
+        findsNothing,
+      );
     });
 
     testWidgets('une macro hors bornes est refusée, pas tronquée', (

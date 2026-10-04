@@ -43,6 +43,7 @@ export 'components/app_nutrient_tile.dart';
 export 'components/app_password_field.dart';
 export 'components/app_pill.dart';
 export 'components/app_popup_card.dart';
+export 'components/app_progress_ring.dart';
 export 'components/app_prompt.dart';
 export 'components/app_reveal_sweep.dart';
 export 'components/app_round_icon_button.dart';

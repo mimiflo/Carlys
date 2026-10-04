@@ -207,7 +207,9 @@ l'accueil (plein écran).
 | `/coach`                | `coach`           | Coach IA (branche Training)        |
 | `/progress`             | `progress`        | Progression (onglet)               |
 | `/academy`              | `academy`         | Academy (onglet)                   |
-| `/nutrition`            | `nutrition`       | Nutrition (branche Academy)        |
+| `/nutrition`            | `nutrition`       | Nutrition (onglet) : objectifs du jour, tuiles, journal — voir `docs/product/nutrition.md` |
+| `/nutrition/recettes`   | `recipes`         | Recettes (branche Nutrition)       |
+| `/nutrition/metabolisme` | `metabolism`     | Mon métabolisme (branche Nutrition) : dépense, macros calculées, corps, profil |
 | `/nutrition/repas/nouveau` | `meal-new`     | Ajouter un repas (plein écran) ; `?jour=AAAA-MM-JJ` le date du jour qu'affiche le journal (`AppRoutes.newMeal`) — déclarée AVANT `repas/:mealId` |
 | `/nutrition/repas/:mealId` | `meal-edit`    | Modifier un repas (plein écran) : relu par `GET /nutrition/meals/:id` (`AppRoutes.meal`) — voir `docs/product/nutrition.md` |
 | `/community`            | `community`       | Communauté (onglet) ; `?onglet=defis\|ligue\|amis` ouvre l'un de ses trois onglets (`AppRoutes.communityTab`), et l'adresse suit l'onglet choisi |

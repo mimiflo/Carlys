@@ -1,5 +1,6 @@
-import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/meal_entry.dart';
+import 'package:carlys_mobile/features/nutrition/domain/services/day_intake.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/journal_day_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -128,14 +129,9 @@ void main() {
 
     // « 2 pièces » à côté de « 180 kcal » : les calories restent celles du
     // repas entier, la quantité les DÉCRIT sans les multiplier.
-    expect(find.textContaining('2 pièces'), findsOneWidget);
-    expect(find.textContaining('180 kcal'), findsOneWidget);
-    // L'en-tête compte 180, pas 360 : on compare à CE que le formateur du
-    // dépôt produit, pas à l'espace qu'on croit qu'il met.
-    expect(
-      find.text('180 / ${formatThousands(2000)} KCAL'.toUpperCase()),
-      findsOneWidget,
-    );
+    expect(find.textContaining('180 kcal · 2 pièces'), findsOneWidget);
+    // Et le total du jour compte 180, pas 360.
+    expect(dayIntake(nutrition.meals).kcal, 180);
   });
 
   testWidgets('le journal recule d’un jour, et jamais vers demain', (
@@ -146,26 +142,29 @@ void main() {
       ..meals.add(repas(name: 'Omelette d’hier', eatenAt: midi(hier)));
     await pumpMealApp(tester, nutrition);
 
-    // `byTooltip` désigne le Tooltip, pas le bouton : c'est l'icône qui
-    // ramène l'IconButton dont on veut lire l'état.
-    VoidCallback? demain() => tester
-        .widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.chevron_right_rounded),
-        )
-        .onPressed;
-
-    // Aujourd'hui : rien, et la flèche « demain » est ÉTEINTE — un jour à
-    // venir n'a rien à montrer ni à recevoir.
+    // Aujourd'hui : rien.
     expect(find.textContaining('Rien au journal'), findsOneWidget);
-    expect(demain(), isNull);
 
-    await tester.tap(find.byTooltip('Jour précédent'));
+    // La pastille du jour ouvre le calendrier, qui s'arrête à AUJOURD'HUI :
+    // un jour à venir n'a rien à montrer ni à recevoir.
+    await tester.tap(find.byType(JournalDayChip));
+    await tester.pumpAndSettle();
+    final picker = tester.widget<DatePickerDialog>(
+      find.byType(DatePickerDialog),
+    );
+    expect(picker.lastDate, DateUtils.dateOnly(DateTime.now()));
+
+    // Hier, au besoin sur le mois d'avant (le 1er du mois).
+    if (hier.month != DateTime.now().month) {
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('${hier.day}').last);
+    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
     expect(find.text('Hier'), findsOneWidget);
     expect(find.text('Omelette d’hier'), findsOneWidget);
-    // Et de là, on peut revenir : la flèche « demain » s'allume.
-    expect(demain(), isNotNull);
   });
 
   group('une quantité se dit avec son unité', () {

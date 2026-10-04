@@ -79,9 +79,11 @@ class MetabolismHero extends StatelessWidget {
         ConstrainedBox(
           constraints: BoxConstraints(minHeight: _heroHeight + topInset),
           child: Padding(
+            // La flèche de retour de la page se pose dans la zone sûre, en
+            // haut à gauche : le titre commence SOUS elle.
             padding: EdgeInsets.fromLTRB(
               AppSpacing.gutter,
-              topInset + AppSpacing.md,
+              topInset + AppSpacing.touchTarget,
               AppSpacing.gutter,
               AppSpacing.gapRow,
             ),
