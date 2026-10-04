@@ -41,3 +41,8 @@ int civilDayNumber(DateTime date) {
     local.day,
   ).difference(DateTime.utc(1970)).inDays;
 }
+
+/// Numéro de la semaine CIVILE (du lundi au dimanche) qui contient [date] :
+/// deux dates de la même semaine ont le même, compté depuis celle du lundi
+/// 29 décembre 1969 (0).
+int civilWeekNumber(DateTime date) => (civilDayNumber(date) + 3) ~/ 7;

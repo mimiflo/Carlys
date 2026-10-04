@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/utilities/formatting.dart';
 import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/nutrition.dart';
 import '../../../domain/meal_bounds.dart';

@@ -7,6 +7,7 @@ library;
 
 import 'dart:math' as math;
 
+import '../../../core/utilities/civil_days.dart';
 import '../../progress/domain/entities/progress.dart';
 import '../../workout_session/domain/entities/workout.dart';
 import 'progression.dart';
@@ -59,7 +60,7 @@ RewardFacts buildRewardFacts({
     if (entry.session.status != WorkoutStatus.completed) continue;
     localCompleted++;
     localPerWeek.update(
-      _weekNumber(entry.session.startedAt),
+      civilWeekNumber(entry.session.startedAt),
       (count) => count + 1,
       ifAbsent: () => 1,
     );
@@ -117,15 +118,7 @@ int _bestStreak(Iterable<int> weeks) {
 /// redécouperait une seconde fois — un lundi matin deviendrait le dimanche
 /// d'avant à l'ouest de Greenwich.
 int _weekNumberOfMonday(String mondayOn) {
+  // Même origine que `civilWeekNumber` : le lundi 29 décembre 1969.
   final monday = DateTime.parse('${mondayOn}T00:00:00Z');
-  return monday.difference(DateTime.utc(1970, 1, 5)).inDays ~/ 7;
-}
-
-/// Numéro de la semaine ouverte par le lundi, compté depuis l'origine.
-int _weekNumber(DateTime date) {
-  final local = date.toLocal();
-  final day = DateTime.utc(local.year, local.month, local.day);
-  // `weekday` vaut 1 le lundi : on recule jusqu'au lundi de la semaine.
-  final monday = day.subtract(Duration(days: day.weekday - 1));
-  return monday.difference(DateTime.utc(1970, 1, 5)).inDays ~/ 7;
+  return monday.difference(DateTime.utc(1969, 12, 29)).inDays ~/ 7;
 }

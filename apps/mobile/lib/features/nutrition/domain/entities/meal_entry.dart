@@ -5,6 +5,7 @@
 /// champ ajouté d'un côté comme de l'autre.
 library;
 
+import '../../../../core/utilities/formatting.dart';
 import 'meal_component.dart';
 import 'meal_moment.dart';
 
@@ -61,13 +62,7 @@ enum MealQuantityUnit {
   /// séparatrice décimale. Les zéros de fin ne s'écrivent pas : « 1,50 »
   /// laisse croire à une précision au centième que personne n'a saisie.
   String spell(double quantity) {
-    final nombre = quantity == quantity.roundToDouble()
-        ? quantity.round().toString()
-        : quantity
-              .toStringAsFixed(2)
-              .replaceFirst(RegExp(r'0+$'), '')
-              .replaceAll('.', ',');
-    return '$nombre ${suffixFor(quantity)}';
+    return '${formatDecimalInput(quantity)} ${suffixFor(quantity)}';
   }
 
   /// L'unité qui suit [quantity], accordée : « g », « portion »,

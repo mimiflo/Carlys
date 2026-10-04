@@ -7,6 +7,7 @@
 /// montrer une saisie fautive sans la perdre.
 library;
 
+import '../../../../core/utilities/formatting.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/services/meal_composition.dart';
 
@@ -223,26 +224,7 @@ class MealEditorState {
   static String _integer(int? value) => value == null ? '' : '$value';
 }
 
-/// La virgule est la séparatrice décimale française : l'accepter évite un
-/// refus incompréhensible sur un clavier numérique français. Vide ou
-/// illisible : `null`.
-double? parseDecimalInput(String raw) {
-  final text = raw.trim().replaceAll(',', '.');
-  return text.isEmpty ? null : double.tryParse(text);
-}
-
-/// Une quantité telle qu'elle s'écrit dans une case : sans décimale quand
-/// elle est entière, à la virgule sinon, sans zéro de fin (« 1,5 », jamais
-/// « 1.50 »).
-String formatQuantityInput(double? value) {
-  if (value == null) {
-    return '';
-  }
-  if (value == value.roundToDouble()) {
-    return value.round().toString();
-  }
-  return value
-      .toStringAsFixed(2)
-      .replaceFirst(RegExp(r'0+$'), '')
-      .replaceAll('.', ',');
-}
+/// Une quantité telle qu'elle s'écrit dans une case (« 1,5 ») ; vide sans
+/// valeur.
+String formatQuantityInput(double? value) =>
+    value == null ? '' : formatDecimalInput(value);

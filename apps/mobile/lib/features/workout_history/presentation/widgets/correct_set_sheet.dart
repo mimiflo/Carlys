@@ -81,7 +81,7 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
       return;
     }
     final reps = int.tryParse(_reps.text.trim());
-    final poids = double.tryParse(_weight.text.trim().replaceAll(',', '.'));
+    final poids = parseDecimalInput(_weight.text);
     final correction = SetCorrection(
       reps: reps == widget.set.reps ? null : reps,
       weightKg: poids == widget.set.weightKg ? null : poids,
@@ -193,13 +193,13 @@ class _NombreField extends StatelessWidget {
           ? TextInputAction.next
           : TextInputAction.done,
       validator: (value) {
-        final raw = value?.trim().replaceAll(',', '.') ?? '';
+        final raw = value?.trim() ?? '';
         if (raw.isEmpty) {
           return initiallyFilled
               ? 'Vide n’efface pas la valeur : remets-la ou corrige-la.'
               : null;
         }
-        final nombre = decimal ? double.tryParse(raw) : int.tryParse(raw);
+        final nombre = decimal ? parseDecimalInput(raw) : int.tryParse(raw);
         if (nombre == null || nombre <= 0 || nombre > max) {
           return 'Entre 1 et ${formatThousands(max.round())}.';
         }

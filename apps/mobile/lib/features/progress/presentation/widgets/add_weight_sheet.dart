@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Ce qu'une saisie de poids rapporte : une valeur ET sa date.
@@ -72,9 +73,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
     super.dispose();
   }
 
-  String get _formatted => _weightKg == _weightKg.roundToDouble()
-      ? _weightKg.toStringAsFixed(0)
-      : _weightKg.toStringAsFixed(1);
+  String get _formatted => formatDecimalInput(_weightKg, decimals: 1);
 
   /// Les flèches gardent leur rôle — l'ajustement fin sans clavier — mais
   /// elles écrivent désormais dans le champ, qui reste la source de vérité.
@@ -90,7 +89,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
   void _saisie(String texte) {
     // La virgule est la séparatrice décimale française : l'accepter évite un
     // refus incompréhensible sur un clavier numérique français.
-    final valeur = double.tryParse(texte.trim().replaceAll(',', '.'));
+    final valeur = parseDecimalInput(texte);
     setState(() {
       if (valeur == null) {
         _erreur = texte.trim().isEmpty
@@ -121,17 +120,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
     }
   }
 
-  String get _dateLisible {
-    final aujourdHui = DateTime.now();
-    final memeJour =
-        _measuredAt.year == aujourdHui.year &&
-        _measuredAt.month == aujourdHui.month &&
-        _measuredAt.day == aujourdHui.day;
-    if (memeJour) return 'Aujourd’hui';
-    final j = _measuredAt.day.toString().padLeft(2, '0');
-    final m = _measuredAt.month.toString().padLeft(2, '0');
-    return '$j/$m/${_measuredAt.year}';
-  }
+  String get _dateLisible => formatSpokenDay(_measuredAt, DateTime.now());
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../../../core/utilities/formatting.dart';
 
 /// La TAILLE en centimètres : ses bornes, sa précision, son écriture.
 ///
@@ -22,16 +23,12 @@ class HeightCm {
 
   /// Lit une saisie française ou anglaise (« 175,5 » comme « 175.5 »).
   /// `null` si le champ est vide ou illisible — l'appelant distingue les deux.
-  static double? parse(String raw) {
-    final nettoye = raw.trim().replaceFirst(',', '.');
-    return nettoye.isEmpty ? null : double.tryParse(nettoye);
-  }
+  static double? parse(String raw) => parseDecimalInput(raw);
 
   /// Écriture destinée au champ : sans décimale quand elle est inutile, avec
   /// la virgule française sinon.
-  static String format(double value) => value == value.roundToDouble()
-      ? value.toStringAsFixed(0)
-      : value.toStringAsFixed(decimals).replaceFirst('.', ',');
+  static String format(double value) =>
+      formatDecimalInput(value, decimals: decimals);
 
   /// La valeur tient-elle sur le nombre de décimales autorisé ?
   ///

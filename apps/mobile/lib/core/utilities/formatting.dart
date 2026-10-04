@@ -85,6 +85,28 @@ String formatDecimal(double value, {int decimals = 1}) {
   return fraction.isEmpty ? integerPart : '$integerPart,$fraction';
 }
 
+/// Une valeur telle qu'elle s'écrit dans un CHAMP de saisie : sans décimale
+/// quand elle est entière, à la virgule sinon, sans zéro de fin ni espace des
+/// milliers (« 1,5 », jamais « 1.50 » ni « 1 840 ») — [parseDecimalInput] la
+/// relit telle quelle.
+String formatDecimalInput(double value, {int decimals = 2}) {
+  if (value == value.roundToDouble()) {
+    return value.round().toString();
+  }
+  return value
+      .toStringAsFixed(decimals)
+      .replaceFirst(RegExp(r'\.?0+$'), '')
+      .replaceAll('.', ',');
+}
+
+/// La virgule est la séparatrice décimale française : l'accepter évite un
+/// refus incompréhensible sur un clavier numérique français. Vide ou
+/// illisible : `null`.
+double? parseDecimalInput(String raw) {
+  final text = raw.trim().replaceAll(',', '.');
+  return text.isEmpty ? null : double.tryParse(text);
+}
+
 /// Volume : au-delà de 1 000 kg la maquette bascule en tonnes (« 6,4 t »).
 /// Renvoie la valeur et son unité séparément — l'unité se rend en plus petit.
 ({String value, String unit}) formatVolume(double kilograms) {
@@ -245,9 +267,15 @@ String formatSpokenDay(DateTime moment, DateTime now) {
   if (sameDay(DateTime(now.year, now.month, now.day - 1))) {
     return 'Hier';
   }
-  final day = moment.day.toString().padLeft(2, '0');
-  final month = moment.month.toString().padLeft(2, '0');
-  return '$day/$month/${moment.year}';
+  return formatNumericDate(moment);
+}
+
+/// « 12/09/2026 ». Le jour est lu tel quel : à l'appelant de passer une date
+/// LOCALE.
+String formatNumericDate(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
 }
 
 /// L'heure en 24 h, comme partout ailleurs dans l'application : « 08h24 ».

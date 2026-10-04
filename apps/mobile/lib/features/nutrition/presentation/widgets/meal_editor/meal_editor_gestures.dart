@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/errors/app_exception.dart';
 import '../../../../../core/feedback/server_gesture.dart';
+import '../../../../../core/utilities/formatting.dart';
 import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/nutrition.dart';
 import '../../controllers/meal_editor_controller.dart';

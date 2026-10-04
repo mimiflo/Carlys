@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/domain/services/meal_composition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/utils/meal_editor_state.dart';

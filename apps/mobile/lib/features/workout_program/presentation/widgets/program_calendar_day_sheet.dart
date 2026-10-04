@@ -53,12 +53,10 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
     return [
       for (final entry in tout)
         if (entry.session.status == WorkoutStatus.completed)
-          if (_memeJour(entry.session.startedAt.toLocal(), cible)) entry,
+          if (DateUtils.isSameDay(entry.session.startedAt.toLocal(), cible))
+            entry,
     ];
   }
-
-  static bool _memeJour(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

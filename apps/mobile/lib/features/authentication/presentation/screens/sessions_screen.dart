@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/feedback/server_gesture.dart';
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../controllers/sessions_controller.dart';
@@ -130,8 +131,7 @@ class _SessionTile extends ConsumerWidget {
 String _formatDate(DateTime utc) {
   final local = utc.toLocal();
   String pad(int value) => value.toString().padLeft(2, '0');
-  return '${pad(local.day)}/${pad(local.month)}/${local.year} '
-      '${pad(local.hour)}:${pad(local.minute)}';
+  return '${formatNumericDate(local)} ${pad(local.hour)}:${pad(local.minute)}';
 }
 
 /// Déconnecter un appareil le prive de sa session : le geste se confirme,

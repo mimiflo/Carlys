@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
 
@@ -79,9 +80,7 @@ class _SetInputFormState extends State<_SetInputForm> {
             const SizedBox(height: AppSpacing.sm),
             _Stepper(
               label: 'Charge (kg)',
-              value: _weightKg == _weightKg.roundToDouble()
-                  ? _weightKg.toStringAsFixed(0)
-                  : _weightKg.toStringAsFixed(1),
+              value: formatDecimal(_weightKg),
               onMinus: _weightKg >= 2.5
                   ? () => setState(() => _weightKg -= 2.5)
                   : null,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/program.dart';
 import '../../domain/entities/program_calendar.dart';
@@ -47,9 +48,7 @@ class ProgramSettingsCard extends StatelessWidget {
     // Une CHAÎNE `AAAA-MM-JJ`, jamais un instant : c'est un jour civil, et
     // l'envoyer en ISO 8601 complet le ferait reculer d'un jour à l'ouest de
     // Greenwich.
-    final mois = choisie.month.toString().padLeft(2, '0');
-    final jour = choisie.day.toString().padLeft(2, '0');
-    onStartsOn('${choisie.year}-$mois-$jour');
+    onStartsOn(formatDayKey(choisie));
   }
 
   String get _dateLisible {
@@ -57,10 +56,7 @@ class ProgramSettingsCard extends StatelessWidget {
     if (debut == null) {
       return 'À choisir';
     }
-    final date = asLocalDate(debut);
-    final jour = date.day.toString().padLeft(2, '0');
-    final mois = date.month.toString().padLeft(2, '0');
-    return '$jour/$mois/${date.year}';
+    return formatNumericDate(asLocalDate(debut));
   }
 
   @override

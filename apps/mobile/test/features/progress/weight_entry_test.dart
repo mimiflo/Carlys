@@ -97,7 +97,7 @@ void main() {
     await tester.tap(find.byIcon(AppIcons.add));
     await tester.pump();
 
-    expect(find.widgetWithText(TextField, '70.5'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '70,5'), findsOneWidget);
   });
 
   testWidgets('la date est proposée, et vaut aujourd’hui par défaut', (
@@ -126,7 +126,7 @@ void main() {
       expect(find.textContaining('besoins'), findsOneWidget);
       // La date corrigée est celle de la mesure, pas celle du jour.
       expect(find.text('06/08/2026'), findsOneWidget);
-      expect(find.widgetWithText(TextField, '88.4'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '88,4'), findsOneWidget);
     },
   );
 

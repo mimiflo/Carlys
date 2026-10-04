@@ -195,13 +195,7 @@ class CoachThreadView extends StatelessWidget {
   static DateTime? _dayBreak(DateTime? moment, DateTime? previous) {
     final at = moment?.toLocal();
     if (at == null) return null;
-    final before = previous?.toLocal();
-    final sameDay =
-        before != null &&
-        before.year == at.year &&
-        before.month == at.month &&
-        before.day == at.day;
-    return sameDay ? null : at;
+    return DateUtils.isSameDay(previous?.toLocal(), at) ? null : at;
   }
 }
 

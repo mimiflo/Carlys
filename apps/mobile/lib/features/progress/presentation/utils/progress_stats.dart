@@ -76,7 +76,7 @@ WeeklyAttendance? weeklyAttendance(
   final activeWeeks = <int>{};
   for (final point in points) {
     if (point.sessionsCount > 0) {
-      activeWeeks.add(_weekIndex(point.bucketStart));
+      activeWeeks.add(civilWeekNumber(point.bucketStart));
     }
   }
   if (activeWeeks.isEmpty) {
@@ -121,8 +121,3 @@ List<String> volumeAxisLabels(
           : formatShortDateMono(points[index].bucketStart.toLocal()),
   ];
 }
-
-/// Index de semaine calendaire (lundi) en arithmétique entière : insensible
-/// aux changements d'heure, contrairement à un décalage de `Duration`.
-// 1970-01-01 tombe un jeudi : +3 pour caler l'origine sur un lundi.
-int _weekIndex(DateTime date) => (civilDayNumber(date) + 3) ~/ 7;

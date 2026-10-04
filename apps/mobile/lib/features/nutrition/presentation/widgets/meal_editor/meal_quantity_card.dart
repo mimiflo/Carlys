@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/utilities/formatting.dart';
 import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/nutrition.dart';
-import '../../utils/meal_editor_state.dart';
 import 'bound_text.dart';
 
 /// La carte QUANTITÉ : combien, et dans quelle unité.
