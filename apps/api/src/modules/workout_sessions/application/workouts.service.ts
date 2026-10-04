@@ -13,6 +13,7 @@ import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/work
 import { creditedSessionEffort } from './session-effort';
 import { ownedSession } from './workout-ownership';
 import { presentSessionDetail, presentSessionSummary } from './workout.presenter';
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 /** Série prévue transmise au lancement — des cibles, pas des mesures. */
 export interface CreateSessionPlanItemInput {
@@ -50,12 +51,6 @@ export interface CreateSessionInput {
 }
 
 type PlanItemRow = Prisma.WorkoutSessionPlanItemUncheckedCreateInput;
-
-export interface SessionsPage {
-  items: WorkoutSessionSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
 
 /**
  * Séances offline-first : les identifiants viennent de l'appareil et chaque
@@ -171,15 +166,13 @@ export class WorkoutsService {
     return presentSessionDetail(await this.ownedSession(userId, sessionId));
   }
 
-  async listSessions(userId: string, limit: number, cursor?: string): Promise<SessionsPage> {
+  async listSessions(
+    userId: string,
+    limit: number,
+    cursor?: string,
+  ): Promise<CursorPage<WorkoutSessionSummary>> {
     const rows = await this.workouts.listSessionsPage(userId, limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentSessionSummary);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentSessionSummary);
   }
 
   async sessionDetail(userId: string, sessionId: string): Promise<WorkoutSessionDetail> {

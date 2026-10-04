@@ -1,3 +1,6 @@
+/** Mauvais usage de la commande : le script le dit avec son aide (code 2). */
+export class UsageError extends Error {}
+
 /**
  * Lance un script en ligne de commande : son code de sortie, ou 1 avec un
  * message lisible. Une configuration invalide (validateEnv) ne sort jamais

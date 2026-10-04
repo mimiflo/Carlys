@@ -230,7 +230,5 @@ export function turnSignal(
   );
   return input.signal === undefined ? deadline : AbortSignal.any([deadline, input.signal]);
 }
-/** Un refus est un CONTENU, pas une panne : l'utilisateur doit le lire. */
-export const COACH_REFUSAL_TEXT = 'Je ne peux pas répondre à cette demande.';
 /** Plafond de tours atteint : on rend ce qu'on a plutôt que de boucler. */
 export const COACH_GAVE_UP_TEXT = 'Je n’ai pas réussi à aboutir. Reformule ta demande ?';

@@ -12,6 +12,7 @@ import {
   WorkoutTemplatesRepository,
 } from '../infrastructure/workout-templates.repository';
 import { presentTemplateDetail, presentTemplateSummary } from './workout-template.presenter';
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 interface PlannedSetInput {
   id: string;
@@ -36,12 +37,6 @@ export interface SaveTemplateInput {
   notes?: string | null;
   estimatedDurationMinutes?: number | null;
   exercises: TemplateExerciseInput[];
-}
-
-export interface TemplatesPage {
-  items: WorkoutTemplateSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface SavedTemplate {
@@ -75,15 +70,13 @@ export class WorkoutTemplatesService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async listTemplates(userId: string, limit: number, cursor?: string): Promise<TemplatesPage> {
+  async listTemplates(
+    userId: string,
+    limit: number,
+    cursor?: string,
+  ): Promise<CursorPage<WorkoutTemplateSummary>> {
     const rows = await this.templates.listTemplatesPage(userId, limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentTemplateSummary);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentTemplateSummary);
   }
 
   async templateDetail(userId: string, templateId: string): Promise<WorkoutTemplateDetail> {

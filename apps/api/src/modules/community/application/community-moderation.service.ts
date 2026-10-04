@@ -12,6 +12,7 @@ import {
   CommunityModerationRepository,
   type CommunityReportRow,
 } from '../infrastructure/community-moderation.repository';
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 export interface CreateReportCommand {
   reportedUserId: string;
@@ -20,12 +21,6 @@ export interface CreateReportCommand {
   friendChallengeId?: string | null;
   reason: CommunityReportReason;
   details?: string;
-}
-
-export interface ReportsPage {
-  items: AdminCommunityReport[];
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 function presentReport(row: CommunityReportRow): ReportContract {
@@ -171,15 +166,9 @@ export class CommunityModerationService {
     status: CommunityReportStatus | undefined,
     limit: number,
     cursor?: string,
-  ): Promise<ReportsPage> {
+  ): Promise<CursorPage<AdminCommunityReport>> {
     const rows = await this.moderation.listReports(status, limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentAdminReport);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentAdminReport);
   }
 
   /** Résoudre (ou rouvrir) un signalement — audité, idempotent sur le même statut. */

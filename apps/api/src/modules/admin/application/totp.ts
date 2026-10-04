@@ -70,21 +70,3 @@ export function base32Encode(bytes: Buffer): string {
   if (bits > 0) output += BASE32[(value << (5 - bits)) & 31];
   return output;
 }
-
-export function base32Decode(text: string): Buffer {
-  const clean = text.toUpperCase().replace(/[\s=]/g, '');
-  let bits = 0;
-  let value = 0;
-  const bytes: number[] = [];
-  for (const char of clean) {
-    const index = BASE32.indexOf(char);
-    if (index < 0) throw new Error('Clé base32 invalide.');
-    value = (value << 5) | index;
-    bits += 5;
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 0xff);
-      bits -= 8;
-    }
-  }
-  return Buffer.from(bytes);
-}

@@ -40,9 +40,9 @@ import {
   sweepSupersededSeedMedia,
 } from '../modules/media/application/catalog-media-sweep';
 import { syncExerciseMedia } from '../modules/media/application/catalog-media-sync';
-import { runCli } from './run-cli';
+import { runCli, UsageError } from './run-cli';
 
-export class UsageError extends Error {}
+export { UsageError };
 
 export interface CatalogSeedArgs {
   readonly withPhotos: boolean;
@@ -135,16 +135,8 @@ async function main(argv: readonly string[]): Promise<number> {
     return 2;
   }
 
-  // Dans le try : une configuration invalide doit sortir en « Échec : … »
-  // avec un code maîtrisé, pas en rejet non géré à pile brute.
-  let config: AppConfigService;
-  try {
-    const env: Env = validateEnv(process.env);
-    config = new AppConfigService(new ConfigService<Env, true>(env));
-  } catch (error) {
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
-  }
+  // Configuration invalide : runCli la dit en « Échec : … », code 1.
+  const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
   const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
   try {
     const summary = await syncCatalog(prisma);

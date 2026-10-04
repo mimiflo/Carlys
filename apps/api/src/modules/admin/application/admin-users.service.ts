@@ -20,12 +20,7 @@ import {
   paidSubscriptionOf,
   presentManagedEntitlements,
 } from './managed-entitlements';
-
-export interface UsersPage {
-  items: ManagedUserSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 function isPremiumNow(row: ManagedUserRow): boolean {
   const now = Date.now();
@@ -56,15 +51,13 @@ export class AdminUsersService {
     private readonly entitlements: EntitlementsService,
   ) {}
 
-  async listUsers(search: string | undefined, limit: number, cursor?: string): Promise<UsersPage> {
+  async listUsers(
+    search: string | undefined,
+    limit: number,
+    cursor?: string,
+  ): Promise<CursorPage<ManagedUserSummary>> {
     const rows = await this.admin.listUsers(search, limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentSummary);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentSummary);
   }
 
   async userDetail(userId: string): Promise<ManagedUserDetail> {

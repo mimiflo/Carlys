@@ -1,4 +1,4 @@
-import { base32Decode, base32Encode, newTotpSecret, totpCode, verifyTotp } from './totp';
+import { base32Encode, newTotpSecret, totpCode, verifyTotp } from './totp';
 
 /** Secret de la RFC 6238 (annexe B), « 12345678901234567890 » en ASCII. */
 const RFC_SECRET = Buffer.from('12345678901234567890');
@@ -36,12 +36,10 @@ describe('TOTP (RFC 6238, SHA-1, 30 s)', () => {
     expect(verifyTotp(RFC_SECRET, code, now, step)).toBeNull();
   });
 
-  it('base32 : aller-retour exact, et les espaces ou minuscules saisis passent', () => {
+  it('base32 : le vecteur de la RFC 4648, et 32 caractères pour un secret de 20 octets', () => {
+    expect(base32Encode(Buffer.from('foobar'))).toBe('MZXW6YTBOI');
     const secret = newTotpSecret();
     expect(secret).toHaveLength(20);
-    const encoded = base32Encode(secret);
-    expect(encoded).toMatch(/^[A-Z2-7]{32}$/);
-    expect(base32Decode(encoded)).toEqual(secret);
-    expect(base32Decode(encoded.toLowerCase().replace(/(.{4})/g, '$1 '))).toEqual(secret);
+    expect(base32Encode(secret)).toMatch(/^[A-Z2-7]{32}$/);
   });
 });

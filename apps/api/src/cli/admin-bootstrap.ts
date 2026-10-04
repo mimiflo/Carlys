@@ -44,7 +44,7 @@ import {
 import { base32Encode, newTotpSecret, otpauthUri } from '../modules/admin/application/totp';
 import { sealTotpSecret, totpVaultKey } from '../modules/admin/application/totp-vault';
 import { PasswordService } from '../modules/auth/application/password.service';
-import { runCli } from './run-cli';
+import { runCli, UsageError } from './run-cli';
 
 export const PASSWORD_MIN_LENGTH = 12;
 
@@ -66,7 +66,7 @@ export interface BootstrapArgs {
   readonly resetTotp: boolean;
 }
 
-export class UsageError extends Error {}
+export { UsageError };
 
 const emailSchema = z.string().trim().toLowerCase().email();
 

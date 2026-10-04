@@ -49,9 +49,9 @@ import {
   deleteActiveAccount,
   withApplication,
 } from './active-account-erasure';
-import { runCli } from './run-cli';
+import { runCli, UsageError } from './run-cli';
 
-export class UsageError extends Error {}
+export { UsageError };
 
 export interface PurgeArgs {
   readonly dryRun: boolean;
@@ -211,14 +211,8 @@ async function main(argv: readonly string[]): Promise<number> {
     return 2;
   }
 
-  let config: AppConfigService;
-  try {
-    const env: Env = validateEnv(process.env);
-    config = new AppConfigService(new ConfigService<Env, true>(env));
-  } catch (error) {
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
-  }
+  // Configuration invalide : runCli la dit en « Échec : … », code 1.
+  const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
   const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
   const store = new S3PrivateObjectStore(config);
   try {

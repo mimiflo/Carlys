@@ -1,7 +1,6 @@
 import { type GenerationReport } from '@carlys/api-contracts';
 import { type Prisma } from '@prisma/client';
-import { derivedUuid } from '../../../common/utilities/derived-uuid';
-import { GENERATION_UUID_NAMESPACE } from '../domain/generation/constants';
+import { idFor as rowId } from '../domain/generation/slot-filler';
 import { type PrescribedProgram } from '../domain/generation/types';
 
 /**
@@ -20,16 +19,8 @@ export interface GeneratedRows {
   days: Prisma.ProgramDayCreateManyInput[];
 }
 
-/**
- * Identifiant DÉRIVÉ d'une ligne, comme ceux que le moteur produit déjà.
- *
- * C'est ce qui rend le rejeu inoffensif : réécrire le même programme réécrit
- * les mêmes lignes au lieu d'en créer un second jeu. L'idempotence se prouve
- * alors par égalité d'identifiants, sans journal.
- */
-function rowId(programId: string, key: string): string {
-  return derivedUuid(GENERATION_UUID_NAMESPACE, `${programId}:${key}`);
-}
+// Les lignes prennent des identifiants DÉRIVÉS, comme ceux du moteur : rejouer
+// le même programme réécrit les mêmes lignes au lieu d'en créer un second jeu.
 
 export function toRows(
   userId: string,

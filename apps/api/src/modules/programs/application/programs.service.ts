@@ -12,6 +12,7 @@ import { EntitlementsService } from '../../subscriptions/application/entitlement
 import { anchorOf, dateOfSlot } from '../domain/calendar-dates';
 import { ProgramsRepository, type ProgramWithDays } from '../infrastructure/programs.repository';
 import { presentProgramDetail, presentProgramSummary } from './program.presenter';
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 interface ProgramDayInput {
   id: string;
@@ -30,12 +31,6 @@ export interface SaveProgramInput {
   /** Jour civil `YYYY-MM-DD`, ou `null` pour un programme sans calendrier. */
   startsOn?: string | null;
   days: ProgramDayInput[];
-}
-
-export interface ProgramsPage {
-  items: ProgramSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface SavedProgram {
@@ -58,15 +53,9 @@ export class ProgramsService {
     private readonly entitlements: EntitlementsService,
   ) {}
 
-  async list(userId: string, limit: number, cursor?: string): Promise<ProgramsPage> {
+  async list(userId: string, limit: number, cursor?: string): Promise<CursorPage<ProgramSummary>> {
     const rows = await this.programs.listPage(userId, limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentProgramSummary);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentProgramSummary);
   }
 
   /** Nom du programme en cours, ou `null` s'il n'y en a pas. */

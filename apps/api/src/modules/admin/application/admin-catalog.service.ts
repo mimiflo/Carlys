@@ -11,12 +11,7 @@ import {
   type AdminExerciseRow,
   AdminCatalogRepository,
 } from '../infrastructure/admin-catalog.repository';
-
-export interface AdminExercisePage {
-  items: AdminExerciseSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 /**
  * Le CATALOGUE vu du back-office : lister, publier, supprimer, reclasser.
@@ -39,11 +34,9 @@ export class AdminCatalogService {
     search?: string,
     cursor?: string,
     includeDeleted = false,
-  ): Promise<AdminExercisePage> {
+  ): Promise<CursorPage<AdminExerciseSummary>> {
     const rows = await this.admin.listExercises(search, limit, cursor, includeDeleted);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map((row) => this.presentExercise(row));
-    return { items, hasMore, nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null };
+    return cursorPage(rows, limit, (row) => this.presentExercise(row));
   }
 
   /** Publication/dépublication + invalidation du cache catalogue. */

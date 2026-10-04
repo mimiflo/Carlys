@@ -2,12 +2,7 @@ import { type AdminAuditLog, type AdminOverview } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { type AuditLog } from '@prisma/client';
 import { AdminRepository } from '../infrastructure/admin.repository';
-
-export interface AuditPage {
-  items: AdminAuditLog[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 function presentAuditLog(log: AuditLog): AdminAuditLog {
   return {
@@ -33,14 +28,8 @@ export class AdminPlatformService {
     return this.admin.overview();
   }
 
-  async auditLogs(limit: number, cursor?: string): Promise<AuditPage> {
+  async auditLogs(limit: number, cursor?: string): Promise<CursorPage<AdminAuditLog>> {
     const rows = await this.admin.listAuditLogs(limit, cursor);
-    const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentAuditLog);
-    return {
-      items,
-      hasMore,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
-    };
+    return cursorPage(rows, limit, presentAuditLog);
   }
 }

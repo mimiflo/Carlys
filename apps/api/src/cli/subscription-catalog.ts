@@ -34,6 +34,7 @@ import {
   syncSubscriptionCatalog,
 } from '../modules/subscriptions/application/subscription-catalog-sync';
 import { BILLABLE_STATUSES } from '../modules/subscriptions/infrastructure/subscriptions.repository';
+import { runCli } from './run-cli';
 
 type PaymentConfig = Partial<
   Pick<AppConfigService, 'stripeSecretKey' | 'stripeWebhookSecret' | 'revenueCatWebhookSecret'>
@@ -116,14 +117,8 @@ export function paymentVerdict(
 }
 
 async function main(): Promise<number> {
-  let config: AppConfigService;
-  try {
-    const env: Env = validateEnv(process.env);
-    config = new AppConfigService(new ConfigService<Env, true>(env));
-  } catch (error) {
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
-  }
+  // Configuration invalide : runCli la dit en « Échec : … », code 1.
+  const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
 
   const products = productsFromConfig(config);
   const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
@@ -159,12 +154,5 @@ async function main(): Promise<number> {
 }
 
 if (require.main === module) {
-  main()
-    .then((code) => {
-      process.exitCode = code;
-    })
-    .catch((error: unknown) => {
-      process.stderr.write(`Échec : ${(error as Error).message}\n`);
-      process.exitCode = 1;
-    });
+  runCli(main);
 }

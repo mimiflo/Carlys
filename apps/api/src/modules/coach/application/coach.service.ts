@@ -228,11 +228,6 @@ export class CoachService {
     await this.cancellations.request(userId, messageId);
   }
 
-  async remainingToday(userId: string): Promise<number> {
-    await this.availability.assertAvailable(userId);
-    return this.quota.remaining(userId);
-  }
-
   private async requireConversation(
     userId: string,
     id: string,
