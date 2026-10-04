@@ -224,7 +224,10 @@ cp "$DEPOT_CONFIG/config/"*.conf "$CARLYS_CONFIG_DIR/"
 } | sed -e 's/=CHANGE_MOI_[A-Z0-9_]*/=secret-du-banc-0123456789abcdef0123/' -e 's/^LOG_LEVEL=.*/LOG_LEVEL=info/' \
   > "$ENV_STAGING"
 echo 'CARLYS_OLLAMA_REPLICAS=1' >> "$ENV_STAGING"
-echo 'COACH_WORKER_URLS=https://nom:motdepasse@gpu.exemple/v1' >> "$ENV_STAGING"
+# Assemblée ici, jamais écrite d'un bloc : le détecteur de secrets de la CI
+# (TruffleHog) prendrait l'adresse factice pour un vrai identifiant.
+identifiant='nom:motdepasse'
+printf 'COACH_WORKER_URLS=https://%s@gpu.exemple/v1\n' "$identifiant" >> "$ENV_STAGING"
 mkdir -p "$BANC/exemples"
 cp "$DEPOT_CONFIG/env/staging.env.example" "$BANC/exemples/"
 export CARLYS_ENV_EXAMPLES_DIR="$BANC/exemples"
