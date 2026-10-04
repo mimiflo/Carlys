@@ -18,14 +18,54 @@
 # en poussée sur cette branche (`gh`, droit `actions: read`), le commit
 # d'avant la poussée à défaut. Le commit d'avant ne suffit pas : une
 # réécriture rouge suivie d'une poussée sans rapport passerait au vert — et
-# ses images partiraient en recette.
+# ses images partiraient en recette. Un vert devenu introuvable (poussée
+# forcée, puis ménage côté GitHub) cède la place au vert d'avant lui, parmi
+# les vingt derniers ; le commit d'avant la poussée ne sert qu'en dernier.
 set -euo pipefail
 
 usage="usage : migrations_publiees.sh <base> | --poussee <commit d'avant>"
+cd "$(git rev-parse --show-toplevel)"
+
+# `joignable <commit>` — 0 : présent, ou rapatrié (clone superficiel en CI) ;
+# 1 : DISPARU du dépôt distant (« not our ref ») ; 2 : autre échec (réseau,
+# GitHub en panne). Seul un commit disparu cède la place au vert d'avant :
+# sur une panne passagère, la garde s'arrête, elle ne baisse pas d'un cran.
+joignable() {
+  local erreur
+  git cat-file -e "$1^{commit}" 2> /dev/null && return 0
+  # LC_ALL=C : git traduit ses propres messages ; seul l'anglais se reconnaît.
+  erreur="$(LC_ALL=C git fetch -q --no-tags --depth=1 origin "$1" 2>&1)" && return 0
+  grep -q -i -E "not our ref|unadvertised object|couldn't find remote ref|no such remote ref" \
+    <<< "$erreur" && return 1
+  printf '%s\n' "$erreur" >&2
+  return 2
+}
+
 if [ "${1-}" = --poussee ]; then
-  base="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/api-ci.yml/runs?branch=$GITHUB_REF_NAME&event=push&status=success&per_page=1" \
-    --jq '.workflow_runs[0].head_sha // empty')"
-  base="${base:-${2:?$usage}}"
+  avant="${2:?$usage}"
+  # Capturé d'abord : une panne de `gh` arrête la garde, elle ne la replie
+  # pas en silence sur le commit d'avant.
+  verts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/api-ci.yml/runs?branch=$GITHUB_REF_NAME&event=push&status=success&per_page=20" \
+    --jq '.workflow_runs[].head_sha')"
+  base=''
+  while read -r vert; do
+    [ -n "$vert" ] || continue
+    code=0
+    joignable "$vert" || code=$?
+    if [ "$code" -eq 0 ]; then
+      base="$vert"
+      break
+    fi
+    if [ "$code" -eq 2 ]; then
+      echo "✗ Dernier vert ${vert:0:12} injoignable (réseau ?) : refus par prudence." >&2
+      exit 1
+    fi
+    echo "  ~ dernier vert ${vert:0:12} introuvable (historique réécrit ?) : le précédent."
+  done <<< "$verts"
+  if [ -z "$base" ] && [ -n "$verts" ]; then
+    echo "::warning::Aucun des derniers verts d'api-ci n'est joignable : la garde des migrations compare au seul commit d'avant la poussée."
+  fi
+  base="${base:-$avant}"
 else
   base="${1:?$usage}"
 fi
@@ -33,11 +73,8 @@ if [ "$base" = 0000000000000000000000000000000000000000 ]; then
   echo "Première poussée de la branche : aucune migration n'y était publiée."
   exit 0
 fi
-cd "$(git rev-parse --show-toplevel)"
 
-# Clone superficiel (CI) : la base n'y est pas encore.
-git cat-file -e "$base^{commit}" 2> /dev/null \
-  || git fetch -q --no-tags --depth=1 origin "$base" 2> /dev/null || true
+joignable "$base" || true
 court="$(git rev-parse --verify --quiet --short=12 "$base^{commit}")" || {
   echo "✗ Commit « $base » introuvable dans l'historique : impossible de prouver" >&2
   echo "  que les migrations déjà publiées sont intactes. Refus par prudence." >&2

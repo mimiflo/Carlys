@@ -113,10 +113,8 @@ jobs:
       # ── Une migration PUBLIÉE ne se réécrit pas ─────────────────────────────
       # Base : en pull request, la branche cible ; en poussée, le dernier
       # commit VERT d'api-ci sur la branche. Règle et incident :
-      # docs/database/migrations.md.
-      # ponytail: un dernier vert devenu introuvable (poussée forcée, puis
-      # ménage côté GitHub) laisse la garde rouge : se replier alors sur le
-      # commit d'avant la poussée.
+      # docs/database/migrations.md. Un vert devenu introuvable cède la
+      # place au précédent (voir l'en-tête du script).
       - name: Migrations publiées intactes
         env:
           GH_TOKEN: ${{ github.token }}

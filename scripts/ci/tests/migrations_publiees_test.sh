@@ -29,11 +29,13 @@ lancer() {
 }
 dit() { grep -q -F -- "$1" "$TMP/sortie" && echo oui || echo non; }
 
-# Le faux `gh` : répond $VERT (vide = aucune exécution verte), note la requête.
+# Le faux `gh` : répond $VERT (vide = aucune exécution verte, « panne » =
+# échec de l'appel), note la requête.
 mkdir "$TMP/bin"
 cat > "$TMP/bin/gh" << 'FAUX'
 #!/usr/bin/env bash
 echo "$*" > "$TMP_GH/requete"
+[ "${VERT-}" != panne ] || exit 1
 echo "${VERT-}"
 FAUX
 chmod +x "$TMP/bin/gh"
@@ -53,6 +55,11 @@ engager() {
   git -C "$depot" rev-parse HEAD
 }
 BASE="$(engager base)"
+# Un dépôt « distant » : un commit qu'il n'a pas répond « not our ref »,
+# comme un commit que GitHub a perdu après une poussée forcée.
+git init -q --bare "$TMP/origine.git"
+git -C "$depot" remote add origin "$TMP/origine.git"
+git -C "$depot" push -q origin HEAD:refs/heads/development 2> /dev/null
 repartir() { git -C "$depot" checkout -q -f "$BASE" && git -C "$depot" clean -q -f -d; }
 
 verifier "rien n'a bougé → 0" 0 "$(lancer "$BASE")"
@@ -101,6 +108,20 @@ verifier "… et le message nomme le renommage de P1" oui "$(dit '20260101000000
 verifier "… la requête ne veut que les poussées vertes de la branche" oui \
   "$(grep -q -F 'branch=development&event=push&status=success' "$TMP/requete" 2> /dev/null && echo oui || echo non)"
 verifier "aucune exécution verte : repli sur le commit d'avant la poussée" 0 "$(VERT='' lancer --poussee "$P1")"
+INTROUVABLE=0123456789abcdef0123456789abcdef01234567
+verifier "dernier vert introuvable : le vert d'avant lui sert de base → 1" 1 \
+  "$(VERT="$INTROUVABLE"$'\n'"$BASE" lancer --poussee "$P1")"
+verifier "… et le message le dit" oui "$(dit 'introuvable (historique réécrit ?)')"
+verifier "aucun vert joignable : repli sur le commit d'avant la poussée → 0" 0 \
+  "$(VERT="$INTROUVABLE" lancer --poussee "$P1")"
+verifier "… annoncé dans la CI" oui "$(dit '::warning::')"
+git -C "$depot" remote set-url origin "$TMP/injoignable.git"
+verifier "vert injoignable (réseau, pas disparu) : refus, sans repli → 1" 1 \
+  "$(VERT="$INTROUVABLE"$'\n'"$BASE" lancer --poussee "$P1")"
+verifier "… et le message le dit" oui "$(dit 'injoignable (réseau ?)')"
+git -C "$depot" remote set-url origin "$TMP/origine.git"
+verifier "gh en panne : la garde s'arrête, sans repli silencieux → 1" 1 \
+  "$(VERT=panne lancer --poussee "$P1")"
 verifier "première poussée d'une branche → 0" 0 \
   "$(VERT='' lancer --poussee 0000000000000000000000000000000000000000)"
 repartir

@@ -24,7 +24,10 @@ commit déjà poussé à ceux d'aujourd'hui. Les ajouts passent ;
   vert** sur la branche — pas le commit d'avant la poussée : une réécriture
   (rouge) suivie d'une poussée sans rapport aurait comparé la seconde à la
   première, serait passée au vert, et ses images seraient parties en recette.
-  En pull request, contre la branche cible ;
+  Un vert devenu introuvable (poussée forcée, puis ménage côté GitHub) cède
+  la place au vert d'avant lui, parmi les vingt derniers ; le commit d'avant
+  la poussée ne sert que si aucun n'est joignable. En pull request, contre la
+  branche cible ;
 - en tête de **`./scripts/check.sh`**, contre la base commune avec
   `origin/development`.
 
