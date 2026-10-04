@@ -67,6 +67,8 @@ export const coachGatewayEnv = {
     ),
   /** Mise à l'écart d'un worker en panne avant de le réessayer. */
   COACH_WORKER_COOLDOWN_MS: int(1_000, 600_000, 30_000),
+  /** Scans d'assiette par personne et par jour (ADR 0015) : chacun occupe le modèle. */
+  COACH_MEAL_SCANS_PER_DAY: int(1, 200, 10),
 };
 
 export interface CoachGatewaySettings {
@@ -85,6 +87,7 @@ export interface CoachGatewaySettings {
   historyMessages: number;
   workerUrls: string[];
   workerCooldownMs: number;
+  mealScansPerDay: number;
 }
 
 /** Les réglages lus, et la liste des workers dépliée. */
@@ -111,5 +114,6 @@ export function coachGatewaySettings(config: ConfigService<Env, true>): CoachGat
     historyMessages: get('COACH_HISTORY_MESSAGES'),
     workerUrls: listed.length > 0 ? listed : fallbackBaseUrl === undefined ? [] : [fallbackBaseUrl],
     workerCooldownMs: get('COACH_WORKER_COOLDOWN_MS'),
+    mealScansPerDay: get('COACH_MEAL_SCANS_PER_DAY'),
   };
 }

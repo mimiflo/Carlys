@@ -37,6 +37,6 @@ import { NutritionController } from './presentation/http/nutrition.controller';
   // Le coach lit les cibles métaboliques et le journal alimentaire par ces
   // services, jamais par Prisma. La suppression de compte efface les photos
   // de repas par `MealPhotosService`.
-  exports: [NutritionService, MealsService, MealPhotosService],
+  exports: [NutritionService, MealsService, MealPhotosService, FoodsService],
 })
 export class NutritionModule {}

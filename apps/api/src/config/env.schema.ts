@@ -182,6 +182,11 @@ export const envSchema = z
     COACH_API_KEY: z.string().min(8).optional(),
     /** Modèle servi par nos workers. Sans lui, le coach est indisponible. */
     COACH_MODEL: z.string().min(1).optional(),
+    /**
+     * Modèle de VISION servi par les mêmes workers (le scan d'assiette, ADR
+     * 0015). Sans lui, le scan répond 503 ; le coach, lui, n'en dépend pas.
+     */
+    COACH_VISION_MODEL: z.string().min(1).optional(),
     /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
     COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
     /** Interrupteur global : coupe la fonctionnalité sans déploiement. */

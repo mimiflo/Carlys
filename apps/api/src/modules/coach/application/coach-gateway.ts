@@ -1,4 +1,4 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
@@ -140,6 +140,42 @@ export class CoachGateway {
     } finally {
       clearInterval(watch);
       await this.gate.leave(requestId);
+    }
+  }
+
+  /**
+   * Une tâche du modèle HORS conversation (l'analyse d'une photo de repas) :
+   * elle entre dans la MÊME file que le coach — une personne, une
+   * génération à la fois ; la file pleine dit « très sollicité » —, attend
+   * son tour, garde son bail le temps de la tâche, puis rend la place.
+   */
+  async withSlot<T>(userId: string, signal: AbortSignal, task: () => Promise<T>): Promise<T> {
+    const requestId = randomUUID();
+    const entry = await this.gate.enter(requestId, userId);
+    if (entry === 'user_busy') {
+      throw new HttpException(
+        'Le coach travaille déjà pour toi. Attends qu’il ait fini.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (entry === 'busy') {
+      this.metrics.requests.inc({ outcome: 'busy' });
+      throw new UserFacingUnavailableException(BUSY_MESSAGE, 'SERVICE_BUSY');
+    }
+    try {
+      // Aucune connexion à tenir éveillée : la tâche tourne en fond, le
+      // client relit son résultat. L'attente a donc toute la patience de la file.
+      await this.waitForSlot(requestId, { stream: true, signal });
+      const renew = setInterval(() => void this.renewLease(requestId), GATE_LEASE_MS / 3);
+      this.metrics.active.inc();
+      try {
+        return await task();
+      } finally {
+        clearInterval(renew);
+        this.metrics.active.dec();
+      }
+    } finally {
+      await this.gate.leave(requestId, userId);
     }
   }
 

@@ -169,6 +169,8 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `DELETE /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — « Retirer la photo » du même écran, appliqué à l'enregistrement (`NutritionRepository.removeMealPhoto`) |
 | `GET /nutrition/foods` | **mobile** | apps/mobile — feuille « Ajouter un aliment » de l'écran de repas (`FoodSearchController` → `NutritionRepository.searchFoods`, anti-rebond, deux caractères au moins, réponses dépassées jetées) ; `meta.source` (mention CIQUAL et version) affichée en pied de feuille |
 | `GET /nutrition/foods/{code}` | **mobile** | apps/mobile — fiche d'un aliment de la base, exposée par le dépôt (`NutritionRepository.food`) ; la feuille de recherche ne l'appelle pas : la recherche rend déjà les valeurs pour 100 g et la mention |
+| `POST /nutrition/meal-scans` | **mobile** | apps/mobile — écran « Scanner mon assiette » (tuile « Scanner un aliment ») : la photo, réduite à 768 px sur l'appareil, part avec l'identifiant du scan né sur l'appareil (`NutritionRepository.startMealScan`, via `MealScanController`) ; 202 et scan `PENDING` |
+| `GET /nutrition/meal-scans/{id}` | **mobile** | apps/mobile — le même écran relit le scan toutes les 2 s jusqu'à `DONE` ou `FAILED` (`NutritionRepository.mealScan`), puis ouvre « Nouveau repas » pré-rempli |
 | `GET /nutrition/metabolism` | **mobile** | apps/mobile |
 
 ### Communauté

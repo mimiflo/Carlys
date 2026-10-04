@@ -54,6 +54,7 @@ vers l'ADR qui la remplace).
 | [0012](0012-coach-reponse-en-flux.md) | Coach IA : la réponse s'écrit en direct (SSE) | Acceptée — 2026-09 |
 | [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 (repli cloud retiré le 2026-10-03) |
 | [0014](0014-coach-actions-garanties.md) | Coach IA : proposer et créer une séance, garanti par l'orchestration | Acceptée — 2026-10 |
+| [0015](0015-scan-assiette-modele-de-vision.md) | Scan d'assiette : le modèle de vision reconnaît, la base CIQUAL calcule | Acceptée — 2026-10 |
 
 ## Ajouter un ADR
 

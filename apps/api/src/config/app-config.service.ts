@@ -207,11 +207,13 @@ export class AppConfigService {
 
   // ── Coach IA ───────────────────────────────────────────────────────────
 
-  get coachProvider(): { baseUrl?: string; apiKey?: string; model?: string } {
+  /** Workers et modèles ; `visionModel` absent : scan d'assiette désactivé. */
+  get coachProvider(): { baseUrl?: string; apiKey?: string; model?: string; visionModel?: string } {
     return {
       baseUrl: this.config.get('COACH_API_BASE_URL', { infer: true }),
       apiKey: this.config.get('COACH_API_KEY', { infer: true }),
       model: this.config.get('COACH_MODEL', { infer: true }),
+      visionModel: this.config.get('COACH_VISION_MODEL', { infer: true }),
     };
   }
 

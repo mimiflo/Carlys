@@ -28,6 +28,9 @@ import { CoachGate } from './infrastructure/coach-gate';
 import { CoachGenerationRepository } from './infrastructure/coach-generation.repository';
 import { CoachMetrics } from './infrastructure/coach-metrics';
 import { CoachRepository } from './infrastructure/coach.repository';
+import { MealVisionClient } from './infrastructure/meal-vision.client';
+import { MealScansController } from './presentation/http/meal-scans.controller';
+import { MealScansService } from './application/meal-scans.service';
 import { CoachWorkerPool } from './infrastructure/coach-worker-pool';
 import { OpenAiCompatibleCoachClient } from './infrastructure/openai-compatible.client';
 import { CoachController } from './presentation/http/coach.controller';
@@ -66,10 +69,12 @@ export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): 
     UsersModule,
     MetricsModule,
   ],
-  controllers: [CoachController, CoachInternalController],
+  controllers: [CoachController, CoachInternalController, MealScansController],
   providers: [
     CoachAvailability,
     CoachService,
+    MealScansService,
+    MealVisionClient,
     CoachTools,
     CoachQuota,
     CoachRepository,

@@ -150,6 +150,31 @@ export const foodSourceMetaSchema = z.object({ source: foodSourceSchema });
 export type FoodSourceMeta = z.infer<typeof foodSourceMetaSchema>;
 
 /**
+ * Le scan d'une assiette (/api/v1/nutrition/meal-scans) : le modèle de vision
+ * reconnaît les aliments d'une photo et estime leurs grammes, la base CIQUAL
+ * donne leurs valeurs. `PENDING` tant que le modèle travaille ; `food` est
+ * `null` pour un aliment vu que la base n'a pas su nommer.
+ */
+export const mealScanStatusSchema = z.enum(['PENDING', 'DONE', 'FAILED']);
+export const mealScanItemSchema = z.object({
+  /** Ce que le modèle a vu, tel qu'il l'a nommé : « Poulet, filet, grillé ». */
+  seen: z.string(),
+  /** Sa masse estimée, en grammes (1 à 2 000). */
+  grams: z.number().int(),
+  /** L'aliment de la base qui lui correspond le mieux. */
+  food: foodSchema.nullable(),
+});
+export const mealScanSchema = z.object({
+  id: z.string().uuid(),
+  status: mealScanStatusSchema,
+  items: z.array(mealScanItemSchema),
+  /** Pourquoi le scan a échoué, écrit pour la personne ; `null` sinon. */
+  error: z.string().nullable(),
+});
+export type MealScan = z.infer<typeof mealScanSchema>;
+export type MealScanItem = z.infer<typeof mealScanItemSchema>;
+
+/**
  * Bornes d'une composition : 30 aliments au plus, 1 à 5 000 g chacun (deux
  * décimales). Recopiées par le DTO de l'API ; le client les applique à la
  * saisie pour ne pas découvrir un 400 à l'envoi.

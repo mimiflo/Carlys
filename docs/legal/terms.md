@@ -1,6 +1,6 @@
 # Conditions d’utilisation de Carlys
 
-Dernière mise à jour : 3 octobre 2026.
+Dernière mise à jour : 4 octobre 2026.
 
 Ces conditions encadrent l’utilisation de l’application mobile Carlys et de
 ses pages web. En créant un compte, que ce soit avec ton adresse e-mail ou
@@ -83,6 +83,12 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
 - N’utilise pas le coach pour obtenir un avis médical, et ne lui confie pas
   d’informations que tu ne voudrais pas voir traitées par un prestataire
   externe (voir la politique de confidentialité).
+- Le scan d’assiette, réservé aux mêmes abonnés que le coach, repose sur le
+  même type de modèle, tourné sur le même serveur : il **estime** les
+  aliments d’une photo et leurs grammes, et peut se tromper d’aliment comme
+  de quantité. Il ne remplit que l’écran du repas : rien ne s’ajoute au
+  journal tant que tu n’as pas vérifié et enregistré. Un plafond quotidien
+  de scans s’applique à chaque compte.
 
 ## 6. L’abonnement Premium
 

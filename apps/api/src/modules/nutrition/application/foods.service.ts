@@ -56,6 +56,25 @@ export class FoodsService {
   }
 
   /**
+   * L'aliment de la base le plus proche d'un nom LIBRE — celui que le modèle
+   * de vision donne à ce qu'il voit (« Poulet, filet, grillé ») : tous ses
+   * mots d'abord, puis sans le dernier, jusqu'au premier seul. Les mots de
+   * tête nomment l'aliment, ceux de la fin sa préparation : c'est elle qui
+   * cède. `null` : la base n'a rien de tel.
+   */
+  async closest(label: string): Promise<FoodContract | null> {
+    // Six mots suffisent à nommer un aliment, et bornent les requêtes.
+    const words = searchWords(label).slice(0, 6);
+    for (let count = words.length; count >= 1; count--) {
+      const [first, ...others] = words.slice(0, count);
+      if (first === undefined) break;
+      const [row] = await this.foods.search([first, ...others], 1);
+      if (row !== undefined) return presentFood(row);
+    }
+    return null;
+  }
+
+  /**
    * La fiche d'un aliment. Retiré ou inconnu : 404 dans les deux cas — un
    * aliment retiré ne peut plus entrer dans un repas, le montrer comme
    * disponible inviterait à un 400 au moment d'enregistrer.

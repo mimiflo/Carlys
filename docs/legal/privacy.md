@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 3 octobre 2026.
+Dernière mise à jour : 4 octobre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -145,7 +145,8 @@ appareils. Rien ne t’y oblige : un repas s’enregistre très bien sans photo.
   de l’utilisation de l’application.
 - **Qui la voit** : toi, et personne d’autre dans l’application. Elle n’est
   montrée ni à tes amis, ni dans les défis ou la ligue, et elle n’est
-  transmise ni au coach IA, ni à aucun autre prestataire. Elle est rangée à
+  transmise ni au coach IA, ni à aucun autre prestataire (le scan
+  d’assiette, ci-dessous, est un envoi à part que tu déclenches toi-même). Elle est rangée à
   part des images publiques de l’application, dans un espace de stockage
   privé que seul le serveur de Carlys peut lire, et qu’il ne te rend qu’à
   toi, après avoir vérifié ton identité. Les personnes qui exploitent le
@@ -154,6 +155,31 @@ appareils. Rien ne t’y oblige : un repas s’enregistre très bien sans photo.
 - **Quand elle disparaît** : quand tu la remplaces ou la retires, quand tu
   supprimes le repas, et quand tu supprimes ton compte (voir « Combien de
   temps »).
+
+### Le scan d’assiette (facultatif, abonnés)
+
+« Scanner un aliment » envoie la photo de ton assiette pour qu’une
+intelligence artificielle reconnaisse les aliments et estime leurs grammes.
+Rien ne s’enregistre sans toi : l’écran du repas s’ouvre pré-rempli, tu
+corriges, puis tu choisis de l’ajouter ou non au journal.
+
+- **Ce qui quitte ton téléphone** : la photo que tu as prise ou choisie,
+  préparée comme celle d’un repas (redressée, sans aucune information
+  inscrite par l’appareil) et réduite à 768 pixels sur son plus grand côté.
+- **Qui l’analyse** : un modèle de vision ouvert (Qwen3-VL) que Carlys fait
+  tourner sur son propre serveur, comme le coach. La photo ne part chez
+  aucun prestataire d’intelligence artificielle, et elle n’entre pas dans
+  ta conversation avec le coach.
+- **Ce qui est gardé** : la photo n’est PAS stockée par le scan. Elle reste
+  dans la mémoire du serveur le temps de l’analyse (une à deux minutes en
+  général, davantage si d’autres attendent), puis elle est oubliée. Le
+  résultat (le nom des aliments vus, leurs grammes estimés et les aliments
+  correspondants de la table Ciqual) est gardé une heure au plus, le temps
+  que ton téléphone le relise, puis effacé. Si tu ajoutes ensuite le repas
+  au journal, sa photo devient celle du repas (section ci-dessus).
+- **Combien** : un nombre de scans par jour s’applique à chaque compte
+  (remis à zéro à minuit UTC, soit 1 h ou 2 h du matin à Paris) ; un scan
+  qui échoue de notre fait (serveur occupé ou en panne) n’est pas compté.
 
 ### Ta communauté
 
@@ -440,6 +466,8 @@ transfert applicable à chaque prestataire.]
   ton mot de passe change, tous ceux qui restaient tombent.
 - **Les sessions** expirent après 30 jours sans utilisation, ou immédiatement
   quand tu les déconnectes.
+- **Le scan d’assiette** ne garde pas la photo, et son résultat une heure au
+  plus (voir « Le scan d’assiette »).
 - **Les jetons de notification** sont rattachés à la session qui les a
   enregistrés. Ils sont supprimés quand tu te déconnectes de l’appareil,
   quand cette session est déconnectée à distance ou révoquée (changement ou

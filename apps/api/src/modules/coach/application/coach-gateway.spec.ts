@@ -332,3 +332,33 @@ describe('CoachGateway — travail de fond', () => {
     jest.useRealTimers();
   });
 });
+
+describe('CoachGateway — un créneau pour un travail de fond (scan d’assiette)', () => {
+  const signal = () => new AbortController().signal;
+
+  it('déjà une réponse en cours pour la personne : 429, sans rien lancer', async () => {
+    const { gateway, gate } = setup();
+    gate.enter.mockResolvedValue('user_busy');
+    const task = jest.fn();
+    await expect(gateway.withSlot('u', signal(), task)).rejects.toMatchObject({ status: 429 });
+    expect(task).not.toHaveBeenCalled();
+    expect(gate.leave).not.toHaveBeenCalled();
+  });
+
+  it('file pleine : 503 SERVICE_BUSY, écrit pour la personne', async () => {
+    const { gateway, gate } = setup();
+    gate.enter.mockResolvedValue('busy');
+    await expect(gateway.withSlot('u', signal(), jest.fn())).rejects.toBeInstanceOf(
+      UserFacingUnavailableException,
+    );
+  });
+
+  it('la place se rend, que la tâche réussisse ou échoue', async () => {
+    const { gateway, gate } = setup();
+    await expect(gateway.withSlot('u', signal(), () => Promise.resolve(7))).resolves.toBe(7);
+    await expect(
+      gateway.withSlot('u', signal(), () => Promise.reject(new Error('panne'))),
+    ).rejects.toThrow('panne');
+    expect(gate.leave).toHaveBeenCalledTimes(2);
+  });
+});

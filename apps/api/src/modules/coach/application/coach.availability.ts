@@ -31,6 +31,23 @@ export class CoachAvailability {
     if (!this.config.coachEnabled || !this.providerConfigured()) {
       throw new ServiceUnavailableException('Le coach est momentanément indisponible.');
     }
+    await this.assertEntitled(userId);
+  }
+
+  /**
+   * Le scan d'assiette : le coach allumé, ses workers, SON modèle de vision,
+   * et le même droit que le coach — c'est le même modèle qui travaille.
+   */
+  async assertVisionAvailable(userId: string): Promise<string> {
+    const model = this.config.coachProvider.visionModel;
+    if (!this.config.coachEnabled || this.config.coachGateway.workerUrls.length === 0 || !model) {
+      throw new ServiceUnavailableException('Le scan d’assiette est momentanément indisponible.');
+    }
+    await this.assertEntitled(userId);
+    return model;
+  }
+
+  private async assertEntitled(userId: string): Promise<void> {
     const { entitlements } = await this.entitlements.entitlementsFor(userId);
     const granted = entitlements.some(
       (entitlement) => entitlement.key === REQUIRED_ENTITLEMENT && entitlement.isActive,

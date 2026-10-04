@@ -22,6 +22,17 @@ function png(b: Buffer): { width: number; height: number } | null {
 }
 
 function jpeg(b: Buffer): { width: number; height: number } | null {
+  const frame = readJpegFrame(b);
+  return frame === null ? null : { width: frame.width, height: frame.height };
+}
+
+/**
+ * La trame d'un JPEG : son marqueur SOFn (C0 base, C2 progressif…), sa
+ * précision en bits et ses dimensions. `null` : pas un JPEG, ou sans trame.
+ */
+export function readJpegFrame(
+  b: Buffer,
+): { marker: number; precision: number; width: number; height: number } | null {
   if (b.length < 4 || b.readUInt16BE(0) !== 0xffd8) return null;
   let offset = 2;
   while (offset + 9 < b.length) {
@@ -31,7 +42,12 @@ function jpeg(b: Buffer): { width: number; height: number } | null {
     // SOF0…SOF15, hors marqueurs qui ne décrivent pas une trame.
     const isStartOfFrame = marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker);
     if (isStartOfFrame) {
-      return { height: b.readUInt16BE(offset + 5), width: b.readUInt16BE(offset + 7) };
+      return {
+        marker,
+        precision: b[offset + 4]!,
+        height: b.readUInt16BE(offset + 5),
+        width: b.readUInt16BE(offset + 7),
+      };
     }
     offset += 2 + length;
   }
