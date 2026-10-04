@@ -66,10 +66,41 @@ pour rien de mieux.
    règles de celle d'un repas (JPEG prouvé par ses octets, 5 Mio au plus),
    et en plus celles du décodeur des workers : JPEG de base ou progressif en
    8 bits, 4 096 px de côté au plus (415 sinon, avant la file). L'appareil
-   la réduit à 768 px avant l'envoi.
+   la réduit à 512 px avant l'envoi.
 6. **Un worker n'est écarté que pour une panne** (réseau, 5xx) : ni un
    refus d'image (4xx), ni un délai dépassé sur un processeur lent ne le
    mettent en quarantaine pour tout le monde.
+
+## Optimisation mesurée (4 octobre 2026, suite)
+
+Banc élargi à 12 repas (40 aliments à trouver, photos à composition
+connue), la chaîne de l'appli rejouée (sélecteur à 1 600 px, réduction du
+scan, JPEG 80), la vraie table CIQUAL 2020 importée. Deux mesures : ce que
+le modèle RECONNAÎT, puis ce qui arrive BOUT EN BOUT (la ligne CIQUAL que
+la personne verra). Une variable à la fois.
+
+| Variante | Reconnus | Bout en bout | Décision |
+| --- | --- | --- | --- |
+| 768 px, consigne d'origine, ancien rapprochement | 28/40 | 19/40 | point de départ |
+| photo à 512 px | 31/40 | 20/40 | gardé : mieux reconnu, photo plus légère, autant de temps (≈ 80 s) |
+| consigne « noms en français » | 31/40 | inchangé | écarté : aucun effet, l'anglais revient |
+| « décrire avant de nommer » | - | - | écarté : deux fois plus de texte à écrire, hors délai sur processeur |
+| rapprochement par mots entiers et accordés | | 27/40 | gardé (`closest-food-query.ts`) |
+| mots anglais traduits avant la recherche | | 30/40 | gardé (« Lettuce », « Avocado »… échappent au modèle) |
+
+Avec le rapprochement final, 768 et 512 px finissent tous deux à 30/40 : le
+gain des 512 px tient à la reconnaissance, et au poids de la photo.
+
+Ce qui reste hors de portée d'un réglage :
+
+- **887 aliments CIQUAL sans énergie** (« - » dans la table, valeur UE comme
+  N x Jones) ne sont pas importés, dont la laitue crue, la salade verte ou
+  les petits pois cuits, le beurre de cacahuète. Les calculer à partir des
+  macros (facteurs du règlement UE 1169/2011) est une décision de données,
+  à prendre à part.
+- **La photo elle-même** : l'écran du scan dit comment la prendre (vue de
+  dessus, pleine lumière, chaque aliment visible), parce qu'aucun réglage
+  ne rattrape une assiette coupée ou dans l'ombre.
 
 ## Alternatives écartées
 

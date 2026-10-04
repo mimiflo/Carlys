@@ -898,7 +898,7 @@ a une. La photo reste privée : routes et stockage plus haut.
   (`MealScanTips` : vue de dessus et assiette entière, pleine lumière,
   chaque aliment visible) ; puis « Prendre la photo » ou « Choisir une photo » (même port
   `MealPhotoPicker` que la photo du plat). L'appareil réduit la photo à
-  768 px (`MealBounds.scanPhotoMaxSide`, dans un isolat) et l'envoie avec un
+  512 px (`MealBounds.scanPhotoMaxSide`, dans un isolat) et l'envoie avec un
   identifiant né sur lui ; l'écran montre la photo, « L'IA regarde ton
   assiette » et le temps écoulé, et relit le scan toutes les 2 s
   (`MealScanController`, 8 min de patience au plus). Quitter l'écran arrête

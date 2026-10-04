@@ -165,7 +165,7 @@ corriges, puis tu choisis de l’ajouter ou non au journal.
 
 - **Ce qui quitte ton téléphone** : la photo que tu as prise ou choisie,
   préparée comme celle d’un repas (redressée, sans aucune information
-  inscrite par l’appareil) et réduite à 768 pixels sur son plus grand côté.
+  inscrite par l’appareil) et réduite à 512 pixels sur son plus grand côté.
 - **Qui l’analyse** : un modèle de vision ouvert (Qwen3-VL) que Carlys fait
   tourner sur son propre serveur, comme le coach. La photo ne part chez
   aucun prestataire d’intelligence artificielle, et elle n’entre pas dans

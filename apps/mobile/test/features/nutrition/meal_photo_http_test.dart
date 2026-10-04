@@ -192,7 +192,7 @@ void main() {
           _indexOf(adapter.bodies.first, const [0xFF, 0xD8, 0xFF]),
         ),
       )!;
-      expect(sent.width, 768, reason: 'réduite pour le modèle');
+      expect(sent.width, 512, reason: 'réduite pour le modèle');
       expect(adapter.requests.last.path, '/nutrition/meal-scans/scan-1');
       for (final result in [started, read]) {
         expect(result.scan.status, MealScanStatus.done);
