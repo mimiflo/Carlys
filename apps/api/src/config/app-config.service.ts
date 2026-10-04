@@ -81,19 +81,19 @@ export class AppConfigService {
   }
 
   /**
-   * Clé des EMPREINTES de journal (`logFingerprint`) : dérivée du secret JWT
-   * par HKDF, sous une étiquette propre — une même clé ne sert jamais à deux
-   * usages. Elle ne sort jamais du serveur ; sans elle, une empreinte ne se
-   * vérifie contre aucune adresse candidate.
+   * Clé des EMPREINTES de journal (`logFingerprint`), dérivée par HKDF sous
+   * une étiquette propre : une même clé ne sert jamais à deux usages. Elle ne
+   * sort jamais du serveur ; sans elle, une empreinte ne se vérifie contre
+   * aucune adresse candidate.
    *
-   * ponytail: dérivée plutôt qu'une variable d'environnement de plus, donc
-   * changer `JWT_ACCESS_SECRET` change aussi les empreintes (la corrélation
-   * ne traverse pas la rotation). Une clé dédiée le jour où elle devra.
+   * Source : `LOG_FINGERPRINT_SECRET`, qui survit à une rotation du secret
+   * JWT. Absente, le secret JWT (les empreintes d'avant la clé dédiée) :
+   * poser la clé change donc les empreintes une fois, puis plus jamais.
    */
   get logFingerprintKey(): Buffer {
-    return Buffer.from(
-      hkdfSync('sha256', this.jwtAccessSecret, '', 'carlys/empreinte-de-journal', 32),
-    );
+    const secret =
+      this.config.get('LOG_FINGERPRINT_SECRET', { infer: true }) ?? this.jwtAccessSecret;
+    return Buffer.from(hkdfSync('sha256', secret, '', 'carlys/empreinte-de-journal', 32));
   }
 
   get jwtAccessTtlSeconds(): number {

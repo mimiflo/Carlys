@@ -702,10 +702,11 @@ supervise_un() {
   #
   # Portée « sur » et pas « tout » : la supervision recopie les valeurs que
   # l'exemple porte en clair, elle n'ENGENDRE aucun secret sans qu'on le lui
-  # demande. Les deux secrets engendrables produisent de toute façon un
+  # demande. METRICS_TOKEN et JWT_ACCESS_SECRET absents produisent un
   # symptôme bruyant que `status` et `doctor` nomment déjà, avec la commande
-  # exacte — mieux vaut un humain averti qu'une valeur apparue toute seule
-  # dans un fichier qu'il croit connaître.
+  # exacte ; LOG_FINGERPRINT_SECRET absent a un repli (le secret JWT), et
+  # `doctor` le nomme aussi. Mieux vaut un humain averti qu'une valeur
+  # apparue toute seule dans un fichier qu'il croit connaître.
   if [ "$(envsync_actif "$file")" = oui ]; then
     envsync_appliquer "$env_name" "$file" ecrire sur || true
   fi

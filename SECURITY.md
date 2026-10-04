@@ -153,10 +153,11 @@ aucune version antérieure ne reçoit de correctif.
   `admin.login_blocked_lockout` : `metadata.emailHash`), n'en gardent
   qu'une empreinte **à clé** — un HMAC-SHA-256 tronqué
   (`common/utilities/log-privacy.ts`), sous une clé dérivée par HKDF de
-  `JWT_ACCESS_SECRET` (`AppConfigService.logFingerprintKey`). Un SHA-256 nu
-  se renversait par dictionnaire ; sans la clé, une adresse candidate ne se
-  vérifie plus. Contrepartie : changer `JWT_ACCESS_SECRET` change aussi les
-  empreintes, la corrélation ne traverse pas la rotation. Les lignes d'audit
+  `LOG_FINGERPRINT_SECRET` (`AppConfigService.logFingerprintKey`), propre à
+  cet usage : la corrélation traverse une rotation de `JWT_ACCESS_SECRET`.
+  Un serveur qui ne l'a pas encore dérive la clé du secret JWT, comme avant ;
+  la poser change les empreintes une fois. Un SHA-256 nu se renversait par
+  dictionnaire ; sans la clé, une adresse candidate ne se vérifie plus. Les lignes d'audit
   écrites avant ce changement (7921f3f) portaient l'adresse en clair
   (`metadata.email`, back-office ET mobile) : la migration de données
   `20260927200000_audit_adresses_et_empreintes_nues` la remplace par

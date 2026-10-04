@@ -283,8 +283,9 @@ est donc le navigateur, pas l'application mobile.
   `admin.login_blocked_lockout`, `metadata.emailHash` dans l'audit) n'y
   figurent que par une empreinte à clé : un HMAC-SHA-256 tronqué
   (`common/utilities/log-privacy.ts`), sous une clé dérivée de
-  `JWT_ACCESS_SECRET` (`AppConfigService.logFingerprintKey`), que seul le
-  serveur tient — un SHA-256 nu se renversait par dictionnaire. Les
+  `LOG_FINGERPRINT_SECRET` (à défaut, de `JWT_ACCESS_SECRET` :
+  `AppConfigService.logFingerprintKey`), que seul le serveur tient — un
+  SHA-256 nu se renversait par dictionnaire. Les
   lignes d'audit écrites avant ce changement ont été vidées de l'adresse
   en clair et des empreintes sans clé (migration
   `20260927200000_audit_adresses_et_empreintes_nues`, voir `SECURITY.md`).

@@ -89,6 +89,15 @@ export const envSchema = z
     // ── Authentification ────────────────────────────────────────────────────
     /** Secret de signature des access tokens JWT — obligatoire, jamais par défaut. */
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET doit faire au moins 32 caractères'),
+    /**
+     * Clé des empreintes de journal, propre à cet usage : changer le secret
+     * JWT ne casse plus la corrélation. Absente, l'empreinte se dérive du
+     * secret JWT (comportement d'avant, gardé pour les serveurs déjà en place).
+     */
+    LOG_FINGERPRINT_SECRET: z
+      .string()
+      .min(32, 'LOG_FINGERPRINT_SECRET doit faire au moins 32 caractères')
+      .optional(),
     JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
     JWT_ISSUER: z.string().min(1).default('carlys-api'),
     JWT_AUDIENCE: z.string().min(1).default('carlys-mobile'),
