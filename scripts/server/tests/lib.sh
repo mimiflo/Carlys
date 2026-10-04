@@ -67,7 +67,14 @@ banc_preparer() {
   export BANC_SORTIE="$BANC/sortie"
   export FAUX_PG_DUMP=ok FAUX_MIGRATE=echec FAUX_SERVICES="postgres redis minio"
   export MC_CONFIG_DIR="$BANC/mc"
-  mkdir -p "$BANC/bin" "$CARLYS_ROOT/staging" "$CARLYS_ROOT/production"
+  # Une configuration versionnée VIDE par défaut : chaque essai décrit son
+  # environnement dans son .env, comme avant l'ADR 0017 ; ceux qui éprouvent
+  # les couches remplissent ce dossier.
+  export CARLYS_CONFIG_DIR="$BANC/config"
+  mkdir -p "$BANC/bin" "$CARLYS_ROOT/staging" "$CARLYS_ROOT/production" "$CARLYS_CONFIG_DIR"
+  : > "$CARLYS_CONFIG_DIR/commun.conf"
+  : > "$CARLYS_CONFIG_DIR/staging.conf"
+  : > "$CARLYS_CONFIG_DIR/production.conf"
   : > "$FAUX_JOURNAL"
   printf 'jeton-factice' > "$CARLYS_ROOT/ghcr.token"
   local env_name port

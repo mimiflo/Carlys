@@ -937,8 +937,8 @@ a une. La photo reste privée : routes et stockage plus haut.
   notre fait, gardé si le worker refuse l'image ; JPEG de base ou progressif
   en 8 bits, 4 096 px au plus (415 avant la file).
 - **Mise en route sur le serveur** : `COACH_VISION_MODEL=qwen3-vl:4b-instruct`
-  dans le `.env` ; le service `ollama` télécharge le modèle (≈ 3,3 Go) à son
-  redémarrage. `CARLYS_OLLAMA_MAX_LOADED_MODELS=2` garde coach et vision en
+  dans `infrastructure/server/config/<env>.conf` (posé en recette, ADR 0017) ;
+  le service `ollama` télécharge le modèle (≈ 3,3 Go) au déploiement suivant. `CARLYS_OLLAMA_MAX_LOADED_MODELS=2` garde coach et vision en
   mémoire (≈ 6 Go, à prévoir dans `CARLYS_OLLAMA_MEM_LIMIT`).
 
 ### « Mon métabolisme » (`/nutrition/metabolisme`)

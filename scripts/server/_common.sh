@@ -30,6 +30,9 @@ CARLYS_REPO_DIR="${CARLYS_REPO_DIR:-$(cd -- "$CARLYS_LIB_DIR/../.." && pwd -P)}"
 # le modifier.
 CARLYS_COMPOSE_FILE="${CARLYS_COMPOSE_FILE:-$CARLYS_REPO_DIR/infrastructure/server/compose.yml}"
 CARLYS_ENV_EXAMPLES_DIR="${CARLYS_ENV_EXAMPLES_DIR:-$CARLYS_REPO_DIR/infrastructure/server/env}"
+# Les RÉGLAGES versionnés (ADR 0017) : commun.conf, puis <env>.conf. Le .env
+# du serveur ne garde que les secrets.
+CARLYS_CONFIG_DIR="${CARLYS_CONFIG_DIR:-$CARLYS_REPO_DIR/infrastructure/server/config}"
 
 # ── Registre d'images ───────────────────────────────────────────────────────
 # PRÉFIXE COMPLET des images, hôte ET propriétaire : c'est la forme qu'attend
@@ -100,6 +103,7 @@ normalize_sha() {
 # ── Arborescence d'un environnement ─────────────────────────────────────────
 env_dir()      { printf '%s/%s' "$CARLYS_ROOT" "$1"; }
 env_file()     { printf '%s/%s/.env' "$CARLYS_ROOT" "$1"; }
+etat_file()    { printf '%s/%s/etat.env' "$CARLYS_ROOT" "$1"; }
 deployed_file(){ printf '%s/%s/DEPLOYED' "$CARLYS_ROOT" "$1"; }
 backups_dir()  { printf '%s/backups' "$CARLYS_ROOT"; }
 ghcr_token_file() { printf '%s/ghcr.token' "$CARLYS_ROOT"; }
@@ -111,6 +115,11 @@ require_env_file() {
     "Le serveur n'a pas été préparé pour « $env_name »." \
     "Lancer d'abord : sudo $CARLYS_REPO_DIR/scripts/server/setup.sh" \
     "puis remplir $file (secrets, domaine, mots de passe)."
+  # Sans ses couches versionnées, un .env migré ne dit plus rien des
+  # réglages : chaque script retomberait EN SILENCE sur ses défauts.
+  [ -n "$(config_dir_de "$file")" ] \
+    || die "Configuration versionnée absente : $CARLYS_CONFIG_DIR/{commun,$env_name}.conf" \
+      "Le clone du serveur doit être à jour : sudo git -C $CARLYS_REPO_DIR pull --ff-only"
   printf '%s' "$file"
 }
 
@@ -121,17 +130,71 @@ require_compose_file() {
     "doit désigner le fichier compose de déploiement."
 }
 
-# Lit une valeur dans un fichier .env SANS le sourcer. Un `source` exécuterait
-# le contenu du fichier : un mot de passe contenant « $( » suffirait à lancer
-# du code. On lit, on ne l'interprète pas.
+# `env_couches <fichier>` — les fichiers que lit un environnement, du moins au
+# plus prioritaire, un par ligne (ADR 0017) : commun.conf, <env>.conf,
+# etat.env, puis son .env. Tout autre fichier (alertes.env,
+# sauvegarde-distante.env…) n'a que lui-même. Les couches absentes sont
+# rendues aussi : à l'appelant de les sauter.
+env_couches() {
+  local file="$1" conf
+  conf="$(config_dir_de "$file")"
+  if [ -n "$conf" ]; then
+    printf '%s\n' "$conf/commun.conf" "$conf/$(env_de "$file").conf" "$(dirname -- "$file")/etat.env"
+  fi
+  printf '%s\n' "$file"
+}
+
+# Le nom d'environnement d'un .env : celui de son répertoire.
+env_de() { local dir; dir="$(dirname -- "$1")"; printf '%s' "${dir##*/}"; }
+
+# `config_dir_de <fichier .env>` — le dossier de configuration EN SERVICE
+# pour ce .env : celle que deploy.sh a figée pour le sha déployé
+# (<env>/config/), sinon, avant ce premier déploiement, celle du clone. Vide
+# pour un fichier qui n'est pas le .env d'un environnement.
+#
+# Figée, et pas lue dans le clone : la supervision avance le clone seule,
+# dès qu'une CI est verte. Lue là, une configuration poussée toucherait la
+# production à la passe suivante, sans attendre la recette, et un retour
+# arrière ne la ramènerait pas (ADR 0017).
+config_dir_de() {
+  local file="$1" dir env_name
+  [ "${file##*/}" = .env ] || return 0
+  dir="$(dirname -- "$file")"
+  env_name="${dir##*/}"
+  if [ -f "$dir/config/commun.conf" ] && [ -f "$dir/config/$env_name.conf" ]; then
+    printf '%s' "$dir/config"
+  elif [ -f "$CARLYS_CONFIG_DIR/commun.conf" ] && [ -f "$CARLYS_CONFIG_DIR/$env_name.conf" ]; then
+    printf '%s' "$CARLYS_CONFIG_DIR"
+  fi
+}
+
+# Lit une valeur dans les couches d'un .env SANS les sourcer. Un `source`
+# exécuterait le contenu du fichier : un mot de passe contenant « $( »
+# suffirait à lancer du code. On lit, on ne l'interprète pas. La dernière
+# déclaration l'emporte, couche après couche, comme chez Compose.
 env_value() {
-  local key="$1" file="$2" default="${3-}" line
+  local key="$1" file="$2" default="${3-}" couche
+  local -a couches=()
+  while IFS= read -r couche; do
+    [ -f "$couche" ] && couches+=("$couche")
+  done < <(env_couches "$file")
+  env_value_dans "$key" "$default" ${couches[@]+"${couches[@]}"}
+}
+
+# `env_value_dans <clé> <défaut> <fichier…>` — la même lecture, dans les
+# seuls fichiers nommés (la migration compare le .env SEUL à la
+# configuration).
+env_value_dans() {
+  local key="$1" default="$2" line=''
+  shift 2
   # `[[:space:]]*=` et non `=` : Compose rogne les espaces autour de la clé,
   # donc `CARLYS_TAG =sha-abc` est une déclaration VALIDE pour lui. Un motif
   # qui exige le `=` collé rendrait ici la valeur par défaut pendant que la
   # pile tourne avec la vraie — deploy, promote et status décriraient un
   # serveur qui n'existe pas. Mesuré : la divergence était réelle.
-  line="$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "$file" 2>/dev/null | tail -n 1 || true)"
+  if [ "$#" -gt 0 ]; then
+    line="$(grep -hE "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "$@" 2>/dev/null | tail -n 1 || true)"
+  fi
   if [ -z "$line" ]; then printf '%s' "$default"; return 0; fi
   line="${line#*=}"
   line="${line%$'\r'}"
@@ -235,7 +298,7 @@ deployed_operator() {
   printf '%s@%s' "${CARLYS_OPERATOR:-${SUDO_USER:-${USER:-$(id -un)}}}" "$(hostname -s 2>/dev/null || echo inconnu)"
 }
 
-# ── CARLYS_TAG dans le .env ─────────────────────────────────────────────────
+# ── CARLYS_TAG dans etat.env (le .env avant l'ADR 0017) ─────────────────────
 # deploy.sh exporte CARLYS_TAG dans SON shell, ce qui suffit à ses propres
 # appels compose et à rien d'autre. Le .env, lui, gardait `sha-CHANGE_MOI_SHA12`
 # à vie — si bien que la commande écrite en tête de compose.yml et répétée dans
@@ -271,7 +334,33 @@ env_set_value() {
   mv -f "$tmp" "$file" || { rm -f "$tmp"; die "Remplacement de $file échoué"; }
 }
 
-env_set_tag() { env_set_value "$1" CARLYS_TAG "$2"; }
+# `etat_creer <etat.env> [lignes…]` — le fichier d'état, en 600, avec son
+# en-tête, s'il n'existe pas encore.
+etat_creer() {
+  local cible="$1"; shift
+  [ -f "$cible" ] && return 0
+  (umask 077 && printf '%s\n' \
+    "# État de l'environnement, tenu par carlysctl (ADR 0017). Ne pas modifier :" \
+    "# deploy, scale et la supervision le réécrivent." "$@" > "$cible")
+}
+
+# `etat_set <fichier .env> <clé> <valeur>` — l'ÉTAT que carlysctl tient
+# (version déployée, nombre d'exemplaires) s'écrit dans etat.env, à côté du
+# .env (ADR 0017). Sauf si le .env porte encore la clé : il passe après
+# etat.env, une valeur écrite là serait masquée — on la réécrit donc là où
+# elle vit, jusqu'à ce que `carlysctl config-migrer` la déplace.
+etat_set() {
+  local file="$1" cle="$2" valeur="$3" cible
+  cible="$(dirname -- "$file")/etat.env"
+  if grep -qE "^[[:space:]]*(export[[:space:]]+)?${cle}[[:space:]]*=" "$file" 2>/dev/null; then
+    cible="$file"
+  else
+    etat_creer "$cible" || die "Création de $cible impossible"
+  fi
+  env_set_value "$cible" "$cle" "$valeur"
+}
+
+env_set_tag() { etat_set "$1" CARLYS_TAG "$2"; }
 
 deployed_append() {
   local env_name="$1" sha="$2" event="$3" file
@@ -309,13 +398,34 @@ dc() {
   local env_name="$1" file="$2"; shift 2
   local coach=()
   coach_local_actif "$file" && coach=(--profile ollama)
-  docker compose \
+  # Toutes les couches, dans l'ordre de env_couches : la dernière l'emporte.
+  local couche
+  local -a couches=()
+  while IFS= read -r couche; do
+    [ -f "$couche" ] && couches+=(--env-file "$couche")
+  done < <(env_couches "$file")
+  # Le dossier de configuration et le .env, exacts : compose.yml en tire la
+  # liste `env_file` de l'API. L'environnement du processus l'emporte sur les
+  # couches, donc sur un chemin écrit en dur dans un fichier.
+  CARLYS_CONFIG_DIR="$(config_dir_de "$file")" CARLYS_ENV_FILE="$file" docker compose \
     --project-name "$(compose_project "$env_name" "$file")" \
-    --env-file "$file" \
+    "${couches[@]}" \
     --file "$CARLYS_COMPOSE_FILE" \
     --profile "$env_name" \
     ${coach[@]+"${coach[@]}"} \
     "$@"
+}
+
+# `dc_texte <env> <fichier .env>` — la commande `docker compose` que `dc`
+# lance, À RECOPIER : pour les messages de diagnostic. Le seul .env n'y
+# suffit plus (ADR 0017), les réglages sont dans les couches qui le précèdent.
+dc_texte() {
+  local env_name="$1" file="$2" couche texte
+  texte="docker compose -p $(compose_project "$env_name" "$file")"
+  while IFS= read -r couche; do
+    [ -f "$couche" ] && texte+=" --env-file $couche"
+  done < <(env_couches "$file")
+  printf '%s -f %s' "$texte" "$CARLYS_COMPOSE_FILE"
 }
 
 # `coach_local_actif <fichier .env>` — vrai si le coach tourne sur le serveur
@@ -531,6 +641,10 @@ admin_host_port() {
 # après, même si bash ne l'exigerait pas (rien n'est appelé au chargement).
 # shellcheck source=scripts/server/_envsync.sh
 . "$CARLYS_LIB_DIR/_envsync.sh"
+# _config.sh aussi (envcheck_cles, envcheck_exemple) : la migration du .env
+# vers la configuration versionnée (ADR 0017).
+# shellcheck source=scripts/server/_config.sh
+. "$CARLYS_LIB_DIR/_config.sh"
 # shellcheck source=scripts/server/_repo.sh
 . "$CARLYS_LIB_DIR/_repo.sh"
 # Le dump d'une base (backup.sh ET deploy.sh, avant chaque migration de

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests du compose du serveur, tel que Compose le COMPREND — pas tel qu'il est
-# écrit : `docker compose config` interpole les deux .env d'exemple et rend
-# ce que le moteur recevrait. Aucun démon Docker n'est nécessaire.
+# écrit : `docker compose config` interpole la configuration versionnée et
+# les deux gabarits de secrets, et rend ce que le moteur recevrait. Aucun
+# démon Docker n'est nécessaire.
 #
 #   bash scripts/server/tests/compose_test.sh
 #
@@ -10,7 +11,9 @@
 #     production est protégée du tueur de processus du noyau ;
 #   - le tas de V8 de l'API reste sous le plafond de son conteneur ;
 #   - le Redis de recette a un `--maxmemory` sous son plafond ;
-#   - PostgreSQL reçoit les réglages du planificateur (SSD).
+#   - PostgreSQL reçoit les réglages du planificateur (SSD) ;
+#   - la configuration versionnée ne porte aucun secret, le gabarit aucun
+#     réglage, et chaque variable de l'API est portée par l'un des deux.
 set -euo pipefail
 
 # shellcheck source=scripts/server/tests/lib.sh
@@ -18,6 +21,7 @@ set -euo pipefail
 DEPOT="$(cd -- "$BANC_SERVEUR/../.." && pwd -P)"
 COMPOSE="${CARLYS_TEST_COMPOSE:-$DEPOT/infrastructure/server/compose.yml}"
 EXEMPLES="${CARLYS_TEST_EXEMPLES:-$DEPOT/infrastructure/server/env}"
+CONFIG="${CARLYS_TEST_CONFIG:-$DEPOT/infrastructure/server/config}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -35,8 +39,10 @@ rendu() {
   local env_name="$1" fichier="$TMP/$1.env" profils=(--profile "$1")
   [ -n "${2-}" ] && profils+=(--profile "$2")
   grep -E '^[A-Z_][A-Z0-9_]*=' "$EXEMPLES/$env_name.env.example" > "$fichier"
-  CARLYS_ENV_FILE="$fichier" CARLYS_TAG=sha-000000000000 CARLYS_ADMIN_TAG_SUFFIX='' \
-    docker compose --env-file "$fichier" -f "$COMPOSE" "${profils[@]}" \
+  # Les couches de `dc` (ADR 0017) : réglages versionnés, puis secrets.
+  CARLYS_CONFIG_DIR="$CONFIG" CARLYS_ENV_FILE="$fichier" CARLYS_TAG=sha-000000000000 CARLYS_ADMIN_TAG_SUFFIX='' \
+    docker compose --env-file "$CONFIG/commun.conf" --env-file "$CONFIG/$env_name.conf" \
+    --env-file "$fichier" -f "$COMPOSE" "${profils[@]}" \
     config --format json 2>"$TMP/$env_name.err"
 }
 champ() { jq -r "$2" <<< "$1"; }
@@ -102,5 +108,44 @@ for env_name in staging production; do
   verifier "$env_name : effective_cache_size jamais sous le défaut de PostgreSQL" 4GB \
     "$(sed -n 's/.*effective_cache_size=\([^ ]*\).*/\1/p' <<< "$commande_pg")"
 done
+
+echo
+echo "configuration versionnée (ADR 0017) — réglages ici, secrets au .env"
+
+# Les clés d'un fichier, actives ou commentées (la forme d'une facultative).
+cles() { sed -n 's/^[[:space:]]*#\{0,1\}[[:space:]]*\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$@" | sort -u; }
+actives() { sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$@" | sort -u; }
+# shellcheck disable=SC1091 # chargé pour ses lecteurs de schéma, sans effet de bord
+api="$(CARLYS_REPO_DIR="$DEPOT" bash -c '. "$1/scripts/server/_common.sh"; envcheck_cles_api' _ "$DEPOT")"
+for env_name in staging production; do
+  conf=("$CONFIG/commun.conf" "$CONFIG/$env_name.conf")
+  # Le format STRICT d'abord : il rend les gardes suivantes exactes. Compose
+  # accepterait aussi `export CLE=`, `CLE =…` ou une minuscule, que `cles`
+  # ne verrait pas.
+  verifier "$env_name : configuration au format strict CLE=valeur" '' \
+    "$(grep -nvE '^[[:space:]]*(#.*)?$|^[A-Z][A-Z0-9_]*=' "${conf[@]}" || true)"
+  verifier "$env_name : aucune valeur à l'allure de secret dans la configuration" '' \
+    "$(grep -nE '^[^#]*(://[^/?#[:space:]]*@|-----BEGIN|sk_(live|test)_|rk_live_|whsec_)' "${conf[@]}" || true)"
+  verifier "$env_name : aucune clé déclarée deux fois dans un même fichier" '' \
+    "$(for f in "${conf[@]}"; do sed -n 's/^[[:space:]]*#\{0,1\}[[:space:]]*\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$f" | sort | uniq -d; done | tr '\n' ' ')"
+  verifier "$env_name : aucune clé à la fois dans commun.conf et $env_name.conf" '' \
+    "$(comm -12 <(cles "$CONFIG/commun.conf") <(cles "$CONFIG/$env_name.conf") | tr '\n' ' ')"
+  verifier "$env_name : aucun secret du gabarit dans la configuration" '' \
+    "$(comm -12 <(cles "${conf[@]}") <(cles "$EXEMPLES/$env_name.env.example") | tr '\n' ' ')"
+  # … ni rien qui en porte le nom, même oublié du gabarit.
+  verifier "$env_name : aucune clé au nom de secret dans la configuration" '' \
+    "$(cles "${conf[@]}" | grep -E '(_SECRET|_PASSWORD|_PASS|_TOKEN|_API_KEY|_KEY_ID|_ACCESS_KEY|_PRIVATE_KEY|_JSON|_DSN|_AUTH|_CREDENTIALS|_WEBHOOK)$' | tr '\n' ' ')"
+  verifier "$env_name : aucune valeur factice dans la configuration" '' \
+    "$(grep -lE '^[^#]*CHANGE_MOI_' "${conf[@]}" || true)"
+  verifier "$env_name : aucune variable de l'API déclarée vide dans la configuration" '' \
+    "$(comm -12 <(sed -n 's/^\([A-Z_][A-Z0-9_]*\)=[[:space:]]*$/\1/p' "${conf[@]}" | sort -u) <(printf '%s\n' "$api") | tr '\n' ' ')"
+  verifier "$env_name : chaque variable du schéma de l'API est portée par le dépôt" '' \
+    "$(comm -23 <(printf '%s\n' "$api") <(cles "${conf[@]}" "$EXEMPLES/$env_name.env.example") | tr '\n' ' ')"
+  verifier "$env_name : la pile se lit sans aucun avertissement de Compose" '' \
+    "$(cat "$TMP/$env_name.err")"
+done
+# L'état ne se versionne pas : il vit dans etat.env.
+verifier "ni CARLYS_TAG ni CARLYS_API_REPLICAS dans le dépôt" '' \
+  "$(actives "$CONFIG"/*.conf "$EXEMPLES"/staging.env.example "$EXEMPLES"/production.env.example | grep -xE 'CARLYS_TAG|CARLYS_API_REPLICAS' | tr '\n' ' ')"
 
 banc_bilan

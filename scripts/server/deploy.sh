@@ -146,8 +146,25 @@ ENV_FILE="$(require_env_file "$ENV_NAME")"
 # registre, aux images ni au journal. Le répertoire de l'environnement existe,
 # require_env_file vient de le prouver.
 lock_env "$ENV_NAME"
-# Le .env de l'environnement fait foi sur le registre : c'est lui que le
-# compose versionné interpole. On ne lui impose pas la valeur du script.
+
+# La configuration DU sha déployé (ADR 0017), figée avant de lire le moindre
+# réglage : ports, exemplaires et registre sont ceux de la version qui part.
+# Une bascule qui n'aboutit pas remet celle d'avant, avec la pile d'avant.
+CONFIG_FIGEE=non
+DEPLOY_REUSSI=non
+if config_figer "$ENV_NAME" "$SHA"; then
+  CONFIG_FIGEE=oui
+  info "configuration : celle de sha-$SHA, figée dans $(env_dir "$ENV_NAME")/config"
+fi
+remettre_config() {
+  [ "$CONFIG_FIGEE" = oui ] || return 0
+  config_rendre "$ENV_NAME"
+  CONFIG_FIGEE=non
+}
+trap '[ "$DEPLOY_REUSSI" = oui ] || remettre_config' EXIT
+
+# Les couches de l'environnement font foi sur le registre : ce sont elles que
+# le compose versionné interpole. On ne leur impose pas la valeur du script.
 CARLYS_REGISTRY="$(env_value CARLYS_REGISTRY "$ENV_FILE" "$CARLYS_REGISTRY")"
 PROJECT="$(compose_project "$ENV_NAME" "$ENV_FILE")"
 ADMIN_PORT="$(admin_host_port "$ENV_NAME" "$ENV_FILE")"
@@ -353,8 +370,8 @@ if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
     "Relire la sortie ci-dessus. Migration en échec (P3018) à corriger, ou" \
     "« already exists » puis P3009 sur une migration RENOMMÉE : docs/database/migrations.md." \
     "Pour rejouer la seule migration :" \
-    "  CARLYS_TAG=sha-$SHA docker compose -p $PROJECT --env-file $ENV_FILE \\" \
-    "    -f $CARLYS_COMPOSE_FILE run --rm migrate"
+    "  CARLYS_TAG=sha-$SHA $(dc_texte "$ENV_NAME" "$ENV_FILE") \\" \
+    "    run --rm migrate"
 fi
 ok "schéma à jour"
 
@@ -458,13 +475,14 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   # tête de fichier), donc revenir au sha précédent est licite.
   warn "compose up a échoué."
   if [ -n "$PREVIOUS_SHA" ]; then
+    remettre_config
     export_tags "$PREVIOUS_SHA"
     dc "$ENV_NAME" "$ENV_FILE" up -d || true
     env_set_tag "$ENV_FILE" "sha-$PREVIOUS_SHA"
     deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA(compose)"
   fi
   die "Bascule impossible : docker compose n'a pas démarré la pile." \
-    "Diagnostic : docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE ps" \
+    "Diagnostic : $(dc_texte "$ENV_NAME" "$ENV_FILE") ps" \
     "             docker compose -p $PROJECT logs --tail 100"
 fi
 ok "conteneurs démarrés sur sha-$SHA"
@@ -494,6 +512,7 @@ if [ "$healthy" -eq 1 ]; then
   # documenté en tête de compose.yml relirait `sha-CHANGE_MOI_SHA12`.
   env_set_tag "$ENV_FILE" "sha-$SHA"
   deployed_append "$ENV_NAME" "$SHA" "deploy"
+  DEPLOY_REUSSI=oui
   printf '\n%s✓ %s déployé sur sha-%s%s\n' "$_c_green" "$ENV_NAME" "$SHA" "$_c_off"
   info "journal : $(deployed_file "$ENV_NAME")"
   dc "$ENV_NAME" "$ENV_FILE" ps || true
@@ -513,13 +532,14 @@ if [ -z "$PREVIOUS_SHA" ]; then
     "DEPLOYED n'a pas été écrit : $(deployed_file "$ENV_NAME") reste vide." \
     "Aucun trafic n'a été dégradé — rien ne servait avant celui-ci." \
     "La pile est laissée DEBOUT pour le diagnostic :" \
-    "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE logs -f" \
+    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs -f" \
     "Pour tout arrêter :" \
-    "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE down"
+    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") down"
 fi
 
 step "Retour arrière vers sha-$PREVIOUS_SHA"
 warn "le sha $SHA est abandonné ; le schéma migré n'est PAS défait (pas de migration descendante)."
+remettre_config
 export_tags "$PREVIOUS_SHA"
 # Les images précédentes sont normalement encore locales. On tente quand même
 # le pull (le serveur a pu être élagué), sans en faire une condition : mieux
@@ -530,8 +550,8 @@ docker pull --quiet "$(image_admin "$PREVIOUS_SHA" "$ENV_NAME")" >/dev/null 2>&1
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   die "RETOUR ARRIÈRE ÉCHOUÉ — intervention manuelle requise." \
     "L'environnement $ENV_NAME peut être hors service." \
-    "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE ps" \
-    "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE logs --tail 200" \
+    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") ps" \
+    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs --tail 200" \
     "Le dernier sha connu comme sain est $PREVIOUS_SHA."
 fi
 
@@ -571,4 +591,4 @@ die "RETOUR ARRIÈRE ÉCHOUÉ : le sha précédent $PREVIOUS_SHA ne rend pas la 
   "DEPLOYED n'a pas été mis à jour : $(deployed_file "$ENV_NAME") décrit toujours le dernier état SAIN connu." \
   "Piste la plus fréquente : la migration qui vient d'être appliquée n'est pas" \
   "compatible avec le code précédent. Vérifier le schéma avant de redéployer." \
-  "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE logs --tail 200"
+  "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs --tail 200"

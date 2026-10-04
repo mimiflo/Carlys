@@ -56,6 +56,7 @@ vers l'ADR qui la remplace).
 | [0014](0014-coach-actions-garanties.md) | Coach IA : proposer et créer une séance, garanti par l'orchestration | Acceptée — 2026-10 |
 | [0015](0015-scan-assiette-modele-de-vision.md) | Scan d'assiette : le modèle de vision reconnaît, la base CIQUAL calcule | Acceptée — 2026-10 |
 | [0016](0016-energie-calculee-aliments-ciqual.md) | L'énergie des aliments CIQUAL qui n'en publient pas, calculée depuis leurs macros | Acceptée — 2026-10 |
+| [0017](0017-configuration-versionnee.md) | La configuration du serveur versionnée, le `.env` réduit aux secrets | Acceptée — 2026-10 |
 
 ## Ajouter un ADR
 

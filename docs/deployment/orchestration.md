@@ -48,7 +48,8 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | **Déployer une nouvelle version**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
 La dernière ligne est la seule qui demande une décision. Tant que
-`CARLYS_AUTO_UPDATE=non` dans le `.env` d'un environnement — la valeur livrée —
+`CARLYS_AUTO_UPDATE=non` dans la configuration d'un environnement
+(`infrastructure/server/config/<env>.conf`) — la valeur livrée —
 **rien ne part** sans un geste humain. Le reste garde la pile debout ; ça ne
 change pas la version qu'elle sert.
 
@@ -261,7 +262,8 @@ d'appeler Compose.
 
 ### 4.3 Les réglages
 
-Tous dans le `.env` de l'environnement, tous facultatifs.
+Tous dans la configuration versionnée (`infrastructure/server/config/commun.conf`,
+ou `<env>.conf` pour ce qui diffère — ADR 0017), tous facultatifs.
 
 | Variable                         | Défaut  |                                      |
 | -------------------------------- | ------- | ------------------------------------ |
@@ -332,7 +334,8 @@ le point le plus important de ce document.
 
 ### Recette — elle suit une branche
 
-`CARLYS_AUTO_UPDATE=oui` dans `/srv/carlys/staging/.env`. La recette suit alors
+`CARLYS_AUTO_UPDATE=oui` dans `infrastructure/server/config/staging.conf`
+(un commit, ADR 0017). La recette suit alors
 la tête de `CARLYS_UPDATE_BRANCH` (défaut `development`), **dès que les trois images de
 ce commit existent dans le registre**.
 
@@ -355,7 +358,8 @@ case `ignorer_ci`.
 
 ### Production — elle suit la RECETTE, jamais une branche
 
-`CARLYS_AUTO_UPDATE=oui` dans `/srv/carlys/production/.env`. La production
+`CARLYS_AUTO_UPDATE=oui` dans `infrastructure/server/config/production.conf`.
+La production
 promeut alors le sha **qui tourne déjà en recette**, et seulement si :
 
 1. il y a passé `CARLYS_PROMOTE_SOAK_MINUTES` (60 par défaut) ;
@@ -662,8 +666,9 @@ est active :
       images suivies  : main
       scripts du clone : claude/…
   Si « main » est en retard, la pile RECULE.
-  Aligner l'une sur l'autre :
-    echo 'CARLYS_UPDATE_BRANCH=claude/…' | sudo tee -a /srv/carlys/staging/.env
+  Aligner l'une sur l'autre : CARLYS_UPDATE_BRANCH=claude/… dans
+    infrastructure/server/config/<env>.conf (un commit, ADR 0017),
+    ou retirer la ligne du .env si un ancien réglage l'y masque.
 ```
 
 **`carlysctl update` refuse un recul.** Le critère est l'**ancêtre**, et il est
@@ -863,6 +868,9 @@ sudo git -C /srv/carlys/repo pull --ff-only
 cd /srv/carlys/repo
 
 # 2. Le .env de la recette : deux lignes à ajouter, une à corriger.
+#    (Migration de septembre 2026, AVANT l'ADR 0017 : depuis, ces réglages
+#    vivent dans infrastructure/server/config/, et `carlysctl config-migrer`
+#    vide le .env de ceux qui y traîneraient encore.)
 sudo nano /srv/carlys/staging/.env
 #    CARLYS_API_HOST_PORT=3100          (inchangé)
 #  + CARLYS_API_HOST_PORT_LAST=3119     ← NOUVEAU, obligatoire

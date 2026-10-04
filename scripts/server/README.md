@@ -26,7 +26,9 @@ Tout est décrit dans
 | `carlysctl subscription-catalog <env>` | **rarement** : le déploiement le fait déjà (étape 6/8). Après avoir changé un `STRIPE_PRICE_*` ou un `REVENUECAT_PRODUCT_*` du `.env`, sans redéployer | projette plans, droits et produits de paiement — idempotent. Un identifiant remplacé reste lié : ses abonnés renouvellent dessus. Sort en 1 si un fournisseur configuré (clé ou secret de webhook Stripe, secret de webhook RevenueCat), ou qui a encore des abonnés qui prélèvent, manque de son secret de webhook ou de tout produit : un paiement serait encaissé sans rien accorder. Sans aucun moyen de paiement ni abonné, sort en 0 avec un AVERTISSEMENT : Premium ne s'obtient alors que par le back-office |
 | `carlysctl meal-photos-sweep <env> [--a-blanc]` | **rarement** : la supervision le fait une fois par jour. Pour compter sans effacer, ou rejouer tout de suite un balayage raté une fois le stockage réparé | efface du bucket PRIVÉ les photos de repas que plus aucune ligne d'un repas (et d'un compte) vivant ne cite ; épargne les objets de moins d'une heure ; sort en erreur si un effacement échoue |
 | `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]` | **rarement** : la supervision le fait une fois par jour (`_purge_comptes.sh`). Pour compter sans effacer, rejouer une purge ratée, ou exécuter une demande d'effacement IMMÉDIAT (`--compte-actif` pour un compte encore actif, `--compte` pour un compte déjà supprimé ; l'UUID se relève AVANT la suppression, qui efface tout ce qui y mène, et RIEN ne part avant que la personne ait renvoyé le code écrit à l'adresse du compte, l'expéditeur d'un courriel se falsifiant : procédure dans `docs/deployment/orchestration.md`, « Effacement immédiat sur demande ») | efface définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut) : leurs photos privées, puis leur ligne et, par cascade, tout ce qui s'y rattache (le journal d'audit reste, sans le lien). `--compte` refuse un compte qui n'est pas déjà supprimé. `--compte-actif` le supprime d'abord comme l'appli (Stripe résilié, audit), puis l'efface ; l'adresse du compte se tape au clavier, jamais en argument (l'historique du shell la garderait), et doit être la sienne. Sort en 1 si un compte n'a pas pu être effacé, en 2 sur un refus |
-| `carlysctl env-sync <env> [--appliquer] [--tout]` | après un `git pull`, ou quand `doctor` signale une clé absente | ajoute au `.env` les réglages introduits depuis sa création. N'écrase jamais une ligne, engendre les secrets sûrs avec `--tout`, refuse ce qu'un humain seul peut choisir |
+| `carlysctl env-sync <env> [--appliquer] [--tout]` | après un `git pull`, ou quand `doctor` signale une clé absente | ajoute au `.env` les SECRETS introduits depuis sa création (les réglages, eux, sont versionnés). N'écrase jamais une ligne, engendre les secrets sûrs avec `--tout`, refuse ce qu'un humain seul peut choisir |
+| `carlysctl config-migrer <env> [--appliquer]` | une fois, sur un serveur mis en service avant l'ADR 0017, juste avant un déploiement | vide le `.env` de ce qui n'est pas un secret : l'état part dans `etat.env`, un réglage identique à la configuration est retiré, un réglage différent est gardé et montré. Essai par défaut ; la pile rendue doit rester identique, sinon tout est remis |
+| `carlysctl compose <env> <args…>` | les gestes d'urgence : `logs`, `ps`, `exec -T postgres …`, `run --rm migrate` | `docker compose` sur la pile, ses quatre couches chargées dans l'ordre — le `.env` seul ne suffit plus à Compose |
 | `carlysctl update <env>` | si `CARLYS_AUTO_UPDATE=oui` | recette : suit une branche ; production : promeut la recette après maturation |
 | `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, élaguer, balayer les photos de repas orphelines et purger les comptes supprimés (une fois par jour chacun), mettre à jour |
 | `carlysctl deploy \| promote \| backup` | — | route vers les scripts ci-dessous, sans rien y ajouter |
@@ -55,6 +57,7 @@ fait d'effet de bord au chargement.
 | `_status.sh` | l'état des lieux |
 | `_envcheck.sh` | ce que Compose pense d'un `.env`, et les quatre pièges qu'il ne voit pas |
 | `_envsync.sh` | compléter un `.env` sans jamais rien deviner |
+| `_config.sh` | la configuration versionnée : figée au déploiement, et la migration d'un ancien `.env` (ADR 0017) |
 | `_repo.sh` | le clone du serveur — qui n'avance que jusqu'à un commit dont les images existent — et la divergence de branches |
 | `_alert.sh` | faire SORTIR une alerte, et ne la crier qu'une fois |
 | `_sauvegarde.sh` | le dump d'une base (sauvegarde nocturne ET avant chaque migration de production) |
@@ -77,6 +80,8 @@ aucun des deux.
 ```
 /srv/carlys/
   staging/.env        production/.env        # secrets, mode 600
+  staging/etat.env    production/etat.env    # état tenu par carlysctl (tag, exemplaires)
+  staging/config/     production/config/     # configuration figée du sha déployé
   staging/DEPLOYED    production/DEPLOYED    # journal tenu par deploy.sh
   staging/.lock       production/.lock       # verrou flock d'un déploiement
   staging/orchestrateur.etat                 # mémoire du superviseur, mode 600
@@ -281,8 +286,7 @@ Restaurer (à faire régulièrement — une sauvegarde jamais restaurée n'en es
 pas une) :
 
 ```bash
-docker compose -p carlys_staging --env-file /srv/carlys/staging/.env \
-  -f infrastructure/server/compose.yml exec -T postgres \
+sudo scripts/server/carlysctl compose staging exec -T postgres \
   pg_restore -U carlys -d carlys_staging --clean --if-exists \
   < /srv/carlys/backups/staging-20260908T030000Z.dump
 ```
@@ -350,8 +354,7 @@ gpg --output production.dump --decrypt production-<horodatage>.dump.gpg
 mkdir medias && gpg --decrypt medias-<horodatage>.tar.gpg | tar -C medias -xf -
 
 # 3. sur le serveur reconstruit (setup.sh, puis un premier déploiement du même sha) :
-docker compose -p carlys_production --env-file /srv/carlys/production/.env \
-  -f infrastructure/server/compose.yml exec -T postgres \
+sudo scripts/server/carlysctl compose production exec -T postgres \
   pg_restore -U carlys -d carlys_production --clean --if-exists < production.dump
 #    et les médias, dans le bucket public :
 mc mirror --overwrite medias/ local/carlys-media
@@ -389,18 +392,23 @@ n'ouvre pas le 80 — une machine injoignable se répare en une commande, un
 CARLYS_PROXY_CIDR=<adresse du proxy> sudo scripts/server/setup.sh
 ```
 
-`deploy.sh` **exporte** vers Compose quatre variables, et l'environnement du
-shell l'emportant sur `--env-file`, un déploiement ne réécrit jamais le `.env` :
+`deploy.sh` commence par **figer la configuration du sha déployé** (ADR
+0017) : `commun.conf` et `<env>.conf` lus DANS CE COMMIT, copiés dans
+`/srv/carlys/<env>/config/` — c'est elle que lisent ensuite `dc`, la
+supervision et l'API, pas le clone, que la supervision fait avancer seule.
+Une bascule ratée et le retour arrière remettent la précédente. Il **exporte**
+ensuite vers Compose quatre variables, l'environnement du shell l'emportant
+sur `--env-file` :
 
 | Exportée | Valeur |
 | --- | --- |
-| `CARLYS_TAG` | `sha-<sha>` |
+| `CARLYS_TAG` | `sha-<sha>` (écrit dans `etat.env` après la bascule) |
 | `CARLYS_ADMIN_TAG_SUFFIX` | `-prod` en production, vide en recette |
 | `CARLYS_ENV_FILE` | le chemin absolu du `.env` réellement ouvert |
-| `CARLYS_REGISTRY` | relu dans ce `.env` |
+| `CARLYS_REGISTRY` | relu dans la configuration en service |
 
-Le suffixe `-prod` est **déduit de l'environnement visé**, pas lu dans le
-`.env` : un `.env` de production dont le suffixe aurait été effacé déploierait
+Le suffixe `-prod` est **déduit de l'environnement visé**, pas lu dans la
+configuration : une configuration de production dont le suffixe aurait été effacé déploierait
 sinon l'image de recette, garde légale désarmée, sans que rien ne proteste.
 
 La migration passe par le service `migrate` du compose (profil dédié, donc

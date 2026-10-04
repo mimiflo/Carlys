@@ -262,8 +262,10 @@ les six vhosts à la fois. Ce qui reste, et pourquoi :
 # Sur le serveur Carlys : la configuration se charge sans certificat préalable.
 sudo nginx -t && sudo systemctl reload nginx
 
-# Les deux .env déployés doivent porter 2, pas 1.
-grep -n '^TRUST_PROXY_HOPS=' /srv/carlys/staging/.env /srv/carlys/production/.env
+# La configuration doit porter 2, pas 1 — et aucun .env ne doit la masquer
+# (ADR 0017 : la valeur LUE est celle de la dernière couche).
+grep -n '^TRUST_PROXY_HOPS=' /srv/carlys/repo/infrastructure/server/config/*.conf \
+  /srv/carlys/staging/.env /srv/carlys/production/.env
 
 # Sur gra6 : l'en-tête doit être ÉCRASÉ (section 3). Un $proxy_add_… ou un
 # $http_… ici est une faille, pas un détail de style.

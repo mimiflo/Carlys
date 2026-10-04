@@ -90,12 +90,21 @@ AGIR À LA MAIN
                                           docs/deployment/orchestration.md
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
-  carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
+  carlysctl env-sync <env> [--appliquer]  ajoute au .env les secrets qui lui
                                           manquent. N'écrase JAMAIS une ligne
                                           existante. --tout engendre en plus
                                           les secrets qui n'engagent aucun
                                           état extérieur ; ce qui doit être
                                           choisi par un humain reste refusé.
+  carlysctl compose <env> <args…>         docker compose sur la pile, ses
+                                          couches chargées (logs, ps, run…)
+  carlysctl config-migrer <env> [--appliquer]
+                                          vide le .env de ce qui n'est pas un
+                                          secret (ADR 0017) : l'état part
+                                          dans etat.env, un réglage identique
+                                          à la configuration versionnée est
+                                          retiré, un réglage différent est
+                                          gardé et montré. Essai par défaut.
   carlysctl prune [--essai]               supprime les images Carlys inutiles,
                                           en gardant le sha déployé ET le
                                           précédent (cible du retour arrière)
@@ -274,6 +283,48 @@ cmd_envsync() {
   lock_env "$env_name" "$CARLYS_LOCK_WAIT"
   envsync_appliquer "$env_name" "$file" "$mode" "$portee" || true
   unlock_env
+}
+
+# `config-migrer <env> [--appliquer]` — le .env réduit à ses secrets (ADR 0017).
+#
+# ESSAI PAR DÉFAUT, comme env-sync : le fichier porte les secrets.
+cmd_config_migrer() {
+  local env_name file mode=essai arg
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  for arg in "$@"; do
+    case "$arg" in
+      --appliquer) mode=ecrire ;;
+      '') ;;
+      *) die "Option inconnue : $arg" "Attendu : --appliquer" ;;
+    esac
+  done
+  file="$(require_env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  step "Migration du .env de « $env_name » vers la configuration versionnée"
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+  # Le code dit s'il reste des réglages à reporter : 0 = le .env ne porte
+  # plus que des secrets.
+  local rc=0
+  config_migrer "$env_name" "$file" "$mode" || rc=$?
+  unlock_env
+  return "$rc"
+}
+
+# `compose <env> <arguments compose…>` — docker compose sur la pile de cet
+# environnement, ses quatre couches chargées dans l'ordre (ADR 0017) : le
+# .env seul ne suffit plus à Compose. Pour les gestes d'urgence (logs, ps,
+# run --rm migrate, exec postgres…).
+cmd_compose() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  [ "$#" -gt 0 ] || die "Que demander à compose ?" "Exemple : carlysctl compose $env_name ps"
+  file="$(require_env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  dc "$env_name" "$file" "$@"
 }
 
 # `alert-test` — prouver que le canal marche AVANT d'en avoir besoin.
@@ -895,6 +946,8 @@ case "$COMMANDE" in
   autoscale) cmd_autoscale "${1-}" "${2-}" ;;
   heal)      cmd_heal "${1-}" ;;
   env-sync)  cmd_envsync "$@" ;;
+  config-migrer) cmd_config_migrer "$@" ;;
+  compose)   cmd_compose "$@" ;;
   alert-test) cmd_alert_test ;;
   admin-create) cmd_admin_create "$@" ;;
   coach-bench) cmd_coach_bench "$@" ;;

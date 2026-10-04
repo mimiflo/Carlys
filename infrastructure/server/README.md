@@ -1,13 +1,15 @@
 # `infrastructure/server/` — la pile Docker du serveur dédié
 
-Trois fichiers, et rien d'autre : le **quoi** faire tourner sur le serveur.
+Le **quoi** faire tourner sur le serveur, et sa **configuration** versionnée.
 Le **comment** l'y installer et l'y déployer vit dans `scripts/server/`.
 
 | Fichier | Rôle |
 | --- | --- |
 | `compose.yml` | la pile complète — PostgreSQL, Redis, MinIO (+ initialisation des deux buckets : médias publics, photos de repas privées), API, application web, et Mailpit en recette |
-| `env/staging.env.example` | modèle du `.env` de recette, à copier dans `/srv/carlys/staging/.env` |
-| `env/production.env.example` | modèle du `.env` de production, à copier dans `/srv/carlys/production/.env` |
+| `config/commun.conf` | les **réglages** communs à la recette et à la production (ADR 0017) |
+| `config/staging.conf`, `config/production.conf` | ce qui distingue chaque environnement : ports, mémoire, URL publiques, coach, e-mail |
+| `env/staging.env.example` | modèle des **secrets** de recette, à copier dans `/srv/carlys/staging/.env` |
+| `env/production.env.example` | modèle des **secrets** de production, à copier dans `/srv/carlys/production/.env` |
 
 ## Ce que ces fichiers NE sont pas
 
@@ -16,26 +18,37 @@ Le **comment** l'y installer et l'y déployer vit dans `scripts/server/`.
   sur place. Ici les images viennent du registre — celles de l'application
   taguées par SHA, celles de MinIO par recette (voir plus bas) — et rien
   n'écoute ailleurs que sur `127.0.0.1`.
-- **Pas des fichiers de configuration.** Les `*.env.example` sont des
-  **modèles versionnés** : chaque valeur y est factice et le dit
-  (`CHANGE_MOI_…`, `DOMAIN` compris). Les vrais fichiers vivent sur le
-  serveur, hors du dépôt, en `chmod 600`.
+- **Pas des secrets.** `config/` ne porte AUCUN secret (la CI le vérifie) ;
+  les `*.env.example` sont des **modèles** : chaque valeur y est factice et le
+  dit (`CHANGE_MOI_…`). Les vrais secrets vivent sur le serveur, hors du
+  dépôt, en `chmod 600`.
 - **Pas un script de déploiement.** `compose.yml` ne sait ni migrer, ni
   attendre `/health/ready`, ni revenir en arrière : c'est le travail de
   `deploy.sh`.
 - **Pas la configuration nginx.** Le serveur web tourne sur l'hôte, pas en
   conteneur : voir `infrastructure/nginx/`.
 
-## Un seul fichier pour deux environnements
+## Un seul fichier pour deux environnements, quatre couches de configuration
 
 Recette et production partagent `compose.yml` ; tout ce qui les distingue tient
-dans leur `.env` — nom de projet compose, ports d'écoute sur la boucle locale,
-domaines, secrets, tag d'image, persistance Redis, profil Mailpit. Deux fichiers
-jumeaux divergeraient au troisième correctif ; un seul ne le peut pas.
+dans leurs couches (ADR 0017), lues dans cet ordre, la dernière l'emportant :
+
+1. `config/commun.conf` — versionné, figé au déploiement ;
+2. `config/<env>.conf` — idem : nom de projet compose, ports d'écoute sur
+   la boucle locale, domaines, persistance Redis, profil Mailpit… ;
+3. `/srv/carlys/<env>/etat.env` — l'état que tient `carlysctl` : tag d'image,
+   nombre d'exemplaires ;
+4. `/srv/carlys/<env>/.env` — les secrets.
+
+Deux fichiers jumeaux divergeraient au troisième correctif ; un seul ne le peut
+pas. Changer un réglage, c'est un commit puis un déploiement : `deploy.sh`
+fige la configuration DU sha déployé dans `/srv/carlys/<env>/config/`, que
+tout lit ensuite — pas le clone, que la supervision fait avancer seule. Un
+retour arrière remet donc aussi la configuration d'avant. `carlysctl` (la
+fonction `dc`) passe les quatre couches à Compose ; à la main :
 
 ```bash
-docker compose --env-file /srv/carlys/staging/.env \
-               -f infrastructure/server/compose.yml up -d
+sudo scripts/server/carlysctl compose staging up -d
 ```
 
 L'isolation entre les deux piles est portée par `COMPOSE_PROJECT_NAME`
@@ -43,12 +56,19 @@ L'isolation entre les deux piles est portée par `COMPOSE_PROJECT_NAME`
 héritent le préfixe, et les deux tournent côte à côte sur le même hôte sans se
 voir.
 
-Le **domaine** est la seule chose à saisir pour déplacer la pile : `DOMAIN`
-ouvre les deux `.env`, et `CORS_ORIGINS`, `S3_PUBLIC_BASE_URL`, `EMAIL_FROM` et
-`PUBLIC_APP_URL` en dérivent (`https://app-staging.${DOMAIN}`, …). Les
-sous-domaines eux-mêmes sont fixés par le contrat de conception et ne se
-paramètrent pas. `scripts/server/setup.sh` relit cette même variable pour
-énumérer les enregistrements DNS à poser : un seul endroit, une seule vérité.
+Le **domaine** est la seule chose à changer pour déplacer la pile : `DOMAIN`
+ouvre `config/commun.conf`, et `CORS_ORIGINS`, `S3_PUBLIC_BASE_URL`,
+`EMAIL_FROM` et `PUBLIC_APP_URL` en dérivent (`https://app-staging.${DOMAIN}`,
+…). Les sous-domaines eux-mêmes sont fixés par le contrat de conception et ne
+se paramètrent pas. `scripts/server/setup.sh` relit cette même variable pour
+énumérer les enregistrements DNS à poser. Le build de l'admin en a un double,
+`vars.CARLYS_DOMAIN` dans GitHub : les changer ensemble.
+
+**Un serveur mis en service avant l'ADR 0017** garde ses réglages dans son
+`.env`, qui l'emporte : rien ne change tant qu'on n'y touche pas.
+`carlysctl config-migrer <env>` les liste (essai), puis, avec `--appliquer`,
+retire ceux qui sont identiques à la configuration versionnée et déplace
+l'état dans `etat.env`. Un réglage différent reste, valeurs affichées.
 
 ## Cinq choses à savoir avant d'y toucher
 
@@ -58,8 +78,7 @@ le lance en tâche ponctuelle AVANT la bascule du trafic, et un code de retour
 non nul arrête le déploiement (`infrastructure/deployment/README.md`).
 
 ```bash
-docker compose --env-file <.env> -f infrastructure/server/compose.yml \
-  run --rm migrate            # `run` active le profil de lui-même
+sudo scripts/server/carlysctl compose <env> run --rm migrate   # `run` active le profil de lui-même
 ```
 
 **Une variable facultative se laisse commentée, jamais vide.** `CLE=` arrive

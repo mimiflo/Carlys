@@ -247,6 +247,10 @@ et `interview-me` (le propriétaire n'est pas développeur : une seule question
 - Ne **jamais** mettre de logique métier dans les contrôleurs HTTP.
 - Ne **jamais** commiter un secret dans le dépôt (les `.env.example` ne contiennent
   que des valeurs factices ; TruffleHog tourne en CI).
+- **Configuration du serveur** (ADR 0017) : les réglages vivent, versionnés,
+  dans `infrastructure/server/config/` (`commun.conf`, `<env>.conf`) ; le
+  `.env` du serveur ne porte que des secrets. Un réglage se change par un
+  commit, jamais en demandant d'éditer le `.env`.
 - Ne **jamais** ignorer une erreur TypeScript ou Dart sans justification écrite.
 - Ne **jamais** supprimer un test pour faire passer une fonctionnalité.
 - Ne **jamais** inventer une dépendance si une solution standard existe déjà.

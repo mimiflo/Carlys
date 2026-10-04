@@ -1,12 +1,14 @@
 # Carlys — pile serveur (staging ET production).
 #
 # UN SEUL fichier pour les deux environnements : ce qui les distingue tient
-# entièrement dans leur fichier `.env` (nom de projet, ports d'écoute sur la
-# boucle locale, domaines, secrets, tag d'image). Deux fichiers jumeaux
-# divergent au troisième correctif ; un seul ne le peut pas.
+# dans leurs couches de configuration (ADR 0017) — config/commun.conf, puis
+# config/<env>.conf (nom de projet, ports, domaines), etat.env (tag d'image)
+# et le .env du serveur (les secrets). Deux fichiers jumeaux divergent au
+# troisième correctif ; un seul ne le peut pas.
 #
-#   docker compose --env-file /srv/carlys/staging/.env \
-#                  -f infrastructure/server/compose.yml up -d
+# `carlysctl` (fonction `dc`) charge les couches dans l'ordre, et pose le
+# dossier de la configuration en service (CARLYS_CONFIG_DIR) ; à la main :
+#   sudo scripts/server/carlysctl compose staging up -d
 #
 # Ce fichier n'est PAS docker-compose.yml à la racine du dépôt : celui-là est
 # l'environnement de DÉVELOPPEMENT local (ports ouverts sur l'hôte, secrets
@@ -18,7 +20,7 @@
 # `migrate` vit derrière un profil dédié et se lance en tâche ponctuelle AVANT
 # la bascule du trafic (infrastructure/deployment/README.md).
 
-# Isolation staging / production : COMPOSE_PROJECT_NAME (posé par le .env)
+# Isolation staging / production : COMPOSE_PROJECT_NAME (config/<env>.conf)
 # préfixe conteneurs, réseau et volumes. La variable d'environnement l'emporte
 # sur ce `name:` ; l'écrire ici sert de garde — sans elle, compose s'arrête au
 # lieu de retomber sur le nom du répertoire et de mélanger les deux piles.
@@ -51,13 +53,13 @@ x-service: &service
 # mémoire (_update.sh). Sans plafond, une fuite de recette, ou un Redis de
 # recette qui grossit sans `maxmemory`, prenait la mémoire de la machine
 # entière : la production se dégradait pour un commit qu'elle n'avait jamais
-# reçu (audit du 25/09). Chaque service porte donc un `mem_limit` lu dans le
-# .env de SON environnement :
+# reçu (audit du 25/09). Chaque service porte donc un `mem_limit` lu dans la
+# configuration de SON environnement (config/<env>.conf) :
 #
-#   - la RECETTE est plafonnée (valeurs de staging.env.example, justifiées
+#   - la RECETTE est plafonnée (valeurs de config/staging.conf, justifiées
 #     là-bas) : c'est elle qui essuie les plâtres, c'est elle qu'on borne ;
 #   - la PRODUCTION n'a pas de plafond par défaut (`0` : aucun), mais son
-#     PostgreSQL porte `oom_score_adj` négatif (production.env.example) : si
+#     PostgreSQL porte `oom_score_adj` négatif (config/production.conf) : si
 #     la machine manque de mémoire malgré tout, le noyau choisit un autre
 #     processus que la base. Un plafond de production mal calibré tuerait la
 #     production elle-même — il se pose en connaissance de la RAM de l'hôte.
@@ -72,11 +74,15 @@ x-task: &task
   logging: *logging
   labels: *labels
 
-# Le fichier .env de l'environnement, désigné par CHEMIN ABSOLU depuis
-# lui-même. `env_file` se résout sinon relativement au répertoire du projet
-# compose, donc au dépôt — alors que le .env vit dans /srv/carlys/<env>/.
-# Cette indirection rend l'appel indépendant du répertoire courant.
+# Ce que reçoivent l'API et la migration, dans l'ordre où `dc` charge les
+# couches (ADR 0017) : les réglages EN SERVICE (CARLYS_CONFIG_DIR, que `dc`
+# pose : la configuration figée du sha déployé, /srv/carlys/<env>/config),
+# puis le .env de l'environnement, les secrets, désigné par CHEMIN ABSOLU. La dernière valeur
+# l'emporte. etat.env n'y est pas : l'API n'a que faire de la version
+# déployée ni du nombre de ses exemplaires.
 x-env-file: &env-file
+  - ${CARLYS_CONFIG_DIR:?CARLYS_CONFIG_DIR est posé par carlysctl (dc) - le dossier des .conf}/commun.conf
+  - ${CARLYS_CONFIG_DIR}/${CARLYS_ENV:?CARLYS_ENV est obligatoire - staging ou production}.conf
   - ${CARLYS_ENV_FILE:?CARLYS_ENV_FILE doit contenir le chemin absolu du .env de cet environnement}
 
 services:
@@ -101,7 +107,7 @@ services:
     #   random_page_cost = 1.1   — lecture aléatoire à peine plus chère que
     #     séquentielle : c'est un SSD/NVMe, le disque de tout serveur dédié
     #     actuel. La documentation de PostgreSQL le conseille pour le SSD. Sur
-    #     un disque rotatif, remettre 4 dans le .env.
+    #     un disque rotatif, remettre 4 dans config/production.conf.
     #   effective_io_concurrency = 200 — lectures anticipées en parallèle des
     #     Bitmap Heap Scan, justement le plan que la valeur précédente fait
     #     choisir ; 200 est la valeur d'usage pour un SSD (le défaut, 1,
@@ -110,12 +116,12 @@ services:
     #     PostgreSQL (128MB, 4GB) tant que la RAM de l'hôte n'est pas connue :
     #     deux instances (recette, production) se la partagent, et un
     #     effective_cache_size SOUS 4GB pousserait au contraire le
-    #     planificateur vers les balayages. À poser dans le .env de
-    #     production une fois l'hôte connu : shared_buffers ≈ 25 % de la RAM
+    #     planificateur vers les balayages. À poser dans config/production.conf
+    #     une fois l'hôte connu : shared_buffers ≈ 25 % de la RAM
     #     laissée à cette base, effective_cache_size ≈ 50 à 75 %.
     #
     # max_connections reste à 100 : les pools Prisma sont bornés en
-    # conséquence (DATABASE_URL, connection_limit=10 — voir les .env).
+    # conséquence (DATABASE_URL, connection_limit=10 — voir les gabarits de secrets).
     command:
       - postgres
       - -c
@@ -156,16 +162,16 @@ services:
     <<: *service
     image: ${CARLYS_REDIS_IMAGE:-redis:7-alpine}
     # Plafond du CONTENEUR ; celui de Redis lui-même est `--maxmemory`, dans
-    # CARLYS_REDIS_MEMOIRE_ARGS, et doit rester en dessous (staging.env.example).
-    # Une clé à part de CARLYS_REDIS_ARGS, et c'est ce qui la fait ARRIVER :
-    # `carlysctl env-sync` ajoute une clé nouvelle au .env d'un serveur en
-    # service, il ne réécrit jamais une clé existante.
+    # CARLYS_REDIS_MEMOIRE_ARGS, et doit rester en dessous (config/staging.conf).
+    # Une clé à part de CARLYS_REDIS_ARGS : née quand les réglages vivaient
+    # dans le .env, où `carlysctl env-sync` ajoutait une clé nouvelle sans
+    # jamais réécrire une existante.
     mem_limit: ${CARLYS_REDIS_MEM_LIMIT:-0}
     # La persistance est un choix d'environnement, pas de fichier : staging est
     # un cache jetable (`--save "" --appendonly no`), production journalise
     # (`--appendonly yes`). CARLYS_REDIS_ARGS est découpé par compose comme une
     # ligne de commande, guillemets compris.
-    command: redis-server ${CARLYS_REDIS_ARGS:?CARLYS_REDIS_ARGS est obligatoire - voir le .env} ${CARLYS_REDIS_MEMOIRE_ARGS:-}
+    command: redis-server ${CARLYS_REDIS_ARGS:?CARLYS_REDIS_ARGS est obligatoire - voir config/<env>.conf} ${CARLYS_REDIS_MEMOIRE_ARGS:-}
     environment:
       TZ: UTC
     volumes:
@@ -193,7 +199,7 @@ services:
   # immuable, indépendante du sha déployé — un retour arrière ne touche donc
   # jamais à MinIO. `sh infrastructure/minio/construire.sh etiquettes` la
   # calcule, et images-ci refuse un commit où ces deux valeurs par défaut ne
-  # suivent pas la recette. CARLYS_MINIO_IMAGE et CARLYS_MC_IMAGE (.env)
+  # suivent pas la recette. CARLYS_MINIO_IMAGE et CARLYS_MC_IMAGE (config/)
   # restent là pour pointer ailleurs sans toucher à ce fichier.
   minio:
     <<: *service
@@ -377,12 +383,12 @@ services:
   api:
     <<: *service
     image: ${CARLYS_REGISTRY:?CARLYS_REGISTRY est obligatoire}/carlys-api:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}
-    # Le .env EST la configuration de l'API : toutes les variables du schéma
-    # Zod y figurent (le nombre ne s'écrit pas ici : il écrivait 49 quand le
-    # schéma en comptait déjà 57). Les passer en bloc plutôt qu'une à une évite la dérive silencieuse
-    # du jour où le schéma Zod en gagne une de plus. Corollaire à connaître :
-    # une variable FACULTATIVE laissée VIDE dans le .env arrive comme chaîne
-    # vide et fait échouer la validation — elle doit rester COMMENTÉE.
+    # La configuration de l'API, EN BLOC : toutes les variables du schéma Zod
+    # sont dans les couches (config/ et le .env). Les passer en bloc plutôt
+    # qu'une à une évite la dérive silencieuse du jour où le schéma en gagne
+    # une de plus. Corollaire à connaître : une variable FACULTATIVE laissée
+    # VIDE arrive comme chaîne vide et fait échouer la validation — elle doit
+    # rester COMMENTÉE.
     env_file: *env-file
     environment:
       # Le processus Node date ses journaux et ses jetons : même exigence UTC
@@ -394,7 +400,7 @@ services:
       NODE_OPTIONS: ${CARLYS_API_NODE_OPTIONS:-}
       # Le contexte du coach EST celui d'Ollama : une seule valeur, sinon
       # l'API laisserait déborder le contexte (915 s pour une réponse, mesuré)
-      # ou couperait l'historique pour rien. Posée dans le .env, elle prime.
+      # ou couperait l'historique pour rien. Posée dans la configuration, elle prime.
       COACH_CONTEXT_TOKENS: ${COACH_CONTEXT_TOKENS:-${CARLYS_OLLAMA_CONTEXT_LENGTH:-8192}}
     # PAR EXEMPLAIRE : N exemplaires, N plafonds.
     mem_limit: ${CARLYS_API_MEM_LIMIT:-0}
@@ -403,8 +409,8 @@ services:
     # `deploy.replicas` — et NON `docker compose up --scale` : le nombre doit
     # survivre à un `up -d` ordinaire. Avec --scale, tout déploiement, tout
     # redémarrage, toute commande tapée sans y penser ramènerait la pile à un
-    # seul exemplaire, sans rien dire. Ici le nombre vit dans le .env de
-    # l'environnement : c'est un état, pas un argument de ligne de commande.
+    # seul exemplaire, sans rien dire. Ici le nombre vit dans etat.env (ADR
+    # 0017) : c'est un état, pas un argument de ligne de commande.
     #
     # (Ce champ est bien lu par Compose v2 et suivants hors Swarm : mesuré,
     # `up -d` crée, ajoute et retire les exemplaires en conséquence.)
@@ -477,7 +483,7 @@ services:
     # production son `-prod`, et une ligne manquante arrête le déploiement au
     # lieu de le laisser réussir de travers.
     image: ${CARLYS_REGISTRY}/carlys-admin:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}${CARLYS_ADMIN_TAG_SUFFIX?CARLYS_ADMIN_TAG_SUFFIX doit etre DECLAREE (vide en recette, -prod en production) - absente, la production perdrait sa garde legale en silence}
-    # PAS d'env_file ici : le .env fixe PORT=3000 pour l'API, alors que l'image
+    # PAS d'env_file ici : la configuration fixe PORT=3000 pour l'API, alors que l'image
     # admin écoute sur 3001. Et elle n'a rien à lire au démarrage —
     # NEXT_PUBLIC_API_BASE_URL est figé À LA CONSTRUCTION de l'image.
     environment:
@@ -502,8 +508,7 @@ services:
   # deploy.sh la lance AVANT la bascule, et un code de sortie non nul arrête
   # le déploiement :
   #
-  #   docker compose --env-file <.env> -f compose.yml \
-  #     run --rm migrate                 # (`run` active le profil tout seul)
+  #   carlysctl compose <env> run --rm migrate   # (`run` active le profil tout seul)
   #
   # Sans --no-deps : le depends_on ci-dessous fait attendre que PostgreSQL soit
   # SAIN avant d'appliquer quoi que ce soit, y compris sur une pile encore

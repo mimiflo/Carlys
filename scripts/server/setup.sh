@@ -392,6 +392,14 @@ for env_name in staging production; do
     warn "modèle absent : $example"
     warn "  le dépôt est-il à jour sur le serveur ? ($CARLYS_REPO_DIR)"
   fi
+  # L'ÉTAT (ADR 0017), réécrit par deploy et scale. Un tag factice d'ici le
+  # premier déploiement : compose exige CARLYS_TAG pour lire la pile, et
+  # `doctor` la jugerait invalide sans lui.
+  etat="$(etat_file "$env_name")"
+  if [ ! -f "$etat" ]; then
+    etat_creer "$etat" 'CARLYS_TAG=sha-CHANGE_MOI_SHA12' 'CARLYS_API_REPLICAS=1'
+    ok "$etat créé (version factice jusqu'au premier déploiement)"
+  fi
 done
 
 # LE FICHIER D'ALERTES, même règle : jamais écrasé. Il vit à la racine et non
@@ -597,7 +605,8 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
 
 $FIREWALL_NOTE
 
-5. Secrets — remplir les .env, toutes les valeurs CHANGE_MOI_… :
+5. Secrets — remplir les .env, toutes les valeurs CHANGE_MOI_… (les RÉGLAGES,
+   eux, sont versionnés dans $CARLYS_CONFIG_DIR) :
      $(env_file staging)
      $(env_file production)
    Attendus : mots de passe PostgreSQL et MinIO, JWT_ACCESS_SECRET (32

@@ -170,10 +170,11 @@ scale_apply() {
     return 1
   fi
 
-  env_set_value "$file" CARLYS_API_REPLICAS "$cible"
-  # `--no-recreate` : le .env est aussi l'`env_file` de l'API, donc y changer
-  # le nombre change la configuration de CHAQUE exemplaire, et Compose les
-  # recréait tous — y compris ceux qui restent, réponses en cours comprises.
+  etat_set "$file" CARLYS_API_REPLICAS "$cible"
+  # `--no-recreate` : quand le nombre vit encore dans le .env (avant
+  # `config-migrer`), le .env est aussi l'`env_file` de l'API : y changer le
+  # nombre change la configuration de CHAQUE exemplaire, et Compose les
+  # recréerait tous — y compris ceux qui restent, réponses en cours comprises.
   # Seuls les exemplaires en trop partent, seuls les nouveaux naissent.
   dc "$env_name" "$file" up -d --no-deps --no-recreate api || die \
     "Compose n'a pas pu porter l'API à $cible exemplaire(s)." \
@@ -251,7 +252,9 @@ scale_drainer() {
 
   jeton="$(env_value METRICS_TOKEN "$file" '')"
   delai="${CARLYS_SCALE_DRAIN_DELAY:-2}"
-  limite="${CARLYS_SCALE_DRAIN_SECONDS:-300}"
+  # L'environnement du processus d'abord (les essais), puis la configuration :
+  # documentée dans les .env, la variable n'y était pourtant jamais relue.
+  limite="${CARLYS_SCALE_DRAIN_SECONDS:-$(env_value CARLYS_SCALE_DRAIN_SECONDS "$file" 300)}"
   debut="$(maintenant)"
   while :; do
     # LA PAUSE D'ABORD : `reload` rend la main avant que les anciens

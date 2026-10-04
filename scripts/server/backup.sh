@@ -37,8 +37,7 @@
 # `carlysctl doctor` le signale tant que la production tourne ainsi.
 #
 # RESTAURER (la sauvegarde qu'on n'a jamais restaurée n'en est pas une) :
-#   docker compose -p carlys_staging --env-file /srv/carlys/staging/.env \
-#     -f infrastructure/server/compose.yml exec -T postgres \
+#   carlysctl compose staging exec -T postgres \
 #     pg_restore -U <user> -d <base> --clean --if-exists < <fichier>.dump
 # Depuis la copie distante : scripts/server/README.md, « Restaurer depuis la
 # copie hors machine ».
@@ -137,7 +136,7 @@ for env_name in "${TARGETS[@]}"; do
   if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -x postgres >/dev/null; then
     warn "postgres ne tourne pas pour $env_name (projet $project, sha déployé $deployed) — RIEN n'a été sauvegardé"
     warn "  cet environnement A été déployé : une base existe et n'est pas sauvegardée."
-    warn "  Diagnostic : docker compose -p $project --env-file $file ps"
+    warn "  Diagnostic : $(dc_texte "$env_name" "$file") ps"
     failures=$((failures + 1))
     continue
   fi
@@ -200,7 +199,7 @@ for env_name in "${TARGETS[@]}"; do
   fi
   bucket="$(env_value S3_BUCKET "$file" '')"
   if [ -z "$bucket" ]; then
-    warn "$env_name : S3_BUCKET absent du .env — médias NON sauvegardés"
+    warn "$env_name : S3_BUCKET absent de la configuration — médias NON sauvegardés"
     failures=$((failures + 1))
     continue
   fi

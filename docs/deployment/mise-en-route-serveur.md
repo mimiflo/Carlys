@@ -337,20 +337,51 @@ revient à chaque déploiement.
 
 ---
 
-## 5. Remplir les `.env`
+## 5. Remplir les `.env` (les secrets seulement)
 
-Deux fichiers, déposés par `setup.sh`, à remplir à la main :
+Depuis l'ADR 0017, un serveur lit sa configuration en quatre couches, la
+dernière l'emportant :
+
+| Couche | Où | Contenu | Qui la change |
+| --- | --- | --- | --- |
+| `commun.conf` | `infrastructure/server/config/` (dépôt) | les réglages communs aux deux environnements | un commit |
+| `staging.conf`, `production.conf` | idem | ce qui distingue un environnement (ports, mémoire, URL publiques, coach, e-mail) | un commit |
+| `etat.env` | `/srv/carlys/<env>/` | la version déployée, le nombre d'exemplaires | `carlysctl`, seul |
+| `.env` | `/srv/carlys/<env>/` | **les secrets** : mots de passe, clés, jetons | à la main |
+
+Les deux `.env`, déposés par `setup.sh`, ne portent donc que des secrets à
+remplir :
 
 ```bash
 sudoedit /srv/carlys/staging/.env
 sudoedit /srv/carlys/production/.env
 ```
 
-Les exemples versionnés
-(`infrastructure/server/env/{staging,production}.env.example`) contiennent
-**toutes** les variables exigées par `apps/api/src/config/env.schema.ts`, avec
-les URL déjà câblées sur les sous-domaines. Ce qui reste à faire : remplacer
-chaque `CHANGE_MOI_…`.
+Les gabarits versionnés
+(`infrastructure/server/env/{staging,production}.env.example`) portent chaque
+secret, avec sa recette de fabrication ; la configuration versionnée porte le
+reste, URL déjà câblées sur les sous-domaines. Ce qui reste à faire :
+remplacer chaque `CHANGE_MOI_…`, et laisser `carlysctl env-sync <env>
+--appliquer --tout` fabriquer les jetons marqués `#carlysctl:engendrer`.
+
+**Changer un réglage** (un port, un plafond mémoire, le modèle du coach) ne
+se fait plus sur le serveur : on modifie `infrastructure/server/config/`, on
+pousse, puis on déploie. Un réglage remis dans le `.env` l'emporterait sur la
+configuration versionnée (il se lit en dernier) : `carlysctl doctor` le
+signale.
+
+**Un serveur mis en service avant l'ADR 0017** a encore ses réglages dans son
+`.env`. Ils y jouent comme avant, rien ne change. Pour l'en vider :
+
+```bash
+sudo /srv/carlys/repo/scripts/server/carlysctl config-migrer staging              # essai : le rapport
+sudo /srv/carlys/repo/scripts/server/carlysctl config-migrer staging --appliquer  # le .env sauvegardé, puis vidé
+```
+
+L'état part dans `etat.env`, un réglage identique à la configuration
+versionnée est retiré ; un réglage DIFFÉRENT reste, valeurs du serveur et du
+dépôt affichées : on reporte la bonne dans le dépôt, on déploie, et on
+relance. Les secrets ne sont jamais affichés.
 
 ### Les pièges qui font refuser le démarrage
 
@@ -526,17 +557,10 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    Après le déploiement, `sudo docker system df` donne la place réellement
    prise. Un disque plein arrête PostgreSQL : gardez de la marge.
 
-2. **Allumer, dans le `.env` de l'environnement.**
-
-   ```bash
-   sudoedit /srv/carlys/staging/.env
-   ```
-
-   Dans le bloc « Coach IA » : **commentez** (un `#` devant) les lignes d'un
-   ancien fournisseur encore actives (Mistral, `ANTHROPIC_API_KEY`),
-   `COACH_API_KEY` **comprise** (avec une clé et une
-   adresse sans `https`, l'API refuse de démarrer), puis posez ces trois
-   lignes, sans `#` :
+2. **Allumer, dans la configuration versionnée de l'environnement**
+   (ADR 0017) : `infrastructure/server/config/staging.conf` (ou
+   `production.conf`), bloc « Coach IA sur le serveur ». Ces trois lignes,
+   sans `#` — en recette, elles le sont déjà :
 
    ```bash
    CARLYS_OLLAMA_REPLICAS=1
@@ -547,12 +571,14 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    Le modèle est une étiquette **exacte**, la variante « instruct » de
    Qwen3-4B, qui ne « réfléchit » pas avant de répondre : l'étiquette courte
    `qwen3:4b` peut désigner une version qui réfléchit, plus lente, et changer
-   de cible en amont.
+   de cible en amont. Aucune `COACH_API_KEY` dans le `.env` : avec une clé et
+   une adresse sans `https`, l'API refuse de démarrer.
 
-   En recette, `CARLYS_OLLAMA_MEM_LIMIT=6g` plafonne sa mémoire (la
-   supervision ajoute la ligne d'elle-même ; sinon, ajoutez-la).
+   En recette, `CARLYS_OLLAMA_MEM_LIMIT=6g` plafonne sa mémoire
+   (`staging.conf`).
 
-   **Le scan d'assiette** (ADR 0015) demande une quatrième ligne, sans `#` :
+   **Le scan d'assiette** (ADR 0015) demande une quatrième ligne, posée en
+   recette :
 
    ```bash
    COACH_VISION_MODEL=qwen3-vl:4b-instruct
@@ -566,6 +592,10 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    `CARLYS_OLLAMA_MAX_LOADED_MODELS=2` les garde tous deux en mémoire
    (≈ 6 Go à eux deux : la limite de 6 Go devient trop juste, la relever si
    la machine le permet).
+
+   Le changement se pousse dans le dépôt, puis se déploie (étape 3). Un
+   ancien `.env` qui porte encore ces lignes l'emporte sur la configuration :
+   `carlysctl config-migrer <env>` le dit.
 
 3. **Déployer** comme d'habitude (§10). Le clone du serveur doit contenir le
    service `ollama` (la supervision l'avance seule ; `git pull` le fait tout
@@ -634,7 +664,7 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    Un petit modèle suit moins bien les consignes : c'est ce test qui le dit.
 
 7. **Production** : refaites les étapes 1 à 5 dans
-   `/srv/carlys/production/.env`. Les deux environnements allumés, c'est deux
+   `infrastructure/server/config/production.conf`. Les deux environnements allumés, c'est deux
    fois la mémoire : sur une petite machine, n'allumez que celui qui sert.
 
 La politique de confidentialité et les conditions le disent déjà (« le coach
@@ -1196,7 +1226,8 @@ Premium s'accorde alors à la main, depuis la fiche d'un utilisateur du
 back-office.
 
 Changer de tarif, c'est créer un nouveau `price_…` chez Stripe (un prix est
-immuable) et le mettre à la place de l'ancien dans le `.env` : l'ancien
+immuable) et le mettre à la place de l'ancien dans `infrastructure/server/config/<env>.conf`
+(un commit, ADR 0017) : l'ancien
 **reste lié en base**, car les abonnés restés dessus renouvellent sur lui. Un
 tarif se retire en l'archivant chez Stripe. Après avoir changé un de ces
 identifiants sans redéployer :
@@ -1235,10 +1266,8 @@ propriétaire. Pourquoi un second bucket plutôt qu'un préfixe dans
 `carlys-media` : ce dernier est lisible sans jeton, et sa politique vaut pour
 tout le bucket (voir `apps/api/src/config/env.schema.ts`).
 
-Un serveur installé avant le 25 septembre 2026 n'a pas la ligne
-`S3_PRIVATE_BUCKET` dans son `.env` : la passe de supervision la recopie du
-modèle (`carlysctl env-sync <env> --appliquer` le fait à la main), et un
-déploiement lancé sans elle s'arrête sur un message qui le dit.
+`S3_PRIVATE_BUCKET` vit dans `infrastructure/server/config/commun.conf`
+(ADR 0017) : un serveur à jour du dépôt l'a d'office.
 
 **Ce bucket n'est PAS sauvegardé** par `backup.sh`, volontairement : une
 photo effacée (repas supprimé, photo retirée, compte supprimé) ne doit

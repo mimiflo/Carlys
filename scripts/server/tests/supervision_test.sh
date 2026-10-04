@@ -143,6 +143,128 @@ verifier "rien de tapé : refus, rien lancé" "1 0" "$code $(lancements deleted-
 banc_nettoyer
 
 echo
+echo "configuration versionnée (ADR 0017) — couches, priorité, état"
+
+lire() { appeler env_value "$@" > /dev/null; cat "$BANC_SORTIE"; }
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+printf 'LOG_LEVEL=info\nCOACH_MODEL=commun\n' > "$CARLYS_CONFIG_DIR/commun.conf"
+printf 'LOG_LEVEL=debug\nCARLYS_OLLAMA_REPLICAS=1\n' > "$CARLYS_CONFIG_DIR/staging.conf"
+verifier "env_value : le fichier d'environnement l'emporte sur commun.conf" debug "$(lire LOG_LEVEL "$ENV_STAGING" x)"
+verifier "env_value : commun.conf répond quand rien d'autre ne le dit" commun "$(lire COACH_MODEL "$ENV_STAGING" x)"
+echo 'LOG_LEVEL=warn' >> "$ENV_STAGING"
+verifier "env_value : le .env l'emporte encore (migration sans surprise)" warn "$(lire LOG_LEVEL "$ENV_STAGING" x)"
+verifier "env_value : un fichier hors environnement n'a pas de couches" x \
+  "$(printf 'A=1\n' > "$BANC/autre.env"; lire LOG_LEVEL "$BANC/autre.env" x)"
+: > "$FAUX_JOURNAL"
+appeler dc staging "$ENV_STAGING" ps > /dev/null
+verifier "dc : les couches dans l'ordre, le .env en dernier" \
+  "--env-file $CARLYS_CONFIG_DIR/commun.conf --env-file $CARLYS_CONFIG_DIR/staging.conf --env-file $ENV_STAGING" \
+  "$(grep -o -- '--env-file [^ ]*' "$FAUX_JOURNAL" | tr '\n' ' ' | sed 's/ $//')"
+verifier "dc : le coach s'allume depuis staging.conf" oui "$(grep -q -F -- '--profile ollama' "$FAUX_JOURNAL" && echo oui || echo non)"
+appeler env_set_tag "$ENV_STAGING" sha-aaaaaaaaaaaa > /dev/null
+verifier "état : le .env qui porte CARLYS_TAG le garde là (sinon masqué)" sha-aaaaaaaaaaaa "$(grep '^CARLYS_TAG=' "$ENV_STAGING" | cut -d= -f2)"
+sed -i '/^CARLYS_TAG=/d' "$ENV_STAGING"
+appeler env_set_tag "$ENV_STAGING" sha-bbbbbbbbbbbb > /dev/null
+verifier "état : sinon dans etat.env, créé à la volée" sha-bbbbbbbbbbbb "$(grep '^CARLYS_TAG=' "$CARLYS_ROOT/staging/etat.env" | cut -d= -f2)"
+verifier "état : etat.env n'est lisible que par root" 600 "$(stat -c %a "$CARLYS_ROOT/staging/etat.env")"
+verifier "état : relu par env_value" sha-bbbbbbbbbbbb "$(lire CARLYS_TAG "$ENV_STAGING" x)"
+: > "$FAUX_JOURNAL"
+appeler dc staging "$ENV_STAGING" ps > /dev/null
+verifier "dc : etat.env entre l'environnement et le .env" oui \
+  "$(grep -q -- "staging.conf --env-file $CARLYS_ROOT/staging/etat.env --env-file $ENV_STAGING" "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+echo
+echo "configuration figée (ADR 0017) — celle du sha déployé, pas celle du clone"
+
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+DEPOT="$BANC/depot"
+git init -q -b development "$DEPOT"
+git -C "$DEPOT" -c user.name=banc -c user.email=banc@banc commit -q --allow-empty -m "avant l'ADR"
+ancien="$(git -C "$DEPOT" rev-parse --short=12 HEAD)"
+mkdir -p "$DEPOT/infrastructure/server/config"
+printf 'LOG_LEVEL=info\n' > "$DEPOT/infrastructure/server/config/commun.conf"
+printf 'COACH_MODEL=version-deployee\n' > "$DEPOT/infrastructure/server/config/staging.conf"
+git -C "$DEPOT" add -A && git -C "$DEPOT" -c user.name=banc -c user.email=banc@banc commit -q -m config
+deploye="$(git -C "$DEPOT" rev-parse --short=12 HEAD)"
+# Le clone a AVANCÉ depuis (la supervision le fait seule) : ce n'est pas lui
+# que la pile doit lire.
+printf 'COACH_MODEL=pousse-mais-pas-deploye\n' > "$DEPOT/infrastructure/server/config/staging.conf"
+export CARLYS_REPO_DIR="$DEPOT" CARLYS_CONFIG_DIR="$DEPOT/infrastructure/server/config"
+verifier "avant tout gel : la configuration du clone" pousse-mais-pas-deploye "$(lire COACH_MODEL "$ENV_STAGING" x)"
+appeler config_figer staging "$deploye" > /dev/null
+verifier "figée : celle du commit déployé, pas celle du clone" version-deployee "$(lire COACH_MODEL "$ENV_STAGING" x)"
+: > "$FAUX_JOURNAL"; appeler dc staging "$ENV_STAGING" ps > /dev/null
+verifier "dc : compose lit la configuration figée" oui \
+  "$(grep -q -- "--env-file $CARLYS_ROOT/staging/config/staging.conf" "$FAUX_JOURNAL" && echo oui || echo non)"
+appeler config_rendre staging > /dev/null
+verifier "rendue (bascule ratée) : retour à la configuration d'avant, le clone ici" pousse-mais-pas-deploye "$(lire COACH_MODEL "$ENV_STAGING" x)"
+appeler config_figer staging "$deploye" > /dev/null
+verifier "un commit d'avant l'ADR : refusé (code 1)…" 1 "$(appeler config_figer staging "$ancien")"
+verifier "… et la configuration en service est gardée" version-deployee "$(lire COACH_MODEL "$ENV_STAGING" x)"
+verifier "un sha inconnu du clone : même chose" 1 "$(appeler config_figer staging 0123456789ab)"
+banc_nettoyer
+unset CARLYS_REPO_DIR
+
+echo
+echo "config-migrer (ADR 0017) — le .env réduit à ses secrets, rien ne change"
+
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+# Un .env d'AVANT l'ADR, tel que l'ancien gabarit le donnait : réglages,
+# état et secrets dans un seul fichier, remplis comme sur un serveur, avec un
+# réglage qu'on y avait changé à la main.
+DEPOT_CONFIG="$BANC_SERVEUR/../../infrastructure/server"
+cp "$DEPOT_CONFIG/config/"*.conf "$CARLYS_CONFIG_DIR/"
+{ cat "$DEPOT_CONFIG/config/commun.conf" "$DEPOT_CONFIG/config/staging.conf"
+  printf 'CARLYS_TAG=sha-123456789abc\nCARLYS_API_REPLICAS=1\n'
+  cat "$DEPOT_CONFIG/env/staging.env.example"
+} | sed -e 's/=CHANGE_MOI_[A-Z0-9_]*/=secret-du-banc-0123456789abcdef0123/' -e 's/^LOG_LEVEL=.*/LOG_LEVEL=info/' \
+  > "$ENV_STAGING"
+echo 'CARLYS_OLLAMA_REPLICAS=1' >> "$ENV_STAGING"
+echo 'COACH_WORKER_URLS=https://nom:motdepasse@gpu.exemple/v1' >> "$ENV_STAGING"
+mkdir -p "$BANC/exemples"
+cp "$DEPOT_CONFIG/env/staging.env.example" "$BANC/exemples/"
+export CARLYS_ENV_EXAMPLES_DIR="$BANC/exemples"
+avant="$BANC/avant.env"; cp "$ENV_STAGING" "$avant"
+cles_avant="$(sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$avant" | sort -u)"
+valeurs() { local k; for k in $cles_avant; do printf '%s=%s\n' "$k" "$(lire "$k" "$ENV_STAGING" '<absent>')"; done; }
+valeurs_avant="$(valeurs)"
+
+echo 'MON_REGLAGE_PERSO=abc123' >> "$ENV_STAGING"
+CARLYS_ENV_EXAMPLES_DIR="$BANC/nulle-part" appeler config_migrer staging "$ENV_STAGING" ecrire > /dev/null || true
+verifier "sans gabarit de secrets : classement refusé, rien n'est écrit" oui \
+  "$(grep -q 'classement impossible' "$BANC_SORTIE" && ! ls "$ENV_STAGING".avant-config-* >/dev/null 2>&1 && echo oui || echo non)"
+avant="$BANC/avant.env"; cp "$ENV_STAGING" "$avant"
+cles_avant="$(sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$avant" | sort -u)"
+valeurs_avant="$(valeurs)"
+appeler config_migrer staging "$ENV_STAGING" essai > /dev/null || true
+verifier "essai : une clé inconnue du dépôt ne montre jamais sa valeur" oui \
+  "$(grep -q 'MON_REGLAGE_PERSO = (non affichée' "$BANC_SORTIE" && ! grep -q abc123 "$BANC_SORTIE" && echo oui || echo non)"
+verifier "essai : rien n'est écrit" oui "$(cmp -s "$avant" "$ENV_STAGING" && echo oui || echo non)"
+verifier "essai : le réglage changé à la main est montré, serveur et dépôt" oui \
+  "$(grep -q 'DIFFÉRENT, gardé : LOG_LEVEL — serveur « info », dépôt « debug »' "$BANC_SORTIE" && echo oui || echo non)"
+verifier "essai : un identifiant dans une URL n'est jamais affiché" non \
+  "$(grep -q 'motdepasse' "$BANC_SORTIE" && echo oui || echo non)"
+verifier "essai : aucun secret n'est affiché" non \
+  "$(grep -q 'secret-du-banc' "$BANC_SORTIE" && echo oui || echo non)"
+
+appeler config_migrer staging "$ENV_STAGING" ecrire > /dev/null || true
+verifier "appliquer : chaque valeur lue est celle d'avant (rien ne change en service)" "$valeurs_avant" "$(valeurs)"
+verifier "appliquer : une sauvegarde du .env, en 600" 600 "$(stat -c %a "$ENV_STAGING".avant-config-* 2>/dev/null | head -1)"
+verifier "appliquer : l'état est passé dans etat.env" sha-123456789abc "$(grep '^CARLYS_TAG=' "$CARLYS_ROOT/staging/etat.env" | cut -d= -f2)"
+verifier "appliquer : plus d'état dans le .env" '' "$(grep -E '^(CARLYS_TAG|CARLYS_API_REPLICAS)=' "$ENV_STAGING")"
+verifier "appliquer : les réglages identiques sont partis (DOMAIN, ports…)" '' "$(grep -E '^(DOMAIN|CARLYS_API_HOST_PORT|NODE_ENV|S3_BUCKET)=' "$ENV_STAGING")"
+verifier "appliquer : les secrets restent" 3 "$(grep -cE '^(POSTGRES_PASSWORD|JWT_ACCESS_SECRET|DATABASE_URL)=' "$ENV_STAGING")"
+verifier "appliquer : le réglage différent reste, en attendant le dépôt" 'LOG_LEVEL=info' "$(grep '^LOG_LEVEL=' "$ENV_STAGING")"
+verifier "appliquer : ce que le dépôt ne pose pas reste aussi" 1 "$(grep -c '^COACH_WORKER_URLS=' "$ENV_STAGING")"
+verifier "appliquer : rejoué, il ne retire plus rien" oui \
+  "$(appeler config_migrer staging "$ENV_STAGING" ecrire > /dev/null; grep -q 'rien à retirer' "$BANC_SORTIE" && echo oui || echo non)"
+banc_nettoyer
+
+echo
 echo "dc — le coach sur le serveur n'existe que si le .env l'allume"
 
 # Le défaut trouvé à la relecture du 29/09 : à zéro exemplaire, le service
@@ -323,7 +445,8 @@ verifier "l'amont perd d'abord l'api-2, puis l'api-2 s'arrête" oui \
   "$([ "$(banc_rang 'nginx 3100 ')" -gt 0 ] && [ "$(banc_rang 'nginx 3100 ')" -lt "$(banc_rang 'stop carlys_staging-api-2')" ] && echo oui || echo non)"
 verifier "… une fois son travail fini (lu trois fois : 2, 1, 0)" 0 "$(cat "$BANC/travail-3101")"
 verifier "… jamais l'api-1, qui reste" non "$(grep -q 'stop.*api-1' "$FAUX_JOURNAL" && echo oui || echo non)"
-verifier "… et le .env porte le nouveau nombre" 1 "$(grep '^CARLYS_API_REPLICAS=' "$ENV_STAGING" | cut -d= -f2)"
+verifier "… et etat.env porte le nouveau nombre (ADR 0017)" 1 "$(grep '^CARLYS_API_REPLICAS=' "$CARLYS_ROOT/staging/etat.env" | cut -d= -f2)"
+verifier "… jamais le .env, réservé aux secrets" '' "$(grep '^CARLYS_API_REPLICAS=' "$ENV_STAGING" | cut -d= -f2)"
 # Une réponse du coach finie page quittée ne tient aucune requête ouverte :
 # elle compte quand même, sinon la décision descend sur elle.
 echo 2 > "$BANC/travail-3100"
@@ -337,7 +460,7 @@ verifier "travail qui ne finit pas à temps : personne n'est arrêté" non \
   "$(grep -q '^stop' "$FAUX_JOURNAL" && echo oui || echo non)"
 verifier "… l'amont retrouve ses deux exemplaires" oui \
   "$(tail -n 1 < <(grep '^nginx' "$FAUX_JOURNAL") | grep -q '3100 3101' && echo oui || echo non)"
-verifier "… et le .env garde l'ancien nombre" '' "$(grep '^CARLYS_API_REPLICAS=' "$ENV_STAGING" | cut -d= -f2)"
+verifier "… et l'ancien nombre reste (rien d'écrit)" '' "$(grep -hs '^CARLYS_API_REPLICAS=' "$ENV_STAGING" "$CARLYS_ROOT/staging/etat.env" | cut -d= -f2)"
 verifier "… et la commande le dit (code 1)" 1 "$(appeler scale_apply staging "$ENV_STAGING" 1)"
 banc_nettoyer
 

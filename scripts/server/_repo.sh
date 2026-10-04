@@ -112,7 +112,8 @@ repo_avertir_branches() {
   warn "        scripts du clone : $clone"
   warn "  Le serveur exécuterait les scripts d'une branche contre les images"
   warn "  d'une autre. Si « $suivie » est en retard, la pile RECULE."
-  warn "  Aligner l'une sur l'autre :"
-  warn "    echo 'CARLYS_UPDATE_BRANCH=$clone' | sudo tee -a $file"
+  warn "  Aligner l'une sur l'autre : CARLYS_UPDATE_BRANCH=$clone dans"
+  warn "    $CARLYS_CONFIG_DIR/<env>.conf (un commit, ADR 0017),"
+  warn "    ou retirer la ligne du .env si un ancien réglage l'y masque."
   return 1
 }

@@ -124,11 +124,18 @@ envcheck_schema_api() {
 #
 # Les clés absentes des exemples sont celles que le contrôle 7 nomme — et il
 # n'en reste aucune : c'est lui qui le dit, pas ce commentaire.
+#
+# La passerelle du coach a son propre fichier, étalé dans le schéma : sans
+# lui, ses clés échappaient aux contrôles 3 et 7.
 envcheck_cles_api() {
-  local schema
+  local schema passerelle
+  local -a sources=()
   schema="$(envcheck_schema_api)"
+  passerelle="$(dirname -- "$schema")/coach-gateway.env.ts"
   [ -r "$schema" ] || return 1
-  grep -oE '^[[:space:]]+[A-Z][A-Z_0-9]*:' "$schema" | tr -d ' :' | sort -u
+  sources=("$schema")
+  [ -r "$passerelle" ] && sources+=("$passerelle")
+  grep -ohE '^[[:space:]]+[A-Z][A-Z_0-9]*:' "${sources[@]}" | tr -d ' :' | sort -u
 }
 
 # Les clés actives dont la valeur porte encore un CHANGE_MOI_.
@@ -162,13 +169,20 @@ envcheck_cles_exemple() {
 # l'exemple pour juger le .env réel. Une variable ajoutée au schéma et oubliée
 # dans les gabarits est invisible pour eux — et pour `_envsync.sh`, qui ne
 # recopie que ce que l'exemple porte.
+#
+# Depuis l'ADR 0017, une variable est portée par le gabarit de SECRETS ou par
+# la configuration VERSIONNÉE (commun.conf, <env>.conf) : les deux comptent.
 envcheck_oubliees_du_gabarit() {
   local exemple
   exemple="$(envcheck_exemple "$1")"
   [ -f "$exemple" ] || return 0
   local api
   api="$(envcheck_cles_api)" || return 0
-  comm -23 <(printf '%s\n' "$api") <(envcheck_cles_exemple "$exemple")
+  comm -23 <(printf '%s\n' "$api") <({
+    envcheck_cles_exemple "$exemple"
+    envcheck_cles_exemple "$CARLYS_CONFIG_DIR/commun.conf"
+    envcheck_cles_exemple "$CARLYS_CONFIG_DIR/$1.conf"
+  } 2>/dev/null | sort -u)
 }
 
 # Le fichier d'exemple d'un environnement, s'il existe.
@@ -191,7 +205,7 @@ envcheck_nouveautes() {
   comm -13 <(envcheck_cles "$file" | sort -u) <(envcheck_cles "$exemple" | sort -u)
 }
 
-# `envcheck_env <env> <.env>` — les cinq contrôles. Rend 1 si quelque chose
+# `envcheck_env <env> <.env>` — les neuf contrôles. Rend 1 si quelque chose
 # empêcherait la pile de démarrer ou trahirait silencieusement une intention.
 envcheck_env() {
   local env_name="$1" file="$2" defaut=0 sortie cle api
@@ -218,15 +232,15 @@ envcheck_env() {
   # prétend ne rien réimplémenter pour ne rien manquer.
   if sortie="$(dc "$env_name" "$file" config -q 2>&1)"; then
     if [ -n "$sortie" ]; then
-      warn "  Compose accepte ce .env mais PRÉVIENT — valeur tronquée ?"
+      warn "  Compose accepte cette configuration mais PRÉVIENT — valeur tronquée ?"
       warn "        un « \$ » dans une valeur ouvre une substitution : le DOUBLER en « \$\$ »"
       printf '%s\n' "$sortie" | sed 's/^/        /' >&2
       defaut=1
     else
-      ok "  Compose accepte ce .env"
+      ok "  Compose accepte cette configuration (config/ + .env)"
     fi
   else
-    warn "  Compose REFUSE ce .env — la pile ne peut pas démarrer :"
+    warn "  Compose REFUSE cette configuration — la pile ne peut pas démarrer :"
     printf '%s\n' "$sortie" | sed 's/^/        /' >&2
     defaut=1
   fi
@@ -311,11 +325,37 @@ envcheck_env() {
   # « Continuer avec… » sont à l'écran.
   while read -r cle; do
     [ -n "$cle" ] || continue
-    warn "  $cle est au schéma de l'API mais dans AUCUN gabarit"
-    warn "        l'ajouter à infrastructure/server/env/$env_name.env.example"
+    warn "  $cle est au schéma de l'API mais NULLE PART dans le dépôt"
+    warn "        un réglage : infrastructure/server/config/ ; un secret :"
+    warn "        infrastructure/server/env/$env_name.env.example"
     warn "        (facultative : la laisser COMMENTÉE, jamais vide)"
     defaut=1
   done < <(envcheck_oubliees_du_gabarit "$env_name")
+
+  # 8. Un SECRET dans la configuration versionnée — un clone modifié à la
+  # main. Le .env passe après, mais un secret qu'il ne pose pas (webhook
+  # facultatif) prendrait la valeur du dépôt : publique.
+  while read -r cle; do
+    [ -n "$cle" ] || continue
+    warn "  $cle est un SECRET, et la configuration versionnée le porte —"
+    warn "        le retirer de $CARLYS_CONFIG_DIR ; sa place est le .env"
+    defaut=1
+  done < <(comm -12 \
+    <({ envcheck_cles_exemple "$CARLYS_CONFIG_DIR/commun.conf"; envcheck_cles_exemple "$CARLYS_CONFIG_DIR/$env_name.conf"; } 2>/dev/null | sort -u) \
+    <(envcheck_cles_exemple "$(envcheck_exemple "$env_name")" 2>/dev/null | sort -u))
+
+  # 9. Ce que le .env porte encore et qui n'est pas un secret (ADR 0017).
+  # Pas un défaut : rien ne casse, c'est même ce qui garde la migration sans
+  # surprise (le .env passe en dernier). Mais un réglage qui reste là MASQUE
+  # la configuration versionnée, et un changement poussé dans le dépôt n'y
+  # ferait rien.
+  local n_reglages
+  n_reglages="$(config_classer "$env_name" "$file" 2>/dev/null | grep -cv '^secret' || true)"
+  if [ "${n_reglages:-0}" -gt 0 ]; then
+    warn "  le .env porte encore $n_reglages ligne(s) qui ne sont pas des secrets —"
+    warn "        elles masquent la configuration versionnée :"
+    warn "        carlysctl config-migrer $env_name   (essai, puis --appliquer)"
+  fi
 
   return "$defaut"
 }

@@ -101,7 +101,9 @@ Store ; tant que tu installes l'APK toi-même, la première suffit.
 
 ### 1.3 Renseigner les deux côtés
 
-**Serveur** — dans le `.env` de l'API (voir `apps/api/.env.example`) :
+**Serveur** — sur un poste, dans le `.env` de l'API (voir `apps/api/.env.example`) ;
+sur le serveur, dans `infrastructure/server/config/` (des identifiants publics,
+pas des secrets — ADR 0017) :
 
 ```bash
 # Le client « Web ». On peut en mettre plusieurs, séparés par des virgules
