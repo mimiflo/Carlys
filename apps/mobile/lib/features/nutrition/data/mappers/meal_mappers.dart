@@ -71,6 +71,24 @@ Food foodFromJson(Map<String, dynamic> row) {
   );
 }
 
+/// Un produit de `GET /nutrition/products/:barcode`.
+PackagedFood packagedFoodFromJson(Map<String, dynamic> row) {
+  final per100g = row['per100g'] as Map<String, dynamic>? ?? const {};
+  return PackagedFood(
+    barcode: row['barcode'] as String? ?? '',
+    name: row['name'] as String? ?? 'Produit scanné',
+    brand: row['brand'] as String?,
+    liquid: row['liquid'] as bool? ?? false,
+    servingQuantity: (row['servingQuantity'] as num?)?.toDouble(),
+    per100g: FoodPer100g(
+      kcal: (per100g['kcal'] as num?)?.toDouble() ?? 0,
+      proteinG: (per100g['proteinG'] as num?)?.toDouble(),
+      carbsG: (per100g['carbsG'] as num?)?.toDouble(),
+      fatG: (per100g['fatG'] as num?)?.toDouble(),
+    ),
+  );
+}
+
 /// La mention d'une réponse de repas (`meta.source`), `null` quand aucun
 /// repas rendu ne porte d'aliment de la base.
 FoodAttribution? attributionFromMeta(Object? meta) {

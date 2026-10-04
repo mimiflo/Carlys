@@ -172,7 +172,7 @@ if [ -f "$PLIST" ]; then
       }' "$PLIST" > "$PLIST.tmp" && mv "$PLIST.tmp" "$PLIST"
   }
   set_plist_string NSCameraUsageDescription \
-    "L’appareil photo sert à scanner le code ami d’un profil Carlys et à photographier tes repas."
+    "L’appareil photo sert à scanner le code ami d’un profil Carlys, le code-barres d’un aliment et à photographier tes repas."
   set_plist_string NSPhotoLibraryUsageDescription \
     "Carlys n’envoie que la photo de repas que tu choisis : le reste de ta photothèque reste sur ton téléphone."
 fi

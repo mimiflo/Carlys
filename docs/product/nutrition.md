@@ -881,12 +881,34 @@ a une. La photo reste privée : routes et stockage plus haut.
 - **De haut en bas** : le jour (pastille), « Tes objectifs du jour » —
   l'anneau des calories et une barre par valeur, le MANGÉ du journal sur le
   VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, quatre
-  tuiles (Ajouter un repas, Mon eau, Mes recettes, Mes besoins), le journal
+  tuiles (Ajouter un repas, Scanner un aliment, Mes recettes, Mes besoins), le journal
   alimentaire (photo du plat ou dessin du moment, heure, calories, quantité,
   trois macros ; toucher un repas l'ouvre, la suppression se fait dans son
   écran), puis le bandeau vers le coach. Profil incomplet : l'anneau cède la
   place à « Compléter mon profil », qui ouvre « Mon métabolisme ».
-- Écarts à la maquette (pas de scanner ni de repas type) :
+- **Scanner un aliment.** La tuile ouvre la caméra (EAN-13, EAN-8, UPC-A ; l'API admet aussi le GTIN-14 tapé ;
+  le code se tape aussi, caméra refusée comprise). Le serveur cherche le
+  produit dans **Open Food Facts** (`GET /nutrition/products/:barcode`) :
+  l'appareil ne contacte jamais le tiers, seul le code part, et la réponse
+  — trouvé comme inconnu — est gardée dans Redis (un mois, un jour). Le
+  chiffre de contrôle est vérifié des deux côtés : une lecture ratée ne
+  cherche pas le produit d'un autre. Base collaborative : toute valeur hors
+  bornes est tenue pour inconnue, ses caractères invisibles (contrôle,
+  bidi) retirés, et un produit sans énergie lisible est « inconnu ».
+  Open Food Facts limite chaque adresse : toutes les lectures partant du
+  serveur, un plafond COMMUN (80 par minute, dans Redis) les borne, et un
+  refus ou une panne de la base ouvre une pause de 30 s (« très
+  sollicité »). Purger une fiche fausse :
+  `DEL nutrition:product:v1:<code>` dans Redis. La feuille propose une portion de l'emballage (ou 100 g),
+  recalcule les valeurs à chaque chiffre et ajoute un repas SAISI (nom ·
+  marque, quantité en g ou en ml, macros connues seulement), daté du jour
+  affiché ; mention « Source : Open Food Facts » (ODbL) sous les valeurs.
+  Inconnu : « Saisir à la main » ouvre l'écran de repas.
+  - ponytail : le produit entre comme repas saisi, pas comme ligne d'une
+    composition CIQUAL (`MealComponent.foodCode` vise la table `Food`) ;
+    le mêler à une composition demandera une table des produits et une
+    colonne de plus.
+- Écarts à la maquette (pas de repas type) :
   `docs/product/design-conformity.md`.
 
 ### « Mon métabolisme » (`/nutrition/metabolisme`)

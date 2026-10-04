@@ -7,16 +7,20 @@
 // montrée est plausible, aucune n'est celle d'une personne réelle.
 //
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+import 'dart:async';
 import 'dart:io';
 
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/scanned_product_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -188,6 +192,43 @@ void main() {
     await tester.tap(find.text('Mes besoins'));
     await tester.pumpAndSettle();
     await capture(tester, 'nutrition-03-metabolisme');
+    await purge(tester);
+  });
+
+  testWidgets('scanner un aliment : la feuille du produit, et la caméra', (
+    tester,
+  ) async {
+    telephone(tester);
+    final nutrition = journee();
+    nutrition.products['3017620422003'] = const PackagedFood(
+      barcode: '3017620422003',
+      name: 'Pâte à tartiner aux noisettes',
+      brand: 'Nutella',
+      per100g: FoodPer100g(kcal: 539, proteinG: 6.3, carbsG: 57.5, fatG: 30.9),
+      servingQuantity: 15,
+    );
+    await tester.pumpWidget(app(nutrition));
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pumpAndSettle();
+    unawaited(
+      showAppSheet<bool>(
+        tester.element(find.byType(NutritionScreen)),
+        builder: (_) =>
+            ScannedProductSheet(barcode: '3017620422003', day: DateTime.now()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-05-produit-scanne');
+
+    Navigator.of(tester.element(find.byType(ScannedProductSheet))).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Scanner un aliment'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-06-scanner');
     await purge(tester);
   });
 

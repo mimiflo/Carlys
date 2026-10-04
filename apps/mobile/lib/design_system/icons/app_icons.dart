@@ -353,6 +353,12 @@ abstract final class AppIcons {
   /// Ouvre le choix d'une valeur dans une liste (le jour du journal).
   static const IconData choose = Icons.expand_more_rounded;
 
+  /// Scanner le code-barres d'un produit emballé.
+  static const IconData scanBarcode = Icons.qr_code_scanner_rounded;
+
+  /// Taper un code à la main, quand la caméra ne le lit pas.
+  static const IconData typeCode = Icons.dialpad_rounded;
+
   /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
   /// la saisie à la main reste possible.
   static const IconData foodDatabasePending = Icons.hourglass_top_rounded;
