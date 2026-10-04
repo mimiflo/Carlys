@@ -15,6 +15,7 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:carlys_mobile/features/nutrition/data/services/image_picker_meal_photo_picker.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:flutter/material.dart';
@@ -22,12 +23,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../test/support/fake_auth_repository.dart';
+import '../../test/support/fake_meal_photo_picker.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_water_store.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
 import '../../test/support/local_data_overrides.dart';
 import '../../test/support/navigation.dart' as navigation;
+import '../../test/support/sample_meals.dart';
 import 'capture_test.dart' show loadRealFonts;
 
 void main() {
@@ -142,7 +145,10 @@ void main() {
     return nutrition;
   }
 
-  Widget app(FakeNutritionRepository nutrition) => ProviderScope(
+  Widget app(
+    FakeNutritionRepository nutrition, {
+    FakeMealPhotoPicker? picker,
+  }) => ProviderScope(
     overrides: [
       appEnvironmentProvider.overrideWithValue(
         const AppEnvironment(
@@ -158,6 +164,7 @@ void main() {
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
       nutritionRepositoryProvider.overrideWithValue(nutrition),
       waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
+      if (picker != null) mealPhotoPickerProvider.overrideWithValue(picker),
     ],
     child: const CarlysApp(),
   );
@@ -199,6 +206,88 @@ void main() {
     await tester.pumpAndSettle();
     await navigation.openNutrition(tester);
     await capture(tester, 'nutrition-04-premier-jour');
+    await purge(tester);
+  });
+
+  /// Les octets d'une photo se décodent HORS de l'horloge du test : on leur
+  /// laisse un vrai instant, puis on repeint.
+  Future<void> decodePhotos(WidgetTester tester) async {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pump();
+  }
+
+  /// Le scan d'une assiette : la photo du déjeuner, analysée puis rendue
+  /// au repas pré-rempli (deux aliments de la base, un qui n'y est pas).
+  Future<FakeNutritionRepository> ouvrirLeScan(
+    WidgetTester tester,
+    List<MealScan> replies,
+  ) async {
+    telephone(tester);
+    final nutrition = journee()
+      ..scanReplies.addAll(replies)
+      ..foods.addEntries(sampleFoods.map((f) => MapEntry(f.code, f)));
+    final photo = File(
+      'tool/screenshots/assets/dejeuner.jpg',
+    ).readAsBytesSync();
+    await tester.pumpWidget(
+      app(nutrition, picker: FakeMealPhotoPicker(photo: photo)),
+    );
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    await tester.tap(find.text('Scanner un aliment'));
+    await tester.pumpAndSettle();
+    return nutrition;
+  }
+
+  testWidgets('scan d’assiette : la photo, l’analyse, le repas pré-rempli', (
+    tester,
+  ) async {
+    await ouvrirLeScan(tester, const [
+      MealScan(id: 's', status: MealScanStatus.pending),
+      MealScan(
+        id: 's',
+        status: MealScanStatus.done,
+        items: [
+          MealScanItem(seen: 'Poulet grillé', grams: 150, food: pouletCuit),
+          MealScanItem(seen: 'Riz blanc', grams: 120, food: rizBlancCuit),
+          MealScanItem(seen: 'Brocoli', grams: 100, food: brocoliCuit),
+        ],
+      ),
+    ]);
+    await capture(tester, 'nutrition-05-scan');
+
+    await tester.tap(find.text('Choisir une photo'));
+    await tester.pump();
+    await decodePhotos(tester);
+    await capture(tester, 'nutrition-06-scan-analyse');
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    // Le message « Repas reconnu » passé, l'écran du repas tel qu'on le relit.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+    await decodePhotos(tester);
+    await capture(tester, 'nutrition-07-scan-repas');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-08-scan-aliments');
+    await purge(tester);
+  });
+
+  testWidgets('scan d’assiette : rien de la base reconnu', (tester) async {
+    await ouvrirLeScan(tester, const [
+      MealScan(
+        id: 's',
+        status: MealScanStatus.done,
+        items: [MealScanItem(seen: 'Bobun', grams: 300)],
+      ),
+    ]);
+    await tester.tap(find.text('Choisir une photo'));
+    await tester.pumpAndSettle();
+    await decodePhotos(tester);
+    await capture(tester, 'nutrition-09-scan-echec');
     await purge(tester);
   });
 }

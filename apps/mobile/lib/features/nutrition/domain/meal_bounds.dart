@@ -35,6 +35,10 @@ abstract final class MealBounds {
   /// sur n'importe quel écran de téléphone, pour quelques centaines de Ko.
   static const int photoMaxSide = 1600;
 
+  /// La photo qui part au SCAN d'assiette, plus petite : le modèle de vision
+  /// n'y gagne rien au-delà, et chaque point de plus allonge son analyse.
+  static const int scanPhotoMaxSide = 768;
+
   /// La qualité JPEG de l'envoi : au-delà, le poids croît sans que l'œil
   /// voie la différence sur une vignette ou un plein écran.
   static const int photoQuality = 80;

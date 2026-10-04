@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -7,9 +8,11 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/nutrition.dart';
+import '../../domain/meal_bounds.dart';
 import '../../domain/repositories/nutrition_repository.dart';
 import '../mappers/meal_mappers.dart';
 import '../mappers/metabolism_mappers.dart';
+import '../services/meal_photo_preparation.dart';
 
 class NutritionRepositoryImpl implements NutritionRepository {
   NutritionRepositoryImpl(this._dio);
@@ -175,6 +178,34 @@ class NutritionRepositoryImpl implements NutritionRepository {
   }
 
   @override
+  Future<MealScanResult> startMealScan(String id, Uint8List jpeg) {
+    return guardDio(() async {
+      final small = await _scanPhoto(jpeg);
+      final form = _photoForm(small)..fields.add(MapEntry('id', id));
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/nutrition/meal-scans',
+        data: form,
+      );
+      return _scanResult(response);
+    });
+  }
+
+  @override
+  Future<MealScanResult> mealScan(String id) {
+    return guardDio(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/meal-scans/$id',
+      );
+      return _scanResult(response);
+    });
+  }
+
+  MealScanResult _scanResult(Response<Map<String, dynamic>> response) => (
+    scan: mealScanFromJson(_data(response)),
+    source: foodSourceFromMeta(response.data?['meta']),
+  );
+
+  @override
   Future<MealEntry> replaceMealPhoto(String id, Uint8List jpeg) {
     return guardDio(() async {
       final response = await _dio.put<Map<String, dynamic>>(
@@ -212,3 +243,11 @@ class NutritionRepositoryImpl implements NutritionRepository {
 final nutritionRepositoryProvider = Provider<NutritionRepository>((ref) {
   return NutritionRepositoryImpl(ref.watch(dioProvider));
 });
+
+/// La photo réduite pour le modèle, dans un isolat : la photo du repas, elle,
+/// garde sa taille et partira avec lui. DE PREMIER NIVEAU, exprès : une
+/// fermeture écrite dans le dépôt capturerait `this`, donc Dio, ses ports et
+/// ses sockets, qu'aucun isolat ne peut recevoir.
+Future<Uint8List> _scanPhoto(Uint8List jpeg) => Isolate.run(
+  () => prepareMealPhoto(jpeg, maxSide: MealBounds.scanPhotoMaxSide),
+);

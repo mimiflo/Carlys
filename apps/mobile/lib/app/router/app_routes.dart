@@ -44,6 +44,12 @@ abstract final class AppRoutes {
       ? '$nutrition/repas/nouveau'
       : '$nutrition/repas/nouveau?jour=${formatDayKey(day)}';
 
+  /// Scanner une assiette (plein écran) : la photo, l'analyse par l'IA,
+  /// puis le repas pré-rempli, daté du jour qu'affiche le journal.
+  static String mealScan({DateTime? day}) => day == null
+      ? '$nutrition/scan'
+      : '$nutrition/scan?jour=${formatDayKey(day)}';
+
   /// MODIFIER un repas du journal, en plein écran.
   static String meal(String mealId) => '$nutrition/repas/$mealId';
   static const String profile = '/profile';

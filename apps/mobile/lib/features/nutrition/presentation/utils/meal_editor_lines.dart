@@ -17,6 +17,34 @@ extension MealEditorLines on MealEditorState {
     attribution: source,
   );
 
+  /// Le résultat d'un scan d'assiette : chaque aliment RECONNU par la base
+  /// devient une ligne (sous un identifiant de [newId]), la photo prise est
+  /// jointe, et le nom du repas reprend leurs noms courts s'il est vide. Un
+  /// aliment que la base n'a pas su nommer reste hors du repas : l'écran le
+  /// dit, la personne l'ajoute à la main.
+  MealEditorState withScan(MealScanSeed scan, String Function() newId) {
+    var next = copyWith(photo: NewMealPhoto(scan.photo));
+    final names = <String>[];
+    for (final item in scan.items) {
+      final food = item.food;
+      if (food == null) continue;
+      names.add(food.shortName);
+      next = next.withLine(
+        MealLine.fromFood(
+          id: newId(),
+          food: food,
+          quantityG: item.grams.toDouble(),
+          sourceVersion: scan.source.version,
+        ),
+        scan.source,
+      );
+    }
+    if (name.trim().isEmpty && names.isNotEmpty) {
+      next = next.copyWith(name: names.toSet().join(', '));
+    }
+    return next;
+  }
+
   /// La quantité de la ligne [lineId] corrigée. Elle garde son identifiant :
   /// le serveur garde donc son instantané, et ne relit pas la base.
   MealEditorState withLineQuantity(String lineId, double grams) => copyWith(

@@ -881,13 +881,52 @@ a une. La photo reste privée : routes et stockage plus haut.
 - **De haut en bas** : le jour (pastille), « Tes objectifs du jour » —
   l'anneau des calories et une barre par valeur, le MANGÉ du journal sur le
   VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, quatre
-  tuiles (Ajouter un repas, Mon eau, Mes recettes, Mes besoins), le journal
+  tuiles (Ajouter un repas, Scanner un aliment, Mes recettes, Mes besoins), le journal
   alimentaire (photo du plat ou dessin du moment, heure, calories, quantité,
   trois macros ; toucher un repas l'ouvre, la suppression se fait dans son
   écran), puis le bandeau vers le coach. Profil incomplet : l'anneau cède la
   place à « Compléter mon profil », qui ouvre « Mon métabolisme ».
-- Écarts à la maquette (pas de scanner ni de repas type) :
+- L'eau se suit depuis l'accueil (carte d'hydratation), plus depuis une
+  tuile de l'onglet.
+- Écarts à la maquette (pas de repas type) :
   `docs/product/design-conformity.md`.
+
+### Scan d'assiette (`/nutrition/scan`, ADR 0015)
+
+- **Le parcours** : la tuile « Scanner un aliment » ouvre « Scanner mon
+  assiette » ; « Prendre la photo » ou « Choisir une photo » (même port
+  `MealPhotoPicker` que la photo du plat). L'appareil réduit la photo à
+  768 px (`MealBounds.scanPhotoMaxSide`, dans un isolat) et l'envoie avec un
+  identifiant né sur lui ; l'écran montre la photo, « L'IA regarde ton
+  assiette » et le temps écoulé, et relit le scan toutes les 2 s
+  (`MealScanController`, 8 min de patience au plus). Quitter l'écran arrête
+  la relecture, pas l'analyse : le serveur la finit, sans rien écrire.
+- **Le résultat** ouvre « Nouveau repas » PRÉ-REMPLI, à la place de l'écran
+  du scan : une ligne par aliment trouvé dans la table CIQUAL, aux grammes
+  estimés, le nom tiré de leurs noms courts, la photo jointe (elle part à
+  l'enregistrement, comme une photo du plat). Le relais passe par
+  `pendingMealScanProvider`, consommé par l'éditeur à son ouverture : un
+  repas ouvert ensuite repart vide. Ce que le modèle a vu sans le trouver
+  dans la base est nommé dans le message passager, à ajouter à la main.
+- **Rien ne s'enregistre sans la personne** : le scan ne remplit que
+  l'écran ; « Ajouter au journal » reste son geste.
+- **Les échecs disent quoi faire** : rien de reconnu, rien dans la base
+  (avec ce que l'IA a vu), hors ligne, réservé aux abonnés, quota du jour,
+  coach très sollicité ; chaque fois « Reprendre une photo » ou « Saisir à
+  la main ».
+- **Côté serveur** : `POST /api/v1/nutrition/meal-scans` puis
+  `GET /api/v1/nutrition/meal-scans/:id` (contrat : `docs/api/README.md`).
+  Le modèle de vision (`COACH_VISION_MODEL`) ne rend que des noms et des
+  grammes, relus sans confiance ; `FoodsService.closest` les rapproche de la
+  table (tous les mots, puis en retirant le dernier) ; les valeurs viennent
+  de la base, jamais du modèle. L'analyse prend un créneau de la file du
+  coach. Quota `COACH_MEAL_SCANS_PER_DAY` (10), rendu si le scan échoue de
+  notre fait, gardé si le worker refuse l'image ; JPEG de base ou progressif
+  en 8 bits, 4 096 px au plus (415 avant la file).
+- **Mise en route sur le serveur** : `COACH_VISION_MODEL=qwen3-vl:4b-instruct`
+  dans le `.env` ; le service `ollama` télécharge le modèle (≈ 3,3 Go) à son
+  redémarrage. `CARLYS_OLLAMA_MAX_LOADED_MODELS=2` garde coach et vision en
+  mémoire (≈ 6 Go, à prévoir dans `CARLYS_OLLAMA_MEM_LIMIT`).
 
 ### « Mon métabolisme » (`/nutrition/metabolisme`)
 
@@ -905,6 +944,22 @@ a une. La photo reste privée : routes et stockage plus haut.
 
 ## Couverture
 
+- Scan d'assiette. Unitaires API : `meal-vision.client.spec.ts` (réponse du
+  modèle relue sans confiance : JSON invalide, noms vides ou de contrôle,
+  grammes hors bornes, 8 aliments au plus), `meal-scans.service.spec.ts`
+  (rejoué sans nouvelle analyse ni quota, deux envois simultanés comptés
+  une fois, quota dépassé, échec qui rend le quota, image refusée qui
+  reste comptée, scan d'autrui, scan perdu après l'échéance et rendu une
+  fois, JPEG que le modèle ne lirait pas),
+  `meal-vision.client.spec.ts` encore : un 4xx garde le worker, un 5xx
+  l'écarte ; `foods.service.spec.ts` (rapprochement en retirant les
+  derniers mots).
+  E2E : `test/meal-scans.e2e-spec.ts` (modèle simulé : 403 sans le droit,
+  du 202 au résultat rapproché de la base, 404 sur le scan d'un autre
+  compte, 429 au-delà du quota, 415). Mobile :
+  `meal_scan_test.dart` (photo analysée puis repas pré-rempli et enregistré
+  avec sa photo, scan consommé, rien de la base, échec du serveur, 403, hors
+  ligne).
 - Unitaires API (`meals.service.spec.ts`) : idempotence, conflit d'id
   d'autrui, retraits idempotents, 404 opaque ; moment ; composition calculée
   et instantané écrit avec le repas ; ambiguïté refusée avant toute lecture

@@ -71,6 +71,26 @@ Food foodFromJson(Map<String, dynamic> row) {
   );
 }
 
+/// Un scan d'assiette de `/nutrition/meal-scans`.
+MealScan mealScanFromJson(Map<String, dynamic> row) {
+  final items = row['items'] as List<dynamic>? ?? const [];
+  return MealScan(
+    id: row['id'] as String? ?? '',
+    status: MealScanStatus.fromApi(row['status']),
+    error: row['error'] as String?,
+    items: [
+      for (final item in items.whereType<Map<String, dynamic>>())
+        MealScanItem(
+          seen: item['seen'] as String? ?? '',
+          grams: (item['grams'] as num?)?.round() ?? 0,
+          food: item['food'] is Map<String, dynamic>
+              ? foodFromJson(item['food'] as Map<String, dynamic>)
+              : null,
+        ),
+    ],
+  );
+}
+
 /// La mention d'une réponse de repas (`meta.source`), `null` quand aucun
 /// repas rendu ne porte d'aliment de la base.
 FoodAttribution? attributionFromMeta(Object? meta) {

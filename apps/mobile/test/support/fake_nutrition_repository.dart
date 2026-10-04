@@ -276,6 +276,44 @@ class FakeNutritionRepository implements NutritionRepository {
   /// L'échec opposé à chaque lecture de photo (hors connexion, par exemple).
   Object? photoReadFailure;
 
+  /// Ce que le « serveur » rend au scan d'une assiette, relecture après
+  /// relecture : le premier élément à l'envoi, puis un par relecture (le
+  /// dernier se répète). Vide : le scan reste en cours.
+  final List<MealScan> scanReplies = [];
+
+  /// Les photos envoyées au scan, par identifiant.
+  final Map<String, Uint8List> scannedPhotos = {};
+
+  /// L'échec opposé au prochain envoi de scan ; consommé.
+  Object? scanFailure;
+
+  int _scanReads = 0;
+
+  static const _ciqual = FoodSource(
+    attribution: 'Source : Anses, Table Ciqual',
+    license: 'Licence Ouverte Etalab 2.0',
+    url: 'https://ciqual.anses.fr/',
+    version: '2020-07-07',
+  );
+
+  MealScan _scanAt(String id, int index) => scanReplies.isEmpty
+      ? MealScan(id: id, status: MealScanStatus.pending)
+      : scanReplies[index.clamp(0, scanReplies.length - 1)];
+
+  @override
+  Future<MealScanResult> startMealScan(String id, Uint8List jpeg) async {
+    final failure = scanFailure;
+    scanFailure = null;
+    if (failure != null) throw failure;
+    scannedPhotos[id] = jpeg;
+    _scanReads = 0;
+    return (scan: _scanAt(id, 0), source: _ciqual);
+  }
+
+  @override
+  Future<MealScanResult> mealScan(String id) async =>
+      (scan: _scanAt(id, ++_scanReads), source: _ciqual);
+
   @override
   Future<Uint8List?> mealPhoto(String id) async {
     photoReads.add(id);

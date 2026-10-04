@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:carlys_mobile/core/api/dio_client.dart';
@@ -6,8 +7,10 @@ import 'package:carlys_mobile/core/auth/token_refresher.dart';
 import 'package:carlys_mobile/core/auth/token_storage.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 import '../../support/fake_secure_storage.dart';
 
@@ -72,6 +75,25 @@ final Uint8List _jpeg = Uint8List.fromList([
   0xFF, 0xD9,
 ]);
 
+/// Un intercepteur qui ne fait rien, sinon tenir un port : intransmissible.
+class _HoldsPort extends Interceptor {
+  _HoldsPort(this.port);
+
+  final RawReceivePort port;
+}
+
+/// Où [needle] commence dans [haystack] (-1 : nulle part).
+int _indexOf(List<int> haystack, List<int> needle) {
+  for (var start = 0; start + needle.length <= haystack.length; start++) {
+    var match = true;
+    for (var i = 0; i < needle.length && match; i++) {
+      match = haystack[start + i] == needle[i];
+    }
+    if (match) return start;
+  }
+  return -1;
+}
+
 /// [needle] figure-t-il, tel quel, dans [haystack] ?
 bool _contains(List<int> haystack, List<int> needle) {
   for (var start = 0; start + needle.length <= haystack.length; start++) {
@@ -103,6 +125,83 @@ void main() {
     dio.httpClientAdapter = adapter;
     return adapter;
   }
+
+  group('scan d’assiette', () {
+    Map<String, Object?> scanned(String status) => {
+      'data': {
+        'id': 'scan-1',
+        'status': status,
+        'items': [
+          {
+            'seen': 'Poulet grillé',
+            'grams': 150,
+            'food': {
+              'code': 990001,
+              'name': 'Poulet, filet, sans peau, cuit',
+              'shortName': 'Poulet',
+              'group': null,
+              'per100g': {
+                'kcal': 121,
+                'proteinG': 26.2,
+                'carbsG': 0,
+                'fatG': 1.8,
+              },
+            },
+          },
+          {'seen': 'Sauce', 'grams': 30, 'food': null},
+        ],
+        'error': null,
+      },
+      'meta': {
+        'source': {
+          'attribution': 'Source : Anses, Table Ciqual',
+          'license': 'Licence Ouverte Etalab 2.0',
+          'url': 'https://ciqual.anses.fr/',
+          'version': '2020-07-07',
+        },
+      },
+      'requestId': 'test',
+    };
+
+    test('POST : la photo RÉDUITE dans « file », l’identifiant dans « id » '
+        '(dans un vrai isolat), puis le GET du même scan', () async {
+      final adapter = record(
+        (options) =>
+            _json(options.method == 'POST' ? 202 : 200, scanned('DONE')),
+      );
+      // Comme le vrai client (jetons, file de renouvellement) : Dio porte de
+      // quoi qu'aucun isolat ne peut recevoir. La réduction ne doit pas l'y
+      // emporter.
+      final port = RawReceivePort();
+      addTearDown(port.close);
+      dio.interceptors.add(_HoldsPort(port));
+      final large = Uint8List.fromList(
+        img.encodeJpg(img.Image(width: 2000, height: 1000)),
+      );
+
+      final started = await repository.startMealScan('scan-1', large);
+      final read = await repository.mealScan('scan-1');
+
+      final post = adapter.requests.first;
+      expect(post.method, 'POST');
+      expect(post.path, '/nutrition/meal-scans');
+      final form = post.data as FormData;
+      expect(form.fields.map((f) => (f.key, f.value)), [('id', 'scan-1')]);
+      final sent = img.decodeJpg(
+        adapter.bodies.first.sublist(
+          _indexOf(adapter.bodies.first, const [0xFF, 0xD8, 0xFF]),
+        ),
+      )!;
+      expect(sent.width, 768, reason: 'réduite pour le modèle');
+      expect(adapter.requests.last.path, '/nutrition/meal-scans/scan-1');
+      for (final result in [started, read]) {
+        expect(result.scan.status, MealScanStatus.done);
+        expect(result.scan.items.first.food?.code, 990001);
+        expect(result.scan.items.last.food, isNull);
+        expect(result.source.version, '2020-07-07');
+      }
+    });
+  });
 
   group('PUT …/photo', () {
     test('multipart EXACT : un seul fichier « file », image/jpeg, octets '

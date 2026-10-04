@@ -353,6 +353,9 @@ abstract final class AppIcons {
   /// Ouvre le choix d'une valeur dans une liste (le jour du journal).
   static const IconData choose = Icons.expand_more_rounded;
 
+  /// Scanner une assiette : l'IA reconnaît ce qu'elle voit sur la photo.
+  static const IconData mealScan = Icons.center_focus_strong_rounded;
+
   /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
   /// la saisie à la main reste possible.
   static const IconData foodDatabasePending = Icons.hourglass_top_rounded;

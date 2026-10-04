@@ -51,6 +51,13 @@ abstract interface class NutritionRepository {
   /// La fiche d'un aliment (404 s'il est inconnu ou retiré).
   Future<FoodDetail> food(int code);
 
+  /// Lance le scan [id] d'une photo de repas (le modèle de vision travaille
+  /// en fond) ; rejoué, le même scan revient.
+  Future<MealScanResult> startMealScan(String id, Uint8List jpeg);
+
+  /// Relit le scan [id] : en cours, fini ou en échec.
+  Future<MealScanResult> mealScan(String id);
+
   /// Les octets JPEG de la photo d'un repas (`GET …/meals/:id/photo`),
   /// lus avec la session de la personne : la photo est PRIVÉE. `null` quand
   /// le repas n'en a pas (le serveur répond 404, sans dire pourquoi).

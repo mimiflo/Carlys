@@ -16,6 +16,7 @@ import 'package:carlys_mobile/features/nutrition/data/services/image_picker_meal
 import 'package:carlys_mobile/features/nutrition/domain/services/meal_photo_picker.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/journal_day_provider.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_editor_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_scan_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/journal_day_chip.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/meal_journal_section.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/nutrition_shortcuts.dart';
@@ -54,6 +55,12 @@ GoRouter _router() => GoRouter(
     GoRoute(
       path: '${AppRoutes.nutrition}/repas/nouveau',
       builder: (_, state) => MealEditorScreen(
+        day: DateTime.tryParse(state.uri.queryParameters['jour'] ?? ''),
+      ),
+    ),
+    GoRoute(
+      path: '${AppRoutes.nutrition}/scan',
+      builder: (_, state) => MealScanScreen(
         day: DateTime.tryParse(state.uri.queryParameters['jour'] ?? ''),
       ),
     ),

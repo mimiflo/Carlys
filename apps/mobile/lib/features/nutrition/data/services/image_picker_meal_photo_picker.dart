@@ -60,7 +60,13 @@ class ImagePickerMealPhotoPicker implements MealPhotoPicker {
     if (file == null) {
       return null;
     }
-    final original = await file.readAsBytes();
+    final Uint8List original;
+    try {
+      original = await file.readAsBytes();
+    } on FileSystemException catch (error) {
+      // Copie rendue par le greffon, illisible (effacée, stockage plein).
+      throw MealPhotoException(MealPhotoFailure.unreadable, error);
+    }
     // Seuls les octets préparés doivent survivre, et seulement en mémoire :
     // la copie rendue part, et sous Android l'ORIGINALE aussi — le greffon
     // la laisse dans le cache, position GPS comprise (voir

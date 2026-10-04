@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -5,6 +7,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../data/services/image_picker_meal_photo_picker.dart';
 import '../../domain/entities/nutrition.dart';
+import '../providers/meal_scan_seed.dart';
 import '../providers/nutrition_providers.dart';
 import '../utils/meal_editor_lines.dart';
 import '../utils/meal_editor_outcome.dart';
@@ -37,10 +40,20 @@ class MealEditorController
     _mayExist = false;
     final mealId = key.mealId;
     if (mealId == null) {
-      return MealEditorState.fresh(
+      final fresh = MealEditorState.fresh(
         id: _uuid.v4(),
         eatenAt: initialMealInstant(key.day, DateTime.now()),
       );
+      // Ouvert par un scan d'assiette : ses aliments et sa photo, repris une
+      // fois — le relais se vide aussitôt la construction finie.
+      final scan = ref.read(pendingMealScanProvider);
+      if (scan == null) return fresh;
+      unawaited(
+        Future.microtask(
+          () => ref.read(pendingMealScanProvider.notifier).state = null,
+        ),
+      );
+      return fresh.withScan(scan, _uuid.v4);
     }
     final detail = await ref.watch(nutritionRepositoryProvider).meal(mealId);
     return MealEditorState.fromMeal(
