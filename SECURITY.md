@@ -39,6 +39,19 @@ aucune version antérieure ne reçoit de correctif.
   par Git (`.gitignore`) ; seuls les `.env.example` sont versionnés et ne
   contiennent **que des valeurs factices** (`.env.example` racine,
   `apps/api/.env.example`, `apps/admin/.env.example`).
+- **Réglages versionnés, secrets au serveur** (ADR 0017) : la configuration
+  du serveur vit dans `infrastructure/server/config/` sans AUCUN secret (la
+  CI le vérifie par le gabarit, par le nom de la clé et par l'allure de la
+  valeur ; `carlysctl doctor` le revérifie sur le serveur) ; le `.env` de
+  chaque environnement (`/srv/carlys/<env>/.env`, 600, root) ne porte que
+  les secrets. `carlysctl config-migrer` n'affiche jamais la valeur d'une
+  clé que la configuration ne déclare pas, et refuse de classer sans gabarit
+  de secrets lisible.
+- **Après la rotation d'un secret**, ses COPIES aussi : `env-sync` et
+  `config-migrer` laissent des sauvegardes du `.env` à côté de lui
+  (`.env.avant-sync-*`, `.env.avant-config-*`, en 600), qui gardent
+  l'ancienne valeur. Les lister puis les supprimer, une fois la rotation
+  vérifiée : `ls /srv/carlys/*/.env.*`.
 - **Détection de secrets en CI** : TruffleHog (`.github/workflows/security-ci.yml`)
   s'exécute sur chaque pull request, chaque poussée sur la branche de travail
   comme sur `main`, et chaque lundi à 06:00 UTC. La branche de travail est
@@ -460,6 +473,7 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | Mesure | Statut |
 | --- | --- |
 | Secrets hors dépôt, `.env` ignorés, `.env.example` factices | En place |
+| Configuration du serveur versionnée sans secret, `.env` réduit aux secrets (ADR 0017) | En place |
 | TruffleHog + `pnpm audit --audit-level high` en CI | En place |
 | Config Zod bloquante au démarrage | En place |
 | Validation `whitelist` + `forbidNonWhitelisted`, Helmet, CORS restreint | En place |
