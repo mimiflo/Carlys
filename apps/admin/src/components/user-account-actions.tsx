@@ -2,7 +2,7 @@
 
 import type { ManagedUserDetail } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { useAdminPermissions } from './use-admin-permissions';
 
 /**
@@ -63,7 +63,7 @@ export function UserAccountActions({ user }: { user: ManagedUserDetail }) {
       )}
       {statusMutation.error !== null && (
         <p className="mt-3 text-sm text-danger-ink" role="alert">
-          {statusMutation.error instanceof AdminApiError && statusMutation.error.status === 403
+          {statusMutation.error instanceof ApiError && statusMutation.error.status === 403
             ? 'Permission manquante pour cette action.'
             : 'Action impossible, réessaie.'}
         </p>

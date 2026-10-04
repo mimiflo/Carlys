@@ -35,7 +35,7 @@ import {
   type CiqualImportReport,
   importCiqualDirectory,
 } from '../modules/nutrition/infrastructure/ciqual/ciqual-import';
-import { runCli, UsageError } from './run-cli';
+import { readArgs, runCli, UsageError } from './run-cli';
 
 export { UsageError };
 
@@ -47,36 +47,33 @@ export interface CiqualImportArgs {
 }
 
 /** Lit les arguments (sans `node` ni le script). */
+const VERSION = '--version attend un libellé, par exemple « 2020-07-07 ».';
+
 export function parseArgs(argv: readonly string[]): CiqualImportArgs {
-  let directory: string | undefined;
-  let version: string | undefined;
-  let dryRun = false;
-  let allowMassRetirement = false;
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index] ?? '';
-    if (arg === '--a-blanc') {
-      dryRun = true;
-    } else if (arg === '--accepter-retraits') {
-      allowMassRetirement = true;
-    } else if (arg === '--version') {
-      const value = argv[index + 1]?.trim() ?? '';
-      if (value === '' || value.startsWith('--')) {
-        throw new UsageError('--version attend un libellé, par exemple « 2020-07-07 ».');
-      }
-      version = value;
-      index += 1;
-    } else if (arg.startsWith('--')) {
-      throw new UsageError(`Option inconnue : « ${arg} ».`);
-    } else if (directory === undefined) {
-      directory = arg;
-    } else {
-      throw new UsageError(`Un seul dossier attendu, reçu aussi « ${arg} ».`);
-    }
-  }
+  const { values, positionals } = readArgs(
+    argv,
+    {
+      'a-blanc': { type: 'boolean' },
+      'accepter-retraits': { type: 'boolean' },
+      version: { type: 'string' },
+    },
+    { positionals: true, attentes: { version: VERSION } },
+  );
+  const [directory, ...extra] = positionals;
   if (directory === undefined) {
     throw new UsageError('Dossier de la distribution CIQUAL manquant.');
   }
-  return { directory, version, dryRun, allowMassRetirement };
+  if (extra.length > 0) {
+    throw new UsageError(`Un seul dossier attendu, reçu aussi « ${extra.join(' ')} ».`);
+  }
+  const version = values.version?.trim();
+  if (version === '') throw new UsageError(VERSION);
+  return {
+    directory,
+    version,
+    dryRun: values['a-blanc'] ?? false,
+    allowMassRetirement: values['accepter-retraits'] ?? false,
+  };
 }
 
 function usage(): string {

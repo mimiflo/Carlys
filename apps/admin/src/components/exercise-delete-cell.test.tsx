@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { DEVELOPPE_COUCHE, exercise, inRow, renderWithQuery } from '@/testing/fixtures';
 import { ExerciseDeleteCell } from './exercise-delete-cell';
 
@@ -49,7 +49,7 @@ describe('ExerciseDeleteCell', () => {
 
   it('un refus du serveur s’affiche, la confirmation reste ouverte', async () => {
     vi.spyOn(adminApi, 'deleteExercise').mockRejectedValue(
-      new AdminApiError('Exercice introuvable.', 404),
+      new ApiError('Exercice introuvable.', 404),
     );
     renderWithQuery(inRow(<ExerciseDeleteCell exercise={DEVELOPPE_COUCHE} />));
 

@@ -6,7 +6,7 @@ import type { AdminLoginChallenge, AdminLoginResult } from '@carlys/api-contract
 import { useState, useSyncExternalStore, type FormEvent } from 'react';
 import { firstAllowedRoute } from '@/components/admin-shell';
 import { LoginSecondFactor } from '@/components/login-second-factor';
-import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';
 
 /**
@@ -18,13 +18,13 @@ import { isNetworkFailure } from '@/lib/api-transport';
  * à qui elle faisait chercher une panne qui n'existait pas.
  */
 function loginFailureMessage(cause: unknown): string {
-  if (cause instanceof AdminApiError && cause.status === 401) {
+  if (cause instanceof ApiError && cause.status === 401) {
     return 'E-mail ou mot de passe incorrect.';
   }
   // 403 : mot de passe juste, mais aucune double authentification émise —
   // le serveur dit quelle commande l'opérateur doit lancer.
-  if (cause instanceof AdminApiError && cause.status === 403) return cause.message;
-  if (cause instanceof AdminApiError && cause.status === 429) {
+  if (cause instanceof ApiError && cause.status === 403) return cause.message;
+  if (cause instanceof ApiError && cause.status === 429) {
     return 'Trop de tentatives : patiente quelques minutes avant de réessayer.';
   }
   if (isNetworkFailure(cause)) {

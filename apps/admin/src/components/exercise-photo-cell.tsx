@@ -3,7 +3,7 @@
 import { MEDIA_ALLOWED_MIME_TYPES, type AdminExerciseSummary } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
-import { adminApi, AdminApiError } from '@/lib/admin-api';
+import { adminApi, ApiError } from '@/lib/admin-api';
 
 const ACCEPT = MEDIA_ALLOWED_MIME_TYPES.IMAGE.join(',');
 
@@ -49,7 +49,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
       await refresh();
     },
     onError: (cause: unknown) => {
-      setError(cause instanceof AdminApiError ? cause.message : 'Dépôt impossible.');
+      setError(cause instanceof ApiError ? cause.message : 'Dépôt impossible.');
     },
   });
 

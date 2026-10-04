@@ -2,16 +2,16 @@
 
 import type { AdminLoginChallenge, AdminLoginResult } from '@carlys/api-contracts';
 import { useState, type FormEvent } from 'react';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';
 
 function codeFailureMessage(cause: unknown): string {
   // 401 : code faux ou déjà servi, ou étape expirée ; 403 : 2FA gelée après
   // trop de codes faux — le serveur dit lequel, et quoi faire.
-  if (cause instanceof AdminApiError && (cause.status === 401 || cause.status === 403)) {
+  if (cause instanceof ApiError && (cause.status === 401 || cause.status === 403)) {
     return cause.message;
   }
-  if (cause instanceof AdminApiError && cause.status === 429) {
+  if (cause instanceof ApiError && cause.status === 429) {
     return 'Trop de codes faux : patiente quelques minutes avant de réessayer.';
   }
   if (isNetworkFailure(cause)) {

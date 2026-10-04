@@ -7,7 +7,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import UserDetailPage from './page';
 
 /**
@@ -271,7 +271,7 @@ describe('Fiche utilisateur', () => {
         ...USER,
         entitlements: droits({ isActive: false, expiresAt: null, source: 'SUBSCRIPTION' }),
       });
-      vi.spyOn(adminApi, 'setEntitlement').mockRejectedValueOnce(new AdminApiError('Erreur', 502));
+      vi.spyOn(adminApi, 'setEntitlement').mockRejectedValueOnce(new ApiError('Erreur', 502));
 
       renderPage();
       fireEvent.click(await screen.findByRole('button', { name: 'Offrir le premium' }));
@@ -306,7 +306,7 @@ describe('Fiche utilisateur', () => {
         .mockResolvedValue(ABONNE_A_DEMI_COUPE);
       vi.spyOn(adminApi, 'setEntitlement')
         .mockResolvedValueOnce(ABONNE_A_DEMI_COUPE)
-        .mockRejectedValueOnce(new AdminApiError('Erreur', 502));
+        .mockRejectedValueOnce(new ApiError('Erreur', 502));
 
       renderPage();
       fireEvent.click(await screen.findByRole('button', { name: /couper l’accès/i }));
@@ -377,7 +377,7 @@ describe('Fiche utilisateur', () => {
     connecte();
     vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);
     vi.spyOn(adminApi, 'setEntitlement').mockRejectedValue(
-      new AdminApiError('Permission entitlement:grant requise.', 403),
+      new ApiError('Permission entitlement:grant requise.', 403),
     );
 
     renderPage();
@@ -391,7 +391,7 @@ describe('Fiche utilisateur', () => {
   it('montre une panne serveur comme une action à réessayer', async () => {
     connecte();
     vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);
-    vi.spyOn(adminApi, 'setUserStatus').mockRejectedValue(new AdminApiError('Erreur 502', 502));
+    vi.spyOn(adminApi, 'setUserStatus').mockRejectedValue(new ApiError('Erreur 502', 502));
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /suspendre le compte/i }));
@@ -403,7 +403,7 @@ describe('Fiche utilisateur', () => {
   // le STATUT qui doit décider de la phrase affichée, pas le message reçu.
   it('distingue un compte introuvable (404) d’une fiche indisponible', async () => {
     adminToken.set('jeton-admin');
-    vi.spyOn(adminApi, 'userDetail').mockRejectedValue(new AdminApiError('Not found', 404));
+    vi.spyOn(adminApi, 'userDetail').mockRejectedValue(new ApiError('Not found', 404));
 
     renderPage();
 
@@ -414,9 +414,7 @@ describe('Fiche utilisateur', () => {
 
   it('montre toute autre erreur de chargement comme une fiche indisponible', async () => {
     adminToken.set('jeton-admin');
-    vi.spyOn(adminApi, 'userDetail').mockRejectedValue(
-      new AdminApiError('Internal server error', 500),
-    );
+    vi.spyOn(adminApi, 'userDetail').mockRejectedValue(new ApiError('Internal server error', 500));
 
     renderPage();
 

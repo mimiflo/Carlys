@@ -1,7 +1,7 @@
 import type { AdminLoginResult, AdminPermission } from '@carlys/api-contracts';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import LoginPage from './page';
 
 /**
@@ -82,7 +82,7 @@ describe('Page Connexion', () => {
 
   it('2FA pas encore émise : la commande de l’opérateur, aucune étape de code', async () => {
     vi.spyOn(adminApi, 'login').mockRejectedValue(
-      new AdminApiError('Double authentification pas encore configurée pour ce compte.', 403),
+      new ApiError('Double authentification pas encore configurée pour ce compte.', 403),
     );
 
     render(<LoginPage />);
@@ -97,7 +97,7 @@ describe('Page Connexion', () => {
   it('code faux : la phrase du serveur, le champ vidé, aucune session', async () => {
     vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
     vi.spyOn(adminApi, 'verifyTotp').mockRejectedValue(
-      new AdminApiError('Code incorrect ou déjà utilisé.', 401),
+      new ApiError('Code incorrect ou déjà utilisé.', 401),
     );
 
     render(<LoginPage />);
@@ -158,7 +158,7 @@ describe('Page Connexion', () => {
   it('distingue un mot de passe faux d’un serveur injoignable', async () => {
     const login = vi
       .spyOn(adminApi, 'login')
-      .mockRejectedValueOnce(new AdminApiError('Identifiants invalides.', 401))
+      .mockRejectedValueOnce(new ApiError('Identifiants invalides.', 401))
       .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     render(<LoginPage />);
@@ -186,7 +186,7 @@ describe('Page Connexion', () => {
     [429, 'Trop de tentatives : patiente quelques minutes avant de réessayer.'],
     [502, 'Connexion impossible pour le moment. Réessaie dans un instant.'],
   ])('un refus %i se dit par sa cause, sans consigne de développeur', async (status, message) => {
-    vi.spyOn(adminApi, 'login').mockRejectedValue(new AdminApiError('Refus.', status));
+    vi.spyOn(adminApi, 'login').mockRejectedValue(new ApiError('Refus.', status));
 
     render(<LoginPage />);
     connecte();

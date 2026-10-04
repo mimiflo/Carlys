@@ -2,7 +2,7 @@ import type { AdminExerciseSummary } from '@carlys/api-contracts';
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
 import { exercise, renderWithQuery } from '@/testing/fixtures';
 import ExercisesPage from './page';
 
@@ -153,7 +153,7 @@ describe('Page Exercices', () => {
   });
 
   it('un refus de permission (403) se dit comme tel', async () => {
-    vi.spyOn(adminApi, 'listExercises').mockRejectedValue(new AdminApiError('Refus.', 403));
+    vi.spyOn(adminApi, 'listExercises').mockRejectedValue(new ApiError('Refus.', 403));
 
     renderWithQuery(<ExercisesPage />);
 

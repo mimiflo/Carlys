@@ -25,7 +25,7 @@ import {
   sweepOrphanMealPhotos,
 } from '../modules/nutrition/application/meal-photo-sweep';
 import { MealPhotoLedger } from '../modules/nutrition/infrastructure/meal-photo-ledger';
-import { runCli, UsageError } from './run-cli';
+import { readArgs, runCli, UsageError } from './run-cli';
 
 export { UsageError };
 
@@ -34,26 +34,22 @@ export interface SweepArgs {
   readonly graceMs: number;
 }
 
+const DELAI = '--delai-minutes attend un nombre entier de minutes, 0 ou plus.';
+
 /** Lit les arguments (sans `node` ni le script). */
 export function parseArgs(argv: readonly string[]): SweepArgs {
-  let dryRun = false;
-  let graceMs = DEFAULT_SWEEP_GRACE_MS;
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index] ?? '';
-    if (arg === '--a-blanc') {
-      dryRun = true;
-    } else if (arg === '--delai-minutes') {
-      const value = Number(argv[index + 1]);
-      if (!Number.isInteger(value) || value < 0) {
-        throw new UsageError('--delai-minutes attend un nombre entier de minutes, 0 ou plus.');
-      }
-      graceMs = value * 60_000;
-      index += 1;
-    } else {
-      throw new UsageError(`Argument inconnu : « ${arg} ».`);
-    }
+  const { values } = readArgs(
+    argv,
+    { 'a-blanc': { type: 'boolean' }, 'delai-minutes': { type: 'string' } },
+    { attentes: { 'delai-minutes': DELAI } },
+  );
+  const minutes = values['delai-minutes'];
+  if (minutes === undefined) {
+    return { dryRun: values['a-blanc'] ?? false, graceMs: DEFAULT_SWEEP_GRACE_MS };
   }
-  return { dryRun, graceMs };
+  const value = Number(minutes);
+  if (!Number.isInteger(value) || value < 0) throw new UsageError(DELAI);
+  return { dryRun: values['a-blanc'] ?? false, graceMs: value * 60_000 };
 }
 
 function usage(): string {

@@ -7,7 +7,7 @@ import {
 } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { paidSubscriptionSentence, premiumStateSentence } from '@/lib/entitlement-labels';
 import { PremiumCutForm } from './premium-cut-form';
 import { useAdminPermissions } from './use-admin-permissions';
@@ -222,7 +222,7 @@ export function PremiumPanel({ user }: { user: ManagedUserDetail }) {
       )}
       {failure !== null && (
         <p className="mt-3 text-sm text-danger-ink" role="alert">
-          {failure instanceof AdminApiError && failure.status === 403
+          {failure instanceof ApiError && failure.status === 403
             ? 'Permission manquante pour cette action.'
             : 'Action impossible, réessaie.'}
         </p>

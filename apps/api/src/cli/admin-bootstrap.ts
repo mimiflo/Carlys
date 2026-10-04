@@ -44,7 +44,7 @@ import {
 import { base32Encode, newTotpSecret, otpauthUri } from '../modules/admin/application/totp';
 import { sealTotpSecret, totpVaultKey } from '../modules/admin/application/totp-vault';
 import { PasswordService } from '../modules/auth/application/password.service';
-import { runCli, UsageError } from './run-cli';
+import { readArgs, runCli, UsageError } from './run-cli';
 
 export const PASSWORD_MIN_LENGTH = 12;
 
@@ -81,45 +81,27 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
     throw new UsageError(`Adresse e-mail invalide : « ${rawEmail} ».`);
   }
 
-  let role = 'superadmin';
-  let roleExplicite = false;
-  let displayName = '';
-  let resetPassword = false;
-  let resetTotp = false;
-  for (let i = 0; i < rest.length; i += 1) {
-    const arg = rest[i];
-    switch (arg) {
-      case '--role': {
-        const value = rest[i + 1];
-        if (value === undefined || adminRoleBySlug(value) === undefined) {
-          throw new UsageError(
-            `--role attend un de : ${ADMIN_ROLES.map((r) => r.slug).join(', ')}.`,
-          );
-        }
-        role = value;
-        roleExplicite = true;
-        i += 1;
-        break;
-      }
-      case '--display-name': {
-        const value = rest[i + 1];
-        if (value === undefined || value.trim() === '') {
-          throw new UsageError('--display-name attend un nom non vide.');
-        }
-        displayName = value.trim();
-        i += 1;
-        break;
-      }
-      case '--reset-password':
-        resetPassword = true;
-        break;
-      case '--reset-2fa':
-        resetTotp = true;
-        break;
-      default:
-        throw new UsageError(`Option inconnue : « ${arg ?? ''}».`);
-    }
+  const ROLE = `--role attend un de : ${ADMIN_ROLES.map((r) => r.slug).join(', ')}.`;
+  const NOM = '--display-name attend un nom non vide.';
+  const { values } = readArgs(
+    rest,
+    {
+      role: { type: 'string' },
+      'display-name': { type: 'string' },
+      'reset-password': { type: 'boolean' },
+      'reset-2fa': { type: 'boolean' },
+    },
+    { attentes: { role: ROLE, 'display-name': NOM } },
+  );
+  if (values.role !== undefined && adminRoleBySlug(values.role) === undefined) {
+    throw new UsageError(ROLE);
   }
+  const displayName = values['display-name']?.trim() ?? '';
+  if (values['display-name'] !== undefined && displayName === '') throw new UsageError(NOM);
+  const role = values.role ?? 'superadmin';
+  const roleExplicite = values.role !== undefined;
+  const resetPassword = values['reset-password'] ?? false;
+  const resetTotp = values['reset-2fa'] ?? false;
   if (resetTotp && (resetPassword || roleExplicite || displayName !== '')) {
     throw new UsageError(
       '--reset-2fa se lance seul : il ne touche ni au mot de passe ni aux rôles.',

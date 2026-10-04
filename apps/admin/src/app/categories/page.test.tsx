@@ -1,7 +1,7 @@
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { MUSCLE_GROUPS, renderWithQuery } from '@/testing/fixtures';
 import CategoriesPage from './page';
 
@@ -70,7 +70,7 @@ describe('Page Catégories', () => {
   });
 
   it('une panne n’est pas présentée comme un problème de session', async () => {
-    vi.spyOn(adminApi, 'listMuscleGroups').mockRejectedValue(new AdminApiError('Erreur 502', 502));
+    vi.spyOn(adminApi, 'listMuscleGroups').mockRejectedValue(new ApiError('Erreur 502', 502));
 
     renderWithQuery(<CategoriesPage />);
 

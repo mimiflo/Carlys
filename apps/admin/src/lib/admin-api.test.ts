@@ -4,7 +4,7 @@ import {
   PREMIUM_ENTITLEMENT_KEYS,
 } from '@carlys/api-contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminToken, parseData, parsePage } from './admin-api';
+import { ApiError, adminApi, adminToken, parseData, parsePage } from './admin-api';
 
 const USER = {
   id: '11111111-2222-4333-8444-555555555555',
@@ -45,10 +45,10 @@ describe('parseData', () => {
   });
 
   it('rejette une enveloppe absente ou un contrat cassé — jamais silencieux', () => {
-    expect(() => parseData(USER, managedUserSummarySchema)).toThrow(AdminApiError);
+    expect(() => parseData(USER, managedUserSummarySchema)).toThrow(ApiError);
     expect(() =>
       parseData({ data: { ...USER, status: 'INCONNU' } }, managedUserSummarySchema),
-    ).toThrow(AdminApiError);
+    ).toThrow(ApiError);
   });
 });
 
@@ -124,7 +124,7 @@ describe('transport JSON', () => {
     expect(json).not.toHaveBeenCalled();
   });
 
-  it('traduit l’enveloppe d’erreur en AdminApiError : message du serveur, statut HTTP', async () => {
+  it('traduit l’enveloppe d’erreur en ApiError : message du serveur, statut HTTP', async () => {
     // C'est ce `status` que l'interface lit pour distinguer un refus de
     // permission (403) d'une panne, et ce `message` qu'elle peut relayer.
     vi.stubGlobal(
@@ -148,9 +148,9 @@ describe('transport JSON', () => {
       .setEntitlement(USER.id, { key: 'premium_exercises', isActive: true })
       .catch((cause: unknown) => cause);
 
-    expect(failure).toBeInstanceOf(AdminApiError);
-    expect((failure as AdminApiError).status).toBe(403);
-    expect((failure as AdminApiError).message).toBe('Permission entitlement:grant requise.');
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).status).toBe(403);
+    expect((failure as ApiError).message).toBe('Permission entitlement:grant requise.');
   });
 
   it('coupe un droit avec sa raison, et le rend à l’abonnement par DELETE', async () => {
@@ -218,9 +218,7 @@ describe('transport JSON', () => {
     fetchMock
       .mockImplementationOnce(() => Promise.resolve(respond({ data: detail })))
       .mockImplementationOnce(() => Promise.resolve(new Response('', { status: 502 })));
-    await expect(adminApi.setPremium(USER.id, { isActive: true })).rejects.toBeInstanceOf(
-      AdminApiError,
-    );
+    await expect(adminApi.setPremium(USER.id, { isActive: true })).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -247,9 +245,9 @@ describe('transport JSON', () => {
 
     const failure: unknown = await adminApi.overview().catch((cause: unknown) => cause);
 
-    expect(failure).toBeInstanceOf(AdminApiError);
-    expect((failure as AdminApiError).status).toBe(502);
-    expect((failure as AdminApiError).message).toBe('Erreur 502');
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).status).toBe(502);
+    expect((failure as ApiError).message).toBe('Erreur 502');
   });
 });
 

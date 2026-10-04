@@ -2,7 +2,7 @@
 
 import { type AdminCommunityReport } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 
 /** Préfixe des requêtes de la page : une résolution invalide TOUS les filtres. */
 export const COMMUNITY_REPORTS_QUERY_KEY = ['admin', 'community-reports'] as const;
@@ -44,7 +44,7 @@ export function CommunityReportStatusCell({ report }: { report: AdminCommunityRe
       </button>
       {mutate.isError && (
         <p className="mt-1 text-xs text-danger-ink" role="alert">
-          {mutate.error instanceof AdminApiError && mutate.error.status === 403
+          {mutate.error instanceof ApiError && mutate.error.status === 403
             ? 'Permission manquante pour cette action.'
             : 'Action impossible, réessaie.'}
         </p>

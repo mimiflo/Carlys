@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
-import { AdminApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
 import AuditPage from './page';
 
 /**
@@ -152,7 +152,7 @@ describe('Page Journal d’audit', () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(ADMIN_PERMISSIONS);
     vi.spyOn(adminApi, 'auditLogs').mockRejectedValue(
-      new AdminApiError('Permission audit:read requise.', 403),
+      new ApiError('Permission audit:read requise.', 403),
     );
 
     renderPage();

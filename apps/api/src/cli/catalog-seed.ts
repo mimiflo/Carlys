@@ -40,7 +40,7 @@ import {
   sweepSupersededSeedMedia,
 } from '../modules/media/application/catalog-media-sweep';
 import { syncExerciseMedia } from '../modules/media/application/catalog-media-sync';
-import { runCli, UsageError } from './run-cli';
+import { readArgs, runCli, UsageError } from './run-cli';
 
 export { UsageError };
 
@@ -50,15 +50,8 @@ export interface CatalogSeedArgs {
 
 /** Lit les arguments (sans `node` ni le script). */
 export function parseArgs(argv: readonly string[]): CatalogSeedArgs {
-  let withPhotos = true;
-  for (const arg of argv) {
-    if (arg === '--sans-photos') {
-      withPhotos = false;
-    } else {
-      throw new UsageError(`Option inconnue : « ${arg} ».`);
-    }
-  }
-  return { withPhotos };
+  const { values } = readArgs(argv, { 'sans-photos': { type: 'boolean' } });
+  return { withPhotos: values['sans-photos'] !== true };
 }
 
 function usage(): string {

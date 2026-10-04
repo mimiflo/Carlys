@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MediaAsset } from '@carlys/api-contracts';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { DEVELOPPE_COUCHE, exercise, inRow, renderWithQuery } from '@/testing/fixtures';
 import { ExercisePhotoCell } from './exercise-photo-cell';
 
@@ -57,9 +57,7 @@ describe('ExercisePhotoCell', () => {
   });
 
   it('montre le refus du serveur tel quel', async () => {
-    vi.spyOn(adminApi, 'uploadMedia').mockRejectedValue(
-      new AdminApiError('Format non accepté.', 415),
-    );
+    vi.spyOn(adminApi, 'uploadMedia').mockRejectedValue(new ApiError('Format non accepté.', 415));
     const { container } = renderWithQuery(inRow(<ExercisePhotoCell exercise={DEVELOPPE_COUCHE} />));
 
     fireEvent.change(fileInput(container), {

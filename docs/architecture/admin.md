@@ -217,8 +217,8 @@ Décisions :
 
 - **Transport partagé** : `lib/api-transport.ts` (URL `/api/v1`, en-têtes,
   lecture du corps, enveloppe d'erreur → `ApiError`) sert au back-office
-  (`lib/admin-api.ts`, avec le jeton ; il ré-exporte `ApiError` sous son nom
-  historique `AdminApiError`) et aux pages publiques (`lib/public-api.ts`, qui
+  (`lib/admin-api.ts`, avec le jeton ; il ré-exporte `ApiError`) et aux
+  pages publiques (`lib/public-api.ts`, qui
   n'envoie **jamais** le jeton d'administration, même présent dans l'onglet).
   Toujours aucun `fetch` dans un composant.
 - **Client d'administration en trois fichiers**, pour qu'aucun ne devienne le

@@ -44,8 +44,8 @@ import { ApiError, requestJson } from './api-transport';
  * pages et leurs tests n'ont toujours qu'un seul objet à connaître.
  */
 
-/** Nom historique du back-office pour l'erreur commune du transport. */
-export { ApiError as AdminApiError };
+/** L'erreur commune du transport, ré-exportée : les pages n'importent qu'ici. */
+export { ApiError };
 export {
   EMPTY_PERMISSIONS,
   adminPermissions,

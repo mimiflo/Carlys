@@ -49,7 +49,7 @@ import {
   deleteActiveAccount,
   withApplication,
 } from './active-account-erasure';
-import { runCli, UsageError } from './run-cli';
+import { readArgs, runCli, UsageError } from './run-cli';
 
 export { UsageError };
 
@@ -64,48 +64,40 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ADRESSE = /^[^\s@]+@[^\s@]+$/;
 
 /** Lit les arguments (sans `node` ni le script). */
+const DELAI = '--delai-jours attend un nombre entier de jours, 1 ou plus.';
+const COMPTE = '--compte attend l’identifiant (UUID) du compte à effacer.';
+const COMPTE_ACTIF = '--compte-actif attend l’identifiant (UUID) du compte à effacer.';
+const CONFIRMER = '--confirmer attend l’adresse e-mail du compte, recopiée.';
+
 export function parseArgs(argv: readonly string[]): PurgeArgs {
-  let dryRun = false;
-  let delayDays = DEFAULT_PURGE_DELAY_DAYS;
-  let accountId: string | undefined;
-  let activeId: string | undefined;
-  let confirmEmail: string | undefined;
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index] ?? '';
-    if (arg === '--a-blanc') {
-      dryRun = true;
-    } else if (arg === '--delai-jours') {
-      const value = Number(argv[index + 1]);
-      if (!Number.isInteger(value) || value < 1) {
-        throw new UsageError('--delai-jours attend un nombre entier de jours, 1 ou plus.');
-      }
-      delayDays = value;
-      index += 1;
-    } else if (arg === '--compte') {
-      const value = argv[index + 1] ?? '';
-      if (!UUID.test(value)) {
-        throw new UsageError('--compte attend l’identifiant (UUID) du compte à effacer.');
-      }
-      accountId = value;
-      index += 1;
-    } else if (arg === '--compte-actif') {
-      const value = argv[index + 1] ?? '';
-      if (!UUID.test(value)) {
-        throw new UsageError('--compte-actif attend l’identifiant (UUID) du compte à effacer.');
-      }
-      activeId = value;
-      index += 1;
-    } else if (arg === '--confirmer') {
-      const value = (argv[index + 1] ?? '').trim();
-      if (!ADRESSE.test(value)) {
-        throw new UsageError('--confirmer attend l’adresse e-mail du compte, recopiée.');
-      }
-      confirmEmail = value;
-      index += 1;
-    } else {
-      throw new UsageError(`Argument inconnu : « ${arg} ».`);
-    }
-  }
+  const { values } = readArgs(
+    argv,
+    {
+      'a-blanc': { type: 'boolean' },
+      'delai-jours': { type: 'string' },
+      compte: { type: 'string' },
+      'compte-actif': { type: 'string' },
+      confirmer: { type: 'string' },
+    },
+    {
+      attentes: {
+        'delai-jours': DELAI,
+        compte: COMPTE,
+        'compte-actif': COMPTE_ACTIF,
+        confirmer: CONFIRMER,
+      },
+    },
+  );
+  const dryRun = values['a-blanc'] ?? false;
+  const delayDays =
+    values['delai-jours'] === undefined ? DEFAULT_PURGE_DELAY_DAYS : Number(values['delai-jours']);
+  if (!Number.isInteger(delayDays) || delayDays < 1) throw new UsageError(DELAI);
+  const accountId = values.compte;
+  if (accountId !== undefined && !UUID.test(accountId)) throw new UsageError(COMPTE);
+  const activeId = values['compte-actif'];
+  if (activeId !== undefined && !UUID.test(activeId)) throw new UsageError(COMPTE_ACTIF);
+  const confirmEmail = values.confirmer?.trim();
+  if (confirmEmail !== undefined && !ADRESSE.test(confirmEmail)) throw new UsageError(CONFIRMER);
   if ((activeId === undefined) !== (confirmEmail === undefined)) {
     throw new UsageError('--compte-actif et --confirmer vont ensemble : l’un exige l’autre.');
   }

@@ -2,7 +2,7 @@ import type { AdminCommunityReport } from '@carlys/api-contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
+import { ApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
 import ReportsPage from './page';
 
 const REPORTER = {
@@ -294,7 +294,7 @@ describe('Page Signalements', () => {
   it('montre un refus de permission (403) comme tel, pas comme une panne', async () => {
     adminToken.set('jeton-admin');
     vi.spyOn(adminApi, 'listCommunityReports').mockRejectedValue(
-      new AdminApiError('Permission community:moderate requise.', 403),
+      new ApiError('Permission community:moderate requise.', 403),
     );
 
     renderPage();
@@ -308,9 +308,7 @@ describe('Page Signalements', () => {
   // session n'y était pour rien.
   it('montre toute autre erreur de chargement comme une panne passagère', async () => {
     adminToken.set('jeton-admin');
-    vi.spyOn(adminApi, 'listCommunityReports').mockRejectedValue(
-      new AdminApiError('Erreur 502', 502),
-    );
+    vi.spyOn(adminApi, 'listCommunityReports').mockRejectedValue(new ApiError('Erreur 502', 502));
 
     renderPage();
 
@@ -323,7 +321,7 @@ describe('Page Signalements', () => {
     adminToken.set('jeton-admin');
     vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));
     vi.spyOn(adminApi, 'setCommunityReportStatus').mockRejectedValue(
-      new AdminApiError('Permission community:moderate requise.', 403),
+      new ApiError('Permission community:moderate requise.', 403),
     );
 
     renderPage();

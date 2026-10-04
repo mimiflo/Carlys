@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { AdminShell } from '@/components/admin-shell';
 import { UserAccountActions } from '@/components/user-account-actions';
 import { PremiumPanel } from '@/components/user-premium-panel';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi } from '@/lib/admin-api';
 import { sourceLabel } from '@/lib/entitlement-labels';
 
 /**
@@ -32,7 +32,7 @@ export default function UserDetailPage() {
       {isPending && <p className="text-sm text-muted">Chargement…</p>}
       {error !== null && (
         <p className="text-sm text-danger-ink" role="alert">
-          {error instanceof AdminApiError && error.status === 404
+          {error instanceof ApiError && error.status === 404
             ? 'Utilisateur introuvable.'
             : 'Fiche indisponible.'}
         </p>

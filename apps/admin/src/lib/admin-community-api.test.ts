@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AdminApiError, adminApi, adminToken } from './admin-api';
+import { ApiError, adminApi, adminToken } from './admin-api';
 
 /**
  * Signalements : routes portées par `admin-community-api.ts`, appelées ici
@@ -135,6 +135,6 @@ describe('signalements de la communauté', () => {
       vi.fn().mockResolvedValue(respond({ data: [{ ...REPORT, reporter: undefined }], meta: {} })),
     );
 
-    await expect(adminApi.listCommunityReports('OPEN')).rejects.toBeInstanceOf(AdminApiError);
+    await expect(adminApi.listCommunityReports('OPEN')).rejects.toBeInstanceOf(ApiError);
   });
 });
