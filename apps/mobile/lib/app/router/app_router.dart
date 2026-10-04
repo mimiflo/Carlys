@@ -22,7 +22,6 @@ import '../../features/community/presentation/screens/friend_challenge_screen.da
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
-import '../../features/nutrition/presentation/screens/food_barcode_scanner_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
 import '../../features/nutrition/presentation/screens/metabolism_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
@@ -240,15 +239,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'recettes',
                     name: 'recipes',
                     builder: (context, state) => const RecipesScreen(),
-                  ),
-                  // La caméra en plein écran, sans la barre du bas ; rend le
-                  // code lu à `scanFood`.
-                  GoRoute(
-                    path: 'scanner',
-                    name: 'scan-food',
-                    parentNavigatorKey: _rootNavigatorKey,
-                    builder: (context, state) =>
-                        const FoodBarcodeScannerScreen(),
                   ),
                   GoRoute(
                     path: 'metabolisme',

@@ -51,10 +51,6 @@ abstract interface class NutritionRepository {
   /// La fiche d'un aliment (404 s'il est inconnu ou retiré).
   Future<FoodDetail> food(int code);
 
-  /// Un produit emballé par son code-barres (Open Food Facts, lu par l'API).
-  /// `null` : la base ne le connaît pas, ou ne donne pas son énergie.
-  Future<PackagedFoodResult?> productByBarcode(String barcode);
-
   /// Les octets JPEG de la photo d'un repas (`GET …/meals/:id/photo`),
   /// lus avec la session de la personne : la photo est PRIVÉE. `null` quand
   /// le repas n'en a pas (le serveur répond 404, sans dire pourquoi).

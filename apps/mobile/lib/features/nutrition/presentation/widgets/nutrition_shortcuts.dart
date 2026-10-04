@@ -3,12 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import 'scanned_product_sheet.dart';
+import 'water_sheet.dart';
 
-/// Les quatre gestes de la page, en tuiles, ceux de la maquette : ajouter un
-/// repas (le geste premier, mis en avant), scanner un produit emballé,
-/// ouvrir les recettes, comprendre ses objectifs. L'eau se note depuis
-/// l'accueil (cellule Hydratation). Chacun mène à ce qui existe — jamais une tuile vide.
+/// Les quatre gestes de la page, en tuiles : ajouter un repas (le geste
+/// premier, mis en avant), noter son eau, ouvrir les recettes, comprendre
+/// ses objectifs. Chacun mène à ce qui existe — jamais une tuile vide.
 class NutritionShortcuts extends StatelessWidget {
   const NutritionShortcuts({required this.day, super.key});
 
@@ -29,9 +28,9 @@ class NutritionShortcuts extends StatelessWidget {
           onTap: () => context.push(AppRoutes.newMeal(day: day)),
         ),
         _ShortcutTile(
-          icon: AppIcons.scanBarcode,
-          label: 'Scanner un aliment',
-          onTap: () => scanFood(context, day),
+          icon: AppIcons.water,
+          label: 'Mon eau',
+          onTap: () => showWaterSheet(context),
         ),
         _ShortcutTile(
           icon: AppIcons.recipes,

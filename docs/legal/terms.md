@@ -1,6 +1,6 @@
 # Conditions d’utilisation de Carlys
 
-Dernière mise à jour : 4 octobre 2026.
+Dernière mise à jour : 3 octobre 2026.
 
 Ces conditions encadrent l’utilisation de l’application mobile Carlys et de
 ses pages web. En créant un compte, que ce soit avec ton adresse e-mail ou
@@ -154,11 +154,6 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
   L’application affiche cette mention, et la version de la table dont
   viennent les valeurs, à côté d’elles. Ce sont des valeurs moyennes pour des aliments génériques : celles
   de ton assiette peuvent s’en écarter.
-- **Les valeurs d’un produit scanné** viennent d’Open Food Facts, base
-  collaborative publiée sous Open Database License (ODbL) ; l’application
-  affiche « Source : Open Food Facts » à côté d’elles. Ce sont des données
-  saisies par des contributeurs, d’après l’emballage : vérifie-les sur le
-  paquet si un chiffre te surprend.
 
 ## 9. Suspension et suppression
 

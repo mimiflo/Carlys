@@ -6,17 +6,14 @@ import { MealPhotoObjects } from './application/meal-photo-objects';
 import { MealPhotosService } from './application/meal-photos.service';
 import { MealsService } from './application/meals.service';
 import { NutritionService } from './application/nutrition.service';
-import { ProductsService } from './application/products.service';
 import { FoodsRepository } from './infrastructure/foods.repository';
 import { MealPhotosRepository } from './infrastructure/meal-photos.repository';
 import { MealsRepository } from './infrastructure/meals.repository';
 import { NutritionRepository } from './infrastructure/nutrition.repository';
-import { OpenFoodFactsClient } from './infrastructure/open-food-facts.client';
 import { FoodsController } from './presentation/http/foods.controller';
 import { MealPhotosController } from './presentation/http/meal-photos.controller';
 import { MealsController } from './presentation/http/meals.controller';
 import { NutritionController } from './presentation/http/nutrition.controller';
-import { ProductsController } from './presentation/http/products.controller';
 
 /**
  * Importe `PrivateStorageModule` pour la photo d'un repas : bucket PRIVÉ,
@@ -24,13 +21,7 @@ import { ProductsController } from './presentation/http/products.controller';
  */
 @Module({
   imports: [PrivateStorageModule],
-  controllers: [
-    NutritionController,
-    MealsController,
-    MealPhotosController,
-    FoodsController,
-    ProductsController,
-  ],
+  controllers: [NutritionController, MealsController, MealPhotosController, FoodsController],
   providers: [
     NutritionService,
     NutritionRepository,
@@ -42,8 +33,6 @@ import { ProductsController } from './presentation/http/products.controller';
     MealPhotoObjects,
     FoodsService,
     FoodsRepository,
-    ProductsService,
-    OpenFoodFactsClient,
   ],
   // Le coach lit les cibles métaboliques et le journal alimentaire par ces
   // services, jamais par Prisma. La suppression de compte efface les photos
