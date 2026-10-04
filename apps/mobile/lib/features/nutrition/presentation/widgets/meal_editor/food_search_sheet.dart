@@ -58,7 +58,7 @@ class _FoodSearchSheetState extends ConsumerState<_FoodSearchSheet> {
       context,
       title: 'Quantité de ${food.shortName}',
       message:
-          '${food.name} : ${food.per100g.kcal.round()} kcal pour 100 g. '
+          '${food.name} : ${food.kcalLabel} pour 100 g. '
           'En grammes, de 1 à 5 000.',
       initialValue: formatQuantityInput(MealBounds.componentDefaultG),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -116,6 +116,7 @@ class _FoodSearchSheetState extends ConsumerState<_FoodSearchSheet> {
             child: FoodSourceMention(
               attribution: source,
               versions: [?source.version],
+              computedEnergy: search.foods.any((food) => food.kcalComputed),
             ),
           );
 

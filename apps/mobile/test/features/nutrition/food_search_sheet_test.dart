@@ -236,4 +236,29 @@ void main() {
     // Le nom officiel se lit en entier, jamais coupé.
     expect(find.text('Galette de riz soufflé, nature'), findsOneWidget);
   });
+
+  testWidgets('une énergie CALCULÉE se lit « ≈ », et la mention dit pourquoi', (
+    tester,
+  ) async {
+    const laitue = Food(
+      code: 990010,
+      name: 'Laitue, crue',
+      shortName: 'Laitue',
+      per100g: FoodPer100g(kcal: 14.7, proteinG: 1.3, carbsG: 1.33, fatG: 0.2),
+      kcalComputed: true,
+    );
+    final nutrition = FakeNutritionRepository()..foods[laitue.code] = laitue;
+    await openMealEditor(tester, nutrition, AppRoutes.newMeal());
+    await openSheet(tester);
+    await search(tester, 'laitue');
+
+    expect(find.text('≈ 15 kcal'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+        'Laitue, crue : environ 15 kcal pour 100 g, calculées par Carlys',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('calculée par Carlys'), findsOneWidget);
+  });
 }

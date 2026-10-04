@@ -68,6 +68,8 @@ Food foodFromJson(Map<String, dynamic> row) {
       carbsG: (per100g['carbsG'] as num?)?.toDouble(),
       fatG: (per100g['fatG'] as num?)?.toDouble(),
     ),
+    // Absent (serveur plus ancien) : publiée, comme avant.
+    kcalComputed: row['kcalComputed'] == true,
   );
 }
 

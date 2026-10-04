@@ -29,6 +29,7 @@ class Food {
     required this.shortName,
     required this.per100g,
     this.group,
+    this.kcalComputed = false,
   });
 
   /// `alim_code` CIQUAL : la clé à renvoyer dans la composition d'un repas.
@@ -44,6 +45,14 @@ class Food {
   /// n'est pas décrit.
   final String? group;
   final FoodPer100g per100g;
+
+  /// L'énergie n'est PAS publiée par l'Anses : le serveur l'a calculée
+  /// depuis les macronutriments (facteurs du règlement UE 1169/2011).
+  final bool kcalComputed;
+
+  /// « 150 kcal », ou « ≈ 15 kcal » quand l'énergie est calculée.
+  String get kcalLabel =>
+      '${kcalComputed ? '≈ ' : ''}${per100g.kcal.round()} kcal';
 
   FoodFamily get family => FoodFamily.fromGroup(group);
 }

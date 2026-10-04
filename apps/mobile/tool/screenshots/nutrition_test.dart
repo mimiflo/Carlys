@@ -13,6 +13,8 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/core/utilities/debouncer.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/services/image_picker_meal_photo_picker.dart';
@@ -292,6 +294,60 @@ void main() {
     await tester.pumpAndSettle();
     await decodePhotos(tester);
     await capture(tester, 'nutrition-09-scan-echec');
+    await purge(tester);
+  });
+
+  testWidgets('recherche d’un aliment : l’énergie calculée se lit « ≈ »', (
+    tester,
+  ) async {
+    telephone(tester);
+    const salades = [
+      Food(
+        code: 20069,
+        name: 'Laitue, crue',
+        shortName: 'Laitue',
+        group: 'fruits, légumes, légumineuses et oléagineux',
+        per100g: FoodPer100g(kcal: 15.1, proteinG: 1.3, carbsG: 1.3, fatG: 0.2),
+        kcalComputed: true,
+      ),
+      Food(
+        code: 20070,
+        name: 'Laitue romaine, crue',
+        shortName: 'Laitue romaine',
+        group: 'fruits, légumes, légumineuses et oléagineux',
+        per100g: FoodPer100g(kcal: 16.2, proteinG: 1.2, carbsG: 1.8, fatG: 0.3),
+        kcalComputed: true,
+      ),
+      Food(
+        code: 20071,
+        name: 'Laitue iceberg, crue',
+        shortName: 'Laitue iceberg',
+        group: 'fruits, légumes, légumineuses et oléagineux',
+        per100g: FoodPer100g(kcal: 13.9, proteinG: 0.9, carbsG: 1.8, fatG: 0.1),
+        kcalComputed: true,
+      ),
+    ];
+    final nutrition = journee()
+      ..foods.addEntries(salades.map((f) => MapEntry(f.code, f)));
+    await tester.pumpWidget(app(nutrition));
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    await tester.tap(find.text('Ajouter un repas').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ajouter un aliment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajouter un aliment'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AppSearchField),
+        matching: find.byType(TextField),
+      ),
+      'laitue',
+    );
+    await tester.pump(Debouncer.search);
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-10-recherche-calculee');
     await purge(tester);
   });
 }

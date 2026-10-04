@@ -76,6 +76,7 @@ class MealLine {
     required this.per100g,
     this.group,
     this.sourceVersion,
+    this.kcalComputed = false,
   });
 
   /// La ligne d'un repas déjà enregistré.
@@ -117,6 +118,7 @@ class MealLine {
       sourceVersion: sourceVersion,
       quantityG: quantityG,
       per100g: food.per100g,
+      kcalComputed: food.kcalComputed,
     );
   }
 
@@ -129,6 +131,11 @@ class MealLine {
   final double quantityG;
   final FoodPer100g per100g;
 
+  /// L'énergie de l'aliment choisi est calculée, pas publiée (`Food`). Une
+  /// ligne déjà enregistrée ne le sait pas : le serveur n'en garde que
+  /// l'instantané.
+  final bool kcalComputed;
+
   FoodFamily get family => FoodFamily.fromGroup(group);
 
   MealLine withQuantity(double grams) => MealLine(
@@ -140,6 +147,7 @@ class MealLine {
     sourceVersion: sourceVersion,
     quantityG: grams,
     per100g: per100g,
+    kcalComputed: kcalComputed,
   );
 
   MealComponentInput toInput() =>

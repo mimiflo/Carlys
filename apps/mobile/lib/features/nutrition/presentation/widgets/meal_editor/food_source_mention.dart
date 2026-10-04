@@ -22,11 +22,17 @@ class FoodSourceMention extends StatelessWidget {
   const FoodSourceMention({
     required this.attribution,
     required this.versions,
+    this.computedEnergy = false,
     super.key,
   });
 
   final FoodAttribution attribution;
   final Iterable<String> versions;
+
+  /// Un aliment montré a une énergie CALCULÉE (« ≈ » dans la recherche) : la
+  /// mention le dit, pour qu'on ne la prenne pas pour une valeur publiée par
+  /// l'Anses.
+  final bool computedEnergy;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +43,10 @@ class FoodSourceMention extends StatelessWidget {
     final address = _address(attribution.url);
     return Text(
       '${attribution.attribution}$dated, ${attribution.license}'
-      '${address.isEmpty ? '' : ', $address'}.',
+      '${address.isEmpty ? '' : ', $address'}.'
+      '${computedEnergy ? ' Énergie de certains aliments absente de la table, '
+                'calculée par Carlys d’après leurs protéines, glucides et '
+                'lipides.' : ''}',
       style: AppTypography.label.copyWith(
         color: AppColors.darkTextTertiary,
         height: AppTypography.body.height,

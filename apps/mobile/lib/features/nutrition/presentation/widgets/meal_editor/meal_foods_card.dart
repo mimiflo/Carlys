@@ -77,6 +77,7 @@ class MealFoodsCard extends StatelessWidget {
                 for (final line in lines)
                   if (line.sourceVersion != null) line.sourceVersion!,
               ],
+              computedEnergy: lines.any((line) => line.kcalComputed),
             ),
           ],
         ],

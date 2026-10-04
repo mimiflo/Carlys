@@ -142,6 +142,38 @@ void main() {
       },
     );
 
+    test(
+      'l’énergie calculée par le serveur se dit ; absente, elle est publiée',
+      () async {
+        final food = {
+          'code': 990010,
+          'name': 'Laitue, crue',
+          'shortName': 'Laitue',
+          'group': null,
+          'per100g': {
+            'kcal': 14.7,
+            'proteinG': 1.3,
+            'carbsG': 1.33,
+            'fatG': 0.2,
+          },
+        };
+        record(
+          (_) => _enveloped(
+            [
+              {...food, 'kcalComputed': true},
+              {...food, 'code': 990011},
+            ],
+            meta: {'source': _source},
+          ),
+        );
+
+        final found = await repository.searchFoods('laitue');
+
+        expect(found.foods.map((f) => f.kcalComputed), [true, false]);
+        expect(found.foods.first.kcalLabel, '≈ 15 kcal');
+      },
+    );
+
     test('un serveur plus ANCIEN : ni moment, ni aliments, ni photo', () async {
       // La liste d'avant la composition : les clés manquent, elles ne sont
       // pas nulles. Rien ne doit casser, et rien ne doit s'inventer.

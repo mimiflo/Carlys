@@ -19,7 +19,7 @@ class FoodResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final kcal = '${food.per100g.kcal.round()} kcal';
+    final kcal = food.kcalLabel;
     final energy = Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -40,7 +40,10 @@ class FoodResultRow extends StatelessWidget {
     );
     return Semantics(
       button: true,
-      label: '${food.name} : $kcal pour 100 g',
+      label: food.kcalComputed
+          ? '${food.name} : environ ${food.per100g.kcal.round()} kcal pour '
+                '100 g, calculées par Carlys'
+          : '${food.name} : $kcal pour 100 g',
       hint: 'Ajouter cet aliment',
       excludeSemantics: true,
       onTap: onTap,
