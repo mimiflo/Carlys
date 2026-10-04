@@ -31,6 +31,11 @@
 #     #carlysctl:engendrer hex32
 #     METRICS_TOKEN=CHANGE_MOI_JETON_METRIQUES
 #
+# `#carlysctl:engendrer-auto hex32` va plus loin : la SUPERVISION l'engendre
+# elle-même, sans `--tout`. Réservé au secret dont l'absence a un repli et que
+# rien d'extérieur ne lit (LOG_FINGERPRINT_SECRET : l'API dérive sinon la clé
+# du secret JWT) — l'engendrer ne ferme aucune porte, il en ouvre une.
+#
 # Le défaut, en l'absence de directive, est de REFUSER. Ajouter une variable
 # sans y penser la range donc du côté prudent ; c'est le seul sens dans lequel
 # l'oubli est acceptable.
@@ -105,6 +110,12 @@ envsync_classer() {
   esac
   directive="$(envsync_directive "$cle" "$exemple")"
   case "$directive" in
+    engendrer-auto\ *)
+      if envsync_engendrer "${directive#engendrer-auto }" >/dev/null 2>&1; then
+        printf 'auto:%s' "${directive#engendrer-auto }"
+        return 0
+      fi
+      ;;
     engendrer\ *)
       # La recette doit exister ICI, sinon on retombe du côté prudent.
       if envsync_engendrer "${directive#engendrer }" >/dev/null 2>&1; then
@@ -139,6 +150,10 @@ envsync_conseil() {
       printf 'secret À ENGENDRER : carlysctl env-sync %s --appliquer --tout   (ou openssl rand -hex 32)' \
         "$env_name"
       ;;
+    auto:*)
+      printf 'engendré par la supervision à son prochain passage (ou : carlysctl env-sync %s --appliquer)' \
+        "$env_name"
+      ;;
     engendrer:*)
       printf 'secret À ENGENDRER : carlysctl env-sync %s --appliquer --tout' "$env_name"
       ;;
@@ -162,8 +177,8 @@ envsync_plan() {
     classe="$(envsync_classer "$cle" "$exemple")"
     case "$classe" in
       recopier) valeur="$(envsync_ligne_exemple "$cle" "$exemple")" ;;
-      engendrer:*)
-        valeur="$cle=$(envsync_engendrer "${classe#engendrer:}")" || continue ;;
+      engendrer:* | auto:*)
+        valeur="$cle=$(envsync_engendrer "${classe#*:}")" || continue ;;
       *) valeur="$(envsync_ligne_exemple "$cle" "$exemple")" ;;
     esac
     printf '%s\t%s\t%s\n' "$classe" "$cle" "$valeur"
@@ -196,6 +211,10 @@ envsync_appliquer() {
       recopier)
         a_ecrire+=("$ligne")
         info "  + $ligne"
+        ;;
+      auto:*)
+        a_ecrire+=("$ligne")
+        info "  + $cle=… (engendré, ${classe#auto:}, non affiché)"
         ;;
       engendrer:*)
         if [ "$portee" != tout ]; then

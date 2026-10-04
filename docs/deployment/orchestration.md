@@ -42,6 +42,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Tenir l'amont Nginx à jour                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | **oui**            | minuterie            |
 | Élaguer images, couches pendantes et cache de construction de plus d'une semaine à chaque passe (le filet de retour arrière est gardé ; jamais les volumes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **oui**            | minuterie            |
 | Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | **oui**            | minuterie            |
+| Importer la table d'aliments CIQUAL, téléchargée et vérifiée par son empreinte, une fois par version (`_ciqual.sh` ; à la main : `carlysctl ciqual-import <env>`) | **oui**            | minuterie            |
 | Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, et les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui**            | minuterie            |
 | Sauvegarder les bases **et les médias MinIO**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **oui**            | cron, 3 h du matin   |
 | **Déployer une nouvelle version**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | **non par défaut** | `CARLYS_AUTO_UPDATE` |
@@ -758,7 +759,7 @@ carlysctl env-sync staging --appliquer          # écrit les valeurs recopiables
 carlysctl env-sync staging --appliquer --tout   # + engendre les secrets sûrs
 ```
 
-Trois classements, et **ils ne sont écrits nulle part à la main** — ils se
+Quatre classements, et **ils ne sont écrits nulle part à la main** — ils se
 lisent dans le fichier d'exemple, qui porte déjà la convention `CHANGE_MOI_` et
 une directive `#carlysctl:engendrer` au-dessus des secrets qu'on sait fabriquer
 sans casser d'état extérieur :
@@ -767,6 +768,7 @@ sans casser d'état extérieur :
 | ------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | valeur en clair dans l'exemple       | **recopiée**                                   | `CARLYS_API_REPLICAS=1`, `SWAGGER_ENABLED=false` : la valeur que le script utilisait déjà comme défaut               |
 | secret marqué `#carlysctl:engendrer` | **engendré** avec `--tout`, **jamais affiché** | `METRICS_TOKEN`, `JWT_ACCESS_SECRET` : rien d'extérieur n'en dépend, une valeur neuve ne casse rien                  |
+| secret marqué `#carlysctl:engendrer-auto` | **engendré par la supervision elle-même**, jamais affiché | `LOG_FINGERPRINT_SECRET` : son absence a un repli (la clé dérivée du secret JWT), rien d'autre ne le lit |
 | tout le reste                        | **refusé**, avec la raison                     | `DOMAIN` casserait le site ; `POSTGRES_PASSWORD` engendré fermerait la base à double tour sur des données existantes |
 
 Le défaut, en l'absence de directive, est de **refuser** : une variable ajoutée
@@ -784,7 +786,8 @@ les énoncer :
   journal systemd.
 
 La supervision l'appelle à chaque passe, avant tout le reste, mais **sans**
-`--tout` : elle recopie, elle n'invente pas. `CARLYS_ENV_SYNC=non` la fait
+`--tout` : elle recopie, elle n'invente pas — sauf les secrets
+`engendrer-auto`. `CARLYS_ENV_SYNC=non` la fait
 taire.
 
 > **Ne jamais faire `cat <exemple> >> .env`.** Les clés déjà présentes se
