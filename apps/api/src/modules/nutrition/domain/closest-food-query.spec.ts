@@ -54,6 +54,12 @@ describe('closestFoodQuery', () => {
     expect(closestFoodQuery('Saumon, cru')?.cooked).toBe(false);
   });
 
+  it('l’anglais qui échappe au modèle est traduit avant la recherche', () => {
+    expect(closestFoodQuery('Lettuce, cuit')?.heads).toEqual(['salade']);
+    expect(closestFoodQuery('Oatmeal, cuit')?.heads).toEqual(['flocon', 'avoine']);
+    expect(closestFoodQuery('Mashed potatoes')?.heads).toEqual(['puree', 'pomme', 'terre']);
+  });
+
   it('rien qui nomme un aliment : null', () => {
     expect(closestFoodQuery('!!')).toBeNull();
     expect(closestFoodQuery('de la, avec')).toBeNull();

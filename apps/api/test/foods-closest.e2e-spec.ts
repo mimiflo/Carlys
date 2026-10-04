@@ -45,6 +45,8 @@ const NAMES = [
   'Poisson cuit (aliment moyen)',
   'Oeuf, brouillé, avec matière grasse',
   'Oeufs de lompe, semi-conserve',
+  'Avocat, pulpe, cru',
+  'Huile d’avocat',
 ];
 const FIRST_CODE = 970_001;
 
@@ -91,6 +93,8 @@ describe('Rapprochement d’un nom libre avec la table CIQUAL (e2e)', () => {
     ['Pois chiches', 'Pois chiche, bouilli/cuit à l’eau'],
     // Le pluriel du nom ne compte pas double : pas les oeufs de lompe.
     ['Oeufs brouillés', 'Oeuf, brouillé, avec matière grasse'],
+    // L'anglais qui échappe au modèle est traduit.
+    ['Avocado, coupé', 'Avocat, pulpe, cru'],
   ])('« %s » → « %s »', async (seen, expected) => {
     expect((await foods.closest(seen))?.name).toBe(expected);
   });

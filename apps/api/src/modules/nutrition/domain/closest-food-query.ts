@@ -17,9 +17,10 @@ import { searchWords } from './food-text';
  *   ne trouve plus le poisson.
  * - [cooked] : le nom dit cuit, grillé, poêlé… ; une variante crue recule.
  *
- * Mesuré le 4 octobre 2026 sur la vraie table (12 repas, 40 aliments) : 27
- * retrouvés de la photo à l'aliment, contre 20 en retirant les mots de fin un
- * à un.
+ * Mesuré le 4 octobre 2026 sur la vraie table (12 repas, 40 aliments) : 30
+ * retrouvés de la photo à l'aliment (27 sans la traduction de l'anglais),
+ * contre 20 en retirant les mots de fin un à un. ADR 0015, « Optimisation
+ * mesurée ».
  */
 export interface ClosestFoodQuery {
   readonly heads: readonly string[];
@@ -100,6 +101,63 @@ const PREPARATION_WORDS = new Set([
   'tranche',
 ]);
 
+/**
+ * Le modèle glisse à l'anglais malgré la consigne (« Lettuce », « Avocado »,
+ * « Oatmeal », mesuré au banc du 4 octobre 2026) : la table CIQUAL, elle, est
+ * en français. Les mots courants d'une assiette, traduits AVANT la recherche.
+ * « lettuce » donne « salade » : la laitue crue manque à la table importée
+ * (sans énergie dans CIQUAL 2020), « laitue » ne trouverait que l'algue.
+ */
+const ENGLISH_FOOD_WORDS: Readonly<Record<string, string>> = {
+  apple: 'pomme',
+  avocado: 'avocat',
+  banana: 'banane',
+  bean: 'haricot',
+  beans: 'haricot',
+  beef: 'boeuf',
+  blueberries: 'myrtille',
+  blueberry: 'myrtille',
+  bread: 'pain',
+  broccoli: 'brocoli',
+  carrot: 'carotte',
+  carrots: 'carotte',
+  cheese: 'fromage',
+  chicken: 'poulet',
+  corn: 'mais',
+  cucumber: 'concombre',
+  egg: 'oeuf',
+  eggs: 'oeuf',
+  fish: 'poisson',
+  fries: 'frite',
+  hamburger: 'steak hache',
+  lentils: 'lentille',
+  lettuce: 'salade',
+  mango: 'mangue',
+  mashed: 'puree',
+  milk: 'lait',
+  mushroom: 'champignon',
+  mushrooms: 'champignon',
+  oatmeal: 'flocon avoine',
+  oats: 'flocon avoine',
+  onion: 'oignon',
+  pasta: 'pates',
+  peas: 'petit pois',
+  pepper: 'poivron',
+  potato: 'pomme de terre',
+  potatoes: 'pomme de terre',
+  rice: 'riz',
+  salad: 'salade',
+  salmon: 'saumon',
+  sausage: 'saucisse',
+  spinach: 'epinard',
+  strawberries: 'fraise',
+  strawberry: 'fraise',
+  tomato: 'tomate',
+  tomatoes: 'tomate',
+  yoghurt: 'yaourt',
+  yogurt: 'yaourt',
+};
+
 /** Leur pluriel change le sens : « pâtes » n'est pas « pâte ». */
 const MEANING_PLURALS = new Set(['pates']);
 
@@ -122,7 +180,10 @@ function canName(term: Term): boolean {
 
 /** `null` : le nom ne porte aucun mot d'aliment (vide, ponctuation, liaisons, chiffres). */
 export function closestFoodQuery(label: string): ClosestFoodQuery | null {
-  const terms = searchWords(label)
+  const french = searchWords(label).flatMap((word) =>
+    (ENGLISH_FOOD_WORDS[word] ?? word).split(' '),
+  );
+  const terms = [...new Set(french)]
     .filter((word) => !LINK_WORDS.has(word))
     .slice(0, MAX_WORDS)
     .map((word) => ({ word, base: baseFoodWord(word) }));
