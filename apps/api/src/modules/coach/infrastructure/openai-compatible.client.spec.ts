@@ -595,7 +595,7 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(sent(fetchMock, 1).init.signal?.aborted).toBe(true);
       // Une coupure VOULUE : ni nouvel essai, ni worker mis de côté.
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(pool.status()[0]?.healthy).toBe(true);
+      expect((await pool.status())[0]?.healthy).toBe(true);
     });
 
     it('les jetons de l’occasion d’agir comptent, même pour un simple « FIN »', async () => {
@@ -1079,7 +1079,7 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(sent(fetchMock, 1).body.max_tokens).toBe(512);
       // Le premier est écarté le temps de sa remise en route ; aucun n'est
       // resté compté comme occupé.
-      expect(pool.status()).toEqual([
+      expect(await pool.status()).toEqual([
         expect.objectContaining({ url: A, healthy: false, active: 0 }),
         expect.objectContaining({ url: B, healthy: true, active: 0 }),
       ]);
@@ -1101,7 +1101,7 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       // Le signal transmis au worker est bien celui qui porte l'annulation.
       expect((fetchMock.mock.calls[0]?.[1] as RequestInit).signal?.aborted).toBe(true);
-      expect(pool.status().every((worker) => worker.healthy)).toBe(true);
+      expect((await pool.status()).every((worker) => worker.healthy)).toBe(true);
     });
   });
 });

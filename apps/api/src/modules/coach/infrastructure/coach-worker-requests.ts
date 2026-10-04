@@ -43,7 +43,7 @@ export class CoachWorkerRequests {
     const body = JSON.stringify({ model, max_tokens: maxOutputTokens, ...payload, ...stream });
     const tried = new Set<string>();
     for (let attempt = 0; ; attempt++) {
-      const worker = this.pool.acquire(tried, prefer);
+      const worker = await this.pool.acquire(tried, prefer);
       const idle = this.idleWatch();
       // Panne DU WORKER (réseau, 5xx, flux rompu ou muet) : il est écarté un
       // temps. Jamais une annulation ni une échéance, qui ne disent rien de lui.

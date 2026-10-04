@@ -28,9 +28,10 @@ import { CoachGate } from './infrastructure/coach-gate';
 import { CoachGenerationRepository } from './infrastructure/coach-generation.repository';
 import { CoachMetrics } from './infrastructure/coach-metrics';
 import { CoachRepository } from './infrastructure/coach.repository';
-import { MealVisionClient } from './infrastructure/meal-vision.client';
+import { MealVisionClient, VISION_TIMEOUT_MS } from './infrastructure/meal-vision.client';
 import { MealScansController } from './presentation/http/meal-scans.controller';
 import { MealScansService } from './application/meal-scans.service';
+import { CoachWorkerLoad } from './infrastructure/coach-worker-load';
 import { CoachWorkerPool } from './infrastructure/coach-worker-pool';
 import { OpenAiCompatibleCoachClient } from './infrastructure/openai-compatible.client';
 import { CoachController } from './presentation/http/coach.controller';
@@ -93,12 +94,23 @@ export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): 
     CoachActionTurn,
     CoachWorkoutCreator,
     CoachHealth,
+    CoachWorkerLoad,
     {
-      // UN pool par exemplaire de l'API : le client et l'état de santé le partagent.
+      // UN pool par exemplaire de l'API : le client et l'état de santé le
+      // partagent ; la charge des workers, elle, se lit sur tous (Redis).
       provide: CoachWorkerPool,
-      inject: [AppConfigService],
-      useFactory: (config: AppConfigService) =>
-        new CoachWorkerPool(config.coachGateway.workerUrls, config.coachGateway.workerCooldownMs),
+      inject: [AppConfigService, CoachWorkerLoad],
+      useFactory: (config: AppConfigService, load: CoachWorkerLoad) =>
+        new CoachWorkerPool(
+          config.coachGateway.workerUrls,
+          config.coachGateway.workerCooldownMs,
+          Date.now,
+          {
+            load,
+            // La plus longue génération (tour ou analyse de photo), plus une minute.
+            leaseMs: Math.max(config.coachGateway.requestTimeoutMs, VISION_TIMEOUT_MS) + 60_000,
+          },
+        ),
     },
     {
       provide: COACH_MODEL_PORT,

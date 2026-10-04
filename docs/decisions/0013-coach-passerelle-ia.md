@@ -58,8 +58,13 @@ processeur, ≈ 8 jetons/s en écriture (mesuré le 30 septembre 2026).
    suite, jamais une attente sans fin.
 4. **Plusieurs workers : le moins chargé, et retrait temporaire.**
    `COACH_WORKER_URLS` liste les adresses (défaut : `COACH_API_BASE_URL`).
-   Chaque tour prend le worker sain qui a le moins de générations en cours ;
-   une panne (réseau, 5xx) le met de côté `COACH_WORKER_COOLDOWN_MS`, et la
+   Chaque tour prend le worker sain qui a le moins de générations en cours,
+   **tous exemplaires de l'API confondus** (4 octobre 2026) : un bail par
+   génération dans Redis (`coach:worker:leases:<empreinte de l'adresse>`, script Lua
+   atomique, `coach-worker-load.ts`), qui expire seul si son exemplaire meurt
+   en plein tour ; Redis muet, chaque exemplaire décide sur ses propres
+   compteurs, comme avant. La mise de côté après une panne reste propre à
+   chaque exemplaire ; une panne (réseau, 5xx) le met de côté `COACH_WORKER_COOLDOWN_MS`, et la
    tentative suivante part sur un autre. Ajouter une carte graphique =
    ajouter une adresse et relever `COACH_MAX_CONCURRENT_REQUESTS`.
 5. **Annuler, c'est arrêter.** *(Remplacée le 3 octobre 2026, voir le

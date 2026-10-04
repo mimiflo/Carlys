@@ -75,7 +75,7 @@ export class MealVisionClient {
   ) {}
 
   async see(model: string, jpeg: Buffer, signal: AbortSignal): Promise<SeenFood[]> {
-    const worker = this.pool.acquire();
+    const worker = await this.pool.acquire();
     let failed = true;
     const bounded = AbortSignal.any([signal, AbortSignal.timeout(VISION_TIMEOUT_MS)]);
     try {

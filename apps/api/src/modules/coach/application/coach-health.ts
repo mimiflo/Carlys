@@ -39,11 +39,13 @@ export class CoachHealth {
     const [queue, lastHour, workers] = await Promise.all([
       this.gate.snapshot(now.getTime()),
       this.generations.statsSince(new Date(now.getTime() - 3_600_000)),
-      Promise.all(
-        this.pool
-          .status()
-          .map(async ({ url, ...worker }) => ({ ...worker, ...(await this.probe(url)) })),
-      ),
+      this.pool
+        .status()
+        .then((workers) =>
+          Promise.all(
+            workers.map(async ({ url, ...worker }) => ({ ...worker, ...(await this.probe(url)) })),
+          ),
+        ),
     ]);
     const enabled = this.config.coachEnabled;
     return {

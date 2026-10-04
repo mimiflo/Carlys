@@ -59,7 +59,7 @@ describe('CoachWorkerRequests — le délai d’inactivité du flux', () => {
     expect(failure).toBeInstanceOf(GenerationFailure);
     expect(failure).toMatchObject({ end: 'TIMEOUT' });
     expect(seen).toEqual(['Le squat ']);
-    expect(pool.status()[0]).toMatchObject({ healthy: false, active: 0 });
+    expect((await pool.status())[0]).toMatchObject({ healthy: false, active: 0 });
   });
 
   it('avant le premier octet, rien ne compte que l’échéance : relire un long contexte prend du temps', async () => {
@@ -81,7 +81,7 @@ describe('CoachWorkerRequests — le délai d’inactivité du flux', () => {
     );
 
     expect(completion.choices?.[0]?.message?.content).toBe('Prêt.');
-    expect(pool.status()[0]).toMatchObject({ healthy: true, active: 0 });
+    expect((await pool.status())[0]).toMatchObject({ healthy: true, active: 0 });
   });
 
   it('un flux qui parle régulièrement n’est jamais coupé', async () => {
