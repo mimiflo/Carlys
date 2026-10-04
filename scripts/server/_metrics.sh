@@ -37,10 +37,18 @@ CARLYS_METRICS_TIMEOUT="${CARLYS_METRICS_TIMEOUT:-3}"
 metrics_scrape_one() {
   local port="$1" jeton="${2-}" args=()
   args=(-s --noproxy '*' -m "$CARLYS_METRICS_TIMEOUT" -w '\n#--code--%{http_code}')
-  [ -n "$jeton" ] && args+=(-H "Authorization: Bearer $jeton")
   # `|| true` et pas de repli : même sur connexion refusée, `-w` imprime le
   # code (000). En ajouter un second brouillerait le compte.
-  curl "${args[@]}" "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
+  #
+  # LE JETON PASSE PAR L'ENTRÉE STANDARD (`-H @-`), jamais en argument : la
+  # ligne de commande d'un processus se lit par `ps` et /proc/*/cmdline, pour
+  # n'importe quel compte de la machine.
+  if [ -n "$jeton" ]; then
+    printf 'Authorization: Bearer %s\n' "$jeton" \
+      | curl "${args[@]}" -H @- "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
+  else
+    curl "${args[@]}" "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
+  fi
 }
 
 # `metrics_summary <env> <.env>` — une ligne de `clé=valeur`, séparées par des
@@ -48,7 +56,11 @@ metrics_scrape_one() {
 #
 #   lus=<exemplaires ayant répondu>
 #   utilisateurs=<utilisateurs en ligne, -1 si inconnu>
-#   en_vol=<requêtes commencées et pas finies, la lecture de /metrics exclue>
+#   en_vol=<travail commencé et pas fini : requêtes HTTP (la lecture de
+#          /metrics exclue), plus tours du coach et analyses de photo
+#          ouverts (`carlys_api_ai_work_open`, file et écriture finale
+#          comprises) — ils survivent à leur requête (page quittée, scan
+#          relu par l'appareil), voir metrics_travail>
 #   requetes=<compteur cumulé de requêtes HTTP, somme des exemplaires>
 #   latence_somme=<secondes cumulées>  latence_compte=<requêtes comptées>
 #
@@ -91,13 +103,14 @@ metrics_summary() {
         # Dans les trois cas le corps est NON VIDE et ne contient aucune
         # serie : le compter comme une lecture ferait accuser Redis.
         if (code != "") { refuses++; dernier_code = code }
-        vu = 0; up = 0; u = -1; f = 0; code = ""
+        vu = 0; up = 0; u = -1; f = 0; ia = 0; code = ""
         next
       }
       if (vu) {
         lus++
         # Moins un : la lecture de /metrics est elle-meme une requete en vol.
         if (f > 1) en_vol += f - 1
+        en_vol += ia
         # Presence : globale (comptee dans Redis), donc JAMAIS additionnee.
         # La sommer multiplierait les utilisateurs par le nombre
         # dexemplaires. On retient celle du premier exemplaire dont la
@@ -107,11 +120,12 @@ metrics_summary() {
         # awk, qui est delimite par des apostrophes simples.)
         if (up && !fige) { utilisateurs = u; fige = 1 }
       }
-      vu = 0; up = 0; u = -1; f = 0; code = ""
+      vu = 0; up = 0; u = -1; f = 0; ia = 0; code = ""
       next
     }
     { vu = 1 }
     $1 == "carlys_api_http_requests_in_flight" { f = $2 }
+    $1 == "carlys_api_ai_work_open" { ia += $2 }
 
     $1 == "carlys_api_presence_up"  { up = ($2 == 1) }
     $1 == "carlys_api_online_users" { u = $2 }
@@ -127,6 +141,25 @@ metrics_summary() {
         requetes, lat_somme, lat_compte, en_vol
     }
   '
+}
+
+# `metrics_travail <port> <jeton>` — le travail en cours d'UN exemplaire,
+# même compte que `en_vol` ; « ? » s'il ne se lit pas.
+#
+# POURQUOI LE COACH COMPTE À PART. Une réponse du coach se termine même page
+# quittée, et l'analyse d'une photo tourne en fond pendant que l'appareil
+# relit son résultat : ni l'une ni l'autre ne tient de requête HTTP ouverte.
+# Retirer l'exemplaire sur la seule foi des requêtes en vol les coupait.
+metrics_travail() {
+  metrics_scrape_one "$1" "${2-}" | awk '
+    /^#--code--/ { code = $0; sub(/^#--code--/, "", code); next }
+    $1 == "carlys_api_http_requests_in_flight" { f = $2 }
+    $1 == "carlys_api_ai_work_open" { ia += $2 }
+    END {
+      if (code != "200") { print "?"; exit }
+      # Moins un : la lecture de /metrics elle-meme.
+      print (f > 1 ? f - 1 : 0) + ia
+    }'
 }
 
 # `metrics_field <résumé> <clé>` — extrait une valeur du résumé ci-dessus.

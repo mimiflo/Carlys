@@ -126,9 +126,9 @@ scale_decide() {
   # Descendre RETIRE un exemplaire, et coupe net ce qu'il sert encore : une
   # réponse du coach dure une à deux minutes sur processeur (2 octobre 2026,
   # une réponse tuée en plein calcul par une descente de 2 à 1). On attend
-  # donc qu'aucune requête ne soit en vol, sans perdre les votes déjà acquis.
-  # ponytail: mesure à l'instant du passage, une requête partie dans les
-  # secondes avant `up -d` peut encore tomber ; drainer par Nginx si ça arrive.
+  # donc qu'aucun travail ne soit en cours, sans perdre les votes déjà
+  # acquis. Ce n'est qu'un premier filtre, mesuré à l'instant du passage :
+  # ce qui part entre-temps, `scale_drainer` le laisse finir.
   if [ "$en_vol" -gt 0 ]; then
     printf '%d attendre requetes-en-cours %d\n' "$actuel" "$(state_get "$env_name" votes_baisse 0)"
     return 0
@@ -161,6 +161,15 @@ scale_apply() {
     "Il vient du plus petit de CARLYS_SCALE_MAX (ou du nombre de cœurs) et de la" \
     "taille de la plage de ports ($(api_port_capacity "$env_name" "$file"))."
 
+  # Réduire : les exemplaires retirés finissent d'abord ce qu'ils servent.
+  # Leur travail ne finit pas à temps : la réduction est remise, rien n'est
+  # coupé — le .env garde l'ancien nombre, le prochain passage réessaiera.
+  # Rend 1 : `carlysctl scale` dit ainsi que rien n'a changé ; la
+  # supervision, elle, l'ignore (`|| true`).
+  if ! scale_drainer "$env_name" "$file" "$cible"; then
+    return 1
+  fi
+
   env_set_value "$file" CARLYS_API_REPLICAS "$cible"
   # `--no-recreate` : le .env est aussi l'`env_file` de l'API, donc y changer
   # le nombre change la configuration de CHAQUE exemplaire, et Compose les
@@ -174,4 +183,114 @@ scale_apply() {
   nginx_apply_upstream "$env_name" "$file" || warn \
     "exemplaires en place, mais l'amont Nginx n'a pas suivi — le trafic peut encore aller à l'ancienne liste."
   state_set_many "$env_name" dernier_changement "$(maintenant)" votes_baisse 0
+}
+
+# `scale_drainer <env> <.env> <cible>` — avant une réduction, retire de
+# l'amont Nginx les exemplaires en trop, attend qu'ils aient fini leur
+# travail, puis les arrête. Rend 1 (amont rétabli) si ce travail ne finit pas
+# dans CARLYS_SCALE_DRAIN_SECONDS (300 s par défaut : deux réponses du coach
+# sur processeur), s'il ne se lit pas, ou si un partant refuse de s'arrêter.
+# Rend 0 sans rien faire s'il n'y a rien à retirer.
+#
+# QUI PART : les malades d'abord, puis les plus hauts numéros (ceux que
+# Compose retirerait lui-même). On les arrête NOUS-MÊMES, après les avoir
+# drainés : laisser Compose choisir, c'était risquer qu'il en arrête un autre
+# que celui qu'on venait de vider. Il ne lui reste ensuite que le bon nombre,
+# et `up -d` n'a plus rien à retirer.
+#
+# L'ORDRE COMPTE : l'amont d'abord (plus aucune requête neuve n'arrive aux
+# partants ; Nginx laisse finir celles qu'il leur a déjà confiées), la mesure
+# ensuite. Mesurer d'abord laissait passer la requête arrivée entre les deux.
+#
+# LE TRAVAIL, c'est `metrics_travail` : requêtes HTTP, plus tours du coach et
+# analyses de photo ouverts jusqu'à leur dernière écriture, qui survivent à
+# leur requête (page quittée, scan relu par l'appareil).
+scale_drainer() {
+  local env_name="$1" file="$2" cible="$3" jeton delai limite debut
+  local nom etat sante port travail reste i
+  local -a lignes partants=() ports_partants=() malades=() restants=() sains=()
+
+  # Malades d'abord (0), sains ensuite (1) ; à santé égale, le plus haut numéro.
+  mapfile -t lignes < <(api_replica_states "$env_name" "$file" \
+    | awk -F'|' '$2 == "running" && $4 != "" {
+        n = $1; sub(/.*-/, "", n)
+        sain = ($3 == "healthy" || $3 == "sans-sonde") ? 1 : 0
+        print sain "|" n "|" $0
+      }' \
+    | sort -t'|' -k1,1n -k2,2nr | cut -d'|' -f3-)
+  [ "${#lignes[@]}" -gt "$cible" ] || return 0
+
+  # Compose compte TOUS les conteneurs du service, arrêtés ou en redémarrage
+  # compris : s'il y en a d'autres que ceux en marche, `up -d` en retirerait
+  # un de son choix après nous. Vérifié AVANT de toucher à quoi que ce soit ;
+  # `heal` s'occupe d'abord de l'intrus, la réduction attendra.
+  if [ "$(dc "$env_name" "$file" ps -a -q api 2>/dev/null | wc -l)" -ne "${#lignes[@]}" ]; then
+    warn "un conteneur d'API arrêté ou en redémarrage : réduction remise, rien n'est touché"
+    return 1
+  fi
+
+  for i in "${!lignes[@]}"; do
+    IFS='|' read -r nom etat sante port <<< "${lignes[i]}"
+    if [ "$i" -lt $((${#lignes[@]} - cible)) ]; then
+      partants+=("${nom#/}"); ports_partants+=("$port")
+      case "$sante" in healthy | sans-sonde) malades+=(non) ;; *) malades+=(oui) ;; esac
+    else
+      restants+=("$port")
+      case "$sante" in healthy | sans-sonde) sains+=("$port") ;; esac
+    fi
+  done
+  : "${etat:-}"
+  # Comme api_replica_ports : les sains seuls, s'il y en a.
+  [ "${#sains[@]}" -gt 0 ] && restants=("${sains[@]}")
+
+  info "drainage de ${partants[*]} avant de les retirer"
+  nginx_apply_upstream "$env_name" "$file" "${restants[@]}" || {
+    warn "amont Nginx non réécrit : réduction remise, rien n'est arrêté"
+    return 1
+  }
+
+  jeton="$(env_value METRICS_TOKEN "$file" '')"
+  delai="${CARLYS_SCALE_DRAIN_DELAY:-2}"
+  limite="${CARLYS_SCALE_DRAIN_SECONDS:-300}"
+  debut="$(maintenant)"
+  while :; do
+    # LA PAUSE D'ABORD : `reload` rend la main avant que les anciens
+    # processus de Nginx aient cessé de distribuer. Une mesure immédiate
+    # pouvait lire 0 juste avant la dernière requête confiée au partant.
+    sleep "$delai"
+    reste=0
+    for i in "${!ports_partants[@]}"; do
+      port="${ports_partants[i]}"
+      travail="$(metrics_travail "$port" "$jeton")"
+      # Malade ET muet : il était déjà hors de l'amont (api_replica_ports ne
+      # garde que les sains), et c'est justement lui qu'on veut retirer.
+      # L'attendre bloquerait toute réduction tant qu'il existe.
+      [ "$travail" = '?' ] && [ "${malades[i]}" = oui ] && continue
+      # Illisible chez un SAIN (jeton absent ou faux) : rien ne prouve qu'il
+      # a fini, et attendre n'y changera rien.
+      if [ "$travail" = '?' ]; then
+        warn "travail de l'exemplaire du port $port illisible (/metrics) : réduction remise"
+        nginx_apply_upstream "$env_name" "$file" || true
+        return 1
+      fi
+      [ "$travail" = 0 ] || reste=1
+    done
+    [ "$reste" -eq 0 ] && break
+    if [ "$(($(maintenant) - debut))" -ge "$limite" ]; then
+      warn "travail encore en cours sur ${partants[*]} après $limite s : réduction remise"
+      nginx_apply_upstream "$env_name" "$file" || true
+      return 1
+    fi
+  done
+
+  # `stop` laisse à l'API son arrêt propre (elle vide ses envois en vol) ;
+  # `rm` libère le numéro et le port, comme Compose l'aurait fait. Un partant
+  # qui refuse de s'arrêter : on ne laisse pas Compose en choisir un autre,
+  # peut-être en plein travail. Amont rétabli, réduction remise.
+  if ! { docker stop "${partants[@]}" >/dev/null && docker rm "${partants[@]}" >/dev/null; }; then
+    warn "arrêt de ${partants[*]} incomplet : réduction remise — voir carlysctl status $env_name"
+    nginx_apply_upstream "$env_name" "$file" || true
+    return 1
+  fi
+  ok "drainés puis retirés : ${partants[*]}"
 }

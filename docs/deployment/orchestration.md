@@ -35,16 +35,16 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 
 ## 2. Ce qui tourne tout seul, et ce qui ne tourne pas
 
-| | Automatique ? | Commandé par |
-| --- | --- | --- |
-| Relever un conteneur disparu, arrêté, ou « unhealthy » | **oui** | minuterie |
-| Ajuster le nombre d'exemplaires d'API à la charge | **oui** | minuterie |
-| Tenir l'amont Nginx à jour | **oui** | minuterie |
-| Élaguer images, couches pendantes et cache de construction de plus d'une semaine à chaque passe (le filet de retour arrière est gardé ; jamais les volumes) | **oui** | minuterie |
-| Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`) | **oui** | minuterie |
-| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, et les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui** | minuterie |
-| Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
-| **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
+|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Automatique ?      | Commandé par         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ | -------------------- |
+| Relever un conteneur disparu, arrêté, ou « unhealthy »                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | **oui**            | minuterie            |
+| Ajuster le nombre d'exemplaires d'API à la charge                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | **oui**            | minuterie            |
+| Tenir l'amont Nginx à jour                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | **oui**            | minuterie            |
+| Élaguer images, couches pendantes et cache de construction de plus d'une semaine à chaque passe (le filet de retour arrière est gardé ; jamais les volumes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **oui**            | minuterie            |
+| Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | **oui**            | minuterie            |
+| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, et les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui**            | minuterie            |
+| Sauvegarder les bases **et les médias MinIO**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **oui**            | cron, 3 h du matin   |
+| **Déployer une nouvelle version**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
 La dernière ligne est la seule qui demande une décision. Tant que
 `CARLYS_AUTO_UPDATE=non` dans le `.env` d'un environnement — la valeur livrée —
@@ -93,6 +93,7 @@ Carlys y a écrit. D'où la procédure :
    réponse, ou avec un autre code, ne rien faire : si la demande était
    usurpée, la vraie personne vient d'en être avertie, et son compte n'a
    pas bougé.
+
 3. **Compte encore actif** (le cas normal) : l'outil le supprime exactement
    comme l'appli (abonnement Stripe résilié, refus si Stripe ne l'a pas
    fait ; sortie de la ligue, des défis et du fil ; ligne d'audit
@@ -115,6 +116,7 @@ Carlys y a écrit. D'où la procédure :
    supprimé : relancer un peu plus tard. Si la ligne d'audit n'a pas pu
    être écrite, le compte est supprimé mais PAS effacé : relancer avec
    `--compte <uuid>` une fois la base réparée.
+
 4. **Compte déjà supprimé** entre la demande et l'intervention (la fiche
    `/users/<uuid>` affiche le statut `DELETED`), le code ayant été renvoyé :
 
@@ -128,6 +130,7 @@ Carlys y a écrit. D'où la procédure :
    des photos muet, le plus souvent) arrête `carlysctl` avec le message de
    la commande. Sur un échec, relancer une fois la cause réparée (sinon la
    purge quotidienne le reprendra au bout des 30 jours).
+
 5. **Confirmer** l'effacement à la personne, à l'adresse de la fiche,
    celle qui a reçu le code.
 
@@ -207,7 +210,7 @@ débit (il faut deux échantillons pour dériver un compteur). Cette absence ne
 vaut pas « zéro requête par seconde », sans quoi la pile se réduirait à chaque
 redémarrage du superviseur.
 
-### 4.2 Les quatre garde-fous, et pourquoi ils existent
+### 4.2 Les cinq garde-fous, et pourquoi ils existent
 
 Ce qui rend cette décision difficile n'est pas la formule, c'est
 **l'oscillation**. Un superviseur qui suit la charge à la lettre ajoute un
@@ -215,12 +218,27 @@ exemplaire au premier pic, le retire au premier creux, et recommence : la pile
 passe son temps à démarrer et arrêter des processus, chaque redémarrage coûte
 un cache froid, et le service devient **plus lent** qu'avec un nombre fixe.
 
-| Garde-fou | Défaut | Ce qu'il empêche |
-| --- | --- | --- |
-| Délai de garde | 300 s | deux changements coup sur coup |
-| Patience à la baisse | 3 passages | retirer un exemplaire sur un creux passager |
-| Plafond | `nproc`, borné par la plage de ports | une mesure folle qui asphyxie la machine |
-| Requêtes en vol | aucune descente tant qu'une requête est en cours (`en_vol`, lu sur `/metrics`) | couper une réponse du coach en plein calcul (une à deux minutes sur processeur) |
+| Garde-fou            | Défaut                                                                                                                                                                                                                                                                   | Ce qu'il empêche                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Délai de garde       | 300 s                                                                                                                                                                                                                                                                    | deux changements coup sur coup                                                                                                              |
+| Patience à la baisse | 3 passages                                                                                                                                                                                                                                                               | retirer un exemplaire sur un creux passager                                                                                                 |
+| Plafond              | `nproc`, borné par la plage de ports                                                                                                                                                                                                                                     | une mesure folle qui asphyxie la machine                                                                                                    |
+| Travail en cours     | aucune descente tant qu'une requête, une réponse du coach ou une analyse de photo est en cours ou en file (`en_vol`, lu sur `/metrics` : requêtes HTTP plus `carlys_api_ai_work_open`, un tour du coach ou une analyse de photo de son admission à sa dernière écriture) | couper une réponse du coach en plein calcul (une à deux minutes sur processeur), y compris page quittée, où plus aucune requête ne la tient |
+| Drainage             | 300 s (`CARLYS_SCALE_DRAIN_SECONDS`)                                                                                                                                                                                                                                     | arrêter un exemplaire qui a reçu du travail APRÈS la mesure                                                                                 |
+
+**Le drainage** (`scale_drainer`, `_scale.sh`). La mesure ci-dessus date du
+début du passage : une requête partie dans les secondes suivantes tombait avec
+l'exemplaire. Une réduction se fait donc en quatre temps : choisir les
+partants (les malades d'abord, puis les plus hauts numéros) ; les retirer de
+l'amont Nginx, qui ne leur
+confie plus rien et laisse finir ce qu'il leur a déjà confié ; attendre que
+leur travail soit à zéro ; les arrêter **nous-mêmes**, puis seulement écrire
+le nouveau nombre. Compose, à qui il ne reste que le bon nombre, n'a plus rien
+à retirer : il ne peut donc pas en choisir un autre que celui qu'on a vidé.
+Si le travail ne finit pas dans le délai, s'il ne se lit pas (`/metrics`
+refusé), ou si un partant refuse de s'arrêter : l'amont est rétabli, le `.env`
+garde l'ancien nombre, `carlysctl scale` rend 1, et le passage suivant
+réessaiera.
 
 Changer le nombre ne recrée JAMAIS les exemplaires qui restent
 (`up -d --no-recreate`) : le `.env` étant aussi l'`env_file` de l'API, y écrire
@@ -244,15 +262,15 @@ d'appeler Compose.
 
 Tous dans le `.env` de l'environnement, tous facultatifs.
 
-| Variable | Défaut | |
-| --- | --- | --- |
-| `CARLYS_SCALE_MIN` | 1 | plancher |
-| `CARLYS_SCALE_MAX` | `nproc` | plafond, borné par la plage de ports |
-| `CARLYS_SCALE_USERS_PER_REPLICA` | 250 | |
-| `CARLYS_SCALE_RPS_PER_REPLICA` | 40 | |
-| `CARLYS_SCALE_LATENCY_HIGH_MS` | 750 | au-delà, un cran de plus |
-| `CARLYS_SCALE_COOLDOWN_SECONDS` | 300 | délai de garde, les deux sens |
-| `CARLYS_SCALE_DOWN_PATIENCE` | 3 | passages d'accord avant de réduire |
+| Variable                         | Défaut  |                                      |
+| -------------------------------- | ------- | ------------------------------------ |
+| `CARLYS_SCALE_MIN`               | 1       | plancher                             |
+| `CARLYS_SCALE_MAX`               | `nproc` | plafond, borné par la plage de ports |
+| `CARLYS_SCALE_USERS_PER_REPLICA` | 250     |                                      |
+| `CARLYS_SCALE_RPS_PER_REPLICA`   | 40      |                                      |
+| `CARLYS_SCALE_LATENCY_HIGH_MS`   | 750     | au-delà, un cran de plus             |
+| `CARLYS_SCALE_COOLDOWN_SECONDS`  | 300     | délai de garde, les deux sens        |
+| `CARLYS_SCALE_DOWN_PATIENCE`     | 3       | passages d'accord avant de réduire   |
 
 Ces valeurs sont des **points de départ raisonnables, pas des vérités**. La
 seule bonne façon de les régler est de regarder `carlysctl status` sous charge
@@ -345,7 +363,7 @@ promeut alors le sha **qui tourne déjà en recette**, et seulement si :
    prouvé ;
 3. l'image admin `-prod` existe, donc la garde légale est passée.
 
-C'est la règle du dépôt — *on construit une fois, on déploie deux fois* —
+C'est la règle du dépôt — _on construit une fois, on déploie deux fois_ —
 appliquée sans humain au clavier. Une production qui suivrait une branche
 déploierait du code que personne n'a vu tourner.
 
@@ -413,14 +431,14 @@ exemplaire séparément**, jamais à travers Nginx : passer par Nginx atteindrai
 un exemplaire au hasard, et on lirait le débit d'un tiers de la pile en croyant
 lire celui de la pile.
 
-| Série | Portée | |
-| --- | --- | --- |
-| `carlys_api_online_users` | **globale** | utilisateurs distincts vus sur la fenêtre |
-| `carlys_api_presence_up` | globale | 1 = la mesure vient d'aboutir |
-| `carlys_api_online_users_window_seconds` | globale | largeur de la fenêtre (300 s) |
-| `carlys_api_http_requests_total` | par processus | additionnée sur les exemplaires |
-| `carlys_api_http_request_duration_seconds` | par processus | additionnée |
-| `carlys_api_http_requests_in_flight` | par processus | |
+| Série                                      | Portée        |                                           |
+| ------------------------------------------ | ------------- | ----------------------------------------- |
+| `carlys_api_online_users`                  | **globale**   | utilisateurs distincts vus sur la fenêtre |
+| `carlys_api_presence_up`                   | globale       | 1 = la mesure vient d'aboutir             |
+| `carlys_api_online_users_window_seconds`   | globale       | largeur de la fenêtre (300 s)             |
+| `carlys_api_http_requests_total`           | par processus | additionnée sur les exemplaires           |
+| `carlys_api_http_request_duration_seconds` | par processus | additionnée                               |
+| `carlys_api_http_requests_in_flight`       | par processus |                                           |
 
 La présence est **globale** parce qu'elle est comptée dans Redis, par
 HyperLogLog, avec une clé par minute d'horloge. C'est indispensable : c'est
@@ -437,7 +455,7 @@ encaisse tout.
 ### `METRICS_TOKEN` est obligatoire — en RECETTE aussi
 
 C'est contre-intuitif, donc la raison compte : le garde de `/metrics` ne
-regarde pas le *nom* de l'environnement, il regarde `NODE_ENV`. Or `NODE_ENV`
+regarde pas le _nom_ de l'environnement, il regarde `NODE_ENV`. Or `NODE_ENV`
 vaut `production` **dans les deux** `.env` — c'est voulu, la recette doit
 échouer comme la production, sinon elle ne prouve rien.
 
@@ -543,18 +561,18 @@ dit.
 
 ## 10. Quand ça ne va pas
 
-| Symptôme | Cause la plus fréquente |
-| --- | --- |
-| `status` affiche `⚠ ÉCART nginx ↔ réalité` | l'amont n'a pas suivi un changement : `carlysctl heal <env>` |
-| `mesures : aucun exemplaire ne rend /metrics` | en production, `METRICS_TOKEN` absent du `.env` |
-| `utilisateurs en ligne : inconnu` | l'API n'atteint pas Redis — `status` montre le conteneur |
-| `PLAFOND DE RÉPARATIONS ATTEINT` | une panne qui revient à chaque redémarrage ; lire `docker compose logs` |
-| `débit / latence : pas encore mesurable` | premier passage — un débit se dérive de deux échantillons |
-| La pile ne grandit pas alors que la charge monte | `carlysctl autoscale <env>` dit pourquoi : `delai-de-garde`, ou plafond atteint |
-| `carlysctl` dit « un déploiement est déjà en cours » | une passe de supervision ou un `deploy.sh` tient le verrou — `fuser -v /srv/carlys/<env>/.lock` |
-| La mise à jour automatique ne part jamais | `CARLYS_AUTO_UPDATE`, ou en production la maturation pas encore écoulée — `carlysctl update <env>` dit lequel |
-| La recette est repartie sur une version PLUS ANCIENNE | `CARLYS_UPDATE_BRANCH` désigne une branche en retard sur le clone — `carlysctl doctor` nomme les deux |
-| Un réglage écrit dans le `.env` reste sans effet | la clé y est **deux fois** — seule la dernière compte ; `carlysctl doctor` la nomme |
+| Symptôme                                              | Cause la plus fréquente                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `status` affiche `⚠ ÉCART nginx ↔ réalité`            | l'amont n'a pas suivi un changement : `carlysctl heal <env>`                                                  |
+| `mesures : aucun exemplaire ne rend /metrics`         | en production, `METRICS_TOKEN` absent du `.env`                                                               |
+| `utilisateurs en ligne : inconnu`                     | l'API n'atteint pas Redis — `status` montre le conteneur                                                      |
+| `PLAFOND DE RÉPARATIONS ATTEINT`                      | une panne qui revient à chaque redémarrage ; lire `docker compose logs`                                       |
+| `débit / latence : pas encore mesurable`              | premier passage — un débit se dérive de deux échantillons                                                     |
+| La pile ne grandit pas alors que la charge monte      | `carlysctl autoscale <env>` dit pourquoi : `delai-de-garde`, ou plafond atteint                               |
+| `carlysctl` dit « un déploiement est déjà en cours »  | une passe de supervision ou un `deploy.sh` tient le verrou — `fuser -v /srv/carlys/<env>/.lock`               |
+| La mise à jour automatique ne part jamais             | `CARLYS_AUTO_UPDATE`, ou en production la maturation pas encore écoulée — `carlysctl update <env>` dit lequel |
+| La recette est repartie sur une version PLUS ANCIENNE | `CARLYS_UPDATE_BRANCH` désigne une branche en retard sur le clone — `carlysctl doctor` nomme les deux         |
+| Un réglage écrit dans le `.env` reste sans effet      | la clé y est **deux fois** — seule la dernière compte ; `carlysctl doctor` la nomme                           |
 
 ### `carlysctl doctor` — et pourquoi il ne tient aucune liste
 
@@ -582,14 +600,14 @@ Cinq verdicts, dans l'ordre où ils sortent. Les quatre derniers sont là parce
 que l'oracle ne peut pas les voir : Compose n'interpole que ce que `compose.yml`
 nomme, et tout ce qui traverse `env_file` lui est opaque.
 
-| Ce que `doctor` dit | Gravité | Ce qu'il faut faire |
-| --- | --- | --- |
-| `Compose REFUSE ce .env` | **bloquant** — la pile ne démarrera pas | ajouter la variable que le message nomme |
-| `Compose accepte … mais PRÉVIENT` | **bloquant** — valeur tronquée | un `$` dans une valeur ouvre une substitution : le **doubler** en `$$` |
-| `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse | supprimer les lignes en trop ; c'est la **dernière** qui gagne |
-| `<CLÉ> est déclarée VIDE` | **bloquant** — l'API ne démarrera pas | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut. Ne porte que sur les variables du schéma de l'API — `COMPOSE_PROFILES=` est vide **exprès** en production |
-| `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main |
-| `<CLÉ> absente` | **bloquant** | `carlysctl env-sync <env> --appliquer` (voir ci-dessous) |
+| Ce que `doctor` dit                 | Gravité                                 | Ce qu'il faut faire                                                                                                                                                                             |
+| ----------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Compose REFUSE ce .env`            | **bloquant** — la pile ne démarrera pas | ajouter la variable que le message nomme                                                                                                                                                        |
+| `Compose accepte … mais PRÉVIENT`   | **bloquant** — valeur tronquée          | un `$` dans une valeur ouvre une substitution : le **doubler** en `$$`                                                                                                                          |
+| `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse        | supprimer les lignes en trop ; c'est la **dernière** qui gagne                                                                                                                                  |
+| `<CLÉ> est déclarée VIDE`           | **bloquant** — l'API ne démarrera pas   | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut. Ne porte que sur les variables du schéma de l'API — `COMPOSE_PROFILES=` est vide **exprès** en production |
+| `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique  | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main                                                                                                                     |
+| `<CLÉ> absente`                     | **bloquant**                            | `carlysctl env-sync <env> --appliquer` (voir ci-dessous)                                                                                                                                        |
 
 Hors des `.env`, `doctor` réclame aussi, à chaque passage, la **copie hors
 machine** des sauvegardes tant que `/srv/carlys/sauvegarde-distante.env` manque
@@ -622,9 +640,9 @@ seule.
 
 Deux branches entrent en jeu, et rien ne les rapprochait :
 
-| | D'où ça vient |
-| --- | --- |
-| les **images** déployées | `CARLYS_UPDATE_BRANCH`, **`development` par défaut** |
+|                                 | D'où ça vient                                                |
+| ------------------------------- | ------------------------------------------------------------ |
+| les **images** déployées        | `CARLYS_UPDATE_BRANCH`, **`development` par défaut**         |
 | les **scripts** et les exemples | la branche sur laquelle le clone `/srv/carlys/repo` est posé |
 
 Le serveur travaillait sur une branche de fonctionnalité que `main` n'avait pas
@@ -673,16 +691,16 @@ L'alerte part désormais des scripts eux-mêmes, par `curl` — **déjà** un ou
 requis, et il sait parler SMTP. Aucun MTA à installer, aucune dépendance
 ajoutée.
 
-| Ce qui déclenche | Où |
-| --- | --- |
-| sauvegarde d'une base **déployée** échouée | `backup.sh`, chaque nuit |
-| déploiement automatique échoué, sha mis de côté | `_update.sh` |
-| **plafond de réparations atteint** — l'orchestrateur a renoncé | `_heal.sh` |
-| disque encore au-delà du seuil APRÈS élagage | `_prune.sh` |
-| balayage quotidien des photos de repas orphelines en échec (nouvel essai toutes les heures jusqu'à réussite) | `_photos.sh` |
+| Ce qui déclenche                                                                                             | Où                       |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| sauvegarde d'une base **déployée** échouée                                                                   | `backup.sh`, chaque nuit |
+| déploiement automatique échoué, sha mis de côté                                                              | `_update.sh`             |
+| **plafond de réparations atteint** — l'orchestrateur a renoncé                                               | `_heal.sh`               |
+| disque encore au-delà du seuil APRÈS élagage                                                                 | `_prune.sh`              |
+| balayage quotidien des photos de repas orphelines en échec (nouvel essai toutes les heures jusqu'à réussite) | `_photos.sh`             |
 
 **On n'alerte que sur les transitions**, et c'est ce qui rend le système
-lisible. La supervision repasse toutes les deux minutes : signaler un *état*
+lisible. La supervision repasse toutes les deux minutes : signaler un _état_
 enverrait 720 messages par jour.
 
 ```
@@ -721,7 +739,7 @@ carlysctl alert-test
 `carlysctl doctor` compte l'absence de canal comme un **défaut** et le dit.
 
 > **Ce qu'aucune alerte ne peut faire : prévenir que la machine est morte.**
-> Une alerte part *de* la machine ; si elle ne répond plus, rien ne part, et le
+> Une alerte part _de_ la machine ; si elle ne répond plus, rien ne part, et le
 > silence ressemble à « tout va bien ». Couvrir ce cas demande une surveillance
 > **extérieure** — un service qui interroge `/health/live` et crie quand il
 > n'obtient rien. Elle n'est pas dans ce dépôt, et rien ici ne la remplace.
@@ -745,11 +763,11 @@ lisent dans le fichier d'exemple, qui porte déjà la convention `CHANGE_MOI_` e
 une directive `#carlysctl:engendrer` au-dessus des secrets qu'on sait fabriquer
 sans casser d'état extérieur :
 
-| Cas | Ce qui se passe | Pourquoi |
-| --- | --- | --- |
-| valeur en clair dans l'exemple | **recopiée** | `CARLYS_API_REPLICAS=1`, `SWAGGER_ENABLED=false` : la valeur que le script utilisait déjà comme défaut |
-| secret marqué `#carlysctl:engendrer` | **engendré** avec `--tout`, **jamais affiché** | `METRICS_TOKEN`, `JWT_ACCESS_SECRET` : rien d'extérieur n'en dépend, une valeur neuve ne casse rien |
-| tout le reste | **refusé**, avec la raison | `DOMAIN` casserait le site ; `POSTGRES_PASSWORD` engendré fermerait la base à double tour sur des données existantes |
+| Cas                                  | Ce qui se passe                                | Pourquoi                                                                                                             |
+| ------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| valeur en clair dans l'exemple       | **recopiée**                                   | `CARLYS_API_REPLICAS=1`, `SWAGGER_ENABLED=false` : la valeur que le script utilisait déjà comme défaut               |
+| secret marqué `#carlysctl:engendrer` | **engendré** avec `--tout`, **jamais affiché** | `METRICS_TOKEN`, `JWT_ACCESS_SECRET` : rien d'extérieur n'en dépend, une valeur neuve ne casse rien                  |
+| tout le reste                        | **refusé**, avec la raison                     | `DOMAIN` casserait le site ; `POSTGRES_PASSWORD` engendré fermerait la base à double tour sur des données existantes |
 
 Le défaut, en l'absence de directive, est de **refuser** : une variable ajoutée
 sans qu'on y pense tombe donc du côté prudent.

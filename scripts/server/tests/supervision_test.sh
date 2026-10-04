@@ -194,4 +194,84 @@ grep -q -- 'up -d --no-deps --no-recreate api' "$FAUX_JOURNAL" && garde=oui || g
 verifier "changer le nombre ne recrée jamais les exemplaires qui restent" oui "$garde"
 banc_nettoyer
 
+echo
+echo "réduire — l'exemplaire qui part est vidé par Nginx avant d'être arrêté"
+
+# `drainage` — deux exemplaires sains ; le travail de l'api-2 (port 3101) se
+# lit dans $BANC/travail-3101 et baisse d'une unité à chaque lecture.
+drainage() {
+  banc_preparer
+  ENV_STAGING="$CARLYS_ROOT/staging/.env"
+  printf 'carlys_staging-api-1|3100%s\ncarlys_staging-api-2|3101\n' "${3-}" > "$BANC/exemplaires"
+  echo "$1" > "$BANC/travail-3101"
+  echo "${4:-0}" > "$BANC/travail-3100"
+  [ -z "${5-}" ] || echo "$5" > "$BANC/exemplaires.arretes"
+  # Le faux /metrics : le format de metrics_scrape_one, code HTTP compris.
+  cat > "$BANC/bin/curl" << 'FAUX'
+#!/usr/bin/env bash
+port="${*: -1}"; port="${port#http://127.0.0.1:}"; port="${port%%/*}"
+f="$(dirname "$FAUX_JOURNAL")/travail-$port"
+n="$(cat "$f")"; [ "$n" != "?" ] && [ "$n" -gt 0 ] && echo $((n - 1)) > "$f"
+[ "$n" = '?' ] && { printf 'refus\n#--code--401'; exit 0; }
+printf 'carlys_api_http_requests_in_flight 1\ncarlys_api_ai_work_open %s\n\n#--code--200' "$n"
+FAUX
+  # Le faux rechargement : il note les ports que l'amont porte À CET INSTANT.
+  cat > "$BANC/bin/recharger-nginx" << 'FAUX'
+#!/usr/bin/env bash
+printf 'nginx %s\n' "$(grep -o '127.0.0.1:[0-9]*' "$CARLYS_NGINX_CONF_DIR"/*.conf | cut -d: -f2 | tr '\n' ' ')" >> "$FAUX_JOURNAL"
+FAUX
+  chmod +x "$BANC/bin/curl" "$BANC/bin/recharger-nginx"
+  mkdir -p "$BANC/nginx"
+  export CARLYS_NGINX_CONF_DIR="$BANC/nginx" CARLYS_NGINX_TEST=true CARLYS_NGINX_RELOAD=recharger-nginx
+  export CARLYS_SCALE_DRAIN_DELAY=0 CARLYS_SCALE_DRAIN_SECONDS="${2:-30}"
+  appeler scale_apply staging "$ENV_STAGING" 1 > /dev/null || true
+}
+
+drainage 2
+verifier "l'amont perd d'abord l'api-2, puis l'api-2 s'arrête" oui \
+  "$([ "$(banc_rang 'nginx 3100 ')" -gt 0 ] && [ "$(banc_rang 'nginx 3100 ')" -lt "$(banc_rang 'stop carlys_staging-api-2')" ] && echo oui || echo non)"
+verifier "… une fois son travail fini (lu trois fois : 2, 1, 0)" 0 "$(cat "$BANC/travail-3101")"
+verifier "… jamais l'api-1, qui reste" non "$(grep -q 'stop.*api-1' "$FAUX_JOURNAL" && echo oui || echo non)"
+verifier "… et le .env porte le nouveau nombre" 1 "$(grep '^CARLYS_API_REPLICAS=' "$ENV_STAGING" | cut -d= -f2)"
+# Une réponse du coach finie page quittée ne tient aucune requête ouverte :
+# elle compte quand même, sinon la décision descend sur elle.
+echo 2 > "$BANC/travail-3100"
+appeler metrics_summary staging "$ENV_STAGING" > /dev/null
+verifier "le travail du coach compte dans en_vol, sans requête HTTP ouverte" en_vol=2 \
+  "$(grep -o 'en_vol=[0-9]*' "$BANC_SORTIE")"
+banc_nettoyer
+
+drainage 99 0
+verifier "travail qui ne finit pas à temps : personne n'est arrêté" non \
+  "$(grep -q '^stop' "$FAUX_JOURNAL" && echo oui || echo non)"
+verifier "… l'amont retrouve ses deux exemplaires" oui \
+  "$(tail -n 1 < <(grep '^nginx' "$FAUX_JOURNAL") | grep -q '3100 3101' && echo oui || echo non)"
+verifier "… et le .env garde l'ancien nombre" '' "$(grep '^CARLYS_API_REPLICAS=' "$ENV_STAGING" | cut -d= -f2)"
+verifier "… et la commande le dit (code 1)" 1 "$(appeler scale_apply staging "$ENV_STAGING" 1)"
+banc_nettoyer
+
+drainage '?'
+verifier "travail illisible (/metrics refusé) : réduction remise, personne n'est arrêté" non \
+  "$(grep -q '^stop' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+# L'api-1 est malade : c'est elle qui part, même au plus petit numéro, et
+# l'amont ne garde que la saine pendant le drainage.
+drainage 0 30 '|unhealthy'
+verifier "un exemplaire malade part avant un sain, quel que soit son numéro" oui \
+  "$(grep -q 'stop carlys_staging-api-1' "$FAUX_JOURNAL" && ! grep -q 'stop.*api-2' "$FAUX_JOURNAL" && echo oui || echo non)"
+verifier "… et l'amont du drainage ne porte que la saine" oui \
+  "$(grep -q -x 'nginx 3101 ' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+drainage 0 30 '|unhealthy' '?'
+verifier "malade ET muet : il part quand même (il était déjà hors de l'amont)" oui \
+  "$(grep -q 'stop carlys_staging-api-1' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+drainage 0 30 '' 0 carlys_staging-api-3
+verifier "un conteneur arrêté en plus : rien n'est touché, ni l'amont ni personne" non \
+  "$(grep -q -E '^(stop|nginx)' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
 banc_bilan

@@ -165,7 +165,10 @@ $(for port in "$@"; do printf '    server 127.0.0.1:%s max_fails=3 fail_timeout=
 FIN
 }
 
-# `nginx_apply_upstream <env> <.env>` — écrit l'amont, vérifie, recharge.
+# `nginx_apply_upstream <env> <.env> [<port>…]` — écrit l'amont, vérifie,
+# recharge. Sans ports : ceux des exemplaires en marche (api_replica_ports) ;
+# avec : ceux-là seuls — le drainage d'une réduction (_scale.sh) écarte ainsi
+# les exemplaires qu'il va retirer, avant de les retirer.
 #
 # LA SÉQUENCE COMPTE, et c'est tout l'intérêt de la fonction :
 #   1. refuser une liste VIDE — un bloc `upstream` sans `server` est une
@@ -181,9 +184,9 @@ FIN
 # Rend 0 si rechargé ou déjà à jour, 1 si refusé.
 nginx_apply_upstream() {
   local env_name="$1" file="$2"
-  local cible sauvegarde nouveau ports=()
+  local cible sauvegarde nouveau ports=("${@:3}")
 
-  mapfile -t ports < <(api_replica_ports "$env_name" "$file")
+  [ "${#ports[@]}" -gt 0 ] || mapfile -t ports < <(api_replica_ports "$env_name" "$file")
   if [ "${#ports[@]}" -eq 0 ]; then
     warn "Aucun exemplaire d'API en marche pour « $env_name » : l'amont Nginx est laissé INTACT."
     warn "  (un amont vide est une configuration invalide ; l'écraser couperait le service)"

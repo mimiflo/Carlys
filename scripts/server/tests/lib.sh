@@ -18,6 +18,10 @@
 #     minio-init -c …`) : volumes `-v hôte:conteneur` et adresse
 #     http://minio:9000 sont réécrits vers l'hôte. Le `mc` et le `minio`
 #     appelés sont alors de vrais binaires (voir banc_binaires_minio).
+#   - tient des exemplaires d'API si $BANC/exemplaires existe (une ligne
+#     « <nom>|<port>[|<santé>] » chacun) : `compose ps [-a] -q api` les
+#     nomme, `inspect` les dit en marche (sains par défaut), `stop` les
+#     retire du fichier ; `ps -a` nomme en plus ceux de exemplaires.arretes.
 #
 # Source par les fichiers *_test.sh de ce dossier.
 
@@ -157,8 +161,19 @@ banc_docker_factice() {
 #!/usr/bin/env bash
 set -uo pipefail
 printf '%s\n' "$*" >> "$FAUX_JOURNAL"
+exemplaires="$(dirname "$FAUX_JOURNAL")/exemplaires"
 case "${1-}" in
   login) cat > /dev/null; exit 0 ;;
+  inspect)
+    nom="${*: -1}"
+    ligne="$(grep -m1 "^$nom|" "$exemplaires" 2>/dev/null)" || exit 0
+    IFS='|' read -r _ port sante <<< "$ligne"
+    printf '/%s|running|%s|%s\n' "$nom" "${sante:-healthy}" "$port"
+    exit 0 ;;
+  stop)
+    shift
+    for nom in "$@"; do sed -i "/^$nom|/d" "$exemplaires" 2>/dev/null; done
+    exit 0 ;;
   pull | info | image) exit 0 ;;
   manifest)
     case " ${FAUX_IMAGES_ABSENTES:-} " in *" ${3##*:sha-} "*) exit 1 ;; esac
@@ -179,7 +194,16 @@ case "$sous" in
   # Une écriture par service, espacées, comme docker compose : le lecteur
   # qui s'arrête au premier trouvé (`grep -q`) ferme le tube avant la
   # suivante. Sans la pause, cette course ne se voyait que sous charge.
-  ps) for s in $FAUX_SERVICES; do printf '%s\n' "$s"; sleep 0.05; done; exit 0 ;;
+  ps)
+    tous=non
+    [ "${1-}" = -a ] && { tous=oui; shift; }
+    if [ "${1-}" = -q ] && [ "${2-}" = api ]; then
+      [ -f "$exemplaires" ] && cut -d'|' -f1 "$exemplaires"
+      # `-a` : aussi les conteneurs arrêtés, nommés dans $BANC/arretes.
+      [ "$tous" = oui ] && [ -f "$exemplaires.arretes" ] && cat "$exemplaires.arretes"
+      exit 0
+    fi
+    for s in $FAUX_SERVICES; do printf '%s\n' "$s"; sleep 0.05; done; exit 0 ;;
   exec)
     [ "${1-}" = -T ] && shift
     service="$1"; shift
