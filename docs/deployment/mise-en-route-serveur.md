@@ -1194,38 +1194,19 @@ Idempotente, comme le catalogue d'exercices dont elle partage la forme.
 
 ### La base d'aliments (CIQUAL)
 
-**Pas branchée dans le déploiement, pour l'instant.** La recherche d'aliments
-et les repas composés lisent la table CIQUAL de l'Anses, chargée par
-`dist/cli/ciqual-import`. Contrairement au catalogue d'exercices, cette table
-n'est pas livrée avec le code : on télécharge la distribution XML officielle,
-on la dépose sur l'hôte, et on lance la commande à la main. Tant qu'elle n'a
-pas tourné, la recherche rend une liste vide et seule la saisie à la main
-fonctionne. D'où télécharger le fichier, ce que la commande garantit, et
-pourquoi elle n'a **pas encore été validée sur le vrai fichier** :
-`docs/product/nutrition.md`, « Base d'aliments ».
+**Rien à faire.** La supervision télécharge la table officielle de l'Anses,
+en vérifie l'empreinte, et l'importe d'elle-même au premier passage après un
+déploiement (`scripts/server/_ciqual.sh`), puis une fois par nouvelle version
+épinglée. Un échec (site de l'Anses injoignable) ouvre une alerte et se
+réessaie dans l'heure. Pour rejouer l'import tout de suite :
 
 ```bash
-# le dossier décompressé de la distribution (alim_*, alim_grp_*, compo_*, const_*),
-# lisible par l'utilisateur du conteneur (uid 1000)
-sudo mkdir -p /srv/carlys/ciqual/2020 && sudo chmod -R a+rX /srv/carlys/ciqual
-
-# 1. simulation : rien n'est écrit, le rapport dit ce qui changerait
-sudo docker compose --project-name carlys_staging \
-  --env-file /srv/carlys/staging/.env \
-  --file /srv/carlys/repo/infrastructure/server/compose.yml \
-  run --rm --no-deps -T -v /srv/carlys/ciqual/2020:/ciqual:ro api \
-  node dist/cli/ciqual-import /ciqual --a-blanc
-
-# 2. import réel : même commande sans --a-blanc
+sudo /srv/carlys/repo/scripts/server/carlysctl ciqual-import staging
+sudo /srv/carlys/repo/scripts/server/carlysctl ciqual-import production
 ```
 
-`--no-deps` : la commande ne touche que la base, déjà debout sur un serveur
-en service. Idempotente et transactionnelle : la rejouer ne change rien, un
-échec n'écrit rien. Une version qui retirerait plus d'un quart des aliments
-est refusée sans `--accepter-retraits`. Le jour où elle sera branchée, ce sera
-une sous-commande `carlysctl ciqual-import <env> <dossier>` sur le modèle de
-`catalogue_charger` (`scripts/server/_common.sh`) — la documentation produit
-détaille les deux options.
+Le détail (version épinglée, garde-fous) : `docs/product/nutrition.md`,
+« Base d'aliments ».
 
 ### Les photos de repas (bucket privé)
 

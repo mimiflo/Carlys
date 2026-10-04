@@ -380,8 +380,8 @@ vaut_non() {
 # porte dist/cli/<cli>.js. Une image antérieure à son introduction ne l'a pas :
 # le savoir AVANT évite une erreur de Node illisible, et permet à un retour
 # arrière vers un vieux sha de passer son chemin au lieu d'échouer. Sert aux
-# quatre CLI que lance le serveur : catalog-seed, subscription-catalog,
-# meal-photos-sweep et deleted-accounts-purge.
+# CLI que lance le serveur : catalog-seed, subscription-catalog,
+# meal-photos-sweep, deleted-accounts-purge et ciqual-import.
 api_cli_present() {
   dc "$1" "$2" run --rm --no-deps -T --entrypoint test api -f "dist/cli/$3.js" >/dev/null 2>&1
 }
@@ -549,3 +549,5 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_photos.sh"
 # shellcheck source=scripts/server/_purge_comptes.sh
 . "$CARLYS_LIB_DIR/_purge_comptes.sh"
+# shellcheck source=scripts/server/_ciqual.sh
+. "$CARLYS_LIB_DIR/_ciqual.sh"

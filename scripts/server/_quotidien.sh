@@ -3,9 +3,9 @@
 # une fois par jour et par environnement, relancé dans l'heure après un échec,
 # et une alerte tant qu'il échoue.
 #
-# Deux s'en servent, qui ne diffèrent que par leur commande et leurs mots : le
-# balayage des photos de repas orphelines (_photos.sh) et la purge des comptes
-# supprimés (_purge_comptes.sh). La mécanique était recopiée de l'un à l'autre ;
+# Trois s'en servent, qui ne diffèrent que par leur commande et leurs mots : le
+# balayage des photos de repas orphelines (_photos.sh), la purge des comptes
+# supprimés (_purge_comptes.sh) et l'import de la table CIQUAL (_ciqual.sh). La mécanique était recopiée de l'un à l'autre ;
 # elle vit ici, une fois, et un correctif du rythme ou du réessai vaut pour
 # les deux.
 #

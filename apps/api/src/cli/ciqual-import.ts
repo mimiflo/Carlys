@@ -21,10 +21,10 @@
  * refusée (dossier incomplet ? mauvaise distribution ?) ;
  * `--accepter-retraits` l'assume, après simulation.
  *
- * Pas branchée dans le déploiement automatique : contrairement au catalogue
- * d'exercices, la table n'est pas livrée avec le code. Voir la section
- * « Base d'aliments » de `docs/product/nutrition.md` pour l'endroit où la
- * brancher.
+ * Sur un serveur, personne ne la lance : la supervision télécharge la
+ * distribution épinglée, la vérifie et l'importe d'elle-même
+ * (`scripts/server/_ciqual.sh`, `carlysctl ciqual-import <env>` pour la
+ * rejouer).
  */
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';

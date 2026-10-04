@@ -57,6 +57,13 @@ AGIR À LA MAIN
                                           (étape 6/8). À relancer après avoir
                                           changé un STRIPE_PRICE_* ou un
                                           REVENUECAT_PRODUCT_* du .env
+  carlysctl ciqual-import <env>           (ré)importe la table d'aliments CIQUAL,
+                                          téléchargée et vérifiée. La
+                                          supervision le fait d'elle-même au
+                                          premier passage, puis à chaque
+                                          nouvelle version épinglée ;
+                                          --a-blanc simule, --accepter-retraits
+                                          assume une version qui retire beaucoup
   carlysctl meal-photos-sweep <env>       efface du bucket privé les photos de
                                           repas que plus rien ne cite. La
                                           supervision le fait d'elle-même une
@@ -530,6 +537,41 @@ cmd_subscription_catalog() {
   ok "catalogue d'abonnement en place."
 }
 
+# (Ré)importe la table CIQUAL épinglée (_ciqual.sh), même déjà importée.
+#
+# EN TEMPS NORMAL, PERSONNE N'A BESOIN DE CETTE COMMANDE : la supervision
+# l'importe d'elle-même. Elle reste pour rejouer tout de suite un import raté
+# (site de l'Anses revenu), ou après une restauration de la base.
+cmd_ciqual_import() {
+  local env_name file a_blanc=non
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  local options=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --a-blanc) options+=(--a-blanc); a_blanc=oui; shift ;;
+      --accepter-retraits) options+=(--accepter-retraits); shift ;;
+      *) die "Option inconnue : $1" "Attendu : --a-blanc, --accepter-retraits" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker curl sha256sum
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+  api_cli_present "$env_name" "$file" ciqual-import \
+    || die "L'image API déployée sur « $env_name » ne porte pas encore ciqual-import."
+  step "Base d'aliments CIQUAL sur « $env_name »"
+  ciqual_importer "$env_name" "$file" --force ${options[@]+"${options[@]}"} \
+    || die "L'import a échoué — la sortie ci-dessus dit pourquoi. Rien n'a été écrit en base." \
+      "Une nouvelle version qui retire beaucoup d'aliments : --a-blanc pour voir, puis --accepter-retraits."
+  [ "$a_blanc" = oui ] && { ok "simulation terminée : rien n'a été écrit."; return 0; }
+  state_set_many "$env_name" import_ciqual "$(maintenant)" import_ciqual_echec non
+  alerte_resoudre "$env_name" import_ciqual "Base d aliments CIQUAL non importee"
+  ok "table CIQUAL en place."
+}
+
 # Efface du bucket PRIVÉ les photos de repas orphelines — les objets que plus
 # aucune ligne d'un repas vivant ne cite — via dist/cli/meal-photos-sweep de
 # l'image API.
@@ -704,8 +746,9 @@ supervise_un() {
   # l'exemple porte en clair, elle n'ENGENDRE aucun secret sans qu'on le lui
   # demande. METRICS_TOKEN et JWT_ACCESS_SECRET absents produisent un
   # symptôme bruyant que `status` et `doctor` nomment déjà, avec la commande
-  # exacte ; LOG_FINGERPRINT_SECRET absent a un repli (le secret JWT), et
-  # `doctor` le nomme aussi. Mieux vaut un humain averti qu'une valeur
+  # exacte. Seule exception, `#carlysctl:engendrer-auto` : LOG_FINGERPRINT_SECRET,
+  # dont l'absence a un repli et que rien d'extérieur ne lit, est engendré
+  # ici. Pour tout le reste, mieux vaut un humain averti qu'une valeur
   # apparue toute seule dans un fichier qu'il croit connaître.
   if [ "$(envsync_actif "$file")" = oui ]; then
     envsync_appliquer "$env_name" "$file" ecrire sur || true
@@ -727,6 +770,9 @@ supervise_un() {
   # Une fois par jour : les comptes supprimés depuis plus que le délai de
   # conservation, effacés pour de bon. Voir _purge_comptes.sh.
   purge_comptes_si_due "$env_name" "$file" || true
+  # La base d'aliments : téléchargée, vérifiée et importée une fois par
+  # version épinglée, sans que personne ait à la déposer. Voir _ciqual.sh.
+  ciqual_importer_si_du "$env_name" "$file" || true
 
   unlock_env
   update_run "$env_name" "$file" || true
@@ -855,6 +901,7 @@ case "$COMMANDE" in
   catalog-seed) cmd_catalog_seed "$@" ;;
   subscription-catalog) cmd_subscription_catalog "$@" ;;
   meal-photos-sweep) cmd_meal_photos_sweep "$@" ;;
+  ciqual-import) cmd_ciqual_import "$@" ;;
   deleted-accounts-purge) cmd_deleted_accounts_purge "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;

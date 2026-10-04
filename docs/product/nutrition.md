@@ -336,33 +336,39 @@ importés** (2 298 à l'énergie publiée, 794 à l'énergie calculée), 93
 écartés faute de macros. Les huit noms de constituants existent tels quels
 dans `const_*.xml`, l'encodage windows-1252 se lit, aucune forme de teneur
 inattendue n'a fait échouer l'import, et le rejeu est sans effet. Reste à
-faire : l'import réel sur la recette, puis la production (section
-suivante).
+faire : l'import réel sur la recette, puis la production — automatique
+désormais (section suivante).
 
-### Où la brancher dans le déploiement (pas encore fait)
+### Sur le serveur : importée toute seule (4 octobre 2026)
 
-La commande n'est **pas** appelée par `carlysctl` ni par `deploy.sh` : à la
-différence du catalogue d'exercices, la table **n'est pas livrée avec le
-code** (elle n'est pas dans l'image), et son rythme est celui de l'Anses, pas
-celui des déploiements. Deux branchements possibles, à trancher après la
-validation ci-dessus :
+**Personne n'a rien à déposer ni à lancer.** La passe de supervision
+(`scripts/server/_ciqual.sh`) télécharge la distribution XML officielle de
+l'Anses, en vérifie l'**empreinte SHA-256 épinglée** dans ce fichier, la garde
+sur le disque (`/srv/carlys/ciqual/`, commune aux deux environnements), la
+décompresse dans le conteneur de l'API et lance `dist/cli/ciqual-import`. Une
+fois par version et par environnement : au premier passage après un
+déploiement, puis plus rien tant que la version épinglée ne change pas
+(mesuré : 11 s pour 3 092 aliments). Un site injoignable ou une empreinte qui
+ne correspond pas ne bloquent rien : alerte, nouvel essai dans l'heure
+(`_quotidien.sh`).
 
-- **manuel** (recommandé tant que la table n'a pas été validée) : une
-  sous-commande `carlysctl ciqual-import <env> <dossier>` dans
-  `scripts/server/`, sur le modèle de `catalogue_charger` (`_common.sh`) — un
-  `docker compose run --rm --no-deps -T -v <dossier>:/ciqual:ro api node
-  dist/cli/ciqual-import /ciqual` (la commande ne touche que la base, d'où
-  `--no-deps`) ;
-- **automatique** : embarquer la distribution dans l'image (données
-  ouvertes, plusieurs dizaines de Mo non compressés) et ajouter une étape après « Catalogue
-  d'exercices » dans `deploy.sh` ; l'idempotence rend l'étape quasi gratuite
-  quand la version n'a pas bougé.
+Pourquoi pas dans l'image : 3,5 Mo par clone du dépôt, ou une CI qui
+dépendrait d'un site tiers à chaque construction (la leçon de MinIO). Le
+serveur, lui, a le temps.
 
-En attendant, sur un serveur : copier le dossier sur l'hôte et lancer la
-même commande par `docker compose run` avec ce montage (voir
-`docs/deployment/mise-en-route-serveur.md`, « La base d'aliments »). Tant
-qu'elle n'a pas tourné, la recherche rend une liste vide et `meta.source.version`
-vaut `null` : l'écran d'ajout doit alors proposer la saisie à la main.
+- **Nouvelle version CIQUAL** : changer `CARLYS_CIQUAL_URL` et
+  `CARLYS_CIQUAL_SHA256` dans `_ciqual.sh` ; la supervision la réimporte.
+- **Rejouer tout de suite** (site revenu, base restaurée) :
+  `carlysctl ciqual-import <env>`.
+- `--accepter-retraits` n'est passé d'office qu'au **premier** import (les
+  quelques aliments d'essai d'une base neuve le bloquaient) ; ensuite le
+  garde-fou joue : une nouvelle version qui retirerait plus d'un quart des
+  aliments s'arrête sur une alerte. La regarder, puis l'assumer :
+  `carlysctl ciqual-import <env> --a-blanc`, puis `--accepter-retraits`.
+
+Tant qu'elle n'a pas tourné, la recherche rend une liste vide et
+`meta.source.version` vaut `null` : l'écran d'ajout propose alors la saisie à
+la main.
 
 ## Repas composé : le serveur calcule
 

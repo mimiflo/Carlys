@@ -181,6 +181,97 @@ verifier "élagage : jamais -a, jamais les volumes" non "$large"
 banc_nettoyer
 
 echo
+echo "env-sync — la supervision n'engendre que les secrets « engendrer-auto »"
+
+banc_preparer
+F="$CARLYS_ROOT/staging/.env"
+mkdir -p "$BANC/exemples"
+cat > "$BANC/exemples/staging.env.example" << 'FIN'
+#carlysctl:engendrer hex32
+JWT_ACCESS_SECRET=CHANGE_MOI_SECRET_JWT
+
+#carlysctl:engendrer-auto hex32
+LOG_FINGERPRINT_SECRET=CHANGE_MOI_CLE_EMPREINTES
+FIN
+code="$(CARLYS_ENV_EXAMPLES_DIR="$BANC/exemples" appeler envsync_appliquer staging "$F" ecrire sur)"
+cle="$(grep '^LOG_FINGERPRINT_SECRET=' "$F" | cut -d= -f2)"
+verifier "passe de supervision : la clé « auto » est engendrée (64 hexadécimaux)" oui \
+  "$(printf '%s' "$cle" | grep -q -x -E '[0-9a-f]{64}' && echo oui || echo non)"
+verifier "… jamais affichée" non "$(grep -q -F -- "$cle" "$BANC_SORTIE" && echo oui || echo non)"
+verifier "… mais le secret JWT, lui, attend un humain (code 1, rien d'écrit)" "1 non" \
+  "$code $(grep -q '^JWT_ACCESS_SECRET=' "$F" && echo oui || echo non)"
+banc_nettoyer
+
+echo
+echo "base d'aliments CIQUAL — téléchargée, vérifiée, importée une fois par version"
+
+banc_preparer
+F="$CARLYS_ROOT/staging/.env"
+# Le faux site de l'Anses : il sert $BANC/anses.zip, et note chaque téléchargement.
+cat > "$BANC/bin/curl" << 'FAUX'
+#!/usr/bin/env bash
+echo telechargement >> "$(dirname "$FAUX_JOURNAL")/curl.journal"
+# Sans archive à servir, il échoue comme un site qui ne répond pas (code 28).
+while [ "$#" -gt 0 ]; do [ "$1" = -o ] && { cp "$(dirname "$FAUX_JOURNAL")/anses.zip" "$2" 2> /dev/null || exit 28; exit 0; }; shift; done
+exit 1
+FAUX
+chmod +x "$BANC/bin/curl"
+servir() { printf '%s' "$1" > "$BANC/anses.zip"; sha256sum < "$BANC/anses.zip" | cut -d' ' -f1; }
+telechargements() { grep -c . "$BANC/curl.journal" 2> /dev/null || echo 0; }
+export CARLYS_CIQUAL_URL=https://anses.invalid/ciqual.zip
+CARLYS_CIQUAL_SHA256="$(servir 'table 2020')"
+export CARLYS_CIQUAL_SHA256
+
+code="$(appeler ciqual_importer_si_du staging "$F")"
+verifier "jamais déployé → rien, ni téléchargement ni import" "0 0 0" \
+  "$code $(telechargements) $(lancements ciqual-import)"
+banc_deployer staging aaaaaaaaaaaa
+code="$(appeler ciqual_importer_si_du staging "$F")"
+verifier "premier passage → téléchargée, importée, notée" "0 1 1 $CARLYS_CIQUAL_SHA256" \
+  "$code $(telechargements) $(lancements ciqual-import) $(etat staging ciqual_importee)"
+verifier "… retraits acceptés, la base étant neuve" 1 "$(grep -c -- '--accepter-retraits' "$FAUX_JOURNAL")"
+reculer staging import_ciqual $((25 * 3600))
+code="$(appeler ciqual_importer_si_du staging "$F")"
+verifier "le lendemain, version déjà en base → ni téléchargement ni import" "0 1 1" \
+  "$code $(telechargements) $(lancements ciqual-import)"
+verifier "… ni même un conteneur pour regarder l'image" 1 \
+  "$(grep -c -F -- 'dist/cli/ciqual-import.js' "$FAUX_JOURNAL")"
+
+CARLYS_CIQUAL_SHA256="$(servir 'table 2025')"
+code="$(appeler ciqual_importer_si_du staging "$F")"
+verifier "nouvelle version épinglée → tout de suite, sans attendre le lendemain" "0 2 2" \
+  "$code $(telechargements) $(lancements ciqual-import)"
+verifier "… mais le garde-fou des retraits joue, cette fois" 1 "$(grep -c -- '--accepter-retraits' "$FAUX_JOURNAL")"
+
+CARLYS_CIQUAL_SHA256="$(printf 'autre' | sha256sum | cut -d' ' -f1)"
+reculer staging import_ciqual $((25 * 3600))
+code="$(appeler ciqual_importer_si_du staging "$F")"
+verifier "empreinte différente → refusée, rien importé, alerte ouverte" "1 3 2 panne" \
+  "$code $(telechargements) $(lancements ciqual-import) $(etat staging alerte_import_ciqual_etat)"
+verifier "… et le fichier refusé ne reste pas sur le disque" 0 \
+  "$(find "$CARLYS_ROOT/ciqual" -name '.telechargement*' | wc -l | tr -d ' ')"
+
+CARLYS_CIQUAL_SHA256="$(servir 'table 2026')"
+reculer staging import_ciqual 3700
+code="$(FAUX_CLI_CODE=1 appeler ciqual_importer_si_du staging "$F")"
+verifier "import en échec → 1, version pas notée comme importée" "1 oui" \
+  "$code $(etat staging import_ciqual_echec)"
+[ "$(etat staging ciqual_importee)" != "$CARLYS_CIQUAL_SHA256" ] && note=oui || note=non
+verifier "… elle sera retentée" oui "$note"
+# Le site de l'Anses ne répond plus : la production, dans la même passe,
+# n'attend pas les mêmes délais une seconde fois.
+CARLYS_CIQUAL_SHA256="$(servir 'table 2027')"
+rm -f "$BANC/anses.zip"
+avant="$(telechargements)"
+code="$(appeler ciqual_importer_si_du staging "$F")"
+banc_deployer production aaaaaaaaaaaa
+code="$code $(appeler ciqual_importer_si_du production "$CARLYS_ROOT/production/.env")"
+verifier "site injoignable → un seul essai pour toute la machine, puis pause" "1 1 1" \
+  "$code $(($(telechargements) - avant))"
+unset CARLYS_CIQUAL_URL CARLYS_CIQUAL_SHA256
+banc_nettoyer
+
+echo
 echo "mise à l'échelle — jamais retirer un exemplaire qui sert encore une réponse"
 
 banc_preparer
