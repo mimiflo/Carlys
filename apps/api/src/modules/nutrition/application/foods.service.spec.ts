@@ -2,40 +2,35 @@ import { Prisma } from '@prisma/client';
 import { type FoodSearchRow, type FoodsRepository } from '../infrastructure/foods.repository';
 import { FoodsService } from './foods.service';
 
-const POULET: FoodSearchRow = {
-  code: 36_018,
-  name: 'Poulet, filet, sans peau, cuit',
-  shortName: 'Poulet',
-  groupName: 'viandes',
-  kcalPer100g: new Prisma.Decimal(121),
-  proteinPer100g: new Prisma.Decimal(26),
-  carbsPer100g: new Prisma.Decimal(0),
-  fatPer100g: new Prisma.Decimal(1.6),
+const EDAMAME: FoodSearchRow = {
+  code: 20_904,
+  name: 'Soja, graine entière',
+  shortName: 'Soja',
+  groupName: 'légumineuses',
+  kcalPer100g: new Prisma.Decimal(416),
+  proteinPer100g: new Prisma.Decimal(36),
+  carbsPer100g: new Prisma.Decimal(10),
+  fatPer100g: new Prisma.Decimal(20),
 };
 
 describe('FoodsService.closest', () => {
-  /** Une base qui ne connaît que le poulet : chaque mot cherché doit y figurer. */
+  /** Une base qui ne connaît que le soja : chaque tête essayée est notée. */
   function service() {
-    const searched: string[][] = [];
+    const heads: string[] = [];
     const repository = {
-      search: (words: readonly string[]) => {
-        searched.push([...words]);
-        return Promise.resolve(
-          words.every((word) => 'poulet filet sans peau cuit'.includes(word)) ? [POULET] : [],
-        );
+      closest: (head: string) => {
+        heads.push(head);
+        return Promise.resolve(head === 'soja' ? EDAMAME : null);
       },
     };
-    return { foods: new FoodsService(repository as unknown as FoodsRepository), searched };
+    return { foods: new FoodsService(repository as unknown as FoodsRepository), heads };
   }
 
-  it('la préparation cède d’abord : « grillé » absent, « poulet filet » trouvé', async () => {
-    const { foods, searched } = service();
-    const food = await foods.closest('Poulet, filet, grillé');
-    expect(food?.code).toBe(36_018);
-    expect(searched).toEqual([
-      ['poulet', 'filet', 'grille'],
-      ['poulet', 'filet'],
-    ]);
+  it('l’aliment d’abord, puis, faute de lui, un autre nom du libellé', async () => {
+    const { foods, heads } = service();
+    const food = await foods.closest('Fèves de soja, cuites');
+    expect(food?.code).toBe(20_904);
+    expect(heads).toEqual(['feve', 'soja']);
   });
 
   it('rien de tel dans la base : null, sans erreur', async () => {

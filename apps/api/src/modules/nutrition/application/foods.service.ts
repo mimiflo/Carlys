@@ -2,6 +2,7 @@ import { type Food as FoodContract, type FoodSource } from '@carlys/api-contract
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
 import { ciqualAttribution } from '../domain/ciqual-source';
+import { closestFoodQuery } from '../domain/closest-food-query';
 import { searchWords } from '../domain/food-text';
 import { FOOD_CODE_MAX } from '../domain/meal-bounds';
 import { FoodsRepository, type FoodSearchRow } from '../infrastructure/foods.repository';
@@ -56,20 +57,16 @@ export class FoodsService {
   }
 
   /**
-   * L'aliment de la base le plus proche d'un nom LIBRE — celui que le modèle
-   * de vision donne à ce qu'il voit (« Poulet, filet, grillé ») : tous ses
-   * mots d'abord, puis sans le dernier, jusqu'au premier seul. Les mots de
-   * tête nomment l'aliment, ceux de la fin sa préparation : c'est elle qui
-   * cède. `null` : la base n'a rien de tel.
+   * L'aliment de la base le plus proche d'un nom LIBRE, celui que le modèle
+   * de vision donne à ce qu'il voit (« Haricots verts, cuits ») : voir
+   * `closestFoodQuery`. `null` : la base n'a rien de tel.
    */
   async closest(label: string): Promise<FoodContract | null> {
-    // Six mots suffisent à nommer un aliment, et bornent les requêtes.
-    const words = searchWords(label).slice(0, 6);
-    for (let count = words.length; count >= 1; count--) {
-      const [first, ...others] = words.slice(0, count);
-      if (first === undefined) break;
-      const [row] = await this.foods.search([first, ...others], 1);
-      if (row !== undefined) return presentFood(row);
+    const query = closestFoodQuery(label);
+    if (query === null) return null;
+    for (const head of query.heads) {
+      const row = await this.foods.closest(head, query.terms, query.cooked);
+      if (row !== null) return presentFood(row);
     }
     return null;
   }

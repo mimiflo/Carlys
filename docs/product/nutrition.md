@@ -920,7 +920,10 @@ a une. La photo reste privée : routes et stockage plus haut.
   `GET /api/v1/nutrition/meal-scans/:id` (contrat : `docs/api/README.md`).
   Le modèle de vision (`COACH_VISION_MODEL`) ne rend que des noms et des
   grammes, relus sans confiance ; `FoodsService.closest` les rapproche de la
-  table (tous les mots, puis en retirant le dernier) ; les valeurs viennent
+  table par mots entiers et accordés (« Haricots verts, cuits » → « Haricot
+  vert, cuit » ; « pois » ne trouve pas le poisson), le nom de l'aliment
+  d'abord, puis le score de chaque mot, cuit plutôt que cru, l'aliment moyen
+  à égalité (`domain/closest-food-query.ts`) ; les valeurs viennent
   de la base, jamais du modèle. L'analyse prend un créneau de la file du
   coach. Quota `COACH_MEAL_SCANS_PER_DAY` (10), rendu si le scan échoue de
   notre fait, gardé si le worker refuse l'image ; JPEG de base ou progressif
@@ -954,8 +957,12 @@ a une. La photo reste privée : routes et stockage plus haut.
   reste comptée, scan d'autrui, scan perdu après l'échéance et rendu une
   fois, JPEG que le modèle ne lirait pas),
   `meal-vision.client.spec.ts` encore : un 4xx garde le worker, un 5xx
-  l'écarte ; `foods.service.spec.ts` (rapprochement en retirant les
-  derniers mots).
+  l'écarte ; `closest-food-query.spec.ts` (le nom d'abord, jamais un
+  chiffre, pluriels et accords) et `foods.service.spec.ts` (ordre des têtes
+  essayées). E2E `test/foods-closest.e2e-spec.ts` : le classement sur une
+  vraie requête et de vrais noms CIQUAL, un cas par critère, chacun seul à
+  décider (bœuf aux carottes, pâte sablée, poisson pour « pois », oeufs de
+  lompe, courgette crue, fromage moyen).
   E2E : `test/meal-scans.e2e-spec.ts` (modèle simulé : 403 sans le droit,
   du 202 au résultat rapproché de la base, 404 sur le scan d'un autre
   compte, 429 au-delà du quota, 415). Mobile :

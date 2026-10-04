@@ -35,8 +35,11 @@ pour rien de mieux.
    des noms d'aliments et des grammes (sortie JSON contrainte par schéma,
    relue sans confiance : 8 aliments au plus, 1 à 2 000 g, noms nettoyés et
    bornés). Chaque nom est rapproché de la table CIQUAL
-   (`FoodsService.closest` : tous les mots, puis en retirant le dernier mot
-   jusqu'au premier seul). Aucune valeur nutritionnelle ne vient du modèle.
+   (`FoodsService.closest`, `domain/closest-food-query.ts`) par mots
+   ENTIERS et accordés : le nom de l'aliment doit figurer (jamais un
+   chiffre), chaque autre mot classe, une variante crue recule quand le nom
+   dit cuit, l'« aliment moyen » l'emporte à égalité. Aucune valeur
+   nutritionnelle ne vient du modèle.
 2. **Rien ne s'écrit sans la personne.** Le résultat ouvre l'écran
    « Nouveau repas » pré-rempli (aliments, grammes, nom, photo jointe) ; elle
    corrige, puis enregistre ou renonce. Ce qui n'est pas dans la base est
