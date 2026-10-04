@@ -19,7 +19,8 @@ Ce que chaque cas exerce :
 | `traces` → 0 | glucides du poulet filet (`990001`) |
 | `&lt; 0,5` (sous le seuil de quantification) → 0 | lipides du brocoli (`990003`) |
 | `-` (non dosé) → `null` | lipides de la galette de riz (`990006`) |
-| énergie `-` → ignoré, « énergie inconnue » | eau du robinet (`990004`) |
+| énergie `-` et macros inconnues → ignoré, « énergie inconnue » | eau du robinet (`990004`) |
+| énergie `-` mais macros connues → énergie CALCULÉE (`kcalComputed`) | laitue crue (`990010`) : 1,3 g de protéines, 1,33 de glucides, 0,2 de lipides, 1,2 de fibres → 14,7 kcal |
 | aucune teneur d'énergie → ignoré, « énergie inconnue » | sel (`990005`) |
 | ligature `œ` en windows-1252 (octet `0x9C`) | œuf dur (`990009`), groupe « viandes, œufs… » |
 | constituants voisins à ne PAS confondre | `Protéines, N x 6.25`, `Energie … (kJ/100 g)` |

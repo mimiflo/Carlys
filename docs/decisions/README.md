@@ -55,6 +55,7 @@ vers l'ADR qui la remplace).
 | [0013](0013-coach-passerelle-ia.md) | Coach IA : une passerelle devant le modèle (file, workers, annulation) | Acceptée — 2026-09 (repli cloud retiré le 2026-10-03) |
 | [0014](0014-coach-actions-garanties.md) | Coach IA : proposer et créer une séance, garanti par l'orchestration | Acceptée — 2026-10 |
 | [0015](0015-scan-assiette-modele-de-vision.md) | Scan d'assiette : le modèle de vision reconnaît, la base CIQUAL calcule | Acceptée — 2026-10 |
+| [0016](0016-energie-calculee-aliments-ciqual.md) | L'énergie des aliments CIQUAL qui n'en publient pas, calculée depuis leurs macros | Acceptée — 2026-10 |
 
 ## Ajouter un ADR
 

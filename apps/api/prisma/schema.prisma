@@ -1504,11 +1504,15 @@ model Food {
   groupName      String?
   subgroupCode   String?
   subgroupName   String?
-  /// Valeurs POUR 100 g. L'énergie est obligatoire : un aliment sans énergie
-  /// connue n'est pas importé, on ne saurait pas calculer un repas avec lui.
-  /// Les macros valent `null` quand la table ne donne pas de valeur (« - ») :
-  /// inconnu, jamais zéro. « traces » et « < x » valent 0.
+  /// Valeurs POUR 100 g. L'énergie est obligatoire : publiée par l'Anses, ou
+  /// à défaut calculée depuis les macros (`kcalComputed`) ; ni l'une ni
+  /// l'autre, l'aliment n'est pas importé, on ne saurait pas calculer un repas
+  /// avec lui. Les macros valent `null` quand la table ne donne pas de valeur
+  /// (« - ») : inconnu, jamais zéro. « traces » et « < x » valent 0.
   kcalPer100g    Decimal   @db.Decimal(7, 2)
+  /// L'énergie n'est pas publiée par l'Anses : Carlys l'a calculée depuis les
+  /// macronutriments (facteurs du règlement UE 1169/2011). ADR 0016.
+  kcalComputed   Boolean   @default(false)
   proteinPer100g Decimal?  @db.Decimal(7, 2)
   carbsPer100g   Decimal?  @db.Decimal(7, 2)
   fatPer100g     Decimal?  @db.Decimal(7, 2)

@@ -47,6 +47,10 @@ const NAMES = [
   'Oeufs de lompe, semi-conserve',
   'Avocat, pulpe, cru',
   'Huile d’avocat',
+  'Laitue, crue',
+  'Laitue de mer (Ulva sp.), séchée ou déshydratée',
+  'Pomme, sèche',
+  'Pomme, pulpe, crue',
 ];
 const FIRST_CODE = 970_001;
 
@@ -95,6 +99,10 @@ describe('Rapprochement d’un nom libre avec la table CIQUAL (e2e)', () => {
     ['Oeufs brouillés', 'Oeuf, brouillé, avec matière grasse'],
     // L'anglais qui échappe au modèle est traduit.
     ['Avocado, coupé', 'Avocat, pulpe, cru'],
+    // Le « cuit » de réflexe ne pénalise pas la crudité : pas l'algue séchée.
+    ['Lettuce, cuit', 'Laitue, crue'],
+    // Le simple « cuit » fait reculer le cru : la courgette bouillie.
+    ['Courgettes, cuites', 'Courgette, bouillie'],
   ])('« %s » → « %s »', async (seen, expected) => {
     expect((await foods.closest(seen))?.name).toBe(expected);
   });
@@ -109,6 +117,10 @@ describe('Rapprochement d’un nom libre avec la table CIQUAL (e2e)', () => {
 
   it('la mention « (aliment moyen) » ne compte pas dans la longueur : elle décide seule', async () => {
     expect((await foods.closest('Fromage'))?.name).toBe('Fromage (aliment moyen)');
+  });
+
+  it('séché seulement s’il le dit : la pomme sèche, plus courte, recule seule', async () => {
+    expect((await foods.closest('Pomme'))?.name).toBe('Pomme, pulpe, crue');
   });
 
   it('un aliment absent de la base : null, pas son plus proche voisin de rayon', async () => {

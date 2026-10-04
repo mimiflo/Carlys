@@ -27,6 +27,7 @@ type Existing = Pick<
   | 'subgroupCode'
   | 'subgroupName'
   | 'kcalPer100g'
+  | 'kcalComputed'
   | 'proteinPer100g'
   | 'carbsPer100g'
   | 'fatPer100g'
@@ -65,6 +66,7 @@ function sameFood(existing: Existing, row: FoodRow): boolean {
     existing.subgroupName === row.subgroupName &&
     existing.sourceVersion === row.sourceVersion &&
     sameDecimal(existing.kcalPer100g, row.kcalPer100g) &&
+    existing.kcalComputed === row.kcalComputed &&
     sameDecimal(existing.proteinPer100g, row.proteinPer100g) &&
     sameDecimal(existing.carbsPer100g, row.carbsPer100g) &&
     sameDecimal(existing.fatPer100g, row.fatPer100g)

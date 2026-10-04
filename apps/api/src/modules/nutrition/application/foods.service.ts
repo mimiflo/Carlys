@@ -24,6 +24,7 @@ function presentFood(food: FoodSearchRow): FoodContract {
       carbsG: asNumber(food.carbsPer100g),
       fatG: asNumber(food.fatPer100g),
     },
+    kcalComputed: food.kcalComputed,
   };
 }
 
@@ -65,7 +66,7 @@ export class FoodsService {
     const query = closestFoodQuery(label);
     if (query === null) return null;
     for (const head of query.heads) {
-      const row = await this.foods.closest(head, query.terms, query.cooked);
+      const row = await this.foods.closest(head, query);
       if (row !== null) return presentFood(row);
     }
     return null;

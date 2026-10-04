@@ -41,4 +41,24 @@
 <const_nom_fr> Sucres (g/100 g) </const_nom_fr>
 <const_nom_eng> Sugars (g/100g) </const_nom_eng>
 </CONST>
+<CONST>
+<const_code> 34100 </const_code>
+<const_nom_fr> Fibres alimentaires (g/100 g) </const_nom_fr>
+<const_nom_eng> Fibres, dietary (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 60000 </const_code>
+<const_nom_fr> Alcool (g/100 g) </const_nom_fr>
+<const_nom_eng> Alcohol (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 65000 </const_code>
+<const_nom_fr> Acides organiques (g/100 g) </const_nom_fr>
+<const_nom_eng> Organic acids (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 34000 </const_code>
+<const_nom_fr> Polyols totaux (g/100 g) </const_nom_fr>
+<const_nom_eng> Polyols, total (g/100g) </const_nom_eng>
+</CONST>
 </TABLE>

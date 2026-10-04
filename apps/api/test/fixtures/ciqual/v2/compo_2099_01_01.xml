@@ -343,4 +343,58 @@
 <code_confiance> D </code_confiance>
 <source_code missing=" " />
 </COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 900328 </const_code>
+<teneur> - </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 925000 </const_code>
+<teneur> 1,3 </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 931000 </const_code>
+<teneur> 1,33 </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 940000 </const_code>
+<teneur> 0,2 </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 934100 </const_code>
+<teneur> 1,2 </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
+<COMPO>
+<alim_code> 990010 </alim_code>
+<const_code> 960000 </const_code>
+<teneur> 0 </teneur>
+<min missing=" " />
+<max missing=" " />
+<code_confiance> D </code_confiance>
+<source_code missing=" " />
+</COMPO>
 </TABLE>

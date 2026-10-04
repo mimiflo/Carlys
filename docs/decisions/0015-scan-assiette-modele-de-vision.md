@@ -38,7 +38,8 @@ pour rien de mieux.
    (`FoodsService.closest`, `domain/closest-food-query.ts`) par mots
    ENTIERS et accordés : le nom de l'aliment doit figurer (jamais un
    chiffre), chaque autre mot classe, une variante crue recule quand le nom
-   dit cuit, l'« aliment moyen » l'emporte à égalité. Aucune valeur
+   dit cuit, une variante séchée quand il ne le dit pas, l'« aliment
+   moyen » l'emporte à égalité. Aucune valeur
    nutritionnelle ne vient du modèle.
 2. **Rien ne s'écrit sans la personne.** Le résultat ouvre l'écran
    « Nouveau repas » pré-rempli (aliments, grammes, nom, photo jointe) ; elle
@@ -93,11 +94,11 @@ gain des 512 px tient à la reconnaissance, et au poids de la photo.
 
 Ce qui reste hors de portée d'un réglage :
 
-- **887 aliments CIQUAL sans énergie** (« - » dans la table, valeur UE comme
-  N x Jones) ne sont pas importés, dont la laitue crue, la salade verte ou
-  les petits pois cuits, le beurre de cacahuète. Les calculer à partir des
-  macros (facteurs du règlement UE 1169/2011) est une décision de données,
-  à prendre à part.
+- **887 aliments CIQUAL sans énergie** (« - » dans la table), dont la laitue
+  crue ou les petits pois cuits, n'étaient pas importés. Réglé par
+  l'ADR 0016 : leur énergie se calcule depuis les macros (794 d'entre eux),
+  et le scan passe à 32/40 de bout en bout (avec, pour ces nouveaux
+  voisins, « lettuce » traduit en « laitue » et le séché qui recule).
 - **La photo elle-même** : l'écran du scan dit comment la prendre (vue de
   dessus, pleine lumière, chaque aliment visible), parce qu'aucun réglage
   ne rattrape une assiette coupée ou dans l'ombre.

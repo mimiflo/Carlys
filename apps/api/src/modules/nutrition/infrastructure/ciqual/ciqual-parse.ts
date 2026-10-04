@@ -1,4 +1,5 @@
 import { type Prisma } from '@prisma/client';
+import { energyFromMacros } from '../../domain/energy-from-macros';
 import { normalizeFoodText, shortFoodName } from '../../domain/food-text';
 import { parseTeneur } from './ciqual-values';
 import { xmlRecords } from './xml-records';
@@ -14,12 +15,20 @@ import { xmlRecords } from './xml-records';
 
 export class CiqualParseError extends Error {}
 
-/** Les quatre constituants lus, sous leur nom officiel. */
+/**
+ * Les constituants lus, sous leur nom officiel : l'énergie et les trois
+ * macros, plus ce dont l'énergie se CALCULE quand la table ne la publie pas
+ * (`energyFromMacros`).
+ */
 const CIQUAL_CONSTITUENTS = {
   kcal: 'Energie, Règlement UE N° 1169/2011 (kcal/100 g)',
   protein: 'Protéines, N x facteur de Jones (g/100 g)',
   carbs: 'Glucides (g/100 g)',
   fat: 'Lipides (g/100 g)',
+  fibre: 'Fibres alimentaires (g/100 g)',
+  alcohol: 'Alcool (g/100 g)',
+  organicAcids: 'Acides organiques (g/100 g)',
+  polyols: 'Polyols totaux (g/100 g)',
 } as const;
 type Constituent = keyof typeof CIQUAL_CONSTITUENTS;
 
@@ -33,6 +42,11 @@ export interface CiqualFood {
   readonly subgroupCode: string | null;
   readonly subgroupName: string | null;
   readonly kcalPer100g: Prisma.Decimal;
+  /**
+   * L'énergie n'est PAS publiée par l'Anses : Carlys l'a calculée depuis les
+   * macronutriments (facteurs UE 1169/2011). L'écran le dit.
+   */
+  readonly kcalComputed: boolean;
   readonly proteinPer100g: Prisma.Decimal | null;
   readonly carbsPer100g: Prisma.Decimal | null;
   readonly fatPer100g: Prisma.Decimal | null;
@@ -128,7 +142,7 @@ function alimCode(raw: string | undefined, where: string): number {
   return Number(text);
 }
 
-/** Les teneurs des quatre constituants, par aliment. */
+/** Les teneurs des constituants lus, par aliment. */
 function compositions(compoXml: string, codes: Record<Constituent, string>): Map<number, Values> {
   const byConstCode = new Map<string, Constituent>(
     (Object.entries(codes) as [Constituent, string][]).map(([constituent, code]) => [
@@ -180,7 +194,19 @@ export function parseCiqual(xml: {
     seen.add(code);
     const name = (record.alim_nom_fr ?? '').replace(/\s+/g, ' ').trim();
     const food = values.get(code) ?? {};
-    const kcal = food.kcal ?? null;
+    const published = food.kcal ?? null;
+    const kcal =
+      published ??
+      energyFromMacros({
+        protein: food.protein ?? null,
+        carbs: food.carbs ?? null,
+        fat: food.fat ?? null,
+        fibre: food.fibre ?? null,
+        alcohol: food.alcohol ?? null,
+        organicAcids: food.organicAcids ?? null,
+        polyols: food.polyols ?? null,
+      });
+    // Ni publiée ni calculable (macros incomplètes) : écarté.
     if (name === '' || kcal === null) {
       ignored.push({ code, name, reason: name === '' ? 'nom absent' : 'énergie inconnue' });
       continue;
@@ -197,6 +223,7 @@ export function parseCiqual(xml: {
       subgroupCode,
       subgroupName: subgroupCode === null ? null : (subgroups.get(subgroupCode) ?? null),
       kcalPer100g: kcal,
+      kcalComputed: published === null,
       proteinPer100g: food.protein ?? null,
       carbsPer100g: food.carbs ?? null,
       fatPer100g: food.fat ?? null,

@@ -17,6 +17,7 @@ function foodRow(code: number, overrides: Partial<Food> = {}): Food {
     subgroupCode: null,
     subgroupName: null,
     kcalPer100g: new Prisma.Decimal(150),
+    kcalComputed: false,
     proteinPer100g: new Prisma.Decimal(29),
     carbsPer100g: new Prisma.Decimal(0),
     fatPer100g: new Prisma.Decimal('3.6'),

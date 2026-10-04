@@ -987,8 +987,10 @@ Un aliment CIQUAL, écrit par `dist/cli/ciqual-import` seulement.
 - Clé : `code` (`alim_code` CIQUAL, entier, stable d'une version à l'autre).
 - Champs clés : `name`, `shortName` (avant la première virgule), groupe et
   sous-groupe (codes et noms, nullables), `kcalPer100g` `Decimal(7, 2)`
-  obligatoire, `proteinPer100g` / `carbsPer100g` / `fatPer100g` nullables,
-  `searchKey` (nom normalisé), `sourceVersion`, `retiredAt`.
+  obligatoire, `kcalComputed` (l'énergie n'est pas publiée par l'Anses, elle
+  est calculée depuis les macros, ADR 0016 ; faux par défaut),
+  `proteinPer100g` / `carbsPer100g` / `fatPer100g` nullables, `searchKey`
+  (nom normalisé), `sourceVersion`, `retiredAt`.
 - Jamais supprimé : un aliment disparu d'une version reçoit `retiredAt`.
 - Aucun index au-delà de la clé : ~3 200 lignes, la recherche est un
   balayage séquentiel (pas d'extension `pg_trgm`).

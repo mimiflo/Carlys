@@ -119,6 +119,11 @@ export const foodSchema = z.object({
   /** Groupe CIQUAL (« viandes, œufs, poissons et assimilés »), `null` si non décrit. */
   group: z.string().nullable(),
   per100g: foodPer100gSchema,
+  /**
+   * L'énergie n'est PAS publiée par l'Anses : Carlys l'a calculée depuis les
+   * macronutriments (facteurs du règlement UE 1169/2011). L'écran le dit.
+   */
+  kcalComputed: z.boolean(),
 });
 export type Food = z.infer<typeof foodSchema>;
 

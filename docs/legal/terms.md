@@ -159,7 +159,10 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
   Source : Anses, Table de composition nutritionnelle des aliments Ciqual.
   L’application affiche cette mention, et la version de la table dont
   viennent les valeurs, à côté d’elles. Ce sont des valeurs moyennes pour des aliments génériques : celles
-  de ton assiette peuvent s’en écarter.
+  de ton assiette peuvent s’en écarter. Quand la table ne publie pas les
+  calories d’un aliment, Carlys les calcule à partir de ses protéines,
+  glucides et lipides (facteurs de l’étiquetage européen) et l’affiche
+  « ≈ », avec la mention « calculée par Carlys ».
 
 ## 9. Suspension et suppression
 

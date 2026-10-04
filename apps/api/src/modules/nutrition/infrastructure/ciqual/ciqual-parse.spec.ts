@@ -22,8 +22,8 @@ describe('parseCiqual (jeu d’essai au format de la distribution)', () => {
   const v1 = parsedVersion('v1');
 
   it('importe les aliments dont l’énergie est connue, avec nom court, groupe et clé', () => {
-    expect(v1.read).toBe(9);
-    expect(v1.foods).toHaveLength(7);
+    expect(v1.read).toBe(10);
+    expect(v1.foods).toHaveLength(8);
     const poulet = food(v1.foods, 990001);
     expect(poulet).toMatchObject({
       name: 'Poulet, filet, sans peau, cuit',
@@ -48,6 +48,14 @@ describe('parseCiqual (jeu d’essai au format de la distribution)', () => {
     expect(food(v1.foods, 990001).carbsPer100g?.toNumber()).toBe(0);
     expect(food(v1.foods, 990003).fatPer100g?.toNumber()).toBe(0);
     expect(food(v1.foods, 990006).fatPer100g).toBeNull();
+  });
+
+  it('énergie non publiée mais macros connues : calculée, et marquée comme telle', () => {
+    const laitue = food(v1.foods, 990010);
+    // 4 × 1,3 + 4 × 1,33 + 9 × 0,2 + 2 × 1,2 (fibres) = 14,72.
+    expect(laitue.kcalPer100g.toNumber()).toBe(14.7);
+    expect(laitue.kcalComputed).toBe(true);
+    expect(food(v1.foods, 990001).kcalComputed).toBe(false);
   });
 
   it('écarte les aliments sans énergie connue, avec leur raison', () => {

@@ -73,4 +73,13 @@
 <alim_ssgrp_code> 0410 </alim_ssgrp_code>
 <alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
 </ALIM>
+<ALIM>
+<alim_code> 990010 </alim_code>
+<alim_nom_fr> Laitue, crue </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Laitue, crue </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Lettuce, raw </alim_nom_eng>
+<alim_grp_code> 02 </alim_grp_code>
+<alim_ssgrp_code> 0201 </alim_ssgrp_code>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+</ALIM>
 </TABLE>

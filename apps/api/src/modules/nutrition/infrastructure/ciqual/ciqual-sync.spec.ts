@@ -15,6 +15,7 @@ function incoming(code: number, kcal = 100): CiqualFood {
     subgroupCode: null,
     subgroupName: null,
     kcalPer100g: d(kcal),
+    kcalComputed: false,
     proteinPer100g: d(20),
     carbsPer100g: null,
     fatPer100g: d(0),
@@ -60,6 +61,13 @@ describe('planFoodSync', () => {
     expect(plan.toUpdate.map((row) => row.code)).toEqual([1]);
     const bumped = planFoodSync([stored(1)], [incoming(1)], '2099-01-01');
     expect(bumped.toUpdate.map((row) => row.code)).toEqual([1]);
+  });
+
+  it('la même énergie, désormais PUBLIÉE au lieu de calculée : mise à jour', () => {
+    const computed = { ...stored(1), kcalComputed: true };
+    const plan = planFoodSync([computed], [incoming(1)], '2020-07-07');
+    expect(plan.toUpdate.map((row) => row.code)).toEqual([1]);
+    expect(plan.toUpdate[0]?.kcalComputed).toBe(false);
   });
 
   it('un aliment disparu est RETIRÉ, jamais supprimé ; un retiré qui revient est réactivé', () => {

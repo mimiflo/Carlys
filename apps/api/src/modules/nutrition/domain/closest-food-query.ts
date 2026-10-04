@@ -16,8 +16,11 @@ import { searchWords } from './food-text';
  *   que le pluriel distingue de la « pâte sablée », garde ses 2 points ; « pois »
  *   ne trouve plus le poisson.
  * - [cooked] : le nom dit cuit, grillé, poêlé… ; une variante crue recule.
+ * - [dried] : le nom dit séché ou déshydraté ; sinon, une variante SÉCHÉE
+ *   recule : « pomme » n'est pas la pomme sèche, ni « Lettuce, cuit » (le
+ *   modèle écrit « cuit » par réflexe) la laitue de mer séchée.
  *
- * Mesuré le 4 octobre 2026 sur la vraie table (12 repas, 40 aliments) : 30
+ * Mesuré le 4 octobre 2026 sur la vraie table (12 repas, 40 aliments) : 31
  * retrouvés de la photo à l'aliment (27 sans la traduction de l'anglais),
  * contre 20 en retirant les mots de fin un à un. ADR 0015, « Optimisation
  * mesurée ».
@@ -31,6 +34,7 @@ export interface ClosestFoodQuery {
     readonly exact: 1 | 2;
   }[];
   readonly cooked: boolean;
+  readonly dried: boolean;
 }
 
 /** Six mots suffisent à nommer un aliment, et bornent la requête. */
@@ -105,8 +109,6 @@ const PREPARATION_WORDS = new Set([
  * Le modèle glisse à l'anglais malgré la consigne (« Lettuce », « Avocado »,
  * « Oatmeal », mesuré au banc du 4 octobre 2026) : la table CIQUAL, elle, est
  * en français. Les mots courants d'une assiette, traduits AVANT la recherche.
- * « lettuce » donne « salade » : la laitue crue manque à la table importée
- * (sans énergie dans CIQUAL 2020), « laitue » ne trouverait que l'algue.
  */
 const ENGLISH_FOOD_WORDS: Readonly<Record<string, string>> = {
   apple: 'pomme',
@@ -131,7 +133,7 @@ const ENGLISH_FOOD_WORDS: Readonly<Record<string, string>> = {
   fries: 'frite',
   hamburger: 'steak hache',
   lentils: 'lentille',
-  lettuce: 'salade',
+  lettuce: 'laitue',
   mango: 'mangue',
   mashed: 'puree',
   milk: 'lait',
@@ -157,6 +159,9 @@ const ENGLISH_FOOD_WORDS: Readonly<Record<string, string>> = {
   yoghurt: 'yaourt',
   yogurt: 'yaourt',
 };
+
+/** Ils disent que l'aliment est séché. */
+const DRIED_WORDS = new Set(['deshydrate', 'deshydratee', 'sec', 'seche', 'seches', 'secs']);
 
 /** Leur pluriel change le sens : « pâtes » n'est pas « pâte ». */
 const MEANING_PLURALS = new Set(['pates']);
@@ -202,5 +207,6 @@ export function closestFoodQuery(label: string): ClosestFoodQuery | null {
       exact: term.base === noun && !MEANING_PLURALS.has(term.word) ? 1 : 2,
     })),
     cooked: terms.some((term) => among(COOKED_WORDS, term)),
+    dried: terms.some((term) => among(DRIED_WORDS, term)),
   };
 }

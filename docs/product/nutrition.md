@@ -202,7 +202,8 @@ Une ligne `Food` par aliment, clé = `alim_code` CIQUAL (stable d'une version
 - groupe et sous-groupe (codes et noms) ; la réponse de l'API en sert le
   groupe (`group`) ;
 - quatre valeurs **pour 100 g**, lues par le NOM du constituant dans
-  `const_*.xml`, jamais par un code supposé :
+  `const_*.xml`, jamais par un code supposé (fibres, alcool, acides
+  organiques et polyols sont lus aussi, pour l'énergie calculée, plus bas) :
 
   | Valeur | Constituant CIQUAL |
   | --- | --- |
@@ -213,6 +214,8 @@ Une ligne `Food` par aliment, clé = `alim_code` CIQUAL (stable d'une version
 
 - une clé de recherche normalisée (minuscules, sans accents ni ligatures,
   ponctuation en espaces : « Œuf, dur » → `oeuf dur`) ;
+- `kcalComputed` : l'énergie n'est pas publiée par l'Anses, Carlys l'a
+  calculée (plus bas) ;
 - la version de la table dont viennent ces valeurs, et `retiredAt`.
 
 **Comment une teneur est lue.** La table écrit pour un lecteur humain :
@@ -231,9 +234,17 @@ gonflerait un repas d'un nutriment qu'on sait quasi absent. `-` vaut `null`,
 un total faux avec l'aplomb d'un vrai. Toute autre forme fait échouer
 l'import en citant la valeur : une convention nouvelle ne se devine pas.
 
-**Un aliment sans énergie connue n'est pas importé** : on ne saurait pas
-calculer un repas avec lui. Le rapport d'import les compte et en nomme
-quelques-uns.
+**Une énergie absente de la table se calcule** (ADR 0016) : 887 aliments de
+CIQUAL 2020 n'en publient pas, dont la laitue crue ou les petits pois cuits,
+mais en donnent les macros. Leur énergie vient alors des facteurs du
+règlement UE 1169/2011 (protéines et glucides 4 kcal/g, lipides 9, fibres
+2, alcool 7, acides organiques 3, polyols 2,4), `domain/energy-from-macros.ts`
+; appliquée aux 2 298 aliments dont l'énergie est publiée, la formule la
+retrouve à 0,3 kcal près en médiane. L'aliment est marqué `kcalComputed`,
+l'API le sert, et l'appli écrit « ≈ 15 kcal » et le dit dans la mention de
+la source. **Sans protéines, glucides ou lipides connus, il n'est pas
+importé** (93 aliments) : on ne saurait pas calculer un repas avec lui. Le
+rapport d'import les compte et en nomme quelques-uns.
 
 **Un aliment disparu d'une nouvelle version est RETIRÉ, jamais supprimé**
 (`retiredAt`) : il sort de la recherche, ne peut plus entrer dans un repas
@@ -317,25 +328,16 @@ constituants, 47 Mo) : moins d'une seconde d'analyse, 155 Mo de mémoire,
 1,8 s pour le premier import complet, 5,3 s pour une nouvelle version qui
 réécrit toutes les lignes.
 
-### Pas encore validé sur le vrai fichier
+### Validé sur le vrai fichier (4 octobre 2026)
 
-Au 25 septembre 2026, le réseau de l'environnement de développement bloque
-ciqual.anses.fr et data.gouv.fr : **l'import n'a tourné que sur le jeu
-d'essai** (`apps/api/test/fixtures/ciqual/`, format reproduit, noms réels,
-codes et valeurs ILLUSTRATIFS). Dès l'ouverture du réseau, à faire dans cet
-ordre :
-
-1. télécharger la distribution XML officielle, vérifier les URL ci-dessus ;
-2. `ciqual-import <dossier> --a-blanc` sur une base de développement, et
-   relire le rapport : nombre d'aliments lus (~3 200 attendus) et nombre
-   d'ignorés « énergie inconnue » (une large part de la table ignorée
-   signalerait un constituant mal résolu, pas des aliments sans énergie) ;
-3. vérifier que les quatre noms de constituants ci-dessus existent tels
-   quels dans `const_*.xml`, que l'encodage déclaré est bien windows-1252, et
-   qu'aucune forme de teneur inattendue ne fait échouer l'import ;
-4. comparer à la main trois aliments au site CIQUAL (poulet filet cuit, riz
-   blanc cuit, brocoli cuit) ;
-5. seulement alors, l'import réel sur la recette, puis la production.
+La distribution XML officielle (`XML_2020_07_07.zip`, ciqual.anses.fr) a été
+importée sur une base de développement : **3 185 aliments lus, 3 092
+importés** (2 298 à l'énergie publiée, 794 à l'énergie calculée), 93
+écartés faute de macros. Les huit noms de constituants existent tels quels
+dans `const_*.xml`, l'encodage windows-1252 se lit, aucune forme de teneur
+inattendue n'a fait échouer l'import, et le rejeu est sans effet. Reste à
+faire : l'import réel sur la recette, puis la production (section
+suivante).
 
 ### Où la brancher dans le déploiement (pas encore fait)
 

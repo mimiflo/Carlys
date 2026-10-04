@@ -11,6 +11,7 @@ export type FoodSearchRow = Pick<
   | 'shortName'
   | 'groupName'
   | 'kcalPer100g'
+  | 'kcalComputed'
   | 'proteinPer100g'
   | 'carbsPer100g'
   | 'fatPer100g'
@@ -21,7 +22,7 @@ const inflected = (base: string) => `${base}(e|s|x|es)?`;
 
 /** Les colonnes d'un aliment rendu par une recherche (`FoodSearchRow`). */
 const SEARCH_COLUMNS = Prisma.sql`"code", "name", "shortName", "groupName",
-  "kcalPer100g", "proteinPer100g", "carbsPer100g", "fatPer100g"`;
+  "kcalPer100g", "kcalComputed", "proteinPer100g", "carbsPer100g", "fatPer100g"`;
 
 /**
  * Lecture de la base d'aliments. L'écriture n'appartient qu'à l'import
@@ -58,16 +59,15 @@ export class FoodsRepository {
    * ENTIERS (`\m…\M` : « pois » ne trouve pas « poisson », « oeuf » pas
    * « boeuf »), accordés (`cuit` retrouve « cuites ») : [head] doit figurer
    * dans la clé ; chaque terme ajoute ses points `exact` tel quel, 1 accordé
-   * seulement ; [cooked] : « cuit » ajoute 1,
-   * « cru » retire 2. À égalité, celui qui COMMENCE par [head], puis le nom
+   * seulement ; `cooked` : « cuit » ajoute 1, « cru » retire 2 ; pas
+   * `dried` : séché ou déshydraté, et pas cuit, retire 2. À égalité, celui qui COMMENCE par [head], puis le nom
    * le plus court, « (aliment moyen) » non compté : l'aliment moyen est le
    * bon défaut quand la photo ne dit pas la variante. Les mots arrivent
    * normalisés (`[a-z0-9]`) : rien ne s'injecte dans le motif, paramétré.
    */
   async closest(
     head: string,
-    terms: ClosestFoodQuery['terms'],
-    cooked: boolean,
+    { terms, cooked, dried }: Pick<ClosestFoodQuery, 'terms' | 'cooked' | 'dried'>,
   ): Promise<FoodSearchRow | null> {
     const has = (pattern: string) => Prisma.sql`"searchKey" ~ ${`\\m${pattern}\\M`}`;
     const points = [
@@ -82,6 +82,13 @@ export class FoodsRepository {
             Prisma.sql`(CASE WHEN ${has(inflected('cru'))} THEN -2 ELSE 0 END)`,
           ]
         : []),
+      ...(dried
+        ? []
+        : [
+            // Séché ET pas cuit : « Pâtes sèches, cuites » n'est pas la pomme sèche.
+            Prisma.sql`(CASE WHEN ${has('(sec|seche|deshydrate)(e|s|x|es)?')}
+              AND NOT ${has(inflected('cuit'))} THEN -2 ELSE 0 END)`,
+          ]),
     ];
     const [row] = await this.prisma.$queryRaw<FoodSearchRow[]>`
       SELECT ${SEARCH_COLUMNS} FROM "Food"

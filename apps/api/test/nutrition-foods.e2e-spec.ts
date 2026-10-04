@@ -141,6 +141,7 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
         shortName: 'Riz blanc',
         group: 'produits céréaliers',
         per100g: { kcal: 130, proteinG: 2.7, carbsG: 28.6, fatG: 0.3 },
+        kcalComputed: false,
       });
       expect(meta.source).toEqual({
         attribution: 'Source : Anses, Table de composition nutritionnelle des aliments Ciqual',
@@ -184,6 +185,17 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
       expect(
         body<Food[]>(await authed().get('/api/v1/nutrition/foods?q=eau robinet').expect(200)),
       ).toEqual([]);
+    });
+
+    it('énergie absente de la table mais macros connues : calculée, et dite calculée', async () => {
+      const [laitue] = body<Food[]>(
+        await authed().get('/api/v1/nutrition/foods?q=laitue').expect(200),
+      );
+      expect(laitue).toMatchObject({
+        code: 990010,
+        per100g: { kcal: 14.7, proteinG: 1.3, carbsG: 1.33, fatG: 0.2 },
+        kcalComputed: true,
+      });
     });
 
     it('borne la saisie et la limite, et exige d’être connecté', async () => {
@@ -442,8 +454,9 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
         retired: 1,
         reactivated: 0,
       });
-      // Toutes les lignes actives changent de version, le brocoli de valeur aussi.
-      expect(report.updated).toBe(6);
+      // Toutes les lignes actives changent de version (laitue à l'énergie
+      // calculée comprise), le brocoli de valeur aussi.
+      expect(report.updated).toBe(7);
 
       // L'instantané fait foi : le repas ne bouge pas, ni la cuisse retirée ni
       // le brocoli à 29,5 kcal/100 g (30,5 dans la nouvelle version).
@@ -497,7 +510,7 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
         updated: 0,
         reactivated: 0,
         retired: 0,
-        unchanged: 6,
+        unchanged: 7,
       });
     });
 
@@ -505,7 +518,7 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
       const simulation = await importCiqualDirectory(prisma, join(FIXTURES, 'v1'), {
         dryRun: true,
       });
-      expect(simulation).toMatchObject({ dryRun: true, reactivated: 1, updated: 6 });
+      expect(simulation).toMatchObject({ dryRun: true, reactivated: 1, updated: 7 });
       await authed().get(`/api/v1/nutrition/foods/${CUISSE}`).expect(404);
     });
 
@@ -529,7 +542,7 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
         writeFileSync(alim, kept, 'latin1');
 
         await expect(importCiqualDirectory(prisma, directory)).rejects.toThrow(
-          /retirerait 5 aliments sur les 6/,
+          /retirerait 6 aliments sur les 7/,
         );
         // Rien n'a été écrit : le riz est toujours en service.
         await authed().get(`/api/v1/nutrition/foods/${RIZ}`).expect(200);
@@ -537,13 +550,13 @@ describe('Nutrition : base d’aliments et repas composés (e2e)', () => {
         const accepted = await importCiqualDirectory(prisma, directory, {
           allowMassRetirement: true,
         });
-        expect(accepted).toMatchObject({ retired: 5, massRetirement: true });
+        expect(accepted).toMatchObject({ retired: 6, massRetirement: true });
         await authed().get(`/api/v1/nutrition/foods/${RIZ}`).expect(404);
       } finally {
         rmSync(directory, { recursive: true, force: true });
         // La base retrouve la v2 entière : les retirés reviennent.
         const restored = await importCiqualDirectory(prisma, join(FIXTURES, 'v2'));
-        expect(restored.reactivated).toBe(5);
+        expect(restored.reactivated).toBe(6);
       }
     });
   });

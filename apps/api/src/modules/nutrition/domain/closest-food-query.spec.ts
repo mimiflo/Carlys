@@ -11,6 +11,7 @@ describe('closestFoodQuery', () => {
         { word: 'hachee', base: 'hachee', exact: 2 },
       ],
       cooked: false,
+      dried: false,
     });
   });
 
@@ -49,13 +50,15 @@ describe('closestFoodQuery', () => {
     ]);
   });
 
-  it('grillé, poêlé, rôti : cuit ; « cru » ne l’est pas', () => {
+  it('grillé, poêlé, rôti : cuit ; « cru » ne l’est pas ; séché, seulement s’il le dit', () => {
     expect(closestFoodQuery('Poulet, filet, grillé')?.cooked).toBe(true);
     expect(closestFoodQuery('Saumon, cru')?.cooked).toBe(false);
+    expect(closestFoodQuery('Pomme')?.dried).toBe(false);
+    expect(closestFoodQuery('Abricots secs')?.dried).toBe(true);
   });
 
   it('l’anglais qui échappe au modèle est traduit avant la recherche', () => {
-    expect(closestFoodQuery('Lettuce, cuit')?.heads).toEqual(['salade']);
+    expect(closestFoodQuery('Lettuce, cuit')?.heads).toEqual(['laitue']);
     expect(closestFoodQuery('Oatmeal, cuit')?.heads).toEqual(['flocon', 'avoine']);
     expect(closestFoodQuery('Mashed potatoes')?.heads).toEqual(['puree', 'pomme', 'terre']);
   });

@@ -8,6 +8,7 @@ const EDAMAME: FoodSearchRow = {
   shortName: 'Soja',
   groupName: 'légumineuses',
   kcalPer100g: new Prisma.Decimal(416),
+  kcalComputed: false,
   proteinPer100g: new Prisma.Decimal(36),
   carbsPer100g: new Prisma.Decimal(10),
   fatPer100g: new Prisma.Decimal(20),
