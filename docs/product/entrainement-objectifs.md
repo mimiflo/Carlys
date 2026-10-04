@@ -58,7 +58,10 @@ elle n'inventera rien :
 `GET /users/me/training` — l'état complet des entrées, objectif compris.
 Sur mobile : écran « Préparer mon programme » (profil → Entraînement,
 route `/programs/preparation`), chaque geste écrit SON champ puis relit —
-l'écran reflète toujours l'état serveur.
+l'écran reflète toujours l'état serveur. Il ne porte aucun bouton
+« Générer » (retiré le 4 octobre 2026, à la demande du propriétaire) : ces
+réponses sont les objectifs de l'appli entière, que le coach lit pour
+composer une séance ou proposer un programme.
 
 ## La génération (tranche 3)
 

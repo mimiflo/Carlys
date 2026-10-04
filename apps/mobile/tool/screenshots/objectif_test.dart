@@ -18,7 +18,6 @@ import 'package:carlys_mobile/features/exercises/data/repositories/exercises_rep
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_training_settings.dart';
-import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
@@ -33,7 +32,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
-import '../../test/support/fake_program_repository.dart';
 import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
@@ -182,7 +180,7 @@ void main() {
       ..equipmentRefs = const [
         EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
         EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
-        EquipmentRef(id: 'e3', slug: 'elastiques', name: 'Élastiques'),
+        EquipmentRef(id: 'e3', slug: 'elastique', name: 'Élastiques'),
         EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
         EquipmentRef(id: 'e5', slug: 'kettlebell', name: 'Kettlebell'),
         EquipmentRef(id: 'e6', slug: 'poids-du-corps', name: 'Poids du corps'),
@@ -192,7 +190,6 @@ void main() {
         overrides: [
           trainingProfileRepositoryProvider.overrideWithValue(repo),
           exercisesRepositoryProvider.overrideWithValue(exercises),
-          programRepositoryProvider.overrideWithValue(FakeProgramRepository()),
           currentTrainingGoalProvider.overrideWithValue(TrainingGoal.hyrox),
         ],
         child: MaterialApp(
@@ -207,6 +204,13 @@ void main() {
     expect(find.text('Préparer mon programme'), findsOneWidget);
     await capture(tester, 'objectif-03-preparation');
 
+    // Le niveau se change dans sa feuille, ouverte depuis sa carte.
+    await tester.tap(find.text('Intermédiaire'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'objectif-03b-experience');
+    await tester.tap(find.text('Avancé'));
+    await tester.pumpAndSettle();
+
     // Le bas de l'écran : rythme, durée et matériel coché.
     await tester.scrollUntilVisible(
       find.text('Poids du corps'),
@@ -215,21 +219,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture(tester, 'objectif-04-materiel');
-
-    // Le bas de l'écran : le bouton « Générer », prêt puisque les cinq
-    // réponses sont là.
-    await tester.scrollUntilVisible(
-      find.text('Tout est prêt'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await capture(tester, 'objectif-05-generer');
-
-    // Et ce que la génération RÉPOND : le plan avec son explication.
-    await tester.tap(find.text('Générer mon programme'));
-    await tester.pumpAndSettle();
-    await capture(tester, 'objectif-06-rapport');
   });
 
   // La page du coach, « Avant que je réfléchisse » : en haut rien de

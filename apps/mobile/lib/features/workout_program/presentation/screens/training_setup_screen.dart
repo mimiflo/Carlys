@@ -3,21 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
-import '../../domain/entities/training_goal.dart';
 import '../../domain/entities/training_profile.dart';
 import '../providers/training_goal_providers.dart';
 import '../providers/training_profile_providers.dart';
-import '../widgets/generate_program_card.dart';
+import '../widgets/choice_tiles.dart';
+import '../widgets/experience_sheet.dart';
+import '../widgets/setup_summary_card.dart';
 import '../widgets/training_equipment_section.dart';
 import '../widgets/training_goal_sheet.dart';
 import '../widgets/training_setup_sections.dart';
 
-/// « Préparer mon programme » : les ENTRÉES DE GÉNÉRATION en un écran —
+/// « Préparer mon programme » : les objectifs d'entraînement en un écran —
 /// objectif, expérience, rythme, matériel. Chaque geste écrit SON champ au
 /// serveur puis relit : l'écran reflète toujours l'état serveur.
 ///
-/// Le bouton « Générer » vit en bas : c'est l'aboutissement de l'écran, pas
-/// son ouverture — on répond, puis on génère.
+/// Aucun bouton « Générer » : ces réponses servent à l'appli entière (le
+/// coach les lit pour composer une séance ou un programme), pas à un seul
+/// geste de cet écran.
 class TrainingSetupScreen extends ConsumerWidget {
   const TrainingSetupScreen({super.key});
 
@@ -43,61 +45,97 @@ class TrainingSetupScreen extends ConsumerWidget {
               bottomInset + AppSpacing.gapSection,
             ),
             children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: AppBackButton(),
+              const AppScreenHeader.centered(
+                title: 'Préparer mon programme',
+                tagline: 'Un programme à ton image',
               ),
-              const SizedBox(height: AppSpacing.xs),
-              _Bandeau(goal: goal),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Ton expérience'),
-              const SizedBox(height: AppSpacing.sm),
-              ExperienceChoices(
-                current: value.experience,
-                onChoose: (experience) => _ecrire(
-                  context,
-                  ref,
-                  () => ref
-                      .read(trainingProfileActionsProvider)
-                      .setExperience(experience),
+              const SizedBox(height: AppSpacing.gapRow),
+              // L'objectif vient de `AuthUser` (rafraîchi par sa feuille),
+              // jamais d'une copie locale qui divergerait.
+              SetupSummaryCard(
+                icon: AppIcons.goal,
+                title: goal?.label ?? 'Choisir mon objectif',
+                description: goal?.description ?? 'Le pourquoi de tes séances.',
+                semanticLabel:
+                    'Ton objectif : ${goal?.label ?? 'à choisir'}. Modifier',
+                onTap: () => showTrainingGoalSheet(context),
+              ),
+              const SizedBox(height: AppSpacing.gapRow),
+              SetupSummaryCard(
+                icon: AppIcons.statistics,
+                title: value.experience?.label ?? 'Choisir mon niveau',
+                description:
+                    value.experience?.description ??
+                    'Débutant, intermédiaire ou avancé.',
+                semanticLabel:
+                    'Ton expérience : ${value.experience?.label ?? 'à choisir'}. Modifier',
+                onTap: () async {
+                  final experience = await showExperienceSheet(
+                    context,
+                    current: value.experience,
+                  );
+                  if (experience == null || !context.mounted) return;
+                  await _ecrire(
+                    context,
+                    ref,
+                    () => ref
+                        .read(trainingProfileActionsProvider)
+                        .setExperience(experience),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.gapRow),
+              AppTitledCard(
+                icon: AppIcons.calendar,
+                title: 'Séances par semaine',
+                child: ChoiceTiles(
+                  choices: weeklySessionsChoices,
+                  current: value.weeklySessionsTarget,
+                  labelOf: (sessions) => '$sessions',
+                  onChoose: (sessions) => _ecrire(
+                    context,
+                    ref,
+                    () => ref
+                        .read(trainingProfileActionsProvider)
+                        .setWeeklySessions(sessions),
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Séances par semaine'),
-              const SizedBox(height: AppSpacing.sm),
-              ChoicePills(
-                choices: weeklySessionsChoices,
-                current: value.weeklySessionsTarget,
-                labelOf: (sessions) => '$sessions',
-                onChoose: (sessions) => _ecrire(
-                  context,
-                  ref,
-                  () => ref
-                      .read(trainingProfileActionsProvider)
-                      .setWeeklySessions(sessions),
+              const SizedBox(height: AppSpacing.gapRow),
+              AppTitledCard(
+                icon: AppIcons.time,
+                title: 'Durée d’une séance',
+                child: ChoiceTiles(
+                  choices: sessionMinutesChoices,
+                  current: value.sessionMinutesTarget,
+                  labelOf: (minutes) => '$minutes min',
+                  onChoose: (minutes) => _ecrire(
+                    context,
+                    ref,
+                    () => ref
+                        .read(trainingProfileActionsProvider)
+                        .setSessionMinutes(minutes),
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Durée d’une séance'),
-              const SizedBox(height: AppSpacing.sm),
-              ChoicePills(
-                choices: sessionMinutesChoices,
-                current: value.sessionMinutesTarget,
-                labelOf: (minutes) => '$minutes min',
-                onChoose: (minutes) => _ecrire(
-                  context,
-                  ref,
-                  () => ref
-                      .read(trainingProfileActionsProvider)
-                      .setSessionMinutes(minutes),
+              const SizedBox(height: AppSpacing.gapRow),
+              AppTitledCard(
+                icon: AppIcons.workout,
+                title: 'Ton matériel',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Sélectionne le matériel disponible',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TrainingEquipmentSection(profile: value),
+                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Ton matériel'),
-              const SizedBox(height: AppSpacing.sm),
-              TrainingEquipmentSection(profile: value),
-              const SizedBox(height: AppSpacing.gapSection),
-              GenerateProgramCard(profile: value),
             ],
           ),
           (null, AsyncError()) => AppErrorState(
@@ -123,83 +161,5 @@ class TrainingSetupScreen extends ConsumerWidget {
     } on AppException catch (exception) {
       notices.show(exception.message, tone: AppNoticeTone.error);
     }
-  }
-}
-
-/// Le bandeau d'en-tête : ce que cet écran prépare, et l'objectif choisi
-/// comme porte d'entrée — le dégradé VIOLET de l'application (`cta`),
-/// jamais le dégradé de marque multicolore (réservé aux célébrations).
-/// L'objectif vient de `AuthUser` (rafraîchi par la feuille de choix),
-/// jamais d'une copie locale qui divergerait.
-class _Bandeau extends StatelessWidget {
-  const _Bandeau({required this.goal});
-
-  final TrainingGoal? goal;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: const BoxDecoration(
-        gradient: AppColors.cta,
-        borderRadius: AppRadius.cardSecondaryAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Préparer mon programme',
-            style: AppTypography.title.copyWith(color: AppColors.neutral0),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          // Blanc PLEIN : à 80 %, 3,18:1 sur le départ clair du dégradé.
-          Text(
-            'Cinq réponses, objectif compris, et ton futur programme partira '
-            'de toi, pas d’un modèle générique.',
-            style: AppTypography.label.copyWith(color: AppColors.neutral0),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Semantics(
-            button: true,
-            label: 'Ton objectif : ${goal?.label ?? 'à choisir'}',
-            // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
-            onTap: () => showTrainingGoalSheet(context),
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: () => showTrainingGoalSheet(context),
-              borderRadius: AppRadius.fullAll,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xxs,
-                ),
-                // Le violet profond du dégradé : 7,15:1 (voile blanc : 3,38).
-                decoration: const BoxDecoration(
-                  borderRadius: AppRadius.fullAll,
-                  color: AppColors.ctaEnd,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      AppIcons.goal,
-                      size: 14,
-                      color: AppColors.neutral0,
-                    ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    Text(
-                      goal?.label ?? 'Choisir mon objectif',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.neutral0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

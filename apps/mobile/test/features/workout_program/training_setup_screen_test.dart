@@ -85,7 +85,9 @@ void main() {
     final repo = FakeTrainingProfileRepository();
     await monter(tester, repo: repo);
 
-    await voir(tester, 'Avancé');
+    // Le niveau se choisit dans sa feuille, ouverte depuis sa carte.
+    await tester.tap(find.text('Choisir mon niveau'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Avancé'));
     await tester.pumpAndSettle();
 
@@ -95,7 +97,7 @@ void main() {
     expect(repo.equipmentWrites, isEmpty);
   });
 
-  testWidgets('le rythme et la durée s’écrivent par pastilles', (tester) async {
+  testWidgets('le rythme et la durée s’écrivent par tuiles', (tester) async {
     final repo = FakeTrainingProfileRepository();
     await monter(tester, repo: repo);
 
@@ -104,8 +106,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.profile.weeklySessionsTarget, 4);
 
-    await voir(tester, '60 MIN');
-    await tester.tap(find.text('60 MIN'));
+    await voir(tester, '60 min');
+    await tester.tap(find.text('60 min'));
     await tester.pumpAndSettle();
     expect(repo.profile.sessionMinutesTarget, 60);
   });
@@ -137,21 +139,70 @@ void main() {
     },
   );
 
-  testWidgets('le bandeau se lit sur tout son violet, pastille comprise', (
+  testWidgets('l’objectif reste modifiable : sa carte ouvre sa feuille', (
     tester,
   ) async {
-    // Le sous-titre à 80 % tombait à 3,18:1 au départ clair du dégradé, et
-    // le libellé de la pastille à 3,38 sur son voile blanc.
     await monter(
       tester,
       repo: FakeTrainingProfileRepository(),
       goal: TrainingGoal.hyrox,
     );
 
-    final bandeau = surfacePainting(AppColors.cta);
-    expect(bandeau, findsOneWidget);
-    expect(find.text('Hyrox'), findsOneWidget);
-    expect(inkFailuresOn(tester, bandeau), isEmpty);
+    await tester.tap(find.text('Hyrox'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ton objectif d’entraînement'), findsOneWidget);
+  });
+
+  testWidgets('fermer la feuille d’expérience sans choisir n’écrit rien', (
+    tester,
+  ) async {
+    final repo = FakeTrainingProfileRepository();
+    await monter(tester, repo: repo);
+
+    await tester.tap(find.text('Choisir mon niveau'));
+    await tester.pumpAndSettle();
+    expect(find.text('Avancé'), findsOneWidget);
+    // Un toucher hors de la feuille la ferme, sans réponse.
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Avancé'), findsNothing);
+    expect(repo.profile.experience, isNull);
+  });
+
+  testWidgets('à 320 points en texte doublé, chaque tuile reste à 48 points', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await monter(tester, repo: FakeTrainingProfileRepository());
+    await voir(tester, '90 min');
+
+    expect(tester.takeException(), isNull);
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+  });
+
+  testWidgets('la tuile choisie se lit sur son violet', (tester) async {
+    await monter(
+      tester,
+      repo: FakeTrainingProfileRepository(
+        initial: const TrainingProfile(
+          goal: null,
+          experience: null,
+          weeklySessionsTarget: 4,
+          sessionMinutesTarget: null,
+          equipmentSlugs: [],
+        ),
+      ),
+    );
+
+    final tuile = surfacePainting(AppColors.cta);
+    expect(tuile, findsOneWidget);
+    expect(inkFailuresOn(tester, tuile), isEmpty);
   });
 
   testWidgets('la lecture en échec montre l’état d’erreur, réessayable', (

@@ -237,6 +237,21 @@ abstract final class AppIcons {
   static const IconData playFilled = Icons.play_circle_fill_rounded;
   static const IconData dragHandle = Icons.drag_indicator_rounded;
 
+  // ── Matériel d'entraînement ───────────────────────────────────────
+  // Un glyphe par famille du catalogue. Material n'a ni kettlebell ni
+  // élastique : on prend la forme la plus proche (la barre et ses disques,
+  // un poids, un ruban), et [exercises] pour un matériel que l'appli ne
+  // connaît pas encore.
+  static const IconData equipmentBarbell = Icons.linear_scale_rounded;
+  static const IconData equipmentDumbbell = Icons.fitness_center_rounded;
+  static const IconData equipmentKettlebell = Icons.monitor_weight_rounded;
+  static const IconData equipmentMachine =
+      Icons.precision_manufacturing_rounded;
+  static const IconData equipmentCable = Icons.cable_rounded;
+  static const IconData equipmentBench = Icons.airline_seat_flat_rounded;
+  static const IconData equipmentBand = Icons.gesture_rounded;
+  static const IconData equipmentBodyweight = Icons.accessibility_new_rounded;
+
   // ── Communauté ────────────────────────────────────────────────────
   static const IconData block = Icons.block_rounded;
   static const IconData report = Icons.flag_outlined;

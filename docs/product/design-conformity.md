@@ -580,7 +580,9 @@ passent par les jetons ; les ratios sont avant → après, au pire point.
   blanc plein, ≥ 4,60. La hiérarchie tient par la taille et la graisse.
 - **Pastille de l'objectif** (« Préparer mon programme ») : son voile blanc à
   16 % éclaircissait le fond sous le libellé (3,38) ; elle prend l'aplat
-  `ctaEnd` (7,15).
+  `ctaEnd` (7,15). Bandeau et pastille ont disparu à la refonte du
+  4 octobre 2026 (en-tête centré, cartes sombres) ; la tuile de rythme
+  choisie, seule à porter encore le dégradé, garde le blanc plein.
 - **Voiles d'état SOMBRES.** `FilledButton.styleFrom` dérive son voile de
   survol, de focus et d'appui de la couleur du libellé : blanc, il
   éclaircissait le fond sous un texte blanc. `AppButton` principal et

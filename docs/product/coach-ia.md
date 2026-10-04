@@ -176,8 +176,8 @@ pouvoir proposer un PROGRAMME, pas seulement une séance.
 **Le partage des rôles, et pourquoi.** Le coach ne compose pas le programme :
 il en choisit les RÉGLAGES — objectif, séances par semaine, durée d'une
 séance — et c'est le générateur déterministe du module `programs`
-(`PUT /programs/:id/generate`) qui le construit, avec les mêmes règles que
-l'écran « Préparer mon programme ». Un modèle de 4 milliards de paramètres
+(`PUT /programs/:id/generate`) qui le construit, à partir des objectifs
+renseignés sur l'écran « Préparer mon programme ». Un modèle de 4 milliards de paramètres
 qui écrirait trente séances inventerait des exercices et des volumes ; le
 générateur, lui, est testé, respecte le matériel et le niveau, et explique
 ses choix. L'IA propose, l'application exécute — ici plus que jamais.

@@ -40,46 +40,19 @@ class ExperienceChoices extends StatelessWidget {
   }
 }
 
-/// Une rangée de pastilles-choix : « 4 » séances, « 60 MIN »…
-class ChoicePills extends StatelessWidget {
-  const ChoicePills({
-    required this.choices,
-    required this.current,
-    required this.onChoose,
-    required this.labelOf,
-    super.key,
-  });
-
-  /// Presets proposés ; une valeur SERVEUR hors presets (bornes du contrat
-  /// plus larges) est ajoutée en fin de rangée, sélectionnée — sans quoi
-  /// l'écran la cachait et le premier tap l'écrasait en silence.
-  final List<int> choices;
-  final int? current;
-  final ValueChanged<int> onChoose;
-  final String Function(int value) labelOf;
-
-  @override
-  Widget build(BuildContext context) {
-    final affiches = [
-      ...choices,
-      if (current != null && !choices.contains(current)) current!,
-    ];
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      children: [
-        for (final value in affiches)
-          AppPill(
-            label: labelOf(value),
-            mono: true,
-            selected: value == current,
-            selectedTone: AppPillTone.primary,
-            onTap: () => onChoose(value),
-          ),
-      ],
-    );
-  }
-}
+/// Le glyphe d'un matériel du catalogue, par son slug ; [AppIcons.exercises]
+/// pour un matériel que l'appli ne connaît pas encore.
+IconData equipmentIcon(String slug) => switch (slug) {
+  'barre' => AppIcons.equipmentBarbell,
+  'halteres' => AppIcons.equipmentDumbbell,
+  'kettlebell' => AppIcons.equipmentKettlebell,
+  'machine' => AppIcons.equipmentMachine,
+  'poulie' => AppIcons.equipmentCable,
+  'banc' => AppIcons.equipmentBench,
+  'elastique' => AppIcons.equipmentBand,
+  'poids-du-corps' => AppIcons.equipmentBodyweight,
+  _ => AppIcons.exercises,
+};
 
 /// Le matériel : la taxonomie du catalogue, cochée ligne à ligne — chaque
 /// geste écrit la liste COMPLÈTE, l'écran reflète l'état serveur.
@@ -149,6 +122,12 @@ class _EquipmentRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              Icon(
+                equipmentIcon(equipment.slug),
+                size: 20,
+                color: AppColors.primaryLight,
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   equipment.name,
