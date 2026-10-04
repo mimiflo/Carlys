@@ -168,6 +168,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `GET /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — vignette de l'écran de repas : octets lus par le dépôt (`NutritionRepository.mealPhoto`, 404 = pas de photo), gardés en mémoire sous (repas, `photo.updatedAt`) par `MealPhotoCache` |
 | `DELETE /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — « Retirer la photo » du même écran, appliqué à l'enregistrement (`NutritionRepository.removeMealPhoto`) |
 | `GET /nutrition/foods` | **mobile** | apps/mobile — feuille « Ajouter un aliment » de l'écran de repas (`FoodSearchController` → `NutritionRepository.searchFoods`, anti-rebond, deux caractères au moins, réponses dépassées jetées) ; `meta.source` (mention CIQUAL et version) affichée en pied de feuille |
+| `GET /nutrition/products/{barcode}` | **mobile** | apps/mobile — tuile « Scanner un aliment » de l'onglet Nutrition (`FoodBarcodeScannerScreen` → `ScannedProductSheet` → `NutritionRepository.productByBarcode`) ; 404 = produit inconnu, la saisie à la main est proposée ; `meta.source` (mention Open Food Facts, ODbL) affichée sous les valeurs |
 | `GET /nutrition/foods/{code}` | **mobile** | apps/mobile — fiche d'un aliment de la base, exposée par le dépôt (`NutritionRepository.food`) ; la feuille de recherche ne l'appelle pas : la recherche rend déjà les valeurs pour 100 g et la mention |
 | `GET /nutrition/metabolism` | **mobile** | apps/mobile |
 
