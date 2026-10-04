@@ -29,3 +29,15 @@ int joursCivilsEntre(DateTime debut, DateTime fin) {
     b.day,
   ).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
 }
+
+/// Le numéro du jour civil LOCAL de [date], compté depuis le 1er janvier
+/// 1970 : de quoi comparer des dates ou compter des jours sans heure, par
+/// la même reconstruction en UTC que [joursCivilsEntre].
+int civilDayNumber(DateTime date) {
+  final local = date.toLocal();
+  return DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  ).difference(DateTime.utc(1970)).inDays;
+}

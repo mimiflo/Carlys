@@ -169,8 +169,6 @@ class _DayInitial extends StatelessWidget {
   final ConsistencyDay? day;
   final int fallbackIndex;
 
-  static const List<String> _initials = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
   @override
   Widget build(BuildContext context) {
     final data = day;
@@ -184,7 +182,7 @@ class _DayInitial extends StatelessWidget {
     };
 
     return Text(
-      data?.initial ?? _initials[fallbackIndex],
+      data?.initial ?? weekdayInitials[fallbackIndex],
       textAlign: TextAlign.center,
       style: AppTypography.resized(
         AppTypography.labelMono,

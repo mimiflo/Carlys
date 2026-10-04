@@ -35,7 +35,6 @@ void main() {
       'metricM',
       'quote',
       'labelMono',
-      'headline',
       'subtitle',
       'metric',
     };

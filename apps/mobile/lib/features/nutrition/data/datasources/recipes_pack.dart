@@ -4,51 +4,21 @@
 /// contenu éditorial qui doit s'ouvrir hors ligne.
 library;
 
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:flutter/services.dart' show rootBundle;
-
+import '../../../../core/utilities/embedded_pack.dart';
 import '../../domain/entities/nutrition.dart' show NutritionGoal;
 import '../../domain/entities/recipe.dart';
 
-/// C'est le RÉSULTAT qui est mémoïsé, jamais la future : une future ne
-/// s'achève que dans la zone où elle est née.
-List<Recipe>? _recipes;
-Future<List<Recipe>>? _loading;
+final _pack = EmbeddedPack<Recipe>(
+  asset: 'assets/nutrition/recipes.json',
+  listKey: 'recipes',
+  parse: _recipe,
+  emptyMessage: 'pack de recettes vide',
+);
 
-Future<List<Recipe>> loadRecipesPack() async {
-  final cached = _recipes;
-  if (cached != null) {
-    return cached;
-  }
-  try {
-    final recipes = await (_loading ??= _read());
-    _recipes = recipes;
-    return recipes;
-  } finally {
-    // Échec : on ne mémoïse JAMAIS la future en erreur, sinon tout
-    // rechargement rejouerait l'échec à jamais.
-    _loading = null;
-  }
-}
+Future<List<Recipe>> loadRecipesPack() => _pack.load();
 
-Future<List<Recipe>> _read() async {
-  // `load` + `utf8.decode`, jamais `loadString` : au-delà de 50 Kio ce
-  // dernier délègue le décodage à un isolat, qui ne s'achève pas sous
-  // l'horloge simulée d'un test de widget.
-  final data = await rootBundle.load('assets/nutrition/recipes.json');
-  final raw = utf8.decode(Uint8List.sublistView(data));
-  final decoded = jsonDecode(raw) as Map<String, dynamic>;
-  final recipes = (decoded['recipes'] as List<dynamic>)
-      .cast<Map<String, dynamic>>()
-      .map(_recipe)
-      .toList(growable: false);
-  if (recipes.isEmpty) {
-    throw const FormatException('pack de recettes vide');
-  }
-  return recipes;
-}
+/// Réservé aux tests, qui vérifient le rechargement.
+void resetRecipesPackCache() => _pack.reset();
 
 Recipe _recipe(Map<String, dynamic> json) {
   final id = json['id'] as String;
@@ -84,10 +54,4 @@ Recipe _recipe(Map<String, dynamic> json) {
       growable: false,
     ),
   );
-}
-
-/// Réservé aux tests, qui vérifient le rechargement.
-void resetRecipesPackCache() {
-  _recipes = null;
-  _loading = null;
 }

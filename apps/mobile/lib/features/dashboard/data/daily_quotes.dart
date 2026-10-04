@@ -49,6 +49,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utilities/civil_days.dart';
 import '../domain/entities/daily_quote.dart';
 import '../domain/quote_facts.dart';
 import '../domain/quote_selection.dart';
@@ -136,7 +137,7 @@ List<DailyQuote> entrelacer(Map<CarlysValue, List<QuoteEntry>> parValeur) {
 /// L'index avance d'un cran par jour civil local, ce qui fait tourner le
 /// recueil en [carlysQuotes.length] jours et change de valeur chaque matin.
 DailyQuote quoteOfTheDay(DateTime day) {
-  final index = _daysSinceEpoch(day) % carlysQuotes.length;
+  final index = civilDayNumber(day) % carlysQuotes.length;
   return carlysQuotes[index];
 }
 
@@ -163,19 +164,7 @@ DailyQuote contextualQuote({required QuoteFacts facts, required DateTime day}) {
       continue;
     }
     // Le même repère que la rotation : le numéro de jour civil local.
-    return candidates[_daysSinceEpoch(day) % candidates.length];
+    return candidates[civilDayNumber(day) % candidates.length];
   }
   return quoteOfTheDay(day);
-}
-
-/// Numéro de jour civil local. On repasse par `DateTime.utc` avec les seuls
-/// champs de date : le décalage horaire et les changements d'heure ne peuvent
-/// donc pas faire sauter — ou rejouer — une journée.
-int _daysSinceEpoch(DateTime day) {
-  final local = day.toLocal();
-  return DateTime.utc(
-    local.year,
-    local.month,
-    local.day,
-  ).difference(DateTime.utc(1970)).inDays;
 }

@@ -179,9 +179,6 @@ abstract final class AppColors {
   static const Color darkSurface = Color(0xFF15101F);
   static const Color darkSurfaceAlt = Color(0xFF1C1529);
 
-  /// Cartes posées sur une scène 3D uniquement (avec BackdropFilter blur 24).
-  static const Color darkGlass = Color(0xB815101F);
-
   /// Voile derrière une popup (tokens.json → color.surface.darkScrim) : le
   /// fond de l'application à 72 %. Il éteint l'écran sans le noircir, et la
   /// carte centrée devient la seule chose qu'on lise.

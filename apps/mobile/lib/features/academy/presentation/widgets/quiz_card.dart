@@ -18,7 +18,6 @@ class QuizCard extends StatefulWidget {
     this.title,
     this.answeredChoice,
     this.onAnswered,
-    this.framed = true,
     this.hint,
     super.key,
   });
@@ -39,11 +38,6 @@ class QuizCard extends StatefulWidget {
   /// juste. C'est par lui que la réponse est notée sur l'appareil puis
   /// rejoint les défis culturels de la communauté.
   final void Function(int choiceIndex, bool correct)? onAnswered;
-
-  /// Posée dans une carte (Academy, au milieu d'une liste) ou à même le fond
-  /// (accueil, sous sa barre de titre de section). La question ne change pas,
-  /// seul son écrin s'adapte à ce qui l'entoure.
-  final bool framed;
 
   /// Invite affichée AVANT la réponse. Par défaut, celle de la question du
   /// jour (« une seule tentative par jour ») ; le quiz de domaine, qui se
@@ -140,7 +134,7 @@ class _QuizCardState extends State<QuizCard> {
       ],
     );
 
-    return widget.framed ? AppCard(child: content) : content;
+    return AppCard(child: content);
   }
 
   /// Trois choix au plus dans le pack : la table suffit.

@@ -37,7 +37,8 @@ class ConsistencyWeek {
   int get trainedCount => days.where((day) => day.trained).length;
 }
 
-const List<String> _initials = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+/// L'initiale de chaque jour, du lundi au dimanche.
+const List<String> weekdayInitials = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 /// Construit la semaine à partir des jours où une séance a été terminée.
 ///
@@ -56,7 +57,7 @@ ConsistencyWeek buildConsistencyWeek({
         () {
           final date = _shiftDays(monday, index);
           return ConsistencyDay(
-            initial: _initials[index],
+            initial: weekdayInitials[index],
             date: date,
             trained: trainedDays.contains(date),
             isToday: date == today,

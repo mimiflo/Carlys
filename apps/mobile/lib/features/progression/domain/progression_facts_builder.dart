@@ -5,6 +5,7 @@
 /// le barème sans base de données, et la lecture sans barème.
 library;
 
+import '../../../core/utilities/civil_days.dart';
 import '../../workout_session/domain/entities/workout.dart';
 import 'progression_engine.dart';
 
@@ -29,11 +30,11 @@ ProgressionFacts buildProgressionFacts({
   var recentVolume = 0.0;
   var previousVolume = 0.0;
 
-  final todayNumber = _dayNumber(today);
+  final todayNumber = civilDayNumber(today);
 
   for (final entry in history) {
     final session = entry.session;
-    final age = todayNumber - _dayNumber(session.startedAt);
+    final age = todayNumber - civilDayNumber(session.startedAt);
     if (age < 0) {
       // Séance datée dans le futur : horloge décalée ou reprise d'un autre
       // fuseau. On l'ignore plutôt que de la compter à contretemps.
@@ -73,13 +74,4 @@ ProgressionFacts buildProgressionFacts({
     lessonsAnswered: lessonsAnswered,
     lessonsTotal: lessonsTotal,
   );
-}
-
-int _dayNumber(DateTime date) {
-  final local = date.toLocal();
-  return DateTime.utc(
-    local.year,
-    local.month,
-    local.day,
-  ).difference(DateTime.utc(1970)).inDays;
 }

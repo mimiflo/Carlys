@@ -34,18 +34,13 @@ abstract interface class RemoteImageCache {
 const String assetImageScheme = 'asset:';
 
 class DiskRemoteImageCache implements RemoteImageCache {
-  DiskRemoteImageCache({
-    HttpClient? client,
-    this.memoryBudgetBytes = defaultMemoryBudgetBytes,
-  }) : _injected = client;
-
-  final HttpClient? _injected;
+  DiskRemoteImageCache({this.memoryBudgetBytes = defaultMemoryBudgetBytes});
 
   /// Ouvert à la PREMIÈRE image réseau seulement : un écran qui ne sert que
   /// des images du paquet n'a aucune raison d'ouvrir un client HTTP.
   HttpClient? _opened;
 
-  HttpClient get _client => _injected ?? (_opened ??= HttpClient());
+  HttpClient get _client => _opened ??= HttpClient();
 
   /// Mémoire vive : évite de relire le disque à chaque défilement.
   ///

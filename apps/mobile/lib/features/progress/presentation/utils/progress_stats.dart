@@ -5,6 +5,7 @@
 /// mesure impossible à établir renvoie `null` plutôt qu'un chiffre factice.
 library;
 
+import '../../../../core/utilities/civil_days.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../domain/entities/progress.dart';
 
@@ -123,13 +124,5 @@ List<String> volumeAxisLabels(
 
 /// Index de semaine calendaire (lundi) en arithmétique entière : insensible
 /// aux changements d'heure, contrairement à un décalage de `Duration`.
-int _weekIndex(DateTime date) {
-  final local = date.toLocal();
-  final days = DateTime.utc(
-    local.year,
-    local.month,
-    local.day,
-  ).difference(DateTime.utc(1970)).inDays;
-  // 1970-01-01 tombe un jeudi : +3 pour caler l'origine sur un lundi.
-  return (days + 3) ~/ 7;
-}
+// 1970-01-01 tombe un jeudi : +3 pour caler l'origine sur un lundi.
+int _weekIndex(DateTime date) => (civilDayNumber(date) + 3) ~/ 7;

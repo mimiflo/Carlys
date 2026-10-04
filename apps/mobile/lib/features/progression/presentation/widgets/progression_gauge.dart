@@ -15,7 +15,6 @@ class ProgressionGauge extends StatefulWidget {
     required this.value,
     required this.height,
     this.fill,
-    this.animate = true,
     super.key,
   });
 
@@ -26,8 +25,6 @@ class ProgressionGauge extends StatefulWidget {
 
   /// `null` : la piste est en tirets, le compteur n'est pas ouvert.
   final Gradient? fill;
-
-  final bool animate;
 
   /// Le remplissage suit le token des anneaux et des jauges.
   static const Duration fillDuration = AppMotion.ring;
@@ -45,10 +42,6 @@ class _ProgressionGaugeState extends State<ProgressionGauge> {
   @override
   void initState() {
     super.initState();
-    if (!widget.animate) {
-      _shown = widget.value;
-      return;
-    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _shown = widget.value);
     });

@@ -9,6 +9,7 @@ library;
 
 import 'dart:math' as math;
 
+import '../../../core/utilities/civil_days.dart';
 import 'progression.dart';
 
 /// Fenêtre d'observation, en jours.
@@ -79,16 +80,6 @@ ProgressionProfile computeProgression(ProgressionFacts facts) {
 
 int _pointsFor(double ratio) => (ratio.clamp(0.0, 1.0) * maxAxisPoints).round();
 
-/// Numéro de jour civil, pour comparer des dates sans se soucier de l'heure.
-int _dayNumber(DateTime date) {
-  final local = date.toLocal();
-  return DateTime.utc(
-    local.year,
-    local.month,
-    local.day,
-  ).difference(DateTime.utc(1970)).inDays;
-}
-
 /// CONSTANCE — reviens-tu ?
 ///
 /// Compte les SEMAINES où au moins une séance a été terminée, sur les huit
@@ -103,10 +94,10 @@ ProgressionAxis _constance(ProgressionFacts facts) {
     );
   }
 
-  final todayNumber = _dayNumber(facts.today);
+  final todayNumber = civilDayNumber(facts.today);
   final weeks = <int>{};
   for (final day in facts.completedSessionDays) {
-    final age = todayNumber - _dayNumber(day);
+    final age = todayNumber - civilDayNumber(day);
     if (age < 0 || age >= constancyWeeks * 7) {
       continue;
     }
@@ -254,13 +245,13 @@ ProgressionAxis _discipline(ProgressionFacts facts) {
 /// ne construit pas, trop souvent ne laisse pas récupérer. Un axe qui
 /// récompenserait le volume maximal contredirait la valeur qu'il porte.
 ProgressionAxis _equilibre(ProgressionFacts facts) {
-  final todayNumber = _dayNumber(facts.today);
+  final todayNumber = civilDayNumber(facts.today);
   final days = facts.completedSessionDays
       .where((day) {
-        final age = todayNumber - _dayNumber(day);
+        final age = todayNumber - civilDayNumber(day);
         return age >= 0 && age < observationDays;
       })
-      .map(_dayNumber)
+      .map(civilDayNumber)
       .toSet();
 
   if (days.isEmpty) {

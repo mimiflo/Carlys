@@ -186,7 +186,6 @@ abstract final class AppTypography {
   );
 
   // ── Alias de compatibilité (anciens noms encore référencés) ──────
-  static const TextStyle headline = title;
   static const TextStyle subtitle = heading;
   static const TextStyle bodyLarge = TextStyle(
     fontFamily: textFamily,

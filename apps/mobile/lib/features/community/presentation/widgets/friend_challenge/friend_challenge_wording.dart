@@ -41,22 +41,14 @@ String friendChallengeAmount(ChallengeMetric metric, int value) {
     ChallengeMetric.quizCorrect =>
       '${formatThousands(value)} '
           '${value <= 1 ? 'bonne réponse' : 'bonnes réponses'}',
-    ChallengeMetric.activeSeconds => _effort(value),
+    // En prose (« 45 min », « 1 h 05 »), pas en capitales mono comme les
+    // chronos de séance.
+    ChallengeMetric.activeSeconds => formatDurationShort(value).toLowerCase(),
     ChallengeMetric.distanceMeters =>
       value >= 1000
           ? '${formatDecimal(value / 1000)} km'
           : '${formatThousands(value)} m',
   };
-}
-
-/// Des minutes, puis des heures : « 45 min », « 1 h 05 ». Écrit en prose,
-/// pas en capitales mono comme les chronos de séance.
-String _effort(int seconds) {
-  final minutes = seconds ~/ 60;
-  if (minutes < 60) {
-    return '$minutes min';
-  }
-  return '${minutes ~/ 60} h ${(minutes % 60).toString().padLeft(2, '0')}';
 }
 
 /// Une tuile de la rangée de faits : une valeur, et ce qu'elle mesure.

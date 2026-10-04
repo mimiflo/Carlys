@@ -10,25 +10,17 @@ import '../motion/app_motion.dart';
 /// mouvement est volontairement ténu — une respiration d'échelle et de
 /// lumière, jamais un clignotement.
 ///
-/// Elle ne s'anime QUE si la série est vivante. Une flamme qui vacillerait
-/// sur une série éteinte serait un contresens, et un mouvement permanent
-/// sans raison coûterait du budget de rendu pour rien.
+/// Elle ne se montre QUE sur une série vivante : le parent la retire sinon
+/// (`ConsistencyStreak`). Une flamme qui vacillerait sur une série éteinte
+/// serait un contresens.
 ///
 /// La réduction d'animations système est respectée : la flamme est alors
 /// simplement dessinée, immobile.
 class AppLivingFlame extends StatefulWidget {
-  const AppLivingFlame({
-    required this.size,
-    required this.color,
-    this.alive = true,
-    super.key,
-  });
+  const AppLivingFlame({required this.size, required this.color, super.key});
 
   final double size;
   final Color color;
-
-  /// La série est en cours. Faux, la flamme ne bouge pas.
-  final bool alive;
 
   /// Respiration complète. Lente : un feu ne palpite pas.
   static const Duration breath = Duration(milliseconds: 2200);
@@ -51,7 +43,7 @@ class _AppLivingFlameState extends State<AppLivingFlame>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final duration = AppMotion.resolve(context, AppLivingFlame.breath);
-    if (!widget.alive || duration == Duration.zero) {
+    if (duration == Duration.zero) {
       _controller
         ..stop()
         ..value = 0;
@@ -64,12 +56,6 @@ class _AppLivingFlameState extends State<AppLivingFlame>
   }
 
   @override
-  void didUpdateWidget(AppLivingFlame oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.alive != oldWidget.alive) didChangeDependencies();
-  }
-
-  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -78,8 +64,6 @@ class _AppLivingFlameState extends State<AppLivingFlame>
   @override
   Widget build(BuildContext context) {
     final icon = Icon(AppIcons.streak, size: widget.size, color: widget.color);
-    if (!widget.alive) return icon;
-
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
