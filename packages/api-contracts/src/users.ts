@@ -187,4 +187,3 @@ export const updateProfileRequestSchema = z.object({
   activityLevel: activityLevelSchema.optional(),
   nutritionGoal: nutritionGoalSchema.optional(),
 });
-export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

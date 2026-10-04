@@ -61,41 +61,6 @@ export const programDetailSchema = programSummarySchema.extend({
 });
 export type ProgramDetail = z.infer<typeof programDetailSchema>;
 
-/** Jour envoyé par le client. `label` est déduit du modèle s'il est absent. */
-export const saveProgramDaySchema = z.object({
-  id: z.string().uuid(),
-  weekNumber: z.number().int().min(1).max(PROGRAM_MAX_WEEKS),
-  dayOfWeek: z.number().int().min(1).max(7),
-  templateId: z.string().uuid().nullable().optional(),
-  label: z.string().trim().min(1).max(120).optional(),
-  isRest: z.boolean().optional(),
-});
-export type SaveProgramDay = z.infer<typeof saveProgramDaySchema>;
-
-/**
- * Corps du `PUT /programs/:id` — l'état COMPLET du programme.
- *
- * Le serveur y fait converger la base en une transaction : rejouer le même
- * corps redonne exactement le même état, sans journal d'idempotence.
- */
-export const saveProgramRequestSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  description: z.string().trim().max(2000).nullable().optional(),
-  weeksCount: z.number().int().min(1).max(PROGRAM_MAX_WEEKS),
-  isActive: z.boolean().optional(),
-  /**
-   * Premier jour du plan. ABSENT vaut `null` comme le reste du corps — c'est
-   * un état complet, pas un fragment : un client qui garde la date la renvoie.
-   *
-   * Aucune borne haute, contrairement aux dates d'ÉVÉNEMENT (`startedAt`,
-   * `measuredAt`, `eatenAt`) qui refusent le futur : commencer lundi
-   * prochain est le cas normal, pas une horloge déréglée.
-   */
-  startsOn: dayKeySchema.nullable().optional(),
-  days: z.array(saveProgramDaySchema).max(PROGRAM_MAX_DAYS),
-});
-export type SaveProgramRequest = z.infer<typeof saveProgramRequestSchema>;
-
 // ── Calendrier daté (Plan 4, tranche 4) ─────────────────────────────────────
 
 /**
@@ -153,24 +118,6 @@ export const programCalendarWeekSchema = z.object({
   days: z.array(programCalendarDaySchema),
 });
 export type ProgramCalendarWeek = z.infer<typeof programCalendarWeekSchema>;
-
-/**
- * Corps de `PUT /programs/:id/calendar/days/:dayId/session` — la case
- * reconnaît une séance, ou n'en reconnaît plus aucune.
- *
- * Pourquoi un PUT et non un POST : l'état visé est « cette case est honorée
- * par CETTE séance », pas « ajoute un lien ». Rejouer le même corps redonne
- * le même état, et `null` est l'état « plus aucune », pas une absence.
- *
- * Le jour civil décide : une séance n'honore une case que si elle a eu lieu
- * CE JOUR-LÀ, dans le fuseau de la personne. Corriger une séance faite un
- * autre jour n'est pas ce geste-ci — c'est DÉPLACER la case, ce que
- * l'enregistrement complet du programme sait déjà faire.
- */
-export const linkCalendarSessionRequestSchema = z.object({
-  sessionId: z.string().uuid().nullable(),
-});
-export type LinkCalendarSessionRequest = z.infer<typeof linkCalendarSessionRequestSchema>;
 
 // ── Génération de programme (Plan 4, tranche 3) ─────────────────────────────
 

@@ -4,8 +4,6 @@ import { z } from 'zod';
 
 export const healthComponentStatusSchema = z.enum(['up', 'down']);
 
-export type HealthComponentStatus = z.infer<typeof healthComponentStatusSchema>;
-
 export const healthComponentSchema = z.object({
   status: healthComponentStatusSchema,
   latencyMs: z.number().optional(),

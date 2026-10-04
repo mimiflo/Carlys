@@ -16,8 +16,8 @@ enum SocialProvider {
 }
 
 /// Le nom d'un compte Apple ou Google, tel que le serveur l'accepte : de 1 à
-/// 60 POINTS DE CODE, blancs découpés (`SocialLoginDto`, contrat
-/// `socialLoginRequestSchema`). `null` quand il ne reste rien.
+/// 60 POINTS DE CODE, blancs découpés (`SocialLoginDto` de l'API). `null`
+/// quand il ne reste rien.
 ///
 /// Ce nom n'est qu'une courtoisie : il ne sert qu'à nommer un compte neuf.
 /// Mais le serveur valide TOUT le corps avant de regarder si le compte

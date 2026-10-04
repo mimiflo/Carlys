@@ -11,7 +11,6 @@ export const progressPointSchema = z.object({
   sessionsCount: z.number(),
   volumeKg: z.number(),
 });
-export type ProgressPoint = z.infer<typeof progressPointSchema>;
 
 export const progressOverviewSchema = z.object({
   period: progressPeriodSchema,
@@ -43,7 +42,6 @@ export const lifetimeWeekSchema = z.object({
   /** Séances TERMINÉES cette semaine-là. */
   sessions: z.number(),
 });
-export type LifetimeWeek = z.infer<typeof lifetimeWeekSchema>;
 
 export const lifetimeStatsSchema = z.object({
   completedSessions: z.number(),
@@ -68,7 +66,6 @@ export const progressEventKindSchema = z.enum([
   'REWARD',
   'TITLE',
 ]);
-export type ProgressEventKind = z.infer<typeof progressEventKindSchema>;
 
 export const progressEventSchema = z.object({
   /** Identifiant de l'événement dans la frise, stable et opaque. */
@@ -98,26 +95,6 @@ export type MilestoneKind = z.infer<typeof milestoneKindSchema>;
  * Cent laisse la place à trois fois ça sans ouvrir un tuyau.
  */
 export const MILESTONES_IMPORT_MAX = 100;
-
-/**
- * Corps de `POST /progress/milestones`.
- *
- * Seuls les franchissements que le MOBILE décide s'importent : les
- * récompenses et les titres sortent d'un moteur qui vit sur l'appareil. Les
- * records, eux, se dérivent des séries côté serveur et ne s'envoient jamais.
- */
-export const importMilestonesRequestSchema = z.object({
-  milestones: z
-    .array(
-      z.object({
-        kind: z.enum(['REWARD', 'TITLE']),
-        key: z.string().min(1).max(120),
-        occurredAt: z.string(),
-      }),
-    )
-    .max(MILESTONES_IMPORT_MAX),
-});
-export type ImportMilestonesRequest = z.infer<typeof importMilestonesRequestSchema>;
 
 export const personalRecordTypeSchema = z.enum(['MAX_WEIGHT', 'MAX_REPS', 'MAX_SET_VOLUME']);
 export type PersonalRecordType = z.infer<typeof personalRecordTypeSchema>;
@@ -154,7 +131,6 @@ export const exerciseProgressionPointSchema = z.object({
   distanceMeters: z.number(),
   durationSeconds: z.number(),
 });
-export type ExerciseProgressionPoint = z.infer<typeof exerciseProgressionPointSchema>;
 
 export const exerciseProgressionSchema = z.object({
   exerciseId: z.string(),
@@ -174,25 +150,3 @@ export const bodyMetricSchema = z.object({
   measuredAt: z.string(),
 });
 export type BodyMetric = z.infer<typeof bodyMetricSchema>;
-
-/**
- * Correction d'une mesure déjà enregistrée : la valeur, la date, ou les deux.
- *
- * Le TYPE ne se corrige pas — un poids ne devient pas un taux de masse
- * grasse. Se tromper de type se répare en supprimant la ligne et en en
- * créant une autre, ce que l'API permet déjà.
- *
- * `refine` plutôt que deux champs obligatoires : un corps vide n'est pas une
- * correction, c'est un appel qui ne veut rien dire. Le refuser tôt évite une
- * écriture inutile et un `updatedAt` qui bougerait pour rien.
- */
-export const updateBodyMetricRequestSchema = z
-  .object({
-    value: z.number().min(1).max(500).optional(),
-    measuredAt: z.string().optional(),
-  })
-  .refine(
-    (body) => body.value !== undefined || body.measuredAt !== undefined,
-    'Rien à corriger : donne au moins la valeur ou la date.',
-  );
-export type UpdateBodyMetricRequest = z.infer<typeof updateBodyMetricRequestSchema>;

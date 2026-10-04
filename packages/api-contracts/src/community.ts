@@ -59,7 +59,6 @@ export const encourageRequestSchema = z.object({
       message: `Ton mot tient en ${ENCOURAGEMENT_MESSAGE_MAX_LENGTH} caractères au plus.`,
     }),
 });
-export type EncourageRequest = z.infer<typeof encourageRequestSchema>;
 
 export const challengeKindSchema = z.enum(['SPORT', 'CULTURE']);
 export type ChallengeKind = z.infer<typeof challengeKindSchema>;
@@ -109,7 +108,6 @@ export type CommunityChallenge = z.infer<typeof communityChallengeSchema>;
  *  ambiguïté visuelle (ni 0/O, ni 1/I/L…) — la normalisation des saisies
  *  (casse, tirets, préfixe QR) est faite AVANT validation. */
 export const friendCodeSchema = z.string().regex(/^[23456789ACDEFHJKMNPRTUVWXY]{8}$/);
-export type FriendCode = z.infer<typeof friendCodeSchema>;
 
 /** Aperçu renvoyé par la résolution d'un code ami : juste de quoi
  *  confirmer « c'est bien elle/lui » avant d'envoyer la demande. */
@@ -191,7 +189,6 @@ export const createCommunityReportSchema = z
       path: ['friendChallengeId'],
     },
   );
-export type CreateCommunityReport = z.infer<typeof createCommunityReportSchema>;
 
 /**
  * Signalement tel que le voit son AUTEUR : l'accusé de réception. Un
@@ -238,7 +235,6 @@ export type QuizAnswerRecord = z.infer<typeof quizAnswerRecordSchema>;
  * CODE — l'allonger ne demande pas de migration.
  */
 export const FRIEND_CHALLENGE_DURATIONS = [3, 7, 30] as const;
-export type FriendChallengeDuration = (typeof FRIEND_CHALLENGE_DURATIONS)[number];
 
 /** Nombre d'invités en plus du créateur. Au-delà, ce n'est plus « entre amis ». */
 export const FRIEND_CHALLENGE_MAX_INVITES = 9;
@@ -270,7 +266,6 @@ export const FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH = 280;
 export const FRIEND_CHALLENGE_TITLE_MAX_LENGTH = 80;
 
 export const friendChallengeStatusSchema = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
-export type FriendChallengeStatus = z.infer<typeof friendChallengeStatusSchema>;
 
 export const friendChallengeMemberStatusSchema = z.enum([
   'INVITED',
@@ -278,7 +273,6 @@ export const friendChallengeMemberStatusSchema = z.enum([
   'DECLINED',
   'LEFT',
 ]);
-export type FriendChallengeMemberStatus = z.infer<typeof friendChallengeMemberStatusSchema>;
 
 /** Une ligne du classement : qui, combien, et à quelle place. */
 export const friendChallengeMemberSchema = z.object({
@@ -444,7 +438,6 @@ export const leaguePromotionSchema = z.object({
    */
   pointsToZone: z.number(),
 });
-export type LeaguePromotion = z.infer<typeof leaguePromotionSchema>;
 
 /**
  * Ce que la ligue rend en une lecture.

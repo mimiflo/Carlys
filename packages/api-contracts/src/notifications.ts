@@ -11,13 +11,6 @@ import { z } from 'zod';
 export const devicePlatformSchema = z.enum(['ANDROID', 'IOS']);
 export type DevicePlatform = z.infer<typeof devicePlatformSchema>;
 
-export const registerDeviceTokenSchema = z.object({
-  /** Jeton d'enregistrement FCM de l'appareil. */
-  token: z.string().min(1).max(512),
-  platform: devicePlatformSchema,
-});
-export type RegisterDeviceToken = z.infer<typeof registerDeviceTokenSchema>;
-
 /**
  * Familles réglables séparément. Une bascule unique couperait le lien social
  * en même temps que tout le reste, alors qu'on ne refuse pas les deux pour
@@ -35,7 +28,6 @@ export const notificationPreferenceSchema = z.object({
   category: notificationCategorySchema,
   enabled: z.boolean(),
 });
-export type NotificationPreference = z.infer<typeof notificationPreferenceSchema>;
 
 /**
  * GET /notifications/preferences — TOUTES les catégories, y compris celles
@@ -46,10 +38,6 @@ export const notificationPreferencesResponseSchema = z.object({
   preferences: z.array(notificationPreferenceSchema),
 });
 export type NotificationPreferencesResponse = z.infer<typeof notificationPreferencesResponseSchema>;
-
-/** PATCH /notifications/preferences — une catégorie à la fois. */
-export const updateNotificationPreferenceSchema = notificationPreferenceSchema;
-export type UpdateNotificationPreference = z.infer<typeof updateNotificationPreferenceSchema>;
 
 /**
  * OÙ MÈNE le toucher d'une notification : l'écran que l'application ouvre.
@@ -65,7 +53,6 @@ export type UpdateNotificationPreference = z.infer<typeof updateNotificationPref
  *    voyage sous la clé `challengeId`.
  */
 export const PUSH_DESTINATIONS = ['community-friends', 'friend-challenge'] as const;
-export type PushDestination = (typeof PUSH_DESTINATIONS)[number];
 
 /**
  * Le champ `data` d'une notification, tel que l'application le lit. FCM ne

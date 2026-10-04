@@ -3,7 +3,6 @@ import { z } from 'zod';
 /** Contrats des abonnements (/api/v1/subscriptions, /api/v1/entitlements). */
 
 export const subscriptionPlanSlugSchema = z.enum(['free', 'premium']);
-export type SubscriptionPlanSlug = z.infer<typeof subscriptionPlanSlugSchema>;
 
 export const paymentProviderSchema = z.enum(['STRIPE', 'REVENUECAT', 'APP_STORE', 'PLAY_STORE']);
 export type PaymentProvider = z.infer<typeof paymentProviderSchema>;
@@ -41,7 +40,6 @@ export type SubscriptionMe = z.infer<typeof subscriptionMeSchema>;
 
 /** Rythme de facturation d'une offre. */
 export const offerPeriodSchema = z.enum(['month', 'year']);
-export type OfferPeriod = z.infer<typeof offerPeriodSchema>;
 
 /**
  * Une offre du catalogue. Les prix viennent du SERVEUR : une application qui
@@ -76,14 +74,6 @@ export const subscriptionOffersResponseSchema = z.object({
   checkoutAvailable: z.boolean(),
 });
 export type SubscriptionOffersResponse = z.infer<typeof subscriptionOffersResponseSchema>;
-
-/** POST /subscriptions/checkout — ouvre une session de paiement. */
-export const createCheckoutSessionSchema = z.object({
-  /** Identifiant fourni par l'appareil : rejouer n'ouvre pas deux paiements. */
-  id: z.string().uuid(),
-  offerId: z.string().min(1),
-});
-export type CreateCheckoutSession = z.infer<typeof createCheckoutSessionSchema>;
 
 export const checkoutSessionSchema = z.object({
   /** Page de paiement à ouvrir dans le navigateur. */
@@ -138,7 +128,6 @@ export const entitlementSchema = z.object({
   isActive: z.boolean(),
   expiresAt: z.string().nullable(),
 });
-export type Entitlement = z.infer<typeof entitlementSchema>;
 
 /** GET /entitlements — droits effectifs, évalués côté serveur à la lecture. */
 export const entitlementsResponseSchema = z.object({

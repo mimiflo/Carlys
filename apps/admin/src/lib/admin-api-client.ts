@@ -1,3 +1,4 @@
+import { cursorPaginationMetaSchema } from '@carlys/api-contracts';
 import { z } from 'zod';
 import { ApiError, apiUrl, requestJson, unwrapResponse } from './api-transport';
 
@@ -132,10 +133,6 @@ function lire(brut: string): readonly string[] {
 }
 
 const successEnvelopeSchema = z.object({ data: z.unknown() });
-const pageMetaSchema = z.object({
-  nextCursor: z.string().nullable(),
-  hasMore: z.boolean(),
-});
 
 export interface Page<T> {
   items: T[];
@@ -159,7 +156,7 @@ export function parseData<T>(body: unknown, schema: z.ZodType<T>): T {
 /** Variante paginée : `data` + `meta.nextCursor`/`meta.hasMore`. */
 export function parsePage<T>(body: unknown, itemSchema: z.ZodType<T>): Page<T> {
   const items = parseData(body, z.array(itemSchema));
-  const meta = pageMetaSchema.safeParse(
+  const meta = cursorPaginationMetaSchema.safeParse(
     (body as { meta?: unknown }).meta ?? { nextCursor: null, hasMore: false },
   );
   return {

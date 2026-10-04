@@ -71,7 +71,6 @@ Carlys/
 │   └── typescript-config/    # base/library/nestjs/nextjs (strict)
 ├── infrastructure/
 │   ├── database/init/        # 01-init.sql (extension citext + base carlys_test)
-│   ├── docker/               # documentation des images
 │   ├── minio/                # MinIO et mc construits depuis leurs sources (versions épinglées)
 │   ├── nginx/                # reverse proxy staging/production (documentation)
 │   ├── monitoring/           # observabilité : état actuel et cible
@@ -473,4 +472,4 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
   [monter VS Code et l'émulateur Android](./docs/development/poste-de-travail.md) ;
 - [`docs/deployment/`](./docs/deployment/) — mise en ligne, dont
   [le guide de mise en route du serveur](./docs/deployment/mise-en-route-serveur.md) ;
-- READMEs locaux : [`apps/api`](./apps/api/README.md), [`apps/admin`](./apps/admin/README.md), [`apps/mobile`](./apps/mobile/README.md), [`infrastructure/docker`](./infrastructure/docker/README.md).
+- READMEs locaux : [`apps/api`](./apps/api/README.md), [`apps/admin`](./apps/admin/README.md), [`apps/mobile`](./apps/mobile/README.md).

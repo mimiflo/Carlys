@@ -106,7 +106,6 @@ export const foodPer100gSchema = z.object({
   carbsG: z.number().nullable(),
   fatG: z.number().nullable(),
 });
-export type FoodPer100g = z.infer<typeof foodPer100gSchema>;
 
 /** Un aliment de la base CIQUAL (/api/v1/nutrition/foods). */
 export const foodSchema = z.object({
@@ -141,7 +140,6 @@ export const foodAttributionSchema = z.object({
   license: z.string(),
   url: z.string(),
 });
-export type FoodAttribution = z.infer<typeof foodAttributionSchema>;
 
 /** La mention, et la version de la table chargée. */
 export const foodSourceSchema = foodAttributionSchema.extend({
@@ -187,26 +185,6 @@ export type MealScanItem = z.infer<typeof mealScanItemSchema>;
 export const MEAL_COMPONENTS_MAX = 30;
 export const MEAL_COMPONENT_QUANTITY_G_MIN = 1;
 export const MEAL_COMPONENT_QUANTITY_G_MAX = 5_000;
-
-/**
- * Ce que le client envoie pour composer un repas : QUELLE ligne, quel
- * aliment, combien.
- *
- * `id` est un UUID généré SUR L'APPAREIL à l'ajout de la ligne, puis
- * conservé : c'est lui qui, dans une correction (PATCH), désigne une ligne
- * DÉJÀ enregistrée. Une ligne ainsi désignée garde son instantané (nom,
- * valeurs pour 100 g, version de la table) et ne change que de quantité ou
- * de place ; seule une ligne à identifiant NEUF relit la base, et y est
- * refusée si l'aliment en a été retiré. Changer l'aliment d'une ligne, c'est
- * une ligne neuve : nouvel `id`. Un identifiant est unique dans tout le
- * journal : deux lignes, même de repas différents, n'en partagent jamais un.
- */
-export const mealComponentInputSchema = z.object({
-  id: z.string().uuid(),
-  foodCode: z.number().int().positive(),
-  quantityG: z.number().min(MEAL_COMPONENT_QUANTITY_G_MIN).max(MEAL_COMPONENT_QUANTITY_G_MAX),
-});
-export type MealComponentInput = z.infer<typeof mealComponentInputSchema>;
 
 /**
  * Un aliment d'un repas COMPOSÉ, tel que le serveur l'a enregistré.

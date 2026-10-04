@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { communityReportSchema, communityReportStatusSchema } from './community';
+import { communityReportSchema } from './community';
 import { mediaAssetSchema } from './media';
 import {
   entitlementKeySchema,
@@ -58,7 +58,6 @@ export type AdminLoginChallenge = z.infer<typeof adminLoginChallengeSchema>;
 
 /** Utilisateur GÉRÉ (compte mobile), vu du back-office. */
 export const managedUserStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']);
-export type ManagedUserStatus = z.infer<typeof managedUserStatusSchema>;
 
 export const managedUserSummarySchema = z.object({
   id: z.string(),
@@ -162,7 +161,6 @@ export const setManagedEntitlementSchema = z
 export type SetManagedEntitlement = z.infer<typeof setManagedEntitlementSchema>;
 
 export const adminActorTypeSchema = z.enum(['USER', 'ADMIN', 'SYSTEM']);
-export type AdminActorType = z.infer<typeof adminActorTypeSchema>;
 
 export const adminAuditLogSchema = z.object({
   id: z.string(),
@@ -242,19 +240,6 @@ export const categorySlugSchema = z
   .max(48)
   .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/u);
 
-export const createMuscleGroupSchema = z.object({
-  slug: categorySlugSchema,
-  name: z.string().min(2).max(48),
-  sortOrder: z.number().int().min(0).max(999).optional(),
-});
-export type CreateMuscleGroupInput = z.infer<typeof createMuscleGroupSchema>;
-
-export const updateMuscleGroupSchema = z.object({
-  name: z.string().min(2).max(48).optional(),
-  sortOrder: z.number().int().min(0).max(999).optional(),
-});
-export type UpdateMuscleGroupInput = z.infer<typeof updateMuscleGroupSchema>;
-
 /**
  * Catégories d'un exercice, remplacées EN BLOC.
  *
@@ -299,9 +284,3 @@ export const adminCommunityReportSchema = communityReportSchema.extend({
   friendChallengeMessage: z.string().nullable(),
 });
 export type AdminCommunityReport = z.infer<typeof adminCommunityReportSchema>;
-
-/** PATCH /admin/community/reports/:id — résoudre, ou rouvrir par erreur. */
-export const updateCommunityReportSchema = z.object({
-  status: communityReportStatusSchema,
-});
-export type UpdateCommunityReportInput = z.infer<typeof updateCommunityReportSchema>;

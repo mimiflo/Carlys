@@ -35,7 +35,6 @@ export const coachProposalItemSchema = z.object({
   targetWeightKg: z.number().nullable(),
   restSeconds: z.number().nullable(),
 });
-export type CoachProposalItem = z.infer<typeof coachProposalItemSchema>;
 
 export const coachSessionProposalSchema = z.object({
   id: z.string(),
@@ -119,23 +118,3 @@ export type CoachReply = z.infer<typeof coachReplySchema>;
 // les amorces dépendent de ce que l'appareil sait déjà, et n'ont pas à coûter
 // un aller-retour réseau. Un contrat publié qui décrit un comportement
 // inexistant est pire qu'une absence : il se lit comme une promesse.
-
-// ── Requêtes ──────────────────────────────────────────────────────────────
-
-export const createCoachConversationRequestSchema = z.object({
-  id: z.string().uuid(),
-});
-export type CreateCoachConversationRequest = z.infer<typeof createCoachConversationRequestSchema>;
-
-export const sendCoachMessageRequestSchema = z.object({
-  /** UUID du message, généré sur l'appareil : l'envoi est rejouable. */
-  id: z.string().uuid(),
-  content: z.string().min(1).max(2000),
-});
-export type SendCoachMessageRequest = z.infer<typeof sendCoachMessageRequestSchema>;
-
-export const acceptCoachProposalRequestSchema = z.object({
-  /** Séance née sur l'appareil depuis cette proposition. */
-  sessionId: z.string().uuid(),
-});
-export type AcceptCoachProposalRequest = z.infer<typeof acceptCoachProposalRequestSchema>;

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { publicEnv } from './src/lib/env';
 import { securityHeaders } from './src/lib/security-headers';
 
 const nextConfig: NextConfig = {
@@ -12,7 +13,7 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: securityHeaders({
-          apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000',
+          apiBaseUrl: publicEnv.apiBaseUrl,
           isDevelopment: process.env.NODE_ENV !== 'production',
         }),
       },

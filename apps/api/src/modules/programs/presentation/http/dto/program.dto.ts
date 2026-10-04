@@ -90,9 +90,7 @@ export class SaveProgramDayDto {
 
 /** Corps du `PUT` : l'état COMPLET du programme, pas un correctif. */
 export class SaveProgramDto {
-  // Élagués AVANT d'être mesurés, comme le contrat Zod publié
-  // (`saveProgramRequestSchema` : `z.string().trim().min(1).max(120)`) et
-  // comme le module jumeau des modèles. Sans cela `@MinLength(1)` acceptait
+  // Élagués AVANT d'être mesurés, comme le module jumeau des modèles. Sans cela `@MinLength(1)` acceptait
   // trois espaces — un programme sans nom, enregistré tel quel — et un nom
   // de 120 caractères suivi d'un espace était refusé pour 121.
   @ApiProperty()

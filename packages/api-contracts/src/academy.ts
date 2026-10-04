@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 /**
  * Les leçons de l'Académie, par identifiant — celles du pack embarqué dans
  * l'application (`apps/mobile/assets/academy/pack.json`, version 4).
@@ -70,9 +68,6 @@ export const ACADEMY_LESSON_IDS = [
   'calisthenics-jambes',
   'calisthenics-gainage',
 ] as const;
-
-export const academyLessonIdSchema = z.enum(ACADEMY_LESSON_IDS);
-export type AcademyLessonId = z.infer<typeof academyLessonIdSchema>;
 
 /**
  * Bonnes réponses qui comptent aux défis et à la ligue, par jour (le jour

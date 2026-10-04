@@ -236,7 +236,7 @@ describe('génération de programme', () => {
         );
         if (outcome.kind !== 'program') continue;
         for (const day of outcome.program.days) {
-          // `saveProgramDaySchema` borne `label` à 120 caractères : un intitulé
+          // `SaveProgramDayDto` borne `label` à 120 caractères : un intitulé
           // plus long passerait le moteur et échouerait à l'écriture.
           expect(day.label.length).toBeGreaterThan(0);
           expect(day.label.length).toBeLessThanOrEqual(120);

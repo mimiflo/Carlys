@@ -41,19 +41,3 @@ export const mediaAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type MediaAsset = z.infer<typeof mediaAssetSchema>;
-
-/**
- * Dépôt d'un fichier. L'identifiant vient de l'ADMINISTRATION : un envoi
- * rejoué après une coupure ne crée pas un second média ni un second objet.
- */
-export const uploadMediaRequestSchema = z.object({
-  id: z.string().uuid(),
-  kind: mediaKindSchema,
-});
-export type UploadMediaRequest = z.infer<typeof uploadMediaRequestSchema>;
-
-/** Rattache un média à un exercice, ou le détache avec `null`. */
-export const attachExerciseMediaRequestSchema = z.object({
-  mediaId: z.string().uuid().nullable(),
-});
-export type AttachExerciseMediaRequest = z.infer<typeof attachExerciseMediaRequestSchema>;
