@@ -162,6 +162,17 @@ metrics_travail() {
     }'
 }
 
+# `metrics_ia_ouverte <port> [jeton]` — les tours du coach et analyses de
+# photo encore ouverts sur un exemplaire (`carlys_api_ai_work_open`), sans
+# les requêtes HTTP : celles-là durent des millisecondes, ceux-ci des
+# minutes. « ? » si /metrics ne se lit pas.
+metrics_ia_ouverte() {
+  metrics_scrape_one "$1" "${2-}" | awk '
+    /^#--code--/ { code = $0; sub(/^#--code--/, "", code); next }
+    $1 == "carlys_api_ai_work_open" { ia += $2 }
+    END { if (code != "200") print "?"; else print ia + 0 }'
+}
+
 # `metrics_field <résumé> <clé>` — extrait une valeur du résumé ci-dessus.
 metrics_field() {
   printf '%s' "$1" | tr ' ' '\n' | awk -F= -v k="$2" '$1 == k { print $2 }'

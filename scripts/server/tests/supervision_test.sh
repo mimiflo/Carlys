@@ -491,6 +491,41 @@ verifier "malade ET muet : il part quand même (il était déjà hors de l'amont
   "$(grep -q 'stop carlys_staging-api-1' "$FAUX_JOURNAL" && echo oui || echo non)"
 banc_nettoyer
 
+# La BASCULE d'un déploiement (deploy.sh, étape 7) : un seul exemplaire,
+# qui sert une réponse du coach (lue 2, puis 1, puis 0). La fonction tourne
+# sous `set -euo pipefail`, comme dans deploy.sh, et son code est vérifié :
+# elle ne doit JAMAIS faire échouer un déploiement.
+bascule() {
+  drainage "$1" "${2:-30}"
+  if [ "$#" -ge 3 ]; then printf '%s' "$3"; else printf 'carlys_staging-api-1|3100\n'; fi > "$BANC/exemplaires"
+  echo "$1" > "$BANC/travail-3100"
+  CARLYS_DEPLOY_DRAIN_SECONDS="${2:-30}" banc_lancer bash -euo pipefail -c \
+    '. "$0/_common.sh"; deploy_attendre_ia staging "$1"' "$BANC_SERVEUR" "$ENV_STAGING" \
+    > "$BANC/code"
+}
+code_bascule() { cat "$BANC/code"; }
+bascule 2
+verifier "bascule : attend que la réponse du coach en cours finisse (code 0)" 0 "$(code_bascule)"
+verifier "… jusqu'au bout" 0 "$(cat "$BANC/travail-3100")"
+verifier "… et le dit" oui "$(grep -q 'la bascule attend' "$BANC_SORTIE" && echo oui || echo non)"
+banc_nettoyer
+bascule 99 0
+verifier "bascule : une réponse qui ne finit pas à temps ne bloque pas (code 0)" 0 "$(code_bascule)"
+verifier "… et le dit" oui "$(grep -q 'bascule quand même' "$BANC_SORTIE" && echo oui || echo non)"
+banc_nettoyer
+bascule '?'
+verifier "bascule : /metrics illisible, sans attendre (code 0)" 0 "$(code_bascule)"
+verifier "… et le dit" oui "$(grep -q 'bascule sans attendre' "$BANC_SORTIE" && echo oui || echo non)"
+banc_nettoyer
+bascule 2 'beaucoup'
+verifier "bascule : délai illisible, retombé sur le défaut, sans erreur" "0 non" \
+  "$(code_bascule) $(grep -q 'integer' "$BANC_SORTIE" && echo oui || echo non)"
+banc_nettoyer
+bascule 5 30 ''
+verifier "bascule : premier déploiement, aucune API en marche, sans attendre" "0 5" \
+  "$(code_bascule) $(cat "$BANC/travail-3100")"
+banc_nettoyer
+
 drainage 0 30 '' 0 carlys_staging-api-3
 verifier "un conteneur arrêté en plus : rien n'est touché, ni l'amont ni personne" non \
   "$(grep -q -E '^(stop|nginx)' "$FAUX_JOURNAL" && echo oui || echo non)"

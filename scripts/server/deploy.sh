@@ -30,7 +30,9 @@
 #      aussi ce qui rend l'opération AUTOMATIQUE : les trois chemins de
 #      déploiement — mise à jour automatique, promote.sh, carlysctl deploy —
 #      passent tous par ici, personne n'a plus rien à taper ;
-#   5. bascule, puis attente BORNÉE de la santé — /health/ready de l'API ET la
+#   5. bascule — après avoir laissé finir, BORNÉ, les réponses du coach et
+#      les analyses de photo en cours, qui mourraient avec l'ancien
+#      processus —, puis attente BORNÉE de la santé — /health/ready de l'API ET la
 #      page d'accueil de l'admin — bornée, sinon un service mort bloque le
 #      script au lieu de déclencher le retour arrière ;
 #   6. santé absente ⇒ retour au sha précédent lu dans DEPLOYED, contrôlé par
@@ -469,6 +471,9 @@ fi
 
 # ── 7. Bascule ─────────────────────────────────────────────────────────────
 step "7/8 Bascule (compose up -d)"
+# Une réponse du coach en route mourrait avec l'ancien processus : on la
+# laisse finir (borné, voir _scale.sh).
+deploy_attendre_ia "$ENV_NAME" "$ENV_FILE"
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   # Compose a refusé de démarrer la pile. Le schéma est déjà migré (migration
   # compatible avec la version précédente : c'est la contrainte annoncée en

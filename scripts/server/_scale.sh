@@ -297,3 +297,53 @@ scale_drainer() {
   fi
   ok "drainés puis retirés : ${partants[*]}"
 }
+
+# `deploy_attendre_ia <env> <.env>` — avant une BASCULE, laisse finir les
+# tours du coach et les analyses de photo en cours.
+#
+# Ils vivent DANS le processus de l'API : `up -d` le recrée, et la réponse
+# meurt en route — le téléphone lisait « Le coach a besoin d'une connexion »
+# (vécu le 5 octobre 2026 : la recette suit `development`, chaque poussée la
+# redéploie). L'exemplaire reste dans l'amont pendant l'attente : seul, il
+# sert encore tout le monde. Bornée par CARLYS_DEPLOY_DRAIN_SECONDS (120 s :
+# une réponse du coach sur processeur), puis la bascule a lieu quand même —
+# un déploiement ne reste pas suspendu à un trafic qui ne s'arrête pas. Pas
+# plus : une passe de supervision peut déployer la recette PUIS la
+# production, et systemd l'arrête à 20 min (carlys-supervision.service),
+# drainage, migrations et santé compris — tué en pleine bascule, ce serait
+# pire qu'une réponse coupée. Un /metrics illisible ne bloque rien non plus :
+# rend toujours 0.
+deploy_attendre_ia() {
+  local env_name="$1" file="$2" jeton delai limite debut port ouvert reste annonce=non
+  local -a ports=()
+  mapfile -t ports < <(api_replica_ports "$env_name" "$file")
+  [ "${#ports[@]}" -gt 0 ] || return 0
+  jeton="$(env_value METRICS_TOKEN "$file" '')"
+  delai="${CARLYS_SCALE_DRAIN_DELAY:-2}"
+  limite="${CARLYS_DEPLOY_DRAIN_SECONDS:-$(env_value CARLYS_DEPLOY_DRAIN_SECONDS "$file" 120)}"
+  # Une valeur qui n'est pas un nombre ferait échouer le test du délai, donc
+  # attendre sans fin : on retombe sur le défaut.
+  case "$limite" in '' | *[!0-9]*) limite=120 ;; esac
+  debut="$(maintenant)"
+  while :; do
+    reste=0
+    for port in "${ports[@]}"; do
+      ouvert="$(metrics_ia_ouverte "$port" "$jeton")"
+      if [ "$ouvert" = '?' ]; then
+        warn "travail du coach illisible sur le port $port (/metrics) : bascule sans attendre"
+        return 0
+      fi
+      [ "$ouvert" = 0 ] || reste=1
+    done
+    [ "$reste" -eq 0 ] && return 0
+    if [ "$(($(maintenant) - debut))" -ge "$limite" ]; then
+      warn "réponses du coach encore en cours après $limite s : bascule quand même"
+      return 0
+    fi
+    if [ "$annonce" = non ]; then
+      info "réponses du coach en cours : la bascule attend qu'elles finissent (au plus $limite s)"
+      annonce=oui
+    fi
+    sleep "$delai"
+  done
+}

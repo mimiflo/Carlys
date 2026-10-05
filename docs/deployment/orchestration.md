@@ -242,6 +242,19 @@ refusé), ou si un partant refuse de s'arrêter : l'amont est rétabli, le `.env
 garde l'ancien nombre, `carlysctl scale` rend 1, et le passage suivant
 réessaiera.
 
+**Le déploiement aussi laisse finir** (`deploy_attendre_ia`, `_scale.sh`).
+Une bascule (`deploy.sh`, étape 7) recrée l'API : une réponse du coach en
+route mourait avec l'ancien processus, et le téléphone affichait « Le coach a
+besoin d'une connexion ». Le 5 octobre 2026, une poussée qui ne touchait que
+l'application mobile a ainsi coupé une réponse : la recette suit
+`development`, chaque poussée la redéploie. La bascule attend donc que
+`carlys_api_ai_work_open` retombe à zéro sur les exemplaires en service, au
+plus `CARLYS_DEPLOY_DRAIN_SECONDS` (120 s : une passe de supervision qui
+déploie la recette puis la production doit tenir dans les 20 min que lui
+accorde systemd), puis bascule quand même ; un
+`/metrics` illisible ne la retient pas. L'exemplaire reste dans l'amont
+pendant l'attente : seul, il sert encore tout le monde.
+
 Changer le nombre ne recrée JAMAIS les exemplaires qui restent
 (`up -d --no-recreate`) : le `.env` étant aussi l'`env_file` de l'API, y écrire
 le nouveau nombre changeait la configuration de tous, et Compose les recréait
