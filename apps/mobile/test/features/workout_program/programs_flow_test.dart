@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -134,6 +137,109 @@ void main() {
 
     final saved = await programs.byId('programme-1');
     expect(saved.dayAt(1, 1)?.isRest, isTrue);
+    expect(find.text('Repos'), findsNWidgets(2));
+  });
+
+  testWidgets('la case paraît SOUS LE DOIGT, sans attendre le serveur', (
+    tester,
+  ) async {
+    final programs = FakeProgramRepository(programs: [programOf()]);
+    await pumpApp(tester, programs);
+    await openPrograms(tester);
+    await tester.tap(find.text('Force en 2 semaines'));
+    await tester.pumpAndSettle();
+
+    // Le serveur tarde : la relecture, l'écriture, puis la relecture
+    // d'après faisaient attendre la case trois allers-retours.
+    programs.saveGate = Completer<void>();
+    await tester.tap(find.text('À planifier').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Repos').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Repos'), findsNWidgets(2));
+
+    programs.saveGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Repos'), findsNWidgets(2));
+    expect((await programs.byId('programme-1')).dayAt(1, 1)?.isRest, isTrue);
+  });
+
+  testWidgets('l’interrupteur « suivi » bascule sans attendre le serveur', (
+    tester,
+  ) async {
+    final programs = FakeProgramRepository(programs: [programOf()]);
+    await pumpApp(tester, programs);
+    await openPrograms(tester);
+    await tester.tap(find.text('Force en 2 semaines'));
+    await tester.pumpAndSettle();
+
+    programs.saveGate = Completer<void>();
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+    programs.saveGate!.complete();
+    await tester.pumpAndSettle();
+    expect((await programs.byId('programme-1')).isActive, isTrue);
+  });
+
+  testWidgets('refusée par le serveur, la case affichée d’avance se retire', (
+    tester,
+  ) async {
+    final programs = FakeProgramRepository(programs: [programOf()]);
+    await pumpApp(tester, programs);
+    await openPrograms(tester);
+    await tester.tap(find.text('Force en 2 semaines'));
+    await tester.pumpAndSettle();
+
+    programs.saveFailure = const ValidationException('refus voulu');
+    await tester.tap(find.text('À planifier').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Repos').last);
+    await tester.pumpAndSettle();
+
+    // L'écran redit ce que le serveur tient : la case reste à planifier.
+    expect(find.text('Repos'), findsOneWidget);
+    expect((await programs.byId('programme-1')).dayAt(1, 1), isNull);
+  });
+
+  testWidgets('deux gestes rapides, le premier refusé : le second reste', (
+    tester,
+  ) async {
+    final programs = FakeProgramRepository(programs: [programOf()]);
+    await pumpApp(tester, programs);
+    await openPrograms(tester);
+    await tester.tap(find.text('Force en 2 semaines'));
+    await tester.pumpAndSettle();
+
+    // Le premier repos part, et le serveur le fait attendre puis le refuse ;
+    // le second est posé pendant ce temps, derrière lui dans la file.
+    programs
+      ..saveGate = Completer<void>()
+      ..saveFailure = const ValidationException('refus voulu');
+    Future<void> poserRepos() async {
+      await tester.tap(find.text('À planifier').first);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.tap(find.text('Repos').last);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await poserRepos();
+    await poserRepos();
+    expect(find.text('Repos'), findsNWidgets(3));
+
+    programs.saveGate!.complete();
+    await tester.pumpAndSettle();
+
+    // Le refusé s'efface, le second — que le serveur a — reste à l'écran.
+    final saved = await programs.byId('programme-1');
+    expect(saved.dayAt(1, 1), isNull);
+    expect(saved.dayAt(1, 3)?.isRest, isTrue);
     expect(find.text('Repos'), findsNWidgets(2));
   });
 

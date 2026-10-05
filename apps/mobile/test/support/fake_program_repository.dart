@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/generation_report.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
@@ -17,6 +19,14 @@ class FakeProgramRepository implements ProgramRepository {
 
   /// Nombre d'écritures reçues (création comprise) — pour les assertions.
   int saveCount = 0;
+
+  /// Un serveur LENT : tant que ce verrou n'est pas levé, l'écriture attend.
+  /// C'est ce qui rend visible ce que l'écran montre PENDANT l'aller-retour.
+  Completer<void>? saveGate;
+
+  /// Un refus à l'écriture, levé APRÈS le verrou, et pour UNE écriture
+  /// seulement : la suivante passe.
+  Object? saveFailure;
 
   /// Refus de génération à la demande. Le message imite ce que le serveur
   /// rend vraiment : il NOMME le champ manquant. Une doublure qui lèverait
@@ -62,6 +72,12 @@ class FakeProgramRepository implements ProgramRepository {
   Future<ProgramDetail> save(ProgramDetail program) async {
     _guard();
     saveCount++;
+    await saveGate?.future;
+    final failure = saveFailure;
+    if (failure != null) {
+      saveFailure = null;
+      throw failure;
+    }
     if (program.isActive) {
       // UN SEUL programme suivi, comme le vrai serveur.
       for (final entry in _programs.entries) {
