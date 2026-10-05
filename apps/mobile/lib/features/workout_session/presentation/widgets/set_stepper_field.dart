@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 
-/// Colonne de saisie de la carte de série : label mono, champ à pas
-/// (− valeur +) et unité. Une colonne par grandeur (charge, répétitions).
+/// Une grandeur de la carte de série, dans son cadre : son nom (« Charge »),
+/// la valeur en grand, l'unité, puis − et +. Une colonne par grandeur.
 class SetStepperField extends StatelessWidget {
   const SetStepperField({
     required this.label,
@@ -24,78 +24,72 @@ class SetStepperField extends StatelessWidget {
   /// `null` quand la borne basse est atteinte.
   final VoidCallback? onDecrement;
 
-  /// Géométrie de la maquette : icônes 20, boîte VISUELLE 32, champ ~48.
-  /// La boîte n'est pas la cible : l'`IconButton` élargit sa zone tactile à
-  /// [AppSpacing.touchTarget] (`MaterialTapTargetSize.padded`), sans rien
-  /// changer au rendu.
-  static const double _iconSize = 20;
-  static const double _boxSize = 32;
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTypography.resized(
-            AppTypography.labelMono,
-            9,
-          ).copyWith(letterSpacing: 1.08, color: AppColors.darkTextTertiary),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.darkBackground,
-            borderRadius: AppRadius.statTileAll,
-            border: Border.all(color: AppColors.darkBorder),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: AppSpacing.xs,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _StepButton(
-                  icon: AppIcons.minus,
-                  tooltip: 'Diminuer : $label',
-                  onPressed: onDecrement,
-                ),
-                Flexible(
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.resized(AppTypography.metricL, 24)
-                        .copyWith(
-                          letterSpacing: -0.72,
-                          color: AppColors.darkTextPrimary,
-                        ),
-                  ),
-                ),
-                _StepButton(
-                  icon: AppIcons.add,
-                  tooltip: 'Augmenter : $label',
-                  onPressed: onIncrement,
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: AppColors.darkBorderStrong),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          unit.toUpperCase(),
-          style: AppTypography.labelMono.copyWith(
-            fontWeight: FontWeight.w400,
-            color: AppColors.darkTextTertiary,
+          const SizedBox(height: AppSpacing.xxs),
+          // Une charge se lit EN ENTIER pendant la saisie : « 102,5 » se
+          // resserre plutôt que de finir en « 10… ».
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: AppTypography.metricXL.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
+            ),
           ),
-        ),
-      ],
+          Text(
+            unit,
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // Deux disques de 48 points ne tiennent pas côte à côte sur un
+          // écran de 320 : ils passent alors l'un sous l'autre.
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _StepButton(
+                icon: AppIcons.minus,
+                tooltip: 'Diminuer : $label',
+                onPressed: onDecrement,
+              ),
+              _StepButton(
+                icon: AppIcons.add,
+                tooltip: 'Augmenter : $label',
+                onPressed: onIncrement,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
+/// Un disque de 48 points : la cible tactile EST le disque, à la salle,
+/// d'un pouce pressé entre deux séries.
 class _StepButton extends StatelessWidget {
   const _StepButton({
     required this.icon,
@@ -113,17 +107,25 @@ class _StepButton extends StatelessWidget {
       tooltip: tooltip,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(
-        width: SetStepperField._boxSize,
-        height: SetStepperField._boxSize,
+        width: AppSpacing.touchTarget,
+        height: AppSpacing.touchTarget,
       ),
-      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.padded),
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.darkSurfaceAlt,
+        disabledBackgroundColor: AppColors.darkSurfaceAlt,
+        side: const BorderSide(color: AppColors.darkBorder),
+      ),
       onPressed: onPressed,
       icon: Icon(
         icon,
-        size: SetStepperField._iconSize,
+        size: 24,
+        // Le « + » en violet, le « − » en clair : on charge plus souvent
+        // qu'on ne retire, et le geste courant se repère d'un coup d'œil.
         color: onPressed == null
             ? AppColors.darkIconInactive
-            : AppColors.primaryLight,
+            : icon == AppIcons.add
+            ? AppColors.primaryLight
+            : AppColors.darkTextPrimary,
       ),
     );
   }

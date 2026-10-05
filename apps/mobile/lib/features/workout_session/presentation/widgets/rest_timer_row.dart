@@ -6,8 +6,8 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/workout_controllers.dart';
 
-/// Ligne de repos de la barre basse : anneau de progression, temps restant et
-/// reprise anticipée.
+/// Ligne de repos de la barre basse : anneau de progression, temps restant
+/// sur la durée prévue, et reprise anticipée.
 ///
 /// Le repos vient du plan quand la séance suit un modèle, sinon de la série
 /// précédente — cette ligne n'affiche que la durée qu'on lui donne.
@@ -20,76 +20,105 @@ class RestTimerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remaining = formatChrono(timer.remaining.inSeconds);
+    final total = _spoken(timer.total.inSeconds);
 
-    return Semantics(
+    final info = Semantics(
       liveRegion: true,
-      label: 'Repos en cours, temps restant $remaining',
+      label: 'Repos en cours, temps restant $remaining sur $total',
+      excludeSemantics: true,
       child: Row(
         children: [
-          _RestRing(progress: timer.progress, label: remaining),
-          const SizedBox(width: AppSpacing.gapRow),
+          _RestRing(progress: timer.progress),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Repos en cours',
-                  style: AppTypography.resized(
-                    AppTypography.subheading,
-                    14,
-                  ).copyWith(color: AppColors.darkTextPrimary),
+                  'TEMPS DE REPOS',
+                  style: AppTypography.labelMono.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xxs),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    remaining,
+                    maxLines: 1,
+                    style: AppTypography.resized(
+                      AppTypography.metricL,
+                      34,
+                    ).copyWith(color: AppColors.darkTextPrimary),
+                  ),
+                ),
                 Text(
-                  'Prochaine série dans $remaining',
-                  style: AppTypography.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.darkTextTertiary,
+                  'sur $total',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.darkTextSecondary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          TextButton(
-            // Puce, pas un bouton d'action plein : elle garde son archétype
-            // de jeton mais quitte l'orange pour le violet de la marque, pour
-            // qu'aucune surface cliquable ne reste orange.
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryLight,
-              backgroundColor: AppColors.primaryBadgeBg,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.gapRow,
-                vertical: AppSpacing.gapTile,
-              ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: AppTypography.label.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              shape: const RoundedRectangleBorder(
-                borderRadius: AppRadius.lgAll,
-                side: BorderSide(color: AppColors.primaryBadgeBorder),
-              ),
-            ),
-            onPressed: onSkip,
-            child: const Text('Passer'),
-          ),
         ],
       ),
     );
+    final skip = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primaryLight,
+        side: const BorderSide(color: AppColors.primary),
+        minimumSize: const Size(AppSpacing.xxl * 2, AppSpacing.touchTarget),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        textStyle: AppTypography.heading,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.fullAll),
+      ),
+      onPressed: onSkip,
+      child: const Text('Passer'),
+    );
+    // Texte agrandi : le décompte et « Passer » ne tiennent plus sur une
+    // ligne. Le bouton passe alors dessous, sur toute la largeur.
+    if (MediaQuery.textScalerOf(context).scale(10) > 13) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          info,
+          const SizedBox(height: AppSpacing.sm),
+          skip,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: info),
+        const SizedBox(width: AppSpacing.sm),
+        skip,
+      ],
+    );
+  }
+
+  /// « 1 min 30 », « 2 min », « 45 s » : la durée totale, dite comme on la
+  /// lit, sous le décompte.
+  static String _spoken(int seconds) {
+    final minutes = seconds ~/ 60;
+    final rest = seconds % 60;
+    if (minutes == 0) {
+      return '$rest s';
+    }
+    return rest == 0
+        ? '$minutes min'
+        : '$minutes min ${rest.toString().padLeft(2, '0')}';
   }
 }
 
-/// Anneau de repos : arc primaire sur piste neutre, temps restant au centre.
+/// Anneau de repos : arc violet sur piste neutre, le chronomètre au centre.
 class _RestRing extends StatelessWidget {
-  const _RestRing({required this.progress, required this.label});
+  const _RestRing({required this.progress});
 
   final double progress;
-  final String label;
 
-  static const double _diameter = 52;
-  static const double _stroke = 5;
+  static const double _diameter = 72;
+  static const double _stroke = 6;
 
   @override
   Widget build(BuildContext context) {
@@ -98,14 +127,8 @@ class _RestRing extends StatelessWidget {
       height: _diameter,
       child: CustomPaint(
         painter: _RestRingPainter(progress: progress),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTypography.metricS.copyWith(
-              fontSize: 13,
-              color: AppColors.primaryLight,
-            ),
-          ),
+        child: const Center(
+          child: Icon(AppIcons.timer, size: 28, color: AppColors.primaryLight),
         ),
       ),
     );

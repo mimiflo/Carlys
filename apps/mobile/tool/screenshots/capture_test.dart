@@ -1401,6 +1401,18 @@ void main() {
       '34b-calendrier-case',
       shows: find.byType(ProgramCalendarDaySheet),
     );
+
+    // La semaine d'AUJOURD'HUI : sa pastille violette, et la carte du jour
+    // qui lance la séance sans passer par la feuille.
+    Navigator.of(tester.element(find.byType(ProgramCalendarDaySheet))).pop();
+    await settle(tester);
+    await tester.tap(find.byTooltip('Semaine suivante'));
+    await settle(tester);
+    await capture(
+      tester,
+      '34c-calendrier-aujourdhui',
+      shows: find.text('Démarrer la séance'),
+    );
   });
 
   testWidgets('bibliothèque + fiche exercice', (tester) async {
@@ -1744,6 +1756,28 @@ void main() {
       tester,
       '05-seance-active',
       shows: find.byType(ActiveWorkoutScreen),
+    );
+
+    // Le tableau des séries de l'exercice, sous la carte de saisie.
+    await tester.scrollUntilVisible(
+      find.text('SÉRIE'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '05c-seance-active-series',
+      shows: find.text('SÉRIE'),
+    );
+
+    // La série validée : le tableau la coche, la barre basse passe au repos.
+    await tester.tap(find.text('Valider la série'));
+    await settle(tester);
+    await capture(
+      tester,
+      '05b-seance-active-repos',
+      shows: find.text('TEMPS DE REPOS'),
     );
 
     // `testWidgets` refuse qu'un minuteur soit en cours à la fin du corps, et

@@ -237,6 +237,11 @@ abstract final class AppIcons {
   static const IconData playFilled = Icons.play_circle_fill_rounded;
   static const IconData dragHandle = Icons.drag_indicator_rounded;
 
+  /// Passer la série prévue, puis tout le reste de l'exercice : la carte de
+  /// série les met côte à côte, le second va plus loin que le premier.
+  static const IconData skipSet = Icons.skip_next_rounded;
+  static const IconData skipExercise = Icons.fast_forward_rounded;
+
   // ── Matériel d'entraînement ───────────────────────────────────────
   // Un glyphe par famille du catalogue. Material n'a ni kettlebell ni
   // élastique : on prend la forme la plus proche (la barre et ses disques,

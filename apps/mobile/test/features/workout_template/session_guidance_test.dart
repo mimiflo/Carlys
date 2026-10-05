@@ -77,13 +77,12 @@ void main() {
 
     expect(guidance.templateName, 'Push force');
     expect(guidance.planItemId, 'p-1');
-    expect(guidance.overline, 'Série 1 sur 3 · Développé couché');
+    expect((guidance.setRank, guidance.setsInExercise), (1, 3));
     expect(guidance.targetReps, 8);
     expect(guidance.targetWeightKg, 60);
     expect(guidance.restSeconds, 120);
     expect(guidance.exercisePosition, 0);
     // 4 items prévus, celui en cours de saisie ne compte pas deux fois.
-    expect(guidance.upcomingInSession, 3);
     expect(guidance.upcomingInExercise, 2);
     expect(guidance.summary, '0 série sur 4 prévues');
   });
@@ -92,9 +91,8 @@ void main() {
     final guidance = guidanceFor(planOf(doneSetId: 'set-1'));
 
     expect(guidance.planItemId, 'p-2');
-    expect(guidance.overline, 'Série 2 sur 3 · Développé couché');
+    expect((guidance.setRank, guidance.setsInExercise), (2, 3));
     expect(guidance.doneCount, 1);
-    expect(guidance.upcomingInSession, 2);
     expect(guidance.upcomingInExercise, 1);
     expect(guidance.summary, '1 série sur 4 prévues');
   });
@@ -135,7 +133,7 @@ void main() {
     final guidance = guidanceFor(plan);
 
     expect(guidance.planItemId, 'p-2');
-    expect(guidance.overline, 'Série 2 sur 3 · Développé couché');
+    expect((guidance.setRank, guidance.setsInExercise), (2, 3));
   });
 
   test('choix manuel d’un exercice du programme : l’appariement le suit', () {
@@ -146,7 +144,7 @@ void main() {
     );
 
     expect(guidance.planItemId, 'p-4');
-    expect(guidance.overline, 'Série 1 sur 1 · Dips');
+    expect((guidance.setRank, guidance.setsInExercise), (1, 1));
     expect(guidance.exercisePosition, 1);
     expect(guidance.upcomingInExercise, 0);
   });
@@ -162,14 +160,13 @@ void main() {
     // « Passer cet exercice » ne doit jamais sauter un autre exercice que
     // celui affiché.
     expect(guidance.planItemId, isNull);
-    expect(guidance.overline, isNull);
+    expect(guidance.setRank, isNull);
     expect(guidance.targetReps, isNull);
     expect(guidance.exercisePosition, isNull);
     expect(guidance.exerciseName, isNull);
 
     // Le dénominateur ne bouge pas : une série en trop n'est pas un écart.
     expect(guidance.totalCount, 4);
-    expect(guidance.upcomingInSession, 4);
   });
 
   test('programme terminé : la séance continue librement', () {
@@ -200,7 +197,6 @@ void main() {
 
     expect(guidance.planItemId, isNull);
     expect(guidance.exercisePosition, isNull);
-    expect(guidance.upcomingInSession, 0);
     // Un constat, jamais un reproche.
     expect(guidance.summary, '1 série sur 2 prévues');
   });

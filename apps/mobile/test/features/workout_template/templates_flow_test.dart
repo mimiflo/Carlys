@@ -256,7 +256,7 @@ void main() {
 
     // Et l'écran de séance active s'ouvre sur le programme.
     expect(find.text('Développé couché'), findsWidgets);
-    expect(find.text('SÉRIE 1 SUR 2 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
+    expect(find.text('Série 1 sur 2'), findsOneWidget);
   });
 }
 

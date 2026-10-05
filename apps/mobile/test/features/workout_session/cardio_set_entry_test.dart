@@ -48,19 +48,19 @@ void main() {
     tester,
   ) async {
     await monter(tester);
-    expect(find.text('CHARGE'), findsOneWidget);
-    expect(find.text('RÉPÉTITIONS'), findsOneWidget);
-    expect(find.text('DURÉE'), findsNothing);
+    expect(find.text('Charge'), findsOneWidget);
+    expect(find.text('Répétitions'), findsOneWidget);
+    expect(find.text('Durée'), findsNothing);
   });
 
   testWidgets('un mouvement CARDIO s’ouvre en temps et distance', (
     tester,
   ) async {
     await monter(tester, measure: SetMeasure.timeAndDistance);
-    expect(find.text('DURÉE'), findsOneWidget);
-    expect(find.text('DISTANCE'), findsOneWidget);
+    expect(find.text('Durée'), findsOneWidget);
+    expect(find.text('Distance'), findsOneWidget);
     // Proposer une charge sur une course invite à saisir une donnée fausse.
-    expect(find.text('CHARGE'), findsNothing);
+    expect(find.text('Charge'), findsNothing);
   });
 
   testWidgets(
@@ -73,23 +73,23 @@ void main() {
         plannedDurationSeconds: 45,
         // measure reste la valeur par défaut, celle d'un mouvement de force.
       );
-      expect(find.text('DURÉE'), findsOneWidget);
+      expect(find.text('Durée'), findsOneWidget);
       expect(find.text('45'), findsOneWidget);
     },
   );
 
   testWidgets('la bascule change d’unité dans les deux sens', (tester) async {
     await monter(tester);
-    expect(find.text('CHARGE'), findsOneWidget);
+    expect(find.text('Charge'), findsOneWidget);
 
     await tester.tap(find.text('Mesurer en temps et distance'));
     await tester.pumpAndSettle();
-    expect(find.text('DURÉE'), findsOneWidget);
-    expect(find.text('CHARGE'), findsNothing);
+    expect(find.text('Durée'), findsOneWidget);
+    expect(find.text('Charge'), findsNothing);
 
     await tester.tap(find.text('Mesurer en charge et répétitions'));
     await tester.pumpAndSettle();
-    expect(find.text('CHARGE'), findsOneWidget);
+    expect(find.text('Charge'), findsOneWidget);
   });
 
   testWidgets('ne valide QUE le couple de l’unité choisie', (tester) async {

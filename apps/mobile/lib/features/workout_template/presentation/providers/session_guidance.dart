@@ -1,7 +1,7 @@
 /// Traduction du **plan de séance** en consigne d'écran.
 ///
 /// L'écran de séance active n'a pas à connaître les modèles : il reçoit des
-/// valeurs déjà formulées (un sur-titre, une cible, des compteurs). Toute la
+/// valeurs déjà formulées (un rang, une cible, des compteurs). Toute la
 /// lecture du plan se fait ici, dans une **fonction pure** — donc testable
 /// sans base, sans réseau et sans widget.
 library;
@@ -15,13 +15,13 @@ class SessionGuidance {
     required this.templateName,
     required this.doneCount,
     required this.totalCount,
-    required this.upcomingInSession,
     required this.upcomingInExercise,
     this.exerciseName,
     this.exerciseId,
     this.exercisePosition,
     this.planItemId,
-    this.overline,
+    this.setRank,
+    this.setsInExercise,
     this.targetReps,
     this.targetWeightKg,
     this.targetDurationSeconds,
@@ -35,11 +35,8 @@ class SessionGuidance {
   final int doneCount;
   final int totalCount;
 
-  /// Séries prévues restantes **après** celle en cours de saisie — segments
-  /// « à venir » de la barre de progression.
-  final int upcomingInSession;
-
-  /// Idem, limité à l'exercice affiché.
+  /// Séries prévues restantes, dans l'exercice affiché, **après** celle en
+  /// cours de saisie — segments et lignes « à venir ».
   final int upcomingInExercise;
 
   /// Exercice que le programme propose ensuite. `null` quand le programme est
@@ -53,8 +50,10 @@ class SessionGuidance {
   /// c'est une **déviation normale**, pas une erreur.
   final String? planItemId;
 
-  /// « Série 2 sur 4 · Développé couché ».
-  final String? overline;
+  /// « Série 2 sur 4 » : le rang de la série proposée dans l'exercice, et
+  /// le nombre de séries que le modèle y prévoit.
+  final int? setRank;
+  final int? setsInExercise;
 
   final int? targetReps;
   final double? targetWeightKg;
@@ -104,7 +103,6 @@ SessionGuidance guidanceFor(
       templateName: plan.templateName,
       doneCount: plan.doneCount,
       totalCount: plan.totalCount,
-      upcomingInSession: plan.remainingCount,
       upcomingInExercise: 0,
     );
   }
@@ -118,7 +116,6 @@ SessionGuidance guidanceFor(
     totalCount: plan.totalCount,
     // La série en cours de saisie occupe déjà son propre segment : on ne la
     // compte pas deux fois dans les segments « à venir ».
-    upcomingInSession: plan.remainingCount - 1,
     upcomingInExercise: pending > 0 ? pending - 1 : 0,
     exerciseName: item.exerciseName,
     exerciseId: item.exerciseId,
@@ -129,9 +126,8 @@ SessionGuidance guidanceFor(
     // pour cet exercice. Compter `done + 1` ré-annonçait la série qu'on
     // venait de PASSER : une série sautée avance l'item sans compter
     // dans `done`.
-    overline:
-        'Série ${formatThousands(item.setPosition + 1)} sur '
-        '${formatThousands(ofExercise.length)} · ${item.exerciseName}',
+    setRank: item.setPosition + 1,
+    setsInExercise: ofExercise.length,
     targetReps: item.targetReps,
     targetDurationSeconds: item.targetDurationSeconds,
     targetWeightKg: item.targetWeightKg,

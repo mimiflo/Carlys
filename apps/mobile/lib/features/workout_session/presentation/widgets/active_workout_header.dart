@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
-/// En-tête de la séance active (maquette 2e) : croix de fermeture, chrono
-/// mono centré surmontant le nom de la séance, action d'exercice à droite.
+/// En-tête de la séance active : la croix, « Séance en cours » et son
+/// chrono, la pastille de la séance suivie, le changement d'exercice.
 class ActiveWorkoutHeader extends StatelessWidget {
   const ActiveWorkoutHeader({
     required this.startedAt,
@@ -23,91 +23,87 @@ class ActiveWorkoutHeader extends StatelessWidget {
   final String? sessionName;
 
   /// Nom du modèle lancé — provenance immuable de la séance, `null` pour une
-  /// séance libre. Affiché en pastille : on sait à tout moment quel programme
-  /// on est en train de suivre.
+  /// séance libre. Il prime sur [sessionName] dans la pastille : on sait à
+  /// tout moment quel programme on est en train de suivre.
   final String? templateName;
 
   final VoidCallback onClose;
   final VoidCallback onPickExercise;
 
-  /// Icônes d'en-tête de la maquette (23 px, boîte tactile 44).
-  static const double _iconSize = 23;
-  static const double _tapSize = 44;
-
   @override
   Widget build(BuildContext context) {
-    final name = sessionName == null || sessionName!.trim().isEmpty
-        ? 'Séance en cours'
-        : sessionName!;
+    final named = sessionName?.trim();
+    final pill =
+        templateName ?? (named == null || named.isEmpty ? null : named);
 
     return Padding(
-      // La gouttière (22) moins la demi-boîte tactile : les icônes tombent
-      // exactement sur la marge de la maquette.
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeaderIconButton(
+          AppRoundIconButton(
             icon: AppIcons.close,
             tooltip: 'Fermer la séance',
+            color: AppColors.darkTextSecondary,
             onPressed: onClose,
           ),
+          const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Column(
               children: [
-                _ElapsedTimer(startedAt: startedAt),
-                const SizedBox(height: AppSpacing.xxs),
-                if (templateName != null)
-                  AppPill(label: templateName!, tone: AppPillTone.primary)
-                else
-                  Text(
-                    name.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.resized(AppTypography.labelMono, 9)
-                        .copyWith(
-                          letterSpacing: 1.08,
-                          color: AppColors.darkTextTertiary,
-                        ),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Séance en cours',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.title.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const ExcludeSemantics(
+                      child: Icon(
+                        AppIcons.timer,
+                        size: 24,
+                        color: AppColors.darkTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    // « 1:05:42 » en texte agrandi tient en se resserrant.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _ElapsedTimer(startedAt: startedAt),
+                      ),
+                    ),
+                  ],
+                ),
+                ExcludeSemantics(
+                  child: Text(
+                    'TEMPS ÉCOULÉ',
+                    style: AppTypography.labelMono.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
+                  ),
+                ),
+                if (pill != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  AppPill(label: pill, tone: AppPillTone.primary),
+                ],
               ],
             ),
           ),
-          _HeaderIconButton(
+          const SizedBox(width: AppSpacing.xs),
+          AppRoundIconButton(
             icon: AppIcons.add,
             tooltip: 'Changer d’exercice',
             onPressed: onPickExercise,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(
-        width: ActiveWorkoutHeader._tapSize,
-        height: ActiveWorkoutHeader._tapSize,
-      ),
-      onPressed: onPressed,
-      icon: Icon(
-        icon,
-        size: ActiveWorkoutHeader._iconSize,
-        color: AppColors.darkTextSecondary,
       ),
     );
   }
@@ -156,9 +152,9 @@ class _ElapsedTimerState extends State<_ElapsedTimer> {
     return Text(
       formatChrono(elapsed.inSeconds),
       style: AppTypography.resized(
-        AppTypography.metricM,
-        17,
-      ).copyWith(letterSpacing: -0.34, color: AppColors.darkTextPrimary),
+        AppTypography.metricL,
+        32,
+      ).copyWith(color: AppColors.darkTextPrimary),
       semanticsLabel: 'Durée écoulée',
     );
   }

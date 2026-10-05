@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import 'exercise_picker_sheet.dart' show SetMeasure;
 
-// Les deux commandes de la carte de saisie : la BASCULE d'unité et le
-// bouton de validation.
+// Les commandes de la carte de saisie : la BASCULE d'unité, le bouton de
+// validation, et les deux façons de passer.
 //
 // Extraits de la carte parce qu'ils ne décident rien — ils rendent un geste.
 // La carte, elle, tient l'état de la saisie ; les mêler la faisait passer le
@@ -62,6 +62,61 @@ class SetMeasureToggle extends StatelessWidget {
         ),
         icon: const Icon(AppIcons.retry, size: 16),
         label: Text(label),
+      ),
+    );
+  }
+}
+
+/// Passer la série prévue, ou le reste de l'exercice — sous un programme
+/// seulement. Sauter n'est **jamais** une erreur : ces actions restent
+/// discrètes, sans aucun message de rappel à l'ordre.
+class SetSkipActions extends StatelessWidget {
+  const SetSkipActions({
+    required this.onSkipSet,
+    required this.onSkipExercise,
+    super.key,
+  });
+
+  final VoidCallback? onSkipSet;
+  final VoidCallback? onSkipExercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextButton.styleFrom(
+      foregroundColor: AppColors.darkTextPrimary,
+      iconColor: AppColors.primaryLight,
+      textStyle: AppTypography.body,
+      minimumSize: const Size(0, AppSpacing.touchTarget),
+    );
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          if (onSkipSet != null)
+            Expanded(
+              child: TextButton.icon(
+                onPressed: onSkipSet,
+                style: style,
+                icon: const Icon(AppIcons.skipSet),
+                label: const Text('Passer cette série'),
+              ),
+            ),
+          if (onSkipSet != null && onSkipExercise != null)
+            const VerticalDivider(
+              width: AppSpacing.md,
+              indent: AppSpacing.sm,
+              endIndent: AppSpacing.sm,
+              color: AppColors.rowDivider,
+            ),
+          if (onSkipExercise != null)
+            Expanded(
+              child: TextButton.icon(
+                onPressed: onSkipExercise,
+                style: style,
+                icon: const Icon(AppIcons.skipExercise),
+                label: const Text('Passer cet exercice'),
+              ),
+            ),
+        ],
       ),
     );
   }

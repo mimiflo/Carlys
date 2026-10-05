@@ -866,18 +866,19 @@ séances libres (sans modèle) gardent **exactement** le comportement actuel.
 
 | Élément                    | Sans modèle (inchangé)            | Avec modèle                                                              |
 | -------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
-| `ActiveWorkoutHeader`      | Nom de séance, chrono             | + `AppPill` avec `templateName`                                          |
-| `WorkoutProgressSegments`  | `completed` + 1 segment en cours  | **Nouveau paramètre `planned`** : segments à venir dans une 3ᵉ tonalité (bordure sourde), un segment par item de plan restant |
-| Sur-titre de `ExercisePane`| « Série N de la séance »          | « Série 2 sur 4 · Développé couché »                                     |
-| `SetEntryCard` — pastille  | « Précédent 60 kg × 8 »           | « Prévu 8 × 60 kg » (`AppPillTone.accent`) ; « Précédent … » passe en second, ton neutre |
+| `ActiveWorkoutHeader`      | « Séance en cours », chrono, pastille du nom de séance | La pastille porte le `templateName` |
+| `CurrentExerciseCard`      | « Série N » (prochaine saisie), une barre par série faite + la série en cours | « Série 2 sur 4 » (rang de l'item dans le plan, `setRank` / `setsInExercise`) ; barres à venir en trait sourd (`WorkoutProgressSegments.planned`) |
+| `SetEntryCard` — en-tête   | « Série N », pastille « À saisir » | + « Objectif : 8 répétitions à 60 kg » sous le titre                    |
+| `SetEntryCard` — rappel    | « Dernière série : 60 kg × 8 reps » | Inchangé                                                               |
 | `SetEntryCard` — valeurs   | Amorcées sur la perf précédente   | Amorcées sur la **cible du plan**, puis modifiables librement au pas-à-pas |
+| `ExerciseSetsTable`        | « N validées », séries faites puis la ligne « À saisir » | « 2 / 4 validées » ; la ligne en cours porte la cible, les suivantes « À venir » |
 | Exercice courant           | Dernière série saisie, ou choix manuel | Exercice du premier item de plan non fait ; le choix manuel reste prioritaire |
-| Actions                    | Choisir un exercice, supprimer une série | + « Passer cette série » et « Passer cet exercice »                  |
+| Actions                    | Choisir un exercice, supprimer une série (appui long dans le tableau) | + « Passer cette série » et « Passer cet exercice », au pied de la carte de saisie |
 
-`WorkoutProgressSegments` documente aujourd'hui « aucune série à venir n'est
-dessinée : le domaine ne planifie pas les séries d'avance ». Cette phrase et ce
-comportement doivent être **mis à jour**, pas contournés : le paramètre
-`planned` est facultatif et vaut 0 par défaut.
+Le rang « Série 2 sur 4 » est celui de l'ITEM proposé, pas `faites + 1` : une
+série passée fait avancer l'item sans compter parmi les faites. La refonte du
+5 octobre 2026 a déplacé les barres de progression de la séance entière vers
+l'exercice en cours ; le paramètre `planned` reste facultatif et vaut 0.
 
 **Validation d'une série.** L'utilisateur ajuste charge et répétitions au
 pas-à-pas — le pré-remplissage est une **proposition, jamais une contrainte** —

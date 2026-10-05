@@ -5,6 +5,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
+import 'package:carlys_mobile/features/workout_session/presentation/widgets/set_stepper_field.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_template/domain/entities/workout_template.dart';
 import 'package:carlys_mobile/features/workout_template/domain/repositories/workout_template_repository.dart';
@@ -111,12 +112,16 @@ void main() {
 
     // Provenance de la séance, puis consigne : « série 1 sur 3, 8 reps à 60 kg ».
     expect(find.text('Push force'), findsOneWidget);
-    expect(find.text('SÉRIE 1 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
-    expect(find.text('PRÉVU 8 × 60 KG'), findsOneWidget);
+    expect(find.text('Série 1 sur 3'), findsOneWidget);
+    expect(find.text('Objectif : 8 répétitions à 60 kg'), findsOneWidget);
 
     // Le pas-à-pas est amorcé sur la cible, pas sur une valeur arbitraire.
-    expect(find.text('60'), findsOneWidget);
-    expect(find.text('8'), findsOneWidget);
+    Finder stepper(String value) => find.descendant(
+      of: find.byType(SetStepperField),
+      matching: find.text(value),
+    );
+    expect(stepper('60'), findsOneWidget);
+    expect(stepper('8'), findsOneWidget);
   });
 
   testWidgets(
@@ -148,7 +153,7 @@ void main() {
       expect(plan!.doneCount, 1);
 
       // Et l'écran affiche la consigne suivante.
-      expect(find.text('SÉRIE 2 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
+      expect(find.text('Série 2 sur 3'), findsOneWidget);
     },
   );
 
@@ -160,6 +165,10 @@ void main() {
       seed: pushTemplate,
     );
 
+    // Les actions « Passer » vivent au pied de la carte de série, sous le
+    // pli de l'écran de test.
+    await tester.ensureVisible(find.text('Passer cette série'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Passer cette série'));
     await tester.pumpAndSettle();
 
@@ -172,15 +181,15 @@ void main() {
 
     // La cible affichée est celle de la DEUXIÈME série prévue — et elle
     // diffère de la première, sans quoi cette assertion ne prouverait rien.
-    expect(find.text('PRÉVU 10 × 65 KG'), findsOneWidget);
-    expect(find.text('PRÉVU 8 × 60 KG'), findsNothing);
+    expect(find.text('Objectif : 10 répétitions à 65 kg'), findsOneWidget);
+    expect(find.text('Objectif : 8 répétitions à 60 kg'), findsNothing);
     // Le rang NOMME la série proposée — la deuxième, dont on affiche
     // justement la cible deux lignes plus haut. Cette assertion attendait
-    // « SÉRIE 1 SUR 3 » : l'écran ré-annonçait la série qu'on venait de
+    // « Série 1 sur 3 » : l'écran ré-annonçait la série qu'on venait de
     // passer, avec les cibles de la suivante. Une série passée ne compte
     // toujours pas comme faite (`doneCount` reste 0, vérifié plus haut) :
     // c'est le RANG qui suit l'item, pas le décompte des séries réalisées.
-    expect(find.text('SÉRIE 2 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
+    expect(find.text('Série 2 sur 3'), findsOneWidget);
   });
 
   testWidgets('séance libre : aucun objectif, comportement inchangé', (
@@ -188,8 +197,8 @@ void main() {
   ) async {
     final (workouts, _) = await pumpActiveWorkout(tester);
 
-    expect(find.textContaining('SUR'), findsNothing);
-    expect(find.textContaining('PRÉVU'), findsNothing);
+    expect(find.textContaining(' sur '), findsNothing);
+    expect(find.textContaining('Objectif'), findsNothing);
     expect(find.text('Passer cette série'), findsNothing);
     expect(find.text('Aucun exercice'), findsOneWidget);
     expect(workouts.active!.session.templateName, isNull);

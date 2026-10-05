@@ -4,122 +4,196 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
 
-/// Ligne de série de l'exercice en cours (maquette 2e).
+/// Une ligne du tableau des séries de l'exercice : rang, charge (ou durée),
+/// répétitions (ou distance), état.
 ///
-/// Série enregistrée : fond primaire teinté, pastille et coche accent.
-/// Série à venir (celle en cours de saisie) : fond surface, valeurs vides.
+/// Série enregistrée : ses valeurs, une coche verte, et l'appui long pour la
+/// supprimer. Série en cours ([current]) : surlignée, « À saisir » en
+/// violet, avec la cible du programme quand il y en a une. Série prévue
+/// ensuite : des tirets et « À venir ».
 class ExerciseSetRow extends StatelessWidget {
   const ExerciseSetRow({
     required this.position,
     this.set,
     this.onDelete,
+    this.current = false,
+    this.plannedWeightKg,
+    this.plannedReps,
     super.key,
   });
 
-  /// Rang affiché dans la pastille (1 pour la première série).
+  /// Rang affiché (1 pour la première série).
   final int position;
 
-  /// `null` pour la série à venir.
+  /// `null` pour une série pas encore faite.
   final WorkoutSetEntry? set;
 
-  /// Suppression offline-first (appui long) — `null` pour la série à venir.
+  /// Suppression offline-first (appui long) — `null` pour une série à venir.
   final Future<void> Function()? onDelete;
 
-  /// Géométrie de la maquette : pastille carrée 26, coche 18.
-  static const double _badgeSize = 26;
-  static const double _statusIconSize = 18;
+  /// La série en cours de saisie.
+  final bool current;
 
-  /// Fond de la série faite : primaire à 12 % (pas de jeton dédié).
-  static const double _doneBackgroundAlpha = 0.12;
+  /// Cible du programme, montrée sur la ligne en cours.
+  final double? plannedWeightKg;
+  final int? plannedReps;
+
+  static const double _statusIconSize = 24;
 
   @override
   Widget build(BuildContext context) {
     final entry = set;
     final done = entry != null;
-    final detail = _detail(entry);
+    final (first, second) = _cells(entry);
+    final ink = done || current
+        ? AppColors.darkTextPrimary
+        : AppColors.darkTextSecondary;
+    final valueStyle = AppTypography.subheading.copyWith(color: ink);
 
     final row = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      constraints: const BoxConstraints(minHeight: AppSpacing.touchTarget),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       decoration: BoxDecoration(
-        color: done
-            ? AppColors.primary.withValues(alpha: _doneBackgroundAlpha)
-            : AppColors.darkSurface,
-        borderRadius: AppRadius.buttonAll,
-        border: Border.all(
-          color: done ? AppColors.primaryLightBorder : AppColors.darkBorder,
-        ),
+        color: current ? AppColors.primaryCardSoft : null,
+        borderRadius: AppRadius.mdAll,
       ),
       child: Row(
         children: [
-          Container(
-            width: _badgeSize,
-            height: _badgeSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: done ? AppColors.accentBadgeBg : AppColors.rowDivider,
-              borderRadius: AppRadius.smAll,
-            ),
+          SizedBox(
+            width: ExerciseSetColumns.rank,
             child: Text(
               formatThousands(position),
-              style: AppTypography.metricS.copyWith(
-                fontSize: 11,
-                color: done ? AppColors.accent : AppColors.darkIconInactive,
-              ),
+              textAlign: TextAlign.center,
+              style: valueStyle,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(first, style: valueStyle)),
+                    Expanded(child: Text(second, style: valueStyle)),
+                  ],
+                ),
+                // Un échauffement, une série dégressive : ce que la série
+                // ÉTAIT, sous ses valeurs.
+                if (entry != null && entry.kind != SetKind.normal)
+                  Text(
+                    entry.kind.label,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: ExerciseSetColumns.status,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (entry != null &&
+                    entry.syncState != LocalSyncState.synced) ...[
+                  Tooltip(
+                    message: entry.syncState == LocalSyncState.failed
+                        ? 'Synchronisation en échec, elle sera réessayée'
+                        : 'En attente de synchronisation',
+                    child: const Icon(
+                      AppIcons.offline,
+                      size: 18,
+                      color: AppColors.darkTextTertiary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                if (done)
+                  const Icon(
+                    AppIcons.checkCircle,
+                    size: _statusIconSize,
+                    color: AppColors.success,
+                  )
+                else
+                  Flexible(
+                    child: Text(
+                      current ? 'À saisir' : 'À venir',
+                      textAlign: TextAlign.end,
+                      style: AppTypography.body.copyWith(
+                        color: current
+                            ? AppColors.primaryLight
+                            : AppColors.darkTextSecondary,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              detail,
-              style: AppTypography.body.copyWith(
-                height: 1,
-                fontWeight: FontWeight.w500,
-                color: done
-                    ? AppColors.neutralBadgeText
-                    : AppColors.darkIconInactive,
-              ),
-            ),
-          ),
-          if (entry != null && entry.syncState != LocalSyncState.synced) ...[
-            Tooltip(
-              message: entry.syncState == LocalSyncState.failed
-                  ? 'Synchronisation en échec, elle sera réessayée'
-                  : 'En attente de synchronisation',
-              child: const Icon(
-                AppIcons.offline,
-                size: _statusIconSize,
-                color: AppColors.darkTextTertiary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          if (done)
-            const Icon(
-              AppIcons.checkCircle,
-              size: _statusIconSize,
-              color: AppColors.accent,
-            ),
         ],
       ),
     );
 
-    if (!done) {
+    if (entry == null) {
       return Semantics(
-        label: 'Série ${formatThousands(position)} à saisir',
+        label:
+            'Série ${formatThousands(position)} '
+            '${current ? 'à saisir' : 'à venir'}${_spokenTarget()}',
+        excludeSemantics: true,
         child: row,
       );
     }
 
     return Semantics(
-      label: 'Série ${formatThousands(position)} : $detail',
+      label:
+          'Série ${formatThousands(position)} : ${_detail(entry)}'
+          '${entry.syncState == LocalSyncState.synced ? '' : ', en attente de synchronisation'}',
       hint: 'Appui long pour supprimer',
+      excludeSemantics: true,
       child: GestureDetector(
         onLongPress: onDelete == null ? null : () => _confirmDelete(context),
         child: row,
       ),
+    );
+  }
+
+  /// « , cible 82,5 kg × 6 » : ce que la ligne en cours AFFICHE, pour le
+  /// lecteur d'écran aussi.
+  String _spokenTarget() {
+    if (!current) {
+      return '';
+    }
+    final parts = [
+      if (plannedWeightKg != null) '${formatDecimal(plannedWeightKg!)} kg',
+      if (plannedReps != null) '${formatThousands(plannedReps!)} répétitions',
+    ];
+    return parts.isEmpty ? '' : ', cible ${parts.join(' × ')}';
+  }
+
+  /// Les deux cellules de valeur, DANS L'UNITÉ de la série : une série
+  /// chronométrée montre sa durée et sa distance, pas « — kg × — ».
+  (String, String) _cells(WorkoutSetEntry? entry) {
+    if (entry == null) {
+      if (!current) {
+        return ('—', '—');
+      }
+      return (
+        plannedWeightKg == null ? '—' : formatDecimal(plannedWeightKg!),
+        plannedReps == null ? '—' : formatThousands(plannedReps!),
+      );
+    }
+    final seconds = entry.durationSeconds;
+    if (seconds != null) {
+      final duration = formatDuration(seconds);
+      final distance = entry.distanceMeters;
+      return (
+        '${duration.value} ${duration.unit}',
+        distance == null ? '—' : '${formatThousands(distance)} m',
+      );
+    }
+    return (
+      entry.weightKg == null ? '—' : formatDecimal(entry.weightKg!),
+      entry.reps == null ? '—' : formatThousands(entry.reps!),
     );
   }
 
@@ -128,22 +202,20 @@ class ExerciseSetRow extends StatelessWidget {
   /// Une série chronométrée affichée « — kg × — » se lit comme une série
   /// ratée, alors qu'elle est complète : c'est juste qu'elle ne se compte pas
   /// en charge. On lit donc d'abord ce qui est renseigné.
-  String _detail(WorkoutSetEntry? entry) {
-    final kind = entry != null && entry.kind != SetKind.normal
-        ? ' · ${entry.kind.label}'
-        : '';
-    if (entry?.durationSeconds != null) {
-      final duree = formatDuration(entry!.durationSeconds!);
+  String _detail(WorkoutSetEntry entry) {
+    final kind = entry.kind != SetKind.normal ? ' · ${entry.kind.label}' : '';
+    if (entry.durationSeconds != null) {
+      final duree = formatDuration(entry.durationSeconds!);
       final distance = entry.distanceMeters;
       final parcouru = distance == null
           ? ''
           : ' · ${formatThousands(distance)} m';
       return '${duree.value} ${duree.unit}$parcouru$kind';
     }
-    final weight = entry?.weightKg == null
+    final weight = entry.weightKg == null
         ? '—'
-        : formatDecimal(entry!.weightKg!);
-    final reps = entry?.reps == null ? '—' : formatThousands(entry!.reps!);
+        : formatDecimal(entry.weightKg!);
+    final reps = entry.reps == null ? '—' : formatThousands(entry.reps!);
     return '$weight kg × $reps$kind';
   }
 
@@ -159,4 +231,11 @@ class ExerciseSetRow extends StatelessWidget {
       await onDelete?.call();
     }
   }
+}
+
+/// Les largeurs fixes du tableau, partagées par l'en-tête et les lignes :
+/// sans elles, « KG » ne tomberait pas au-dessus de « 80 ».
+abstract final class ExerciseSetColumns {
+  static const double rank = 52;
+  static const double status = 88;
 }

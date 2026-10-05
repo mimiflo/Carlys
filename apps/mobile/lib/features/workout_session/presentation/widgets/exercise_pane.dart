@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
+import 'current_exercise_card.dart';
 import 'exercise_picker_sheet.dart';
-import 'exercise_set_row.dart';
+import 'exercise_sets_table.dart';
 import 'set_entry_card.dart';
 import 'set_entry_fields.dart';
 
-/// Panneau défilant de l'exercice en cours : sur-titre, nom, carte de saisie
-/// et séries déjà enregistrées suivies de la série à saisir.
+/// Panneau défilant de l'exercice en cours : la carte de l'exercice, la
+/// carte de saisie, puis le tableau de ses séries.
 ///
 /// Le panneau ignore tout des modèles de séance : il reçoit une consigne déjà
-/// formulée ([overline], [plannedReps], [plannedWeightKg]) et des actions
+/// formulée ([setRank], [plannedReps], [plannedWeightKg]…) et des actions
 /// facultatives. Sans consigne, son rendu est **exactement** celui d'une
 /// séance libre.
 class ExercisePane extends StatelessWidget {
   const ExercisePane({
     required this.exercise,
-    required this.sessionSetsCount,
     required this.exerciseSets,
     required this.previous,
     required this.onValidate,
-    this.plannedDurationSeconds,
     required this.onDelete,
-    this.overline,
+    this.plannedDurationSeconds,
+    this.setRank,
+    this.setsInExercise,
     this.planItemId,
     this.plannedReps,
     this.plannedWeightKg,
@@ -36,18 +36,15 @@ class ExercisePane extends StatelessWidget {
 
   final PickedExercise exercise;
 
-  /// Nombre de séries déjà enregistrées dans la séance (tous exercices).
-  final int sessionSetsCount;
-
   /// Séries de l'exercice en cours, dans l'ordre de saisie.
   final List<WorkoutSetEntry> exerciseSets;
 
   /// Dernière performance connue sur cet exercice.
   final WorkoutSetEntry? previous;
 
-  /// Sur-titre imposé par le programme (« Série 2 sur 4 · Développé couché ») ;
-  /// `null` retombe sur le rang de la série dans la séance.
-  final String? overline;
+  /// « Série 2 sur 4 » selon le programme ; `null` hors modèle.
+  final int? setRank;
+  final int? setsInExercise;
 
   /// Série prévue que la prochaine validation honorerait : sert de clé de
   /// réinitialisation de la saisie, pour que chaque série reparte de sa cible.
@@ -70,102 +67,55 @@ class ExercisePane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final timeMode =
+        exercise.measure == SetMeasure.timeAndDistance ||
+        plannedDurationSeconds != null ||
+        exerciseSets.any((set) => set.durationSeconds != null);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.gutter,
-        AppSpacing.gapSection,
+        AppSpacing.md,
         AppSpacing.gutter,
         AppSpacing.lg,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppSectionLabel(
-            overline ??
-                'Série ${formatThousands(sessionSetsCount + 1)} de la séance',
+          CurrentExerciseCard(
+            name: exercise.name,
+            doneSets: exerciseSets.length,
+            upcomingSets: upcomingSets,
+            setRank: setRank,
+            setsInExercise: setsInExercise,
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            exercise.name,
-            style: AppTypography.resized(AppTypography.display, 28).copyWith(
-              height: 1.08,
-              letterSpacing: -0.84,
-              color: AppColors.darkTextPrimary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.gutter),
+          const SizedBox(height: AppSpacing.gapTile),
           SetEntryCard(
             // Changer d'exercice — ou passer à la série prévue suivante —
             // réinitialise la saisie sur la nouvelle amorce.
             key: ValueKey('${exercise.name}#${planItemId ?? ''}'),
-            setNumber: exerciseSets.length + 1,
+            setNumber: setRank ?? exerciseSets.length + 1,
             previous: previous,
             plannedReps: plannedReps,
             plannedWeightKg: plannedWeightKg,
             plannedDurationSeconds: plannedDurationSeconds,
             measure: exercise.measure,
             onValidate: onValidate,
+            onSkipSet: onSkipSet,
+            onSkipExercise: onSkipExercise,
           ),
-          if (onSkipSet != null || onSkipExercise != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            _SkipActions(onSkipSet: onSkipSet, onSkipExercise: onSkipExercise),
-          ],
-          const SizedBox(height: AppSpacing.md),
-          for (var index = 0; index < exerciseSets.length; index++) ...[
-            if (index > 0) const SizedBox(height: AppSpacing.xs),
-            ExerciseSetRow(
-              position: index + 1,
-              set: exerciseSets[index],
-              onDelete: () => onDelete(exerciseSets[index].id),
-            ),
-          ],
-          if (exerciseSets.isNotEmpty) const SizedBox(height: AppSpacing.xs),
-          ExerciseSetRow(position: exerciseSets.length + 1),
-          for (var index = 0; index < upcomingSets; index++) ...[
-            const SizedBox(height: AppSpacing.xs),
-            ExerciseSetRow(position: exerciseSets.length + 2 + index),
-          ],
+          const SizedBox(height: AppSpacing.gapSection),
+          ExerciseSetsTable(
+            sets: exerciseSets,
+            upcomingSets: upcomingSets,
+            timeMode: timeMode,
+            plannedWeightKg: plannedWeightKg,
+            plannedReps: plannedReps,
+            setRank: setRank,
+            setsInExercise: setsInExercise,
+            onDelete: onDelete,
+          ),
         ],
       ),
-    );
-  }
-}
-
-/// Sauter n'est **jamais** une erreur : ces actions restent discrètes, sans
-/// aucun message de rappel à l'ordre.
-class _SkipActions extends StatelessWidget {
-  const _SkipActions({required this.onSkipSet, required this.onSkipExercise});
-
-  final VoidCallback? onSkipSet;
-  final VoidCallback? onSkipExercise;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (onSkipSet != null)
-          Expanded(
-            child: TextButton(
-              onPressed: onSkipSet,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.darkTextSecondary,
-                textStyle: AppTypography.label,
-              ),
-              child: const Text('Passer cette série'),
-            ),
-          ),
-        if (onSkipExercise != null)
-          Expanded(
-            child: TextButton(
-              onPressed: onSkipExercise,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.darkTextSecondary,
-                textStyle: AppTypography.label,
-              ),
-              child: const Text('Passer cet exercice'),
-            ),
-          ),
-      ],
     );
   }
 }

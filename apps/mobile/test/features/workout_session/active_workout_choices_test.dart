@@ -39,7 +39,6 @@ void main() {
       templateName: 'Push force',
       doneCount: 1,
       totalCount: 4,
-      upcomingInSession: 3,
       upcomingInExercise: 1,
       exerciseName: exerciseName,
       exerciseId: exerciseId,

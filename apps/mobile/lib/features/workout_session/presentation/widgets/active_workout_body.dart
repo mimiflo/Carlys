@@ -15,10 +15,10 @@ import 'exercise_pane.dart';
 import 'exercise_picker_sheet.dart';
 import 'set_entry_fields.dart';
 import 'workout_close_dialog.dart';
-import 'workout_progress_segments.dart';
 
-/// Corps de la séance active : en-tête, progression, exercice en cours,
-/// carte de saisie, séries de l'exercice et barre basse (repos ou clôture).
+/// Corps de la séance active : en-tête, exercice en cours et sa
+/// progression, carte de saisie, séries de l'exercice et barre basse (repos
+/// ou clôture).
 ///
 /// **Unique point de contact** entre la séance et les modèles : ce corps lit
 /// le plan (`sessionPlanProvider`) et le traduit en consigne d'écran
@@ -72,14 +72,6 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
           onClose: () => _close(abandon: true, guidance: guidance),
           onPickExercise: _pickExercise,
         ),
-        const SizedBox(height: AppSpacing.gapRow),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-          child: WorkoutProgressSegments(
-            completed: sets.length,
-            planned: guidance?.upcomingInSession ?? 0,
-          ),
-        ),
         Expanded(
           child: exercise == null
               ? AppEmptyState(
@@ -93,10 +85,10 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
                 )
               : ExercisePane(
                   exercise: exercise,
-                  sessionSetsCount: sets.length,
                   exerciseSets: exerciseSets,
                   previous: _previous(exerciseSets, exercise),
-                  overline: guidance?.overline,
+                  setRank: guidance?.setRank,
+                  setsInExercise: guidance?.setsInExercise,
                   planItemId: guidance?.planItemId,
                   plannedReps: guidance?.targetReps,
                   plannedWeightKg: guidance?.targetWeightKg,
