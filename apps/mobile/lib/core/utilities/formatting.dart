@@ -197,6 +197,22 @@ String formatDayMonth(DateTime date) {
   return '${local.day} ${_monthsShort[local.month - 1].toLowerCase()}';
 }
 
+/// « 7 au 13 septembre 2026 », « 28 septembre au 4 octobre 2026 » : deux
+/// jours CIVILS (lus tels quels, sans fuseau), le mois et l'année écrits une
+/// fois quand ils sont communs. « au » plutôt qu'un tiret : l'appli n'affiche
+/// aucun tiret de ponctuation (`editorial_tone_test.dart`).
+String formatDayRange(DateTime from, DateTime to) {
+  String day(DateTime date) => date.day == 1 ? '1er' : '${date.day}';
+  String month(DateTime date) => _monthsLong[date.month - 1];
+  final end = '${day(to)} ${month(to)} ${to.year}';
+  final start = from.year != to.year
+      ? '${day(from)} ${month(from)} ${from.year}'
+      : from.month != to.month
+      ? '${day(from)} ${month(from)}'
+      : day(from);
+  return '$start au $end';
+}
+
 /// « MARS 2025 » — « membre depuis ».
 String formatMonthYearMono(DateTime date) =>
     '${_monthsShort[date.month - 1].replaceAll('.', '')} ${date.year}';

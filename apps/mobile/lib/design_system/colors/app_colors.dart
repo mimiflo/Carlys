@@ -232,6 +232,7 @@ abstract final class AppColors {
   static const Color primaryBadgeBorder = Color(0x479B30FF); // primary .28
   static const Color successBadgeBg = Color(0x1F22C55E); // success .12
   static const Color successBadgeBorder = Color(0x4722C55E); // success .28
+  static const Color dangerBadgeBg = Color(0x1FEF4444); // danger .12
   static const Color neutralBadgeBg = Color(0x12FFFFFF); // blanc .07
   static const Color neutralBadgeText = Color(0xFFD3D3E4);
   static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07

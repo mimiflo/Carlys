@@ -118,4 +118,28 @@ void main() {
       expect(formatClock(DateTime(2026, 9, 23, 18, 30)), '18h30');
     });
   });
+
+  group('formatDayRange', () {
+    test('même mois : le mois et l’année écrits une fois', () {
+      expect(
+        formatDayRange(DateTime(2026, 9, 7), DateTime(2026, 9, 13)),
+        '7 au 13 septembre 2026',
+      );
+    });
+
+    test('deux mois, deux années, le 1er', () {
+      expect(
+        formatDayRange(DateTime(2026, 9, 28), DateTime(2026, 10, 4)),
+        '28 septembre au 4 octobre 2026',
+      );
+      expect(
+        formatDayRange(DateTime(2026, 12, 28), DateTime(2027, 1, 3)),
+        '28 décembre 2026 au 3 janvier 2027',
+      );
+      expect(
+        formatDayRange(DateTime(2026, 10, 1), DateTime(2026, 10, 14)),
+        '1er au 14 octobre 2026',
+      );
+    });
+  });
 }

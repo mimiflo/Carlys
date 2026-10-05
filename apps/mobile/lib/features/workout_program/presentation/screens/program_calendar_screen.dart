@@ -14,6 +14,8 @@ import '../../domain/entities/program_calendar.dart';
 import '../providers/program_providers.dart';
 import '../widgets/program_calendar_day_row.dart';
 import '../widgets/program_calendar_day_sheet.dart';
+import '../widgets/program_calendar_hero.dart';
+import '../widgets/program_day_strip.dart';
 import '../widgets/program_week_navigator.dart';
 import '../widgets/program_week_summary.dart';
 
@@ -144,6 +146,18 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
     }
   }
 
+  Widget _row(ProgramCalendarDay jour, ProgramCalendarWeek calendrier) {
+    final isToday = jour.date == calendrier.today;
+    return ProgramCalendarDayRow(
+      day: jour,
+      isToday: isToday,
+      // Une case VIDE ne répond pas : une carte qui répond au doigt sans
+      // rien faire se lit comme un défaut.
+      onTap: jour.id == null ? null : () => _openDay(jour, calendrier),
+      onStart: isToday && jour.isLaunchable ? () => _start(jour) : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final semaine = ref.watch(
@@ -175,49 +189,38 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
               AppSpacing.gutter + MediaQuery.paddingOf(context).bottom,
             ),
             children: [
-              Row(
-                children: [
-                  const AppBackButton(),
-                  const SizedBox(width: AppSpacing.xxs),
-                  Expanded(
-                    child: Text(
-                      calendrier.name,
-                      style: AppTypography.pageTitle.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                  ),
-                ],
+              const AppScreenHeader.centered(
+                title: 'Calendrier du programme',
+                tagline: 'Chaque séance compte',
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.gapRow),
+              ProgramCalendarHero(week: calendrier),
+              const SizedBox(height: AppSpacing.gapTile),
               ProgramWeekNavigator(
                 week: calendrier,
                 onWeek: (value) => setState(() => _week = value),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              AppCard(
-                child: Column(
-                  children: [
-                    for (final jour in calendrier.days) ...[
-                      // Un filet sans marge : chaque ligne porte déjà ses
-                      // 48 points de cible tactile.
-                      if (jour.dayOfWeek > 1)
-                        const Divider(height: 1, thickness: 0.5),
-                      ProgramCalendarDayRow(
-                        day: jour,
-                        isToday: jour.date == calendrier.today,
-                        // Une case VIDE ne répond pas : une ligne qui répond
-                        // au doigt sans rien faire se lit comme un défaut.
-                        onTap: jour.id == null
-                            ? null
-                            : () => _openDay(jour, calendrier),
-                      ),
-                    ],
-                  ],
+              const SizedBox(height: AppSpacing.gapTile),
+              ProgramDayStrip(week: calendrier),
+              const SizedBox(height: AppSpacing.gapTile),
+              ProgramWeekSummary(week: calendrier),
+              const SizedBox(height: AppSpacing.gapSection),
+              Semantics(
+                header: true,
+                child: Text(
+                  'Ta semaine',
+                  style: AppTypography.title.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.gapRow),
-              ProgramWeekSummary(week: calendrier),
+              const SizedBox(height: AppSpacing.sm),
+              for (final jour in calendrier.days) ...[
+                if (jour.dayOfWeek > 1) const SizedBox(height: AppSpacing.xs),
+                _row(jour, calendrier),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              ProgramCalendarLegend(week: calendrier),
             ],
           ),
         ),

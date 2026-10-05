@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/program_calendar.dart';
 
-/// Les deux flèches et le rang de la semaine servie.
+/// Les deux flèches, le rang de la semaine servie et ses dates.
 ///
 /// La flèche éteinte aux bornes du plan, jamais masquée : une commande qui
 /// disparaît laisse croire à un défaut, une commande éteinte dit « pas par
@@ -20,49 +21,51 @@ class ProgramWeekNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: week.weekNumber > 1
-              ? () => onWeek(week.weekNumber - 1)
-              : null,
-          tooltip: 'Semaine précédente',
-          icon: const Icon(AppIcons.chevronLeft),
-          color: AppColors.darkTextSecondary,
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              Text(
-                'Semaine ${week.weekNumber} sur ${week.weeksCount}',
-                style: AppTypography.subheading.copyWith(
-                  color: AppColors.darkTextPrimary,
-                ),
-              ),
-              Text(
-                week.isCurrentWeek
-                    ? 'Semaine en cours'
-                    : week.currentWeek == null
-                    ? 'Hors de la période du plan'
-                    : 'Semaine en cours : ${week.currentWeek}',
-                style: AppTypography.label.copyWith(
-                  color: week.isCurrentWeek
-                      ? AppColors.primaryLight
-                      : AppColors.darkTextTertiary,
-                ),
-              ),
-            ],
+    final hasPrevious = week.weekNumber > 1;
+    final hasNext = week.weekNumber < week.weeksCount;
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Row(
+        children: [
+          AppRoundIconButton(
+            icon: AppIcons.chevronLeft,
+            tooltip: 'Semaine précédente',
+            color: AppColors.darkTextSecondary,
+            onPressed: hasPrevious ? () => onWeek(week.weekNumber - 1) : null,
           ),
-        ),
-        IconButton(
-          onPressed: week.weekNumber < week.weeksCount
-              ? () => onWeek(week.weekNumber + 1)
-              : null,
-          tooltip: 'Semaine suivante',
-          icon: const Icon(AppIcons.chevronRight),
-          color: AppColors.darkTextSecondary,
-        ),
-      ],
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  'Semaine ${week.weekNumber} sur ${week.weeksCount}',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
+                ),
+                if (week.days.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    formatDayRange(
+                      week.days.first.localDate,
+                      week.days.last.localDate,
+                    ),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          AppRoundIconButton(
+            icon: AppIcons.chevronRight,
+            tooltip: 'Semaine suivante',
+            onPressed: hasNext ? () => onWeek(week.weekNumber + 1) : null,
+          ),
+        ],
+      ),
     );
   }
 }

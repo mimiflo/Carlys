@@ -141,6 +141,33 @@ class AppScreenHeader extends StatelessWidget {
   /// Les deux variantes, centrée et alignée, obéissent à la même règle.
   static const double _titleMinWidth = 160;
 
+  /// Le corps du titre centré : [AppTypography.title], ou
+  /// [AppTypography.heading] quand le titre ne tiendrait pas sur UNE ligne
+  /// à côté de ses boutons (« Calendrier du programme » sur 393 points). Un
+  /// titre d'en-tête se lit d'un bloc ; il ne passe à la ligne que si même
+  /// le corps réduit ne tient pas — texte agrandi compris, la mesure se
+  /// faisant à l'échelle du texte système.
+  TextStyle _centeredTitleStyle(
+    double width,
+    TextScaler scaler,
+    TextDirection direction,
+  ) {
+    final large = AppTypography.title.copyWith(
+      color: AppColors.darkTextPrimary,
+    );
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: large),
+      textDirection: direction,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout(maxWidth: width);
+    final fitsOnOneLine = !painter.didExceedMaxLines;
+    painter.dispose();
+    return fitsOnOneLine
+        ? large
+        : AppTypography.heading.copyWith(color: AppColors.darkTextPrimary);
+  }
+
   Widget _buildCentered() {
     // Chaque côté a la largeur de ses boutons, et l'autre côté la même : un
     // seul bouton à droite (ou le retour seul) décentrerait le titre.
@@ -156,38 +183,38 @@ class AppScreenHeader extends StatelessWidget {
       width: side,
       child: Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
     );
-    final heading = Column(
-      children: [
-        Semantics(
-          header: true,
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.title.copyWith(
-              color: AppColors.darkTextPrimary,
+    Widget heading(double width, TextScaler scaler, TextDirection direction) =>
+        Column(
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: _centeredTitleStyle(width, scaler, direction),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          tagline.toUpperCase(),
-          textAlign: TextAlign.center,
-          style: _taglineStyle,
-        ),
-      ],
-    );
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              tagline.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: _taglineStyle,
+            ),
+          ],
+        );
     return LayoutBuilder(
       builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final direction = Directionality.of(context);
         final room = constraints.maxWidth - 2 * (side + AppSpacing.xs);
-        final fits =
-            room >= MediaQuery.textScalerOf(context).scale(_titleMinWidth);
+        final fits = room >= scaler.scale(_titleMinWidth);
         if (!fits) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [back, const Spacer(), trailing]),
               const SizedBox(height: AppSpacing.xxs),
-              heading,
+              heading(constraints.maxWidth, scaler, direction),
             ],
           );
         }
@@ -195,7 +222,7 @@ class AppScreenHeader extends StatelessWidget {
           children: [
             back,
             const SizedBox(width: AppSpacing.xs),
-            Expanded(child: heading),
+            Expanded(child: heading(room, scaler, direction)),
             const SizedBox(width: AppSpacing.xs),
             trailing,
           ],

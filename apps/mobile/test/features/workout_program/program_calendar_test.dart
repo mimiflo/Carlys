@@ -2,7 +2,9 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program_calendar.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_row.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_hero.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_settings_card.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_week_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,15 +34,22 @@ void main() {
     isRest: status == ProgramDayStatus.rest,
   );
 
-  Future<void> monter(WidgetTester tester, ProgramCalendarDay day) async {
+  // L'écran ne donne « Démarrer la séance » qu'au jour d'AUJOURD'HUI qui
+  // attend une séance : le montage reproduit cette règle.
+  Future<void> monter(
+    WidgetTester tester,
+    ProgramCalendarDay day, {
+    bool isToday = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
         home: Scaffold(
           body: ProgramCalendarDayRow(
             day: day,
-            isToday: false,
+            isToday: isToday,
             onTap: day.isLaunchable ? () {} : null,
+            onStart: isToday && day.isLaunchable ? () {} : null,
           ),
         ),
       ),
@@ -74,13 +83,13 @@ void main() {
     ) async {
       await monter(tester, jour(status: ProgramDayStatus.done));
       expect(
-        tester.widget<Text>(find.text('Push A')).style?.color,
+        tester.widget<Text>(find.text('Terminée')).style?.color,
         AppColors.success,
       );
 
       await monter(tester, jour(status: ProgramDayStatus.missed));
       expect(
-        tester.widget<Text>(find.text('Push A')).style?.color,
+        tester.widget<Text>(find.text('Manquée')).style?.color,
         AppColors.danger,
       );
     });
@@ -92,7 +101,7 @@ void main() {
       // jours-là n'ont jamais été promis, ils restent gris.
       await monter(tester, jour(status: ProgramDayStatus.before));
       expect(
-        tester.widget<Text>(find.text('Push A')).style?.color,
+        tester.widget<Text>(find.text('Avant le départ')).style?.color,
         AppColors.darkTextTertiary,
       );
 
@@ -119,10 +128,80 @@ void main() {
         isFalse,
       );
 
+      await monter(
+        tester,
+        jour(status: ProgramDayStatus.upcoming),
+        isToday: true,
+      );
+      expect(find.text('Démarrer la séance'), findsOneWidget);
+      expect(find.text('AUJOURD’HUI'), findsOneWidget);
+      await monter(tester, jour(status: ProgramDayStatus.done), isToday: true);
+      expect(find.text('Démarrer la séance'), findsNothing);
+      // Un autre jour se lance depuis sa feuille, qui dit d'abord ce
+      // qu'elle sait : pas de bouton sur sa ligne.
       await monter(tester, jour(status: ProgramDayStatus.upcoming));
-      expect(find.byIcon(Icons.play_circle_outline_rounded), findsOneWidget);
-      await monter(tester, jour(status: ProgramDayStatus.done));
-      expect(find.byIcon(Icons.play_circle_outline_rounded), findsNothing);
+      expect(find.text('Démarrer la séance'), findsNothing);
+    });
+  });
+
+  group('l’en-tête et les compteurs de la semaine', () {
+    ProgramCalendarWeek semaine(List<ProgramDayStatus> etats) =>
+        ProgramCalendarWeek(
+          programId: 'p',
+          name: 'Force en 2 semaines',
+          weeksCount: 2,
+          // Un MERCREDI : le plan part du lundi de cette semaine-là.
+          startsOn: '2026-09-09',
+          weekNumber: 1,
+          today: '2026-09-09',
+          days: [
+            for (final (index, etat) in etats.indexed)
+              jour(
+                status: etat,
+                dayOfWeek: index + 1,
+                date: '2026-09-${(7 + index).toString().padLeft(2, '0')}',
+              ),
+          ],
+        );
+
+    Future<void> monterWidget(WidgetTester tester, Widget child) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(body: child),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'la période court du départ au dimanche de la dernière semaine',
+      (tester) async {
+        await monterWidget(
+          tester,
+          ProgramCalendarHero(week: semaine([ProgramDayStatus.upcoming])),
+        );
+        expect(find.text('Du 9 au 20 septembre 2026'), findsOneWidget);
+      },
+    );
+
+    testWidgets('les compteurs passent au pluriel au-delà d’un', (
+      tester,
+    ) async {
+      await monterWidget(
+        tester,
+        ProgramWeekSummary(
+          week: semaine([
+            ProgramDayStatus.done,
+            ProgramDayStatus.done,
+            ProgramDayStatus.rest,
+            ProgramDayStatus.upcoming,
+          ]),
+        ),
+      );
+      expect(find.bySemanticsLabel('2 Faites'), findsOneWidget);
+      expect(find.bySemanticsLabel('0 Manquée'), findsOneWidget);
+      expect(find.bySemanticsLabel('1 À venir'), findsOneWidget);
     });
   });
 

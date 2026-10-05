@@ -3,16 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/program_calendar.dart';
 
-/// Ce que la semaine DIT, en trois chiffres et une légende.
+/// Ce que la semaine DIT, en trois chiffres : faites, manquées, à venir.
 ///
-/// Sans elle, le calendrier laissait la moitié de l'écran vide et obligeait
-/// à recompter les lignes pour savoir où l'on en est. Les trois nombres se
-/// déduisent des cases servies — rien n'est redemandé au serveur.
-///
-/// La légende n'est pas décorative : le vert et le rouge portent un jugement
-/// (« faite », « manquée »), et une couleur qui juge doit se nommer. Le gris
-/// des jours d'avant le départ, surtout : il dit « rien ne t'était demandé »,
-/// ce qu'aucune teinte ne fait comprendre seule.
+/// Sans eux, il fallait recompter les lignes pour savoir où l'on en est. Ils
+/// se déduisent des cases servies — rien n'est redemandé au serveur.
 class ProgramWeekSummary extends StatelessWidget {
   const ProgramWeekSummary({required this.week, super.key});
 
@@ -26,71 +20,38 @@ class ProgramWeekSummary extends StatelessWidget {
     final faites = _count(ProgramDayStatus.done);
     final manquees = _count(ProgramDayStatus.missed);
     final aVenir = _count(ProgramDayStatus.upcoming);
-    final prevues = faites + manquees + aVenir;
-    final avantDepart = _count(ProgramDayStatus.before);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: AppStatTile(
-                label: 'Faites',
-                value: '$faites',
-                // La jauge compare aux séances PRÉVUES de la semaine, pas aux
-                // sept jours : un plan à trois séances serait sinon montré
-                // aux deux cinquièmes alors qu'il est complet.
-                progress: prevues == 0 ? 0 : faites / prevues,
-                gaugeColor: AppColors.success,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: AppStatTile(
-                label: 'Manquées',
-                value: '$manquees',
-                progress: prevues == 0 ? 0 : manquees / prevues,
-                gaugeColor: AppColors.danger,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: AppStatTile(
-                label: 'À venir',
-                value: '$aVenir',
-                progress: prevues == 0 ? 0 : aVenir / prevues,
-              ),
-            ),
-          ],
+        Expanded(
+          child: _Counter(
+            value: faites,
+            singular: 'Faite',
+            plural: 'Faites',
+            icon: AppIcons.check,
+            color: AppColors.success,
+            background: AppColors.successBadgeBg,
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _LegendRow(
-                color: AppColors.success,
-                icon: AppIcons.checkCircle,
-                text: 'Séance faite : une séance terminée porte ce jour.',
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              const _LegendRow(
-                color: AppColors.danger,
-                icon: AppIcons.dayMissed,
-                text: 'Séance manquée : le jour est passé, rien n’a été fait.',
-              ),
-              if (avantDepart > 0) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                const _LegendRow(
-                  color: AppColors.darkTextTertiary,
-                  icon: AppIcons.dayUpcoming,
-                  text:
-                      'Avant le départ : ces jours précèdent ton premier '
-                      'jour, ils ne te sont pas reprochés.',
-                ),
-              ],
-            ],
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: _Counter(
+            value: manquees,
+            singular: 'Manquée',
+            plural: 'Manquées',
+            icon: AppIcons.minus,
+            color: AppColors.danger,
+            background: AppColors.dangerBadgeBg,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: _Counter(
+            value: aVenir,
+            singular: 'À venir',
+            plural: 'À venir',
+            icon: AppIcons.time,
+            color: AppColors.primaryLight,
+            background: AppColors.primaryBadgeBg,
           ),
         ),
       ],
@@ -98,30 +59,126 @@ class ProgramWeekSummary extends StatelessWidget {
   }
 }
 
-class _LegendRow extends StatelessWidget {
-  const _LegendRow({
-    required this.color,
+class _Counter extends StatelessWidget {
+  const _Counter({
+    required this.value,
+    required this.singular,
+    required this.plural,
     required this.icon,
-    required this.text,
+    required this.color,
+    required this.background,
   });
 
-  final Color color;
+  final int value;
+  final String singular;
+  final String plural;
   final IconData icon;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    // « 0 Manquée », « 1 Faite », « 2 Faites » : le singulier jusqu'à un.
+    final label = value > 1 ? plural : singular;
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.sm,
+      ),
+      semanticLabel: '$value $label',
+      child: ExcludeSemantics(
+        child: Row(
+          children: [
+            AppIconBadge(
+              icon: icon,
+              color: color,
+              background: background,
+              size: 36,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$value',
+                    style: AppTypography.title.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
+                  ),
+                  // Un mot seul (« Manquées ») : il se resserre plutôt que de
+                  // finir en « Man… » sur une tuile étroite ou un texte agrandi.
+                  AppWholeWordsText(
+                    label,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// La légende des couleurs, sous la liste. Elle n'est pas décorative : le
+/// vert et le rouge portent un jugement (« terminée », « manquée »), et une
+/// couleur qui juge doit se nommer. Le gris des jours d'avant le départ ne
+/// paraît que s'il est à l'écran : il dit « rien ne t'était demandé ».
+class ProgramCalendarLegend extends StatelessWidget {
+  const ProgramCalendarLegend({required this.week, super.key});
+
+  final ProgramCalendarWeek week;
+
+  @override
+  Widget build(BuildContext context) {
+    final avantDepart = week.days.any(
+      (day) => day.status == ProgramDayStatus.before,
+    );
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.xs,
+      children: [
+        const _LegendItem(color: AppColors.success, text: 'Terminée'),
+        const _LegendItem(color: AppColors.danger, text: 'Manquée'),
+        const _LegendItem(color: AppColors.primary, text: 'À venir'),
+        const _LegendItem(color: AppColors.darkTextTertiary, text: 'Repos'),
+        if (avantDepart)
+          const _LegendItem(
+            color: AppColors.darkIconInactive,
+            text: 'Avant le départ',
+          ),
+      ],
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({required this.color, required this.text});
+
+  final Color color;
   final String text;
+
+  static const double _dot = 10;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        Container(
+          width: _dot,
+          height: _dot,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: Text(
-            text,
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextSecondary,
-            ),
+        Text(
+          text,
+          style: AppTypography.label.copyWith(
+            color: AppColors.darkTextSecondary,
           ),
         ),
       ],

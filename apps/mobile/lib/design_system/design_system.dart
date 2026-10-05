@@ -32,6 +32,7 @@ export 'components/app_explain_button.dart';
 export 'components/app_explainable.dart';
 export 'components/app_fitted_text.dart';
 export 'components/app_gauge.dart';
+export 'components/app_icon_badge.dart';
 export 'components/app_icon_choice_tile.dart';
 export 'components/app_initial_avatar.dart';
 export 'components/app_list_row.dart';
