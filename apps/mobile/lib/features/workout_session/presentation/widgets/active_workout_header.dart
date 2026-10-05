@@ -131,18 +131,26 @@ class _ElapsedTimerState extends State<_ElapsedTimer> {
   Timer? _ticker;
   DateTime _now = DateTime.now();
 
+  /// Écran rallumé : l'heure juste TOUT DE SUITE, sans attendre le battement
+  /// suivant (la valeur, elle, vient toujours de l'heure de début).
+  late final AppLifecycleListener _lifecycle;
+
+  void _refresh() {
+    if (mounted) setState(() => _now = DateTime.now());
+  }
+
   @override
   void initState() {
     super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
+    _lifecycle = AppLifecycleListener(onResume: _refresh);
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _refresh());
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
     _ticker = null;
+    _lifecycle.dispose();
     super.dispose();
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../progress/presentation/providers/progress_providers.dart';
@@ -183,38 +184,59 @@ class RestTimerState {
       total.inSeconds == 0 ? 0 : remaining.inSeconds / total.inSeconds;
 }
 
+/// L'heure du minuteur de repos (remplacée en test : écran éteint simulé).
+final restClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 /// Minuteur de repos entre les séries.
+///
+/// Il compte jusqu'à une HEURE DE FIN. Écran éteint, le téléphone suspend
+/// l'appli : un décompte d'une seconde par battement retardait, au
+/// rallumage, d'autant que l'écran était resté noir. Rapporté à l'heure, il
+/// est juste dès le retour au premier plan.
 class RestTimerController extends Notifier<RestTimerState?> {
   Timer? _timer;
+  DateTime? _endsAt;
+  AppLifecycleListener? _lifecycle;
 
   @override
   RestTimerState? build() {
-    ref.onDispose(() => _timer?.cancel());
+    ref.onDispose(_release);
     return null;
   }
 
   void start(Duration duration) {
-    _timer?.cancel();
+    _release();
+    _endsAt = ref.read(restClockProvider)().add(duration);
     state = RestTimerState(total: duration, remaining: duration);
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final current = state;
-      if (current == null) {
-        _timer?.cancel();
-        return;
-      }
-      final remaining = current.remaining - const Duration(seconds: 1);
-      if (remaining <= Duration.zero) {
-        stop();
-      } else {
-        state = RestTimerState(total: current.total, remaining: remaining);
-      }
-    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+    _lifecycle = AppLifecycleListener(onResume: _tick);
+  }
+
+  void _tick() {
+    final current = state;
+    final endsAt = _endsAt;
+    if (current == null || endsAt == null) return;
+    final left = endsAt.difference(ref.read(restClockProvider)());
+    if (left <= Duration.zero) return stop();
+    // À la seconde SUPÉRIEURE : jamais un « 0:00 » qui dure encore.
+    final seconds = (left.inMilliseconds / 1000).ceil();
+    state = RestTimerState(
+      total: current.total,
+      remaining: Duration(seconds: seconds),
+    );
   }
 
   void stop() {
+    _release();
+    state = null;
+  }
+
+  void _release() {
     _timer?.cancel();
     _timer = null;
-    state = null;
+    _endsAt = null;
+    _lifecycle?.dispose();
+    _lifecycle = null;
   }
 }
 
