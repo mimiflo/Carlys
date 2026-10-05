@@ -18,7 +18,7 @@ trap banc_nettoyer EXIT
 # un bash neuf qui charge _common.sh ; rend son code, garde sa sortie.
 appeler() {
   # shellcheck disable=SC2016 # développé par le bash appelé, pas par celui-ci
-  banc_lancer bash -c '. "$0/_common.sh"; "$@"' "$BANC_SERVEUR" "$@"
+  banc_lancer bash -o pipefail -c '. "$0/_common.sh"; "$@"' "$BANC_SERVEUR" "$@"
 }
 
 echo "repo_pull — le clone n'avance que jusqu'à un commit qui a passé la porte"
@@ -222,6 +222,7 @@ cp "$DEPOT_CONFIG/config/"*.conf "$CARLYS_CONFIG_DIR/"
   printf 'CARLYS_TAG=sha-123456789abc\nCARLYS_API_REPLICAS=1\n'
   cat "$DEPOT_CONFIG/env/staging.env.example"
 } | sed -e 's/=CHANGE_MOI_[A-Z0-9_]*/=secret-du-banc-0123456789abcdef0123/' -e 's/^LOG_LEVEL=.*/LOG_LEVEL=info/' \
+      -e 's/^SWAGGER_ENABLED=.*/SWAGGER_ENABLED=true/' \
   > "$ENV_STAGING"
 echo 'CARLYS_OLLAMA_REPLICAS=1' >> "$ENV_STAGING"
 # Assemblée ici, jamais écrite d'un bloc : le détecteur de secrets de la CI
@@ -249,6 +250,10 @@ verifier "essai : une clé inconnue du dépôt ne montre jamais sa valeur" oui \
 verifier "essai : rien n'est écrit" oui "$(cmp -s "$avant" "$ENV_STAGING" && echo oui || echo non)"
 verifier "essai : le réglage changé à la main est montré, serveur et dépôt" oui \
   "$(grep -q 'DIFFÉRENT, gardé : LOG_LEVEL — serveur « info », dépôt « debug »' "$BANC_SORTIE" && echo oui || echo non)"
+# Une clé du PREMIER fichier (commun.conf) : la liste blanche s'arrêtait là
+# avant (grep -q sous pipefail, SIGPIPE), et la valeur passait pour un secret.
+verifier "essai : un réglage de commun.conf aussi" oui \
+  "$(grep -q 'DIFFÉRENT, gardé : SWAGGER_ENABLED — serveur « true », dépôt « false »' "$BANC_SORTIE" && echo oui || echo non)"
 verifier "essai : un identifiant dans une URL n'est jamais affiché" non \
   "$(grep -q 'motdepasse' "$BANC_SORTIE" && echo oui || echo non)"
 verifier "essai : aucun secret n'est affiché" non \

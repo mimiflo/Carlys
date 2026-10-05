@@ -42,11 +42,11 @@ config_classer() {
   actives="$({ envcheck_cles "${fichiers[0]}"; envcheck_cles "${fichiers[1]}"; } 2>/dev/null | sort -u || true)"
   while IFS= read -r cle; do
     [ -n "$cle" ] || continue
-    if printf '%s\n' "${CONFIG_ETAT_CLES[@]}" | grep -qxF -- "$cle"; then
+    if printf '%s\n' "${CONFIG_ETAT_CLES[@]}" | grep -xF -- "$cle" > /dev/null; then
       printf 'etat\t%s\n' "$cle"
-    elif printf '%s\n' "$secrets" | grep -qxF -- "$cle"; then
+    elif printf '%s\n' "$secrets" | grep -xF -- "$cle" > /dev/null; then
       printf 'secret\t%s\n' "$cle"
-    elif printf '%s\n' "$actives" | grep -qxF -- "$cle"; then
+    elif printf '%s\n' "$actives" | grep -xF -- "$cle" > /dev/null; then
       serveur="$(env_value_dans "$cle" '' "$file")"
       depot="$(env_value_dans "$cle" '' "${fichiers[@]}")"
       if [ "$serveur" = "$depot" ]; then
@@ -65,10 +65,15 @@ config_classer() {
 # ou <env>.conf), et si elle n'a pas l'allure d'un secret (identifiant dans
 # une URL, clé privée, jeton Stripe). Une LISTE BLANCHE, pas une liste noire
 # de noms : une clé inconnue peut être un secret que personne n'a rangé.
+#
+# `grep -x … > /dev/null`, jamais `grep -q` (voir backup.sh) : sous
+# `pipefail`, `-q` sort au premier résultat, la boucle qui écrit encore meurt
+# de SIGPIPE, et le pipeline échoue — une clé de commun.conf, le PREMIER lu,
+# passait ainsi pour un secret.
 config_montrer() {
   local env_name="$1" cle="$2" valeur="$3"
   if config_fichiers "$env_name" | while IFS= read -r f; do envcheck_cles_exemple "$f" 2>/dev/null; done \
-       | grep -qxF -- "$cle" \
+       | grep -xF -- "$cle" > /dev/null \
      && ! [[ "$valeur" =~ ://[^/?#[:space:]]*@|-----BEGIN|private_key|sk_(live|test)_|rk_live_|whsec_ ]]; then
     printf '« %s »' "$valeur"
   else
