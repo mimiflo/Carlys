@@ -108,11 +108,9 @@ export class FriendChallengesService {
     // au refus de l'invitation, et il n'est lisible que des membres, dans le
     // défi.
     if (issue === 'CREATED') {
-      await Promise.all(
-        invites.map((invited) =>
-          this.notifier.challengeInvite(invited, userId, input.id, input.title),
-        ),
-      );
+      for (const invited of invites) {
+        this.notifier.challengeInvite(invited, userId, input.id, input.title);
+      }
     }
     return this.detail(userId, input.id);
   }

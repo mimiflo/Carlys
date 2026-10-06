@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { type PrismaService } from '../../../database/prisma/prisma.service';
+import { type CacheService } from '../../../infrastructure/cache/cache.service';
 import { CommunityChallengesRepository } from './community-challenges.repository';
 
 /**
@@ -35,6 +36,26 @@ interface Banc {
   updateMany: jest.Mock;
   /** Combien d'écritures ont eu lieu HORS transaction. */
   horsTransaction: () => number;
+}
+
+/** Un Redis en mémoire : GET/SET JSON et INCR, comme `CacheService`. */
+function cacheEnMemoire() {
+  const store = new Map<string, string>();
+  return {
+    store,
+    getJson: jest.fn((key: string) => {
+      const raw = store.get(key);
+      return Promise.resolve(raw === undefined ? null : JSON.parse(raw));
+    }),
+    setJson: jest.fn((key: string, value: unknown) => {
+      store.set(key, JSON.stringify(value));
+      return Promise.resolve();
+    }),
+    increment: jest.fn((key: string) => {
+      store.set(key, String(Number(store.get(key) ?? '0') + 1));
+      return Promise.resolve();
+    }),
+  };
 }
 
 function banc(
@@ -74,8 +95,12 @@ function banc(
     }),
   };
 
+  const cache = cacheEnMemoire();
   return {
-    repository: new CommunityChallengesRepository(prisma as unknown as PrismaService),
+    repository: new CommunityChallengesRepository(
+      prisma as unknown as PrismaService,
+      cache as unknown as CacheService,
+    ),
     create,
     updateMany,
     horsTransaction: () => horsTransaction,
@@ -197,8 +222,12 @@ function bancDefis(): BancDefis {
       findMany: jest.fn().mockResolvedValue([]),
     },
   };
+  const cache = cacheEnMemoire();
   return {
-    repository: new CommunityChallengesRepository(prisma as unknown as PrismaService),
+    repository: new CommunityChallengesRepository(
+      prisma as unknown as PrismaService,
+      cache as unknown as CacheService,
+    ),
     upsert,
     updateMany,
     deleteMany,
@@ -268,5 +297,32 @@ describe('CommunityChallengesRepository — départ d’un défi', () => {
     );
 
     expect(b.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('CommunityChallengesRepository — agrégats partagés en cache', () => {
+  it('deux lectures de l’onglet : les agrégats ne sont calculés qu’une fois', async () => {
+    const b = bancDefis();
+
+    await b.repository.listOpenChallenges(new Date(), 'user-1');
+    const premiere = b.groupBy.mock.calls.length;
+    const [defi] = await b.repository.listOpenChallenges(new Date(), 'user-2');
+
+    expect(premiere).toBe(2);
+    expect(b.groupBy).toHaveBeenCalledTimes(2);
+    expect(defi).toMatchObject({ totalContribution: 30, participants: 2 });
+  });
+
+  it('rejoindre, quitter ou contribuer : la lecture suivante recalcule', async () => {
+    const b = bancDefis();
+    await b.repository.listOpenChallenges(new Date(), 'user-1');
+
+    await b.repository.joinChallenge('defi-1', 'user-1');
+    await b.repository.listOpenChallenges(new Date(), 'user-1');
+    expect(b.groupBy).toHaveBeenCalledTimes(4);
+
+    await b.repository.contribute('user-1', 'WORKOUTS', 1, new Date());
+    await b.repository.listOpenChallenges(new Date(), 'user-1');
+    expect(b.groupBy).toHaveBeenCalledTimes(6);
   });
 });

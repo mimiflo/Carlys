@@ -66,6 +66,6 @@ export class EncouragementsService {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    await this.notifier.encouragement(recipientUserId, userId, message);
+    this.notifier.encouragement(recipientUserId, userId, message);
   }
 }

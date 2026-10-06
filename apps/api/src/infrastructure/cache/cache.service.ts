@@ -35,6 +35,19 @@ export class CacheService {
   }
 
   /**
+   * Monte un numéro de VERSION : les clés qui l'embarquent deviennent
+   * introuvables d'un coup, en un aller-retour — là où une purge par
+   * préfixe parcourrait tout l'espace de clés.
+   */
+  async increment(key: string): Promise<void> {
+    try {
+      await this.redis.getClient().incr(key);
+    } catch (error) {
+      this.logger.warn({ err: error, key }, 'Cache indisponible pour la version');
+    }
+  }
+
+  /**
    * Invalidation explicite par préfixe — le parcours vit dans
    * `purge-prefix.ts`, partagé avec `dist/cli/catalog-seed`.
    */

@@ -75,7 +75,7 @@ function build(
     isBlockedEitherWay: jest.fn().mockResolvedValue(false),
     blockedUserIdsEitherWay: jest.fn().mockResolvedValue(new Set(blockedEitherWay)),
   };
-  const notifier = { challengeInvite: jest.fn().mockResolvedValue(undefined) };
+  const notifier = { challengeInvite: jest.fn() };
   const service = new FriendChallengesService(
     challenges as unknown as FriendChallengesRepository,
     community as unknown as CommunityRepository,

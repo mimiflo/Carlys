@@ -106,7 +106,7 @@ export class CommunityService {
     }
     const created = await this.community.createRequest(userId, targetId);
     if (created !== null) {
-      await this.notifier.newRequest(userId, targetId);
+      this.notifier.newRequest(userId, targetId);
       return;
     }
     // L'autre côté a écrit la ligne de la paire entre notre lecture et notre
@@ -130,7 +130,7 @@ export class CommunityService {
       if (existing.requesterId === targetId) {
         // Demandes croisées = amitié voulue des deux côtés.
         await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
-        await this.notifier.requestAccepted(userId, targetId);
+        this.notifier.requestAccepted(userId, targetId);
       }
       return; // Ma propre demande est déjà en attente : rien à refaire.
     }
@@ -143,7 +143,7 @@ export class CommunityService {
       return; // Refus opposable : même silence qu'un compte inexistant.
     }
     await this.community.reopenRequest(existing.id, userId, targetId);
-    await this.notifier.newRequest(userId, targetId);
+    this.notifier.newRequest(userId, targetId);
   }
 
   async listReceivedRequests(userId: string): Promise<FriendRequest[]> {
@@ -171,7 +171,7 @@ export class CommunityService {
     );
     if (accept) {
       // Le refus, lui, reste SILENCIEUX : personne n'est notifié d'un non.
-      await this.notifier.requestAccepted(userId, request.requesterId);
+      this.notifier.requestAccepted(userId, request.requesterId);
     }
   }
 

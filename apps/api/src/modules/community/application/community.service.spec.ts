@@ -63,6 +63,12 @@ interface NotificationsStub {
   sendToUser: jest.Mock;
 }
 
+/**
+ * Les notifications partent APRÈS la réponse : on laisse la boucle
+ * d'événements écouler leurs étapes avant de regarder ce qui est parti.
+ */
+const envoisPartis = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 function buildNotifications(pushEnabled = true): NotificationsStub {
   return { pushEnabled, sendToUser: jest.fn().mockResolvedValue(undefined) };
 }
@@ -199,6 +205,19 @@ describe('CommunityService — demandes d’ami', () => {
     expect(stubs.setRequestStatus).not.toHaveBeenCalled();
   });
 
+  it('la réponse n’attend PAS la notification push', async () => {
+    // FCM lent ou muet : la demande d'ami aboutit quand même, aussitôt.
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    const notifications = buildNotifications();
+    notifications.sendToUser.mockReturnValue(new Promise<void>(() => undefined));
+    const service = buildService(stubs, notifications);
+
+    await expect(service.requestFriend(ME, 'ami@carlys.test')).resolves.toBeUndefined();
+    await envoisPartis();
+    expect(notifications.sendToUser).toHaveBeenCalledTimes(1);
+  });
+
   it('après un refus, le même demandeur reste muet pendant 30 jours', async () => {
     const stubs = buildStubs();
     stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
@@ -217,6 +236,7 @@ describe('CommunityService — demandes d’ami', () => {
     await expect(service.requestFriend(ME, 'ami@carlys.test')).resolves.toBeUndefined();
     expect(stubs.reopenRequest).not.toHaveBeenCalled();
     expect(stubs.setRequestStatus).not.toHaveBeenCalled();
+    await envoisPartis();
     expect(notifications.sendToUser).not.toHaveBeenCalled();
   });
 
@@ -237,6 +257,7 @@ describe('CommunityService — demandes d’ami', () => {
     await service.requestFriend(ME, 'ami@carlys.test');
 
     expect(stubs.reopenRequest).toHaveBeenCalledWith('demande-1', ME, FRIEND);
+    await envoisPartis();
     expect(notifications.sendToUser).toHaveBeenCalledTimes(1);
   });
 
@@ -259,6 +280,7 @@ describe('CommunityService — demandes d’ami', () => {
 
     // Pas de délai pour lui, et c'est LUI qui demande désormais.
     expect(stubs.reopenRequest).toHaveBeenCalledWith('demande-1', ME, FRIEND);
+    await envoisPartis();
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       FRIEND,
       expect.objectContaining({ title: 'Nouvelle demande d’ami' }),
@@ -453,6 +475,7 @@ describe('CommunityService — blocages : réponses opaques partout', () => {
     // Rien n'est même LU sur l'amitié : la réponse est celle d'un inconnu.
     expect(stubs.findFriendshipBetween).not.toHaveBeenCalled();
     expect(stubs.createRequest).not.toHaveBeenCalled();
+    await envoisPartis();
     expect(notifications.sendToUser).not.toHaveBeenCalled();
   });
 
@@ -517,6 +540,7 @@ describe('CommunityService — notifications push', () => {
     expect(stubs.displayNameOf).toHaveBeenCalledWith(ME);
     // La CATÉGORIE voyage jusqu'à l'envoi : c'est elle qui permet de
     // couper les demandes d'ami sans couper les encouragements.
+    await envoisPartis();
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       FRIEND,
       {
@@ -541,9 +565,11 @@ describe('CommunityService — notifications push', () => {
     const service = buildService(stubs, notifications);
 
     await service.respondToRequest(ME, 'demande-1', false);
+    await envoisPartis();
     expect(notifications.sendToUser).not.toHaveBeenCalled();
 
     await service.respondToRequest(ME, 'demande-1', true);
+    await envoisPartis();
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       FRIEND,
       {
@@ -568,6 +594,7 @@ describe('CommunityService — notifications push', () => {
 
     await service.encourage(ME, FRIEND, 'Bravo pour ta série !');
 
+    await envoisPartis();
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       FRIEND,
       {
@@ -593,6 +620,7 @@ describe('CommunityService — notifications push', () => {
     await service.encourage(ME, FRIEND, 'Bravo !');
 
     expect(stubs.displayNameOf).not.toHaveBeenCalled();
+    await envoisPartis();
     expect(notifications.sendToUser).not.toHaveBeenCalled();
   });
 
@@ -608,6 +636,7 @@ describe('CommunityService — notifications push', () => {
     const service = buildEncouragements(stubs);
 
     await expect(service.encourage(ME, FRIEND, 'Bravo !')).resolves.toBeUndefined();
+    await envoisPartis();
     expect(loggerStub.error).toHaveBeenCalled();
   });
 });
@@ -626,6 +655,7 @@ describe('EncouragementsService — plafond par ami', () => {
     const service = buildEncouragements(stubs, notifications);
 
     await expect(service.encourage(ME, FRIEND, 'Bravo !')).rejects.toMatchObject({ status: 429 });
+    await envoisPartis();
     expect(notifications.sendToUser).not.toHaveBeenCalled();
   });
 });

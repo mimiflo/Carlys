@@ -36,7 +36,10 @@
 # `keepalive` : sans lui, nginx ouvre une connexion TCP par requête vers
 # l'API. Il EXIGE `proxy_http_version 1.1` et `proxy_set_header Connection ""`,
 # tous deux dans snippets/carlys-proxy.conf — sans le second, nginx annonce
-# `Connection: close` et le pool ne sert à rien.
+# `Connection: close` et le pool ne sert à rien. Nginx garde ces connexions
+# inactives 60 s (`keepalive_timeout`) : l'API les garde 65 s
+# (`apps/api/src/main.ts`). L'ordre compte — si Node fermait le premier,
+# nginx réutiliserait une connexion morte et répondrait 502.
 
 upstream carlys_api_production {
     least_conn;

@@ -90,10 +90,19 @@ export class NotificationsService {
         return;
       }
       const tokens = await this.tokens.listTokens(userId);
-      for (const token of tokens) {
-        const outcome = await this.sender.send(token, message);
-        if (outcome === 'invalid-token') {
-          await this.tokens.deleteByToken(token);
+      // Un appareil n'attend pas l'autre, et l'échec de l'un n'abandonne
+      // pas les autres en vol.
+      const issues = await Promise.allSettled(
+        tokens.map(async (token) => {
+          if ((await this.sender.send(token, message)) === 'invalid-token') {
+            await this.tokens.deleteByToken(token);
+          }
+        }),
+      );
+      for (const issue of issues) {
+        if (issue.status === 'rejected') {
+          const err: unknown = issue.reason;
+          this.logger.error({ err, userId }, 'Notification push non envoyée');
         }
       }
     } catch (error) {

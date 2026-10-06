@@ -25,7 +25,7 @@ function build() {
   const notifier = new CommunityNotifier(
     community as unknown as CommunityRepository,
     notifications as unknown as NotificationsService,
-    { error: jest.fn() } as unknown as PinoLogger,
+    { error: jest.fn(), warn: jest.fn() } as unknown as PinoLogger,
   );
   /** Le message remis à l'envoi, tel quel. */
   const sent = (): PushMessage => {
@@ -43,7 +43,8 @@ describe('CommunityNotifier — la destination du toucher', () => {
   ])('%s mène à l’onglet Amis', async (_cas, envoyer) => {
     const { notifier, sent } = build();
 
-    await envoyer(notifier);
+    envoyer(notifier);
+    await notifier.flush();
 
     expect(sent().data).toEqual({ destination: 'community-friends' });
     expect(pushDataSchema.safeParse(sent().data).success).toBe(true);
@@ -52,7 +53,8 @@ describe('CommunityNotifier — la destination du toucher', () => {
   it('une invitation à un défi mène à CE défi, par son identifiant', async () => {
     const { notifier, notifications, sent } = build();
 
-    await notifier.challengeInvite(INVITEE, CHLOE, DEFI, 'Qui court le plus');
+    notifier.challengeInvite(INVITEE, CHLOE, DEFI, 'Qui court le plus');
+    await notifier.flush();
 
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       INVITEE,

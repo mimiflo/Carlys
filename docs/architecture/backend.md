@@ -312,7 +312,14 @@ schéma** au moment où le code qui les consomme arrive — jamais avant.
   exercices publics, groupes musculaires, programmes publics, configuration
   distante. **Jamais** : séance active d'un utilisateur, données de paiement
   ou d'entitlement — le serveur reste l'unique source d'autorité et ces
-  données ne tolèrent aucune obsolescence.
+  données ne tolèrent aucune obsolescence. Les agrégats PARTAGÉS des défis
+  collectifs (somme, participants présents) y sont aussi, 30 s, sous une
+  clé VERSIONNÉE montée après chaque participation ou contribution validée :
+  chacun voit aussitôt l'effet de son geste, sans relire toutes les
+  participations à chaque ouverture de l'onglet.
+- **Travaux non attendus** (`common/async/travaux-en-vol.ts`) : audit,
+  e-mails, mémoire du coach et notifications de la communauté partent sans
+  faire attendre la réponse, et finissent avant l'arrêt du processus.
 - **BullMQ (cible)** pour les tâches lourdes ou différables : traitement de
   médias, envoi d'e-mails/notifications, traitement asynchrone de webhooks.
   Le client Redis partagé (`infrastructure/cache`) servira de connexion.

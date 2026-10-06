@@ -36,6 +36,13 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('api/docs', app, document);
   }
 
+  // Nginx garde ses connexions vers l'API ouvertes 60 s ; Node les fermait
+  // après 5 s d'inactivité. Nginx réutilisait alors une connexion que Node
+  // venait de fermer : 502, et un POST de synchronisation ne se rejoue pas.
+  // Node doit donc tenir PLUS longtemps que Nginx.
+  const server = app.getHttpServer();
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
   await app.listen(config.port, '0.0.0.0');
   logger.log(`Carlys API démarrée sur le port ${config.port} (${config.nodeEnv})`);
 }

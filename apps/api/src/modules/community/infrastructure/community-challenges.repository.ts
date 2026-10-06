@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { type ChallengeMetric, type CommunityChallenge, Prisma } from '@prisma/client';
 import { lockNamed } from '../../../database/prisma/advisory-lock';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { CacheService } from '../../../infrastructure/cache/cache.service';
 import { type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 
 /**
@@ -23,10 +24,28 @@ export interface ChallengeWithStats extends CommunityChallenge {
   joined: boolean;
 }
 
+/** Ce que tout le monde voit d'un défi : sa somme, et qui y est encore. */
+type SharedStats = Record<string, { total: number; present: number }>;
+
+/**
+ * Les agrégats PARTAGÉS des défis, en cache. Ils parcourent toutes les
+ * participations — tout le monde participe aux défis du mois — à CHAQUE
+ * ouverture de l'onglet : la base saturait à quelques dizaines de lectures
+ * par seconde. La clé embarque une VERSION, montée APRÈS chaque
+ * participation et chaque contribution validées en base : on voit aussitôt
+ * l'effet de son propre geste. La durée de vie borne le reste — l'écart
+ * d'un autre exemplaire qui aurait relu juste avant la montée.
+ */
+const STATS_VERSION = 'community:challenge-stats:version';
+const STATS_TTL_SECONDS = 30;
+
 /** Défis collectifs et réponses de quiz (la source des défis CULTURE). */
 @Injectable()
 export class CommunityChallengesRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   // ── Défis collectifs ────────────────────────────────────────────────────
 
@@ -85,6 +104,7 @@ export class CommunityChallengesRepository {
       create: { challengeId, userId },
       update: { leftAt: null },
     });
+    await this.cache.increment(STATS_VERSION);
   }
 
   /**
@@ -100,6 +120,7 @@ export class CommunityChallengesRepository {
       where: { challengeId, userId, leftAt: null },
       data: { leftAt: new Date() },
     });
+    await this.cache.increment(STATS_VERSION);
   }
 
   async challengeStats(challengeId: string, userId: string): Promise<ChallengeWithStats | null> {
@@ -115,7 +136,7 @@ export class CommunityChallengesRepository {
 
   /**
    * Agrège en BASE, en trois requêtes de taille fixe, quel que soit le nombre
-   * de participants.
+   * de participants — les deux agrégats partagés passant par le cache.
    *
    * La SOMME porte sur toutes les lignes, parties comprises : une
    * contribution versée appartient à l'objectif collectif. Le COMPTE, lui,
@@ -131,7 +152,32 @@ export class CommunityChallengesRepository {
       return [];
     }
     const ids = challenges.map((challenge) => challenge.id);
-    const [totaux, presents, miennes] = await Promise.all([
+    const [partagees, miennes] = await Promise.all([
+      this.sharedStats(ids),
+      this.prisma.challengeParticipation.findMany({
+        where: { challengeId: { in: ids }, userId, leftAt: null },
+        select: { challengeId: true },
+      }),
+    ]);
+    const rejoints = new Set(miennes.map((ligne) => ligne.challengeId));
+
+    return challenges.map((challenge) => ({
+      ...challenge,
+      totalContribution: partagees[challenge.id]?.total ?? 0,
+      participants: partagees[challenge.id]?.present ?? 0,
+      joined: rejoints.has(challenge.id),
+    }));
+  }
+
+  /** Les deux agrégats partagés, lus en cache, sinon en base puis gardés. */
+  private async sharedStats(ids: string[]): Promise<SharedStats> {
+    const version = (await this.cache.getJson<number>(STATS_VERSION)) ?? 0;
+    const key = `community:challenge-stats:${version}:${[...ids].sort().join(',')}`;
+    const cached = await this.cache.getJson<SharedStats>(key);
+    if (cached !== null) {
+      return cached;
+    }
+    const [totaux, presents] = await Promise.all([
       this.prisma.challengeParticipation.groupBy({
         by: ['challengeId'],
         where: { challengeId: { in: ids } },
@@ -142,22 +188,19 @@ export class CommunityChallengesRepository {
         where: { challengeId: { in: ids }, leftAt: null },
         _count: { _all: true },
       }),
-      this.prisma.challengeParticipation.findMany({
-        where: { challengeId: { in: ids }, userId, leftAt: null },
-        select: { challengeId: true },
-      }),
     ]);
-
-    const parDefi = new Map(totaux.map((ligne) => [ligne.challengeId, ligne]));
     const parDefiPresents = new Map(presents.map((ligne) => [ligne.challengeId, ligne]));
-    const rejoints = new Set(miennes.map((ligne) => ligne.challengeId));
-
-    return challenges.map((challenge) => ({
-      ...challenge,
-      totalContribution: parDefi.get(challenge.id)?._sum.contribution ?? 0,
-      participants: parDefiPresents.get(challenge.id)?._count._all ?? 0,
-      joined: rejoints.has(challenge.id),
-    }));
+    const stats: SharedStats = Object.fromEntries(
+      totaux.map((ligne) => [
+        ligne.challengeId,
+        {
+          total: ligne._sum.contribution ?? 0,
+          present: parDefiPresents.get(ligne.challengeId)?._count._all ?? 0,
+        },
+      ]),
+    );
+    await this.cache.setJson(key, stats, STATS_TTL_SECONDS);
+    return stats;
   }
 
   /**
@@ -186,7 +229,7 @@ export class CommunityChallengesRepository {
     if (amount <= 0) {
       return;
     }
-    await client.challengeParticipation.updateMany({
+    const { count } = await client.challengeParticipation.updateMany({
       where: {
         userId,
         leftAt: null,
@@ -194,6 +237,13 @@ export class CommunityChallengesRepository {
       },
       data: { contribution: { increment: amount } },
     });
+    // Aucun défi rejoint pour cette métrique : rien de partagé n'a bougé.
+    // Dans une transaction, c'est son appelant qui monte la version APRÈS le
+    // COMMIT : avant, une lecture concurrente rangerait l'état d'avant sous
+    // la nouvelle version, et un Redis lent retiendrait la transaction.
+    if (count > 0 && client === this.prisma) {
+      await this.cache.increment(STATS_VERSION);
+    }
   }
 
   // ── Réponses de quiz (défis CULTURE) ────────────────────────────────────
@@ -244,6 +294,7 @@ export class CommunityChallengesRepository {
   }): Promise<boolean> {
     const { at, alsoInTransaction, creditedPerDay, ...answer } = input;
     try {
+      let credited = false;
       await this.prisma.$transaction(async (tx) => {
         // Compter puis verser sous un verrou par compte : des réponses
         // parallèles liraient toutes le même décompte.
@@ -252,8 +303,12 @@ export class CommunityChallengesRepository {
         if (answer.correct && (await this.correctOnDay(tx, answer)) <= creditedPerDay) {
           await this.contribute(answer.userId, 'QUIZ_CORRECT', 1, at, tx);
           await alsoInTransaction?.(tx);
+          credited = true;
         }
       });
+      if (credited) {
+        await this.cache.increment(STATS_VERSION);
+      }
       return true;
     } catch (error) {
       // P2002 : réponse déjà comptée (utilisateur, leçon, jour local).
