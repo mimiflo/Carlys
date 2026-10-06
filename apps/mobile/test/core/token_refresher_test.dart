@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:carlys_mobile/core/auth/token_refresher.dart';
 import 'package:carlys_mobile/core/auth/token_storage.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_secure_storage.dart';
@@ -79,6 +80,30 @@ void main() {
 
     expect(await refresher.refresh(), isTrue);
     expect(await storage.readAccessToken(), 'new-access');
+    expect(await storage.readRefreshToken(), 'new-refresh');
+  });
+
+  test('trousseau qui refuse l’écriture : la session continue avec le jeton '
+      'NEUF, jamais l’ancien déjà consommé', () async {
+    final keychain = FakeSecureStorage();
+    storage = TokenStorage(keychain);
+    await storage.save(
+      const StoredTokens(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      ),
+    );
+    keychain.failWrites = PlatformException(code: 'verrouillé');
+    dio.httpClientAdapter = _FakeAdapter(
+      (_) async => _json(200, {
+        'data': {'accessToken': 'new-access', 'refreshToken': 'new-refresh'},
+      }),
+    );
+    final refresher = TokenRefresher(bareDio: dio, storage: storage);
+
+    expect(await refresher.refresh(), isTrue);
+    expect(await storage.readAccessToken(), 'new-access');
+    // Renvoyer « old-refresh » serait une réutilisation : session fermée.
     expect(await storage.readRefreshToken(), 'new-refresh');
   });
 

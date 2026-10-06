@@ -21,6 +21,10 @@ class TokenRefresher {
   /// Invoqué quand la session est définitivement invalide (reconnexion requise).
   void Function()? onSessionExpired;
 
+  /// Un rafraîchissement en cours, ou `null` : une requête qui part pendant
+  /// ce temps l'attend au lieu d'envoyer le jeton qu'il remplace.
+  Future<bool>? get inFlight => _inFlight;
+
   /// Retourne true si de nouveaux jetons ont été obtenus.
   Future<bool> refresh() {
     return _inFlight ??= _refresh().whenComplete(() => _inFlight = null);
@@ -42,12 +46,20 @@ class TokenRefresher {
         _logger.error('Réponse de rafraîchissement inattendue');
         return false;
       }
-      await _storage.save(
-        StoredTokens(
-          accessToken: data['accessToken'] as String,
-          refreshToken: data['refreshToken'] as String,
-        ),
-      );
+      try {
+        await _storage.save(
+          StoredTokens(
+            accessToken: data['accessToken'] as String,
+            refreshToken: data['refreshToken'] as String,
+          ),
+        );
+      } on Exception catch (error) {
+        // Le trousseau a refusé (appareil verrouillé, keystore occupé) : le
+        // jeton d'accès neuf est déjà en mémoire et sert la séance ; seule
+        // la persistance a manqué, et elle ne doit pas faire tomber toutes
+        // les requêtes qui attendaient ce renouvellement.
+        _logger.error('Jetons renouvelés non persistés', error: error);
+      }
       return true;
     } on DioException catch (exception) {
       final status = exception.response?.statusCode;
