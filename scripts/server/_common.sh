@@ -407,7 +407,13 @@ dc() {
   # Le dossier de configuration et le .env, exacts : compose.yml en tire la
   # liste `env_file` de l'API. L'environnement du processus l'emporte sur les
   # couches, donc sur un chemin écrit en dur dans un fichier.
-  CARLYS_CONFIG_DIR="$(config_dir_de "$file")" CARLYS_ENV_FILE="$file" docker compose \
+  #
+  # Le nombre d'exemplaires aussi, PLANCHER COMPRIS (api_replicas_wanted) :
+  # déploiement, réparation et mise à l'échelle passent tous par ici, et
+  # Compose démarre ainsi ce que la supervision attend — jamais un seul
+  # exemplaire sous CARLYS_SCALE_MIN parce que l'état en portait un.
+  CARLYS_CONFIG_DIR="$(config_dir_de "$file")" CARLYS_ENV_FILE="$file" \
+    CARLYS_API_REPLICAS="$(api_replicas_wanted "$env_name" "$file")" docker compose \
     --project-name "$(compose_project "$env_name" "$file")" \
     "${couches[@]}" \
     --file "$CARLYS_COMPOSE_FILE" \

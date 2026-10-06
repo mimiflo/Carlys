@@ -131,7 +131,12 @@ metrics_summary() {
     $1 == "carlys_api_online_users" { u = $2 }
 
     # Debit et latence : par processus, donc additionnes.
+    # La latence ECARTE les reponses du coach (une a trois minutes, flux
+    # compris) : elles attendent le modele, pas l API. Comptees, quelques
+    # questions suffisaient a ajouter des exemplaires inutiles, chacun avec
+    # ses connexions a la base, alors que le goulot etait ailleurs.
     /^carlys_api_http_requests_total\{/                  { requetes += $2 }
+    /route="[^"]*\/coach\/conversations\/:id\/messages(\/stream)?"/ { next }
     /^carlys_api_http_request_duration_seconds_sum\{/    { lat_somme += $2 }
     /^carlys_api_http_request_duration_seconds_count\{/  { lat_compte += $2 }
 

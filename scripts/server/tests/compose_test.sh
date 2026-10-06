@@ -56,9 +56,28 @@ production="$(rendu production)"
 for service in api admin postgres redis minio; do
   verifier "recette : $service a un plafond mémoire" oui \
     "$(champ "$recette" ".services.$service.mem_limit // \"\"" | grep -qE '^[1-9][0-9]*$' && echo oui || echo non)"
+done
+# En production, seuls l'API (une fuite ferait swapper l'hôte, base
+# comprise) et Redis (son cache croîtrait sans fin) sont bornés ; la base,
+# l'admin et le stockage attendent de connaître la RAM de l'hôte.
+for service in admin postgres minio; do
   verifier "production : $service n'a pas de plafond par défaut" aucun \
     "$(champ "$production" ".services.$service.mem_limit // \"aucun\"")"
 done
+verifier "production : chaque exemplaire de l'API est plafonné" "$(octets 768m)" \
+  "$(champ "$production" '.services.api.mem_limit')"
+verifier "production : le tas de V8 s'arrête sous le plafond" oui \
+  "$(champ "$production" '.services.api.environment.NODE_OPTIONS' | grep -q -- '--max-old-space-size=576' && echo oui || echo non)"
+verifier "postgres : requêtes lentes journalisées SANS leurs valeurs" oui \
+  "$(champ "$production" '.services.postgres.command | join(" ")' | grep -q 'log_parameter_max_length=0' && echo oui || echo non)"
+verifier "postgres : /dev/shm assez grand pour les requêtes parallèles" "$(octets 1g)" \
+  "$(champ "$production" '.services.postgres.shm_size')"
+verifier "api : le temps de finir ce qui est en vol avant SIGKILL" 30s \
+  "$(champ "$production" '.services.api.stop_grace_period')"
+verifier "production : Redis est plafonné" "$(octets 1g)" \
+  "$(champ "$production" '.services.redis.mem_limit')"
+verifier "production : Redis évince sous son plafond, jamais une clé sans échéance" oui \
+  "$(champ "$production" '.services.redis.command | join(" ")' | grep -q -- '--maxmemory 512mb --maxmemory-policy volatile-lru' && echo oui || echo non)"
 
 # Le coach sur le serveur : ABSENT tant qu'on ne l'allume pas — pas seulement
 # à zéro exemplaire, sinon `up -d` tirerait quand même son image de près de
@@ -96,7 +115,7 @@ maxmem="$(sed -n 's/.*--maxmemory \([0-9]*[kmgKMG][bB]*\).*/\1/p' <<< "$commande
 verifier "recette : Redis a un --maxmemory sous son plafond" oui \
   "$([ -n "$maxmem" ] && [ "$(octets "$maxmem")" -lt "$(champ "$recette" '.services.redis.mem_limit')" ] && echo oui || echo non)"
 verifier "recette : Redis n'évince que des clés à échéance" oui \
-  "$(grep -q -- '--maxmemory-policy volatile-ttl' <<< "$commande_redis" && echo oui || echo non)"
+  "$(grep -q -- '--maxmemory-policy volatile-lru' <<< "$commande_redis" && echo oui || echo non)"
 
 for env_name in staging production; do
   json="$recette"; [ "$env_name" = production ] && json="$production"

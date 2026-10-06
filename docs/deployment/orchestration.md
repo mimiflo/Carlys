@@ -205,7 +205,10 @@ pic.
 **La latence ajoute UN cran, elle ne fixe pas la cible.** Elle ne dit pas
 combien d'exemplaires il faut, elle dit que ceux qui tournent n'y arrivent pas.
 Une pile qui rame sans que le débit l'explique — requêtes lentes, base sous
-tension — a besoin d'aide, pas de tripler.
+tension — a besoin d'aide, pas de tripler. Les réponses du coach (une à trois
+minutes, flux compris) en sont **écartées** : elles attendent le modèle, pas
+l'API, et quelques questions suffisaient à ajouter des exemplaires inutiles,
+chacun avec ses connexions à la base.
 
 **Une mesure inconnue ne compte pas.** Au premier passage, il n'y a pas de
 débit (il faut deux échantillons pour dériver un compteur). Cette absence ne
@@ -271,17 +274,32 @@ exemplaire par cœur, ils se disputent le même processeur — on paie la mémoi
 de chacun sans gagner de débit. Et jamais plus que la plage de ports :
 au-delà, Docker échoue **en cours de route** (« all ports are allocated ») et
 laisse la pile à moitié mise à l'échelle. `carlysctl` refuse donc avant
-d'appeler Compose.
+d'appeler Compose. En production, le plafond est **fixé à 6** : chaque
+exemplaire ouvre jusqu'à 10 connexions PostgreSQL (`connection_limit`) pour
+`max_connections=100`, et « un par cœur » dépassait ce budget dès un hôte de
+10 cœurs. La recette, qui partage l'hôte, s'arrête à 2.
+
+Le **plancher** vaut 2 en production : avec un seul exemplaire, son plantage
+coupe tout. Le déploiement le respecte aussi — il ne repart jamais sous
+`CARLYS_SCALE_MIN`, même sans état enregistré.
 
 ### 4.3 Les réglages
+
+> **Au prochain déploiement** qui suit le réglage de capacité du 6 octobre
+> 2026, PostgreSQL redémarre UNE fois (nouvelle commande : requêtes lentes
+> journalisées sans leurs valeurs, `max_wal_size`, `/dev/shm` à 1 Go) et
+> les exemplaires de l'API sont recréés (délai d'arrêt de 30 s). L'ordre du
+> déploiement le rend sûr — la base revient saine avant la sauvegarde et la
+> migration — mais la base est coupée quelques secondes : déployer la
+> production peu après la recette, à une heure creuse.
 
 Tous dans la configuration versionnée (`infrastructure/server/config/commun.conf`,
 ou `<env>.conf` pour ce qui diffère — ADR 0017), tous facultatifs.
 
 | Variable                         | Défaut  |                                      |
 | -------------------------------- | ------- | ------------------------------------ |
-| `CARLYS_SCALE_MIN`               | 1       | plancher                             |
-| `CARLYS_SCALE_MAX`               | `nproc` | plafond, borné par la plage de ports |
+| `CARLYS_SCALE_MIN`               | 1       | plancher (2 en production)           |
+| `CARLYS_SCALE_MAX`               | `nproc` | plafond (6 en production, 2 en recette), borné par la plage de ports |
 | `CARLYS_SCALE_USERS_PER_REPLICA` | 250     |                                      |
 | `CARLYS_SCALE_RPS_PER_REPLICA`   | 40      |                                      |
 | `CARLYS_SCALE_LATENCY_HIGH_MS`   | 750     | au-delà, un cran de plus             |

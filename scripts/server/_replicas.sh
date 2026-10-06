@@ -28,8 +28,16 @@ api_host_port_last() {
 }
 
 api_replicas_wanted() {
-  local env_name="$1" file="$2"
-  env_value CARLYS_API_REPLICAS "$file" 1
+  local env_name="$1" file="$2" voulu mini
+  voulu="$(env_value CARLYS_API_REPLICAS "$file" 1)"
+  # Jamais sous le plancher de la mise à l'échelle : un déploiement qui
+  # repartirait à un seul exemplaire laisserait la panne de celui-ci tout
+  # couper jusqu'au prochain passage de la supervision.
+  mini="$(env_value CARLYS_SCALE_MIN "$file" 1)"
+  case "$voulu" in '' | *[!0-9]*) ;; *) case "$mini" in '' | *[!0-9]*) ;; *)
+    [ "$voulu" -lt "$mini" ] && voulu="$mini" ;;
+  esac ;; esac
+  printf '%s' "$voulu"
 }
 
 # Combien d'exemplaires la plage de ports peut accueillir.
@@ -161,6 +169,7 @@ upstream $(nginx_upstream_name "$env_name") {
 
 $(for port in "$@"; do printf '    server 127.0.0.1:%s max_fails=3 fail_timeout=10s;\n' "$port"; done)
     keepalive 32;
+    keepalive_requests 1000;
 }
 FIN
 }

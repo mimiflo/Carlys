@@ -58,11 +58,13 @@ x-service: &service
 #
 #   - la RECETTE est plafonnée (valeurs de config/staging.conf, justifiées
 #     là-bas) : c'est elle qui essuie les plâtres, c'est elle qu'on borne ;
-#   - la PRODUCTION n'a pas de plafond par défaut (`0` : aucun), mais son
-#     PostgreSQL porte `oom_score_adj` négatif (config/production.conf) : si
-#     la machine manque de mémoire malgré tout, le noyau choisit un autre
-#     processus que la base. Un plafond de production mal calibré tuerait la
-#     production elle-même — il se pose en connaissance de la RAM de l'hôte.
+#   - la PRODUCTION ne borne que l'API (par exemplaire, quatre fois sa
+#     mesure) et Redis (son cache croîtrait sans fin) ; sa base, son admin et
+#     son stockage n'ont pas de plafond (`0` : aucun), et son PostgreSQL
+#     porte `oom_score_adj` négatif (config/production.conf) : si la machine
+#     manque de mémoire malgré tout, le noyau choisit un autre processus que
+#     la base. Un plafond de base mal calibré tuerait la production
+#     elle-même — il se pose en connaissance de la RAM de l'hôte.
 #
 # Un conteneur qui dépasse son plafond est tué et relancé par `restart:` — ce
 # qui se voit (`carlysctl status`), là où une machine qui swappe dégrade tout
@@ -122,6 +124,24 @@ services:
     #
     # max_connections reste à 100 : les pools Prisma sont bornés en
     # conséquence (DATABASE_URL, connection_limit=10 — voir les gabarits de secrets).
+    #
+    #   log_min_duration_statement = 500ms — toute requête plus lente se
+    #     journalise avec son texte : sans elle, rien ne dit QUELLE requête
+    #     ralentit l'API sous charge (`carlysctl compose <env> logs postgres`).
+    #   log_parameter_max_length = 0 — le TEXTE de la requête, jamais ses
+    #     VALEURS : Prisma envoie des requêtes paramétrées, et PostgreSQL
+    #     journaliserait sinon `$1 = '…'` en entier — adresses e-mail,
+    #     empreintes de jetons, mots du coach. Les journaux durent des
+    #     semaines et survivent à la purge des comptes.
+    #   max_wal_size = 2GB — le défaut (1GB) déclenche des points de contrôle
+    #     forcés en rafale pendant les pointes d'écriture (lundi matin,
+    #     synchronisations) : chacun écrit d'un coup toutes les pages sales.
+    #
+    # `shm_size` : Docker donne 64 Mo à /dev/shm, où les requêtes PARALLÈLES
+    # (Parallel Hash, Gather) prennent leur mémoire partagée. À 64 Mo, elles
+    # échouent — « could not resize shared memory segment » — au lieu d'être
+    # seulement lentes.
+    shm_size: ${CARLYS_POSTGRES_SHM_SIZE:-1g}
     command:
       - postgres
       - -c
@@ -132,6 +152,12 @@ services:
       - shared_buffers=${CARLYS_POSTGRES_SHARED_BUFFERS:-128MB}
       - -c
       - effective_cache_size=${CARLYS_POSTGRES_EFFECTIVE_CACHE_SIZE:-4GB}
+      - -c
+      - log_min_duration_statement=${CARLYS_POSTGRES_SLOW_QUERY_MS:-500}
+      - -c
+      - log_parameter_max_length=0
+      - -c
+      - max_wal_size=${CARLYS_POSTGRES_MAX_WAL_SIZE:-2GB}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER est obligatoire}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
@@ -390,6 +416,10 @@ services:
     # VIDE arrive comme chaîne vide et fait échouer la validation — elle doit
     # rester COMMENTÉE.
     env_file: *env-file
+    # 30 s, pas les 10 s de Docker : à l'arrêt, Nest finit les requêtes en
+    # cours et draine ce qui part sans être attendu (audit, e-mails,
+    # notifications). Au-delà, SIGKILL l'emportait.
+    stop_grace_period: 30s
     environment:
       # Le processus Node date ses journaux et ses jetons : même exigence UTC
       # que PostgreSQL.

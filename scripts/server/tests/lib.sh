@@ -168,6 +168,8 @@ banc_docker_factice() {
 #!/usr/bin/env bash
 set -uo pipefail
 printf '%s\n' "$*" >> "$FAUX_JOURNAL"
+# Ce que Compose lirait comme nombre d'exemplaires (`deploy.replicas`).
+[ "${1-}" = compose ] && printf 'exemplaires-api=%s\n' "${CARLYS_API_REPLICAS-}" >> "$FAUX_JOURNAL"
 exemplaires="$(dirname "$FAUX_JOURNAL")/exemplaires"
 case "${1-}" in
   login) cat > /dev/null; exit 0 ;;

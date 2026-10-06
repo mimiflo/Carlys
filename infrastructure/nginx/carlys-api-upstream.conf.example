@@ -40,6 +40,10 @@
 # inactives 60 s (`keepalive_timeout`) : l'API les garde 65 s
 # (`apps/api/src/main.ts`). L'ordre compte — si Node fermait le premier,
 # nginx réutiliserait une connexion morte et répondrait 502.
+#
+# `keepalive_requests 1000` : nginx 1.18 (Debian 11, Ubuntu 22.04) ferme une
+# connexion gardée après 100 requêtes — sous charge, une réouverture toutes
+# les quelques secondes par exemplaire. 1000 est le défaut depuis 1.19.10.
 
 upstream carlys_api_production {
     least_conn;
@@ -47,4 +51,5 @@ upstream carlys_api_production {
     server 127.0.0.1:3000 max_fails=3 fail_timeout=10s;
 
     keepalive 32;
+    keepalive_requests 1000;
 }

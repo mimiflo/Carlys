@@ -153,9 +153,13 @@ scale_decide() {
 # d'autre ramènerait l'ancien nombre. L'amont Nginx est régénéré APRÈS, une
 # fois que Docker a attribué les ports.
 scale_apply() {
-  local env_name="$1" file="$2" cible="$3" maxi
+  local env_name="$1" file="$2" cible="$3" maxi mini
   maxi="$(scale_max "$env_name" "$file")"
+  mini="$(scale_min "$file")"
   [ "$cible" -ge 1 ] || die "Nombre d'exemplaires invalide : $cible"
+  [ "$cible" -ge "$mini" ] || die \
+    "Impossible de descendre à $cible exemplaire(s) : le plancher de cet environnement est $mini." \
+    "Il vient de CARLYS_SCALE_MIN, dans infrastructure/server/config/."
   [ "$cible" -le "$maxi" ] || die \
     "Impossible de monter à $cible exemplaires : le plafond de cet environnement est $maxi." \
     "Il vient du plus petit de CARLYS_SCALE_MAX (ou du nombre de cœurs) et de la" \

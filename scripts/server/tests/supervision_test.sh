@@ -156,6 +156,19 @@ echo 'LOG_LEVEL=warn' >> "$ENV_STAGING"
 verifier "env_value : le .env l'emporte encore (migration sans surprise)" warn "$(lire LOG_LEVEL "$ENV_STAGING" x)"
 verifier "env_value : un fichier hors environnement n'a pas de couches" x \
   "$(printf 'A=1\n' > "$BANC/autre.env"; lire LOG_LEVEL "$BANC/autre.env" x)"
+voulus() { appeler api_replicas_wanted staging "$ENV_STAGING" > /dev/null; cat "$BANC_SORTIE"; }
+verifier "exemplaires : sans état ni plancher, un seul" 1 "$(voulus)"
+printf 'CARLYS_SCALE_MIN=2\n' >> "$CARLYS_CONFIG_DIR/staging.conf"
+verifier "exemplaires : jamais sous CARLYS_SCALE_MIN, même sans état" 2 "$(voulus)"
+: > "$FAUX_JOURNAL"
+appeler dc staging "$ENV_STAGING" up -d > /dev/null
+verifier "… et c'est ce que Compose reçoit, pas seulement ce qui s'affiche" oui \
+  "$(grep -q '^exemplaires-api=2$' "$FAUX_JOURNAL" && echo oui || echo non)"
+verifier "… et « scale » refuse de descendre sous le plancher" 1 \
+  "$(appeler scale_apply staging "$ENV_STAGING" 1)"
+printf 'CARLYS_API_REPLICAS=4\n' > "$CARLYS_ROOT/staging/etat.env"
+verifier "exemplaires : l'état au-dessus du plancher est gardé" 4 "$(voulus)"
+rm -f "$CARLYS_ROOT/staging/etat.env"
 : > "$FAUX_JOURNAL"
 appeler dc staging "$ENV_STAGING" ps > /dev/null
 verifier "dc : les couches dans l'ordre, le .env en dernier" \
@@ -475,6 +488,33 @@ banc_nettoyer
 drainage '?'
 verifier "travail illisible (/metrics refusé) : réduction remise, personne n'est arrêté" non \
   "$(grep -q '^stop' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+# La latence qui décide d'ajouter un exemplaire écarte les réponses du coach :
+# une à trois minutes chacune, à attendre le modèle et non l'API.
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+printf 'carlys_staging-api-1|3100\n' > "$BANC/exemplaires"
+cat > "$BANC/bin/curl" << 'FAUX'
+#!/usr/bin/env bash
+cat << 'METRIQUES'
+carlys_api_http_requests_in_flight 1
+carlys_api_http_requests_total{method="GET",route="/api/v1/programs",status="200"} 10
+carlys_api_http_request_duration_seconds_sum{method="GET",route="/api/v1/programs",status="200"} 1.5
+carlys_api_http_request_duration_seconds_count{method="GET",route="/api/v1/programs",status="200"} 10
+carlys_api_http_requests_total{method="POST",route="/api/v1/coach/conversations/:id/messages/stream",status="200"} 2
+carlys_api_http_request_duration_seconds_sum{method="POST",route="/api/v1/coach/conversations/:id/messages/stream",status="200"} 240
+carlys_api_http_request_duration_seconds_count{method="POST",route="/api/v1/coach/conversations/:id/messages/stream",status="200"} 2
+carlys_api_http_request_duration_seconds_sum{method="POST",route="/api/v1/coach/conversations/:id/messages",status="200"} 90
+carlys_api_http_request_duration_seconds_count{method="POST",route="/api/v1/coach/conversations/:id/messages",status="200"} 1
+METRIQUES
+printf '\n#--code--200'
+FAUX
+chmod +x "$BANC/bin/curl"
+appeler metrics_summary staging "$ENV_STAGING" > /dev/null
+verifier "latence : les réponses du coach n'y comptent pas, les requêtes si" \
+  "requetes=12 latence_somme=1.500000 latence_compte=10" \
+  "$(grep -o 'requetes=[0-9]* latence_somme=[0-9.]* latence_compte=[0-9]*' "$BANC_SORTIE")"
 banc_nettoyer
 
 # L'api-1 est malade : c'est elle qui part, même au plus petit numéro, et
