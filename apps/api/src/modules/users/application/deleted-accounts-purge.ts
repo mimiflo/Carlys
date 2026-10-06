@@ -27,6 +27,30 @@ export const DEFAULT_PURGE_DELAY_DAYS = 30;
  */
 export const ORPHAN_PAYMENT_EVENT_RETENTION_DAYS = 90;
 
+/**
+ * Conservation d'une session CLOSE (révoquée, ou expirée faute de
+ * renouvellement) et d'un jeton de renouvellement échu : 30 jours. Chaque
+ * rotation écrit un jeton, et rien n'en effaçait aucun hors suppression de
+ * compte : des dizaines de lignes par personne et par jour, pour toujours,
+ * et autant de sessions mortes avec leur adresse IP et leur `userAgent`.
+ *
+ * LE COMPROMIS, assumé : un jeton ROTATED est un PIÈGE — présenté, il
+ * révoque toute sa session, donc éjecte qui en aurait volé la suite. Effacé,
+ * il ne rend plus qu'un 401. Le piège tient donc TTL + 30 jours après
+ * l'émission du jeton (60 jours par défaut), plus « pour toujours ». Le
+ * borner autrement, c'est une durée de vie ABSOLUE de session (reconnexion
+ * forcée) : une décision produit, pas une purge.
+ */
+export const DEAD_SESSION_RETENTION_DAYS = 30;
+
+/** Ce que la passe des sessions a effacé (ou compté, à blanc). */
+export interface SessionsPurged {
+  /** Sessions closes ; leurs jetons et jetons push partent par cascade. */
+  readonly sessions: number;
+  /** Jetons de renouvellement échus, toutes sessions confondues. */
+  readonly refreshTokens: number;
+}
+
 /** L'accès aux comptes supprimés — la base, pour la purge et elle seule. */
 export interface DeletedAccountsLedger {
   /** Identifiants des comptes DELETED supprimés avant `before`. */
@@ -42,6 +66,10 @@ export interface DeletedAccountsLedger {
   countOrphanPaymentEventsBefore(before: Date): Promise<number>;
   /** Les efface ; rend combien. */
   eraseOrphanPaymentEventsBefore(before: Date): Promise<number>;
+  /** Jetons échus avant `before`, sessions closes (révoquées ou expirées) avant `before`. */
+  countDeadSessionsBefore(before: Date): Promise<SessionsPurged>;
+  /** Les efface ; rend combien. */
+  eraseDeadSessionsBefore(before: Date): Promise<SessionsPurged>;
 }
 
 export interface PurgeOptions {
@@ -65,6 +93,12 @@ export interface PurgeReport {
    * passe quotidienne seule s'en charge, jamais un effacement ciblé.
    */
   readonly paymentEventsErased: number;
+  /**
+   * Sessions closes et jetons échus depuis plus de
+   * [DEAD_SESSION_RETENTION_DAYS] : effacés (comptés à blanc), par la passe
+   * quotidienne seule.
+   */
+  readonly sessionsErased: SessionsPurged;
   /** Un message par compte qui n'a pas pu être effacé. */
   readonly failures: readonly string[];
   /** `--compte` visait un compte introuvable ou encore actif. */
@@ -88,7 +122,8 @@ export interface PurgeReport {
  *     trace des webhooks de paiement qui le nomment.
  *
  * La passe quotidienne efface aussi les événements de paiement en échec qui
- * ne nomment AUCUN compte, passé [ORPHAN_PAYMENT_EVENT_RETENTION_DAYS].
+ * ne nomment AUCUN compte, passé [ORPHAN_PAYMENT_EVENT_RETENTION_DAYS], et
+ * les sessions closes et jetons échus, passé [DEAD_SESSION_RETENTION_DAYS].
  *
  * Seul un compte DELETED est effacé, jamais un compte actif ou suspendu, y
  * compris par `--compte`. Le journal d'audit n'est PAS effacé : il perd le
@@ -107,26 +142,15 @@ export async function purgeDeletedAccounts(
       erased: 0,
       objectsDeleted: 0,
       paymentEventsErased: 0,
+      sessionsErased: AUCUNE_SESSION,
       failures: [],
       refused: `Le compte ${options.accountId ?? ''} n’est pas un compte supprimé : rien n’est effacé.`,
     };
   }
-  const paymentEventsErased = await orphanPaymentEvents(ledger, options);
-  if (options.dryRun) {
-    return {
-      eligible: accounts.length,
-      erased: 0,
-      objectsDeleted: 0,
-      paymentEventsErased,
-      failures: [],
-      refused: null,
-    };
-  }
-
   let erased = 0;
   let objectsDeleted = 0;
   const failures: string[] = [];
-  for (const id of accounts) {
+  for (const id of options.dryRun ? [] : accounts) {
     try {
       objectsDeleted += await deleteEverythingUnder(store, mealPhotoPrefixOf(id));
       if (await ledger.eraseAccount(id)) {
@@ -136,30 +160,55 @@ export async function purgeDeletedAccounts(
       failures.push(`${id} : ${(error as Error).message}`);
     }
   }
+  // Le ménage APRÈS les comptes, et chacun pour soi : son échec (base
+  // coupée, délai dépassé sur un gros arriéré de jetons) ne doit jamais
+  // retarder l'effacement que les CGU promettent à 30 jours.
+  const paymentEventsErased = await dailyPass(
+    options,
+    0,
+    ORPHAN_PAYMENT_EVENT_RETENTION_DAYS,
+    (before) => ledger.countOrphanPaymentEventsBefore(before),
+    (before) => ledger.eraseOrphanPaymentEventsBefore(before),
+    (message) => failures.push(`paiements orphelins : ${message}`),
+  );
+  const sessionsErased = await dailyPass(
+    options,
+    AUCUNE_SESSION,
+    DEAD_SESSION_RETENTION_DAYS,
+    (before) => ledger.countDeadSessionsBefore(before),
+    (before) => ledger.eraseDeadSessionsBefore(before),
+    (message) => failures.push(`sessions closes : ${message}`),
+  );
   return {
     eligible: accounts.length,
     erased,
     objectsDeleted,
     paymentEventsErased,
+    sessionsErased,
     failures,
     refused: null,
   };
 }
 
+const AUCUNE_SESSION: SessionsPurged = { sessions: 0, refreshTokens: 0 };
+
 /** La passe quotidienne seule : un effacement ciblé ne touche qu'à son compte. */
-function orphanPaymentEvents(
-  ledger: DeletedAccountsLedger,
+function dailyPass<T>(
   options: PurgeOptions,
-): Promise<number> {
+  none: T,
+  retentionDays: number,
+  count: (before: Date) => Promise<T>,
+  erase: (before: Date) => Promise<T>,
+  fail: (message: string) => void,
+): Promise<T> {
   if (options.accountId !== undefined) {
-    return Promise.resolve(0);
+    return Promise.resolve(none);
   }
-  const before = new Date(
-    options.now.getTime() - ORPHAN_PAYMENT_EVENT_RETENTION_DAYS * 24 * 3_600_000,
-  );
-  return options.dryRun
-    ? ledger.countOrphanPaymentEventsBefore(before)
-    : ledger.eraseOrphanPaymentEventsBefore(before);
+  const before = new Date(options.now.getTime() - retentionDays * 24 * 3_600_000);
+  return (options.dryRun ? count(before) : erase(before)).catch((error: unknown) => {
+    fail(error instanceof Error ? error.message : String(error));
+    return none;
+  });
 }
 
 /**

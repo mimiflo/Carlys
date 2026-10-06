@@ -1,5 +1,8 @@
 import { type Prisma, type PrismaClient, UserStatus } from '@prisma/client';
-import { type DeletedAccountsLedger } from '../application/deleted-accounts-purge';
+import {
+  type DeletedAccountsLedger,
+  type SessionsPurged,
+} from '../application/deleted-accounts-purge';
 
 /**
  * Délai de la transaction d'effacement d'un compte. Celui de Prisma par
@@ -19,6 +22,14 @@ export const ERASE_ACCOUNT_TIMEOUT_MS = 60_000;
  */
 function orphelinsAvant(before: Date): Prisma.SubscriptionEventWhereInput {
   return { processedAt: null, userId: null, receivedAt: { lt: before } };
+}
+
+/**
+ * Une session CLOSE avant `before` : révoquée, ou expirée (son expiration
+ * glisse à chaque rotation, donc plus aucun renouvellement depuis).
+ */
+function sessionsClosesAvant(before: Date): Prisma.UserSessionWhereInput {
+  return { OR: [{ revokedAt: { lt: before } }, { expiresAt: { lt: before } }] };
 }
 
 /**
@@ -50,6 +61,33 @@ export class PrismaDeletedAccountsLedger implements DeletedAccountsLedger {
       where: orphelinsAvant(before),
     });
     return count;
+  }
+
+  async countDeadSessionsBefore(before: Date): Promise<SessionsPurged> {
+    const [sessions, refreshTokens] = await Promise.all([
+      this.prisma.userSession.count({ where: sessionsClosesAvant(before) }),
+      this.prisma.refreshToken.count({ where: { expiresAt: { lt: before } } }),
+    ]);
+    return { sessions, refreshTokens };
+  }
+
+  /**
+   * Les jetons échus D'ABORD : le compte rendu dit alors la même chose à
+   * blanc et pour de bon. Les sessions closes emportent ensuite, par
+   * cascade, leurs jetons restants et leurs jetons push. Deux instructions
+   * hors transaction : chacune est sûre seule, et rejouée le lendemain.
+   * ponytail: balayage sans index sur `expiresAt`, une fois par jour sur une
+   * table que cette purge garde bornée ; un index (écrit à chaque rotation)
+   * si le balayage se mesure un jour.
+   */
+  async eraseDeadSessionsBefore(before: Date): Promise<SessionsPurged> {
+    const jetons = await this.prisma.refreshToken.deleteMany({
+      where: { expiresAt: { lt: before } },
+    });
+    const sessions = await this.prisma.userSession.deleteMany({
+      where: sessionsClosesAvant(before),
+    });
+    return { sessions: sessions.count, refreshTokens: jetons.count };
   }
 
   /**

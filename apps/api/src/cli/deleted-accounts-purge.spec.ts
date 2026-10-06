@@ -33,6 +33,7 @@ describe('deleted-accounts-purge — arguments', () => {
         erased: 1,
         objectsDeleted: 3,
         paymentEventsErased: 4,
+        sessionsErased: { sessions: 5, refreshTokens: 6 },
         failures: ['id : panne'],
         refused: null,
       },
@@ -42,6 +43,8 @@ describe('deleted-accounts-purge — arguments', () => {
     expect(texte).toContain('comptes effacés    : 1');
     expect(texte).toContain('photos effacées    : 3');
     expect(texte).toContain('paiements orphelins effacés (plus de 90 jours) : 4');
+    expect(texte).toContain('sessions closes effacées (plus de 30 jours) : 5');
+    expect(texte).toContain('jetons de renouvellement échus effacés : 6');
     expect(texte).toContain('ÉCHEC : id : panne');
   });
 

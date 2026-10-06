@@ -36,6 +36,7 @@ import { type Env, validateEnv } from '../config/env.schema';
 import { type PrivateObjectStore } from '../infrastructure/storage/private-object-store';
 import { S3PrivateObjectStore } from '../infrastructure/storage/s3-private-object-store';
 import {
+  DEAD_SESSION_RETENTION_DAYS,
   DEFAULT_PURGE_DELAY_DAYS,
   type DeletedAccountsLedger,
   ORPHAN_PAYMENT_EVENT_RETENTION_DAYS,
@@ -149,6 +150,8 @@ export function formatReport(report: PurgeReport, args: PurgeArgs): string {
     ...(args.accountId === undefined
       ? [
           `  paiements orphelins effacés (plus de ${ORPHAN_PAYMENT_EVENT_RETENTION_DAYS} jours) : ${report.paymentEventsErased}`,
+          `  sessions closes effacées (plus de ${DEAD_SESSION_RETENTION_DAYS} jours) : ${report.sessionsErased.sessions}`,
+          `  jetons de renouvellement échus effacés : ${report.sessionsErased.refreshTokens}`,
         ]
       : []),
     ...report.failures.map((failure) => `  ÉCHEC : ${failure}`),

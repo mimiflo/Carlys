@@ -517,4 +517,50 @@ describe('Purge des comptes supprimés (e2e)', () => {
       await prisma.subscriptionEvent.deleteMany({ where: { id: { in: ids } } });
     }
   });
+
+  it('les sessions closes et les jetons échus partent après 30 jours ; la session vivante reste', async () => {
+    const jours = (n: number) => new Date(Date.now() - n * 86_400_000);
+    const u = await register('sessions');
+    const session = (expiresAt: Date, revokedAt: Date | null) =>
+      prisma.userSession.create({ data: { userId: u.user.id, expiresAt, revokedAt } });
+    const jeton = (sessionId: string, expiresAt: Date) =>
+      prisma.refreshToken.create({
+        data: { sessionId, tokenHash: `e2e-purge-${randomUUID()}`, expiresAt },
+      });
+    await session(jours(31), null); // expirée, jamais renouvelée
+    const revoquee = await session(jours(-10), jours(31));
+    const revoqueeHier = await session(jours(-10), jours(1));
+    const vivante = await prisma.userSession.findFirstOrThrow({
+      where: { userId: u.user.id, revokedAt: null, expiresAt: { gt: new Date() } },
+    });
+    const vieuxJeton = await jeton(vivante.id, jours(31));
+    const jetonDeRevoquee = await jeton(revoquee.id, jours(-10));
+
+    const ledger = new PrismaDeletedAccountsLedger(prisma);
+    const store = new InMemoryObjectStore();
+    const simulation = await purgeDeletedAccounts(ledger, store, {
+      now: new Date(),
+      delayDays: 30,
+      dryRun: true,
+    });
+    expect(simulation.sessionsErased.sessions).toBeGreaterThanOrEqual(2);
+    expect(simulation.sessionsErased.refreshTokens).toBeGreaterThanOrEqual(1);
+    expect(await prisma.userSession.count({ where: { userId: u.user.id } })).toBe(4);
+
+    await purgeDeletedAccounts(ledger, store, { now: new Date(), delayDays: 30, dryRun: false });
+
+    const restes = await prisma.userSession.findMany({
+      where: { userId: u.user.id },
+      select: { id: true },
+    });
+    expect(restes.map((ligne) => ligne.id).sort()).toEqual([revoqueeHier.id, vivante.id].sort());
+    expect(await prisma.refreshToken.count({ where: { id: vieuxJeton.id } })).toBe(0);
+    // Par cascade, avec sa session révoquée.
+    expect(await prisma.refreshToken.count({ where: { id: jetonDeRevoquee.id } })).toBe(0);
+    // La session vivante sert toujours : son jeton du jour se renouvelle.
+    await server()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: u.tokens.refreshToken })
+      .expect(200);
+  });
 });

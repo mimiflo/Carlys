@@ -1,8 +1,10 @@
 import { InMemoryObjectStore } from '../../../../test/support/in-memory-object-store';
 import {
+  DEAD_SESSION_RETENTION_DAYS,
   type DeletedAccountsLedger,
   ORPHAN_PAYMENT_EVENT_RETENTION_DAYS,
   purgeDeletedAccounts,
+  type SessionsPurged,
 } from './deleted-accounts-purge';
 
 /// CE QUE CE FICHIER PROTÈGE : la purge efface les comptes SUPPRIMÉS depuis
@@ -26,7 +28,24 @@ class FauxRegistre implements DeletedAccountsLedger {
   constructor(
     private readonly comptes: Supprime[],
     public orphelins: Date[] = [],
+    /** Fermeture des sessions closes, expiration des jetons. */
+    public sessions: Date[] = [],
+    public jetons: Date[] = [],
   ) {}
+
+  countDeadSessionsBefore(before: Date): Promise<SessionsPurged> {
+    return Promise.resolve({
+      sessions: this.sessions.filter((d) => d < before).length,
+      refreshTokens: this.jetons.filter((d) => d < before).length,
+    });
+  }
+
+  async eraseDeadSessionsBefore(before: Date): Promise<SessionsPurged> {
+    const compte = await this.countDeadSessionsBefore(before);
+    this.sessions = this.sessions.filter((d) => d >= before);
+    this.jetons = this.jetons.filter((d) => d >= before);
+    return compte;
+  }
 
   countOrphanPaymentEventsBefore(before: Date): Promise<number> {
     return Promise.resolve(this.orphelins.filter((recu) => recu < before).length);
@@ -80,6 +99,7 @@ describe('purgeDeletedAccounts', () => {
       erased: 1,
       objectsDeleted: 2,
       paymentEventsErased: 0,
+      sessionsErased: { sessions: 0, refreshTokens: 0 },
       failures: [],
       refused: null,
     });
@@ -167,5 +187,51 @@ describe('purgeDeletedAccounts', () => {
     const rapport = await purgeDeletedAccounts(registre, store, { ...options, dryRun: false });
     expect(rapport.paymentEventsErased).toBe(1);
     expect(registre.orphelins).toEqual([jours(89)]);
+  });
+
+  it('sessions closes et jetons échus : effacés après 30 jours, par la passe quotidienne', async () => {
+    // Une ligne par rotation, jamais effacée hors suppression de compte.
+    const jours = (n: number) => new Date(MAINTENANT.getTime() - n * 86_400_000);
+    expect(DEAD_SESSION_RETENTION_DAYS).toBe(30);
+    const registre = new FauxRegistre(
+      [compte('hier', 1)],
+      [],
+      [jours(31), jours(29)],
+      [jours(31), jours(31), jours(2)],
+    );
+    const store = new InMemoryObjectStore();
+    const options = { now: MAINTENANT, delayDays: 30 };
+
+    const simulation = await purgeDeletedAccounts(registre, store, { ...options, dryRun: true });
+    expect(simulation.sessionsErased).toEqual({ sessions: 1, refreshTokens: 2 });
+    expect(registre.jetons).toHaveLength(3);
+
+    const cible = await purgeDeletedAccounts(registre, store, {
+      ...options,
+      accountId: 'hier',
+      dryRun: false,
+    });
+    expect(cible.sessionsErased).toEqual({ sessions: 0, refreshTokens: 0 });
+    expect(registre.sessions).toHaveLength(2);
+
+    const rapport = await purgeDeletedAccounts(registre, store, { ...options, dryRun: false });
+    expect(rapport.sessionsErased).toEqual({ sessions: 1, refreshTokens: 2 });
+    expect(registre.sessions).toEqual([jours(29)]);
+    expect(registre.jetons).toEqual([jours(2)]);
+  });
+
+  it('passe des sessions en panne : les comptes sont effacés quand même, l’échec est rapporté', async () => {
+    const registre = new FauxRegistre([compte('ancien', 40)]);
+    registre.eraseDeadSessionsBefore = () => Promise.reject(new Error('délai dépassé'));
+
+    const rapport = await purgeDeletedAccounts(registre, new InMemoryObjectStore(), {
+      now: MAINTENANT,
+      delayDays: 30,
+      dryRun: false,
+    });
+
+    expect(registre.effaces).toEqual(['ancien']);
+    expect(rapport.sessionsErased).toEqual({ sessions: 0, refreshTokens: 0 });
+    expect(rapport.failures).toEqual(['sessions closes : délai dépassé']);
   });
 });

@@ -196,6 +196,11 @@ invalide donc immédiatement ses access tokens.
   les sessions au lieu de les révoquer.
 - Relations : n–1 `User` ; 1–n `RefreshToken` ; 1–n `DeviceToken` (les
   jetons push tombent avec la session).
+- **Durée** : une session close — révoquée, ou expirée faute de
+  renouvellement — est effacée 30 jours après, avec ses jetons, par la
+  passe quotidienne de `deleted-accounts-purge`
+  (`DEAD_SESSION_RETENTION_DAYS`) : elle porte une adresse IP et un
+  user-agent.
 - Index : `(user_id)`.
 
 ### `RefreshToken` (implémenté)
@@ -208,6 +213,15 @@ SHA-256 (`tokenHash` unique).
   traité comme une réutilisation.
 - Détection de réutilisation : présenter un jeton `ROTATED`/`REVOKED` →
   révocation de **toute la session** + événement d'audit.
+- **Durée** : chaque rotation écrit une ligne ; un jeton échu depuis plus de
+  30 jours est effacé par la même passe quotidienne. Compromis assumé : un
+  jeton `ROTATED` présenté révoque sa session (le piège qui éjecte un voleur
+  de la chaîne) ; effacé, il ne rend plus qu'un 401. Le piège tient donc
+  TTL + 30 jours après l'émission (60 par défaut). Le borner autrement
+  demande une durée de vie absolue de session — une décision produit.
+  Balayage sans index sur `expiresAt`, une fois par jour, sur une table que
+  la purge garde bornée ; un échec de cette passe est rapporté sans retarder
+  l'effacement des comptes.
 - Index : `(session_id)`.
 
 ### `UserDevice` (abandonné)
