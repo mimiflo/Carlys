@@ -666,6 +666,23 @@ règlement, la zone de montée et le compte des joueurs actifs.
   un `INSERT … ON CONFLICT DO NOTHING` : une ouverture concurrente de la même
   ligne n'avorte pas la transaction englobante (la réponse de quiz verse sa
   part de ligue dans la sienne).
+- **Sous le verrou, on ne compte plus : on LIT l'effectif.** Compter les
+  membres relisait toute la division (8,6 ms pour 50 000 membres, mesuré le
+  6 octobre 2026), et le lundi, quand tout le monde ouvre sa semaine dans la
+  même division, chaque placement tenait le verrou — et une connexion du pool
+  — d'autant : les attentes s'empilaient jusqu'à bloquer l'API entière. La
+  table `LeagueCohort` (migration `20261006163906_effectifs_groupes_ligue`)
+  porte l'effectif de chaque groupe, tenu par un DÉCLENCHEUR PostgreSQL sur
+  `LeagueMembership` (ouverture, déplacement, règlement, suppression de compte
+  en cascade : aucun chemin ne le fait dériver) ; le placement y lit les
+  groupes qui ont de la place et le dernier, par index (1,0 ms). Un groupe
+  vidé par des départs (effectif 0) n'existe plus, comme avant. Un
+  déplacement décrémente son groupe de DÉPART : il prend donc aussi le verrou
+  de la division de départ (tous en une instruction, dans l'ordre global),
+  sans quoi deux déplacements en sens opposé s'interbloquaient (reproduit par
+  `leagues-groups.e2e-spec.ts`). La suppression d'un compte efface sa ligue
+  dans une écriture courte, AVANT la longue cascade, pour ne pas tenir le
+  compteur d'un groupe pendant qu'on supprime ses séances.
 - **Changer de division, c'est changer de groupe.** Les deux réalignements
   (voir plus bas) prennent une place dans la division d'arrivée sous le même
   verrou, comme une ouverture ; quand un règlement en déplace plusieurs, les

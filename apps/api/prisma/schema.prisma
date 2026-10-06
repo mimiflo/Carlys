@@ -1648,10 +1648,30 @@ model LeagueMembership {
 
   @@id([userId, periodKey])
   /// Sert les deux lectures chaudes : le classement d'un GROUPE pour une
-  /// période (et le remplissage des groupes, qui se compte par groupe), et
-  /// la recherche des périodes non réglées.
+  /// période, et la recherche des périodes non réglées. (Le remplissage des
+  /// groupes, lui, se lit dans `LeagueCohort`.)
   @@index([periodKey, division, cohort, score(sort: Desc)])
   @@index([userId, periodKey(sort: Desc)])
+}
+
+/// L'EFFECTIF de chaque groupe de ligue, tenu par la BASE (déclencheur
+/// `league_cohort_count` sur `LeagueMembership`, voir sa migration) : exact
+/// quel que soit le chemin d'écriture — ouverture, rangement, règlement,
+/// suppression de compte en cascade.
+///
+/// Pourquoi il existe : placer un membre comptait TOUS les membres de la
+/// division, sous le verrou de (période, division). Le lundi, quand tout le
+/// monde ouvre sa semaine dans la même division, chaque placement relisait
+/// des dizaines de milliers de lignes en tenant le verrou — et chaque
+/// attente une connexion du pool, jusqu'à bloquer toute l'API. Sous le même
+/// verrou, la place se lit désormais ici, par index : quelques lignes.
+model LeagueCohort {
+  periodKey String
+  division  LeagueDivision
+  cohort    Int
+  members   Int            @default(0)
+
+  @@id([periodKey, division, cohort])
 }
 
 /// Lien d'amitié. UNE ligne par paire, créée PENDING par la demande ; la

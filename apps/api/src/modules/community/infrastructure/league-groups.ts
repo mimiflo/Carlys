@@ -1,6 +1,6 @@
 import { type LeagueDivision, type Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { cohortToJoin, type LeagueGroupCount } from '../domain/league-ladder';
+import { cohortToJoin, LEAGUE_GROUP_SIZE, type LeagueGroupCount } from '../domain/league-ladder';
 
 /**
  * LE REMPLISSAGE DES GROUPES DE LIGUE, sous verrou.
@@ -47,11 +47,17 @@ export async function lockGroups(
 ): Promise<void> {
   const cles = [...new Set(places.map((place) => groupLockKey(place.periodKey, place.division)))];
   cles.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  for (const cle of cles) {
-    // `$executeRaw` et non `$queryRaw` : la fonction rend `void`, que le
-    // client ne sait pas désérialiser en colonne.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${cle})`;
+  if (cles.length === 0) {
+    return;
   }
+  // UN aller-retour pour tous : la sous-requête rend les clés dans l'ordre
+  // croissant, et l'appel les prend dans cet ordre. `$executeRaw` et non
+  // `$queryRaw` : la fonction rend `void`, que le client ne sait pas
+  // désérialiser en colonne.
+  await tx.$executeRaw`
+    SELECT pg_advisory_xact_lock(cle)
+    FROM (SELECT cle FROM unnest(${cles}::bigint[]) AS cle ORDER BY cle) AS triees
+  `;
 }
 
 /**
@@ -69,18 +75,38 @@ export async function groupWithRoom(
   return cohortToJoin(await groupCounts(tx, periodKey, division));
 }
 
-/** Le nombre de membres de chaque groupe de (période, division). */
+/**
+ * Ce qu'il faut savoir des groupes de (période, division) pour y placer
+ * quelqu'un : ceux qui ont de la place, et le dernier (après lequel un
+ * nouveau s'ouvre). Lu dans `LeagueCohort`, tenu par la base : quelques
+ * lignes par index, là où compter les membres relisait toute la division
+ * sous le verrou. [cohortToJoin] rend sur ces lignes la même réponse que sur
+ * tous les groupes.
+ */
 async function groupCounts(
   tx: Prisma.TransactionClient,
   periodKey: string,
   division: LeagueDivision,
 ): Promise<LeagueGroupCount[]> {
-  const groupes = await tx.leagueMembership.groupBy({
-    by: ['cohort'],
-    where: { periodKey, division },
-    _count: { _all: true },
-  });
-  return groupes.map((groupe) => ({ cohort: groupe.cohort, members: groupe._count._all }));
+  // ponytail: parcours linéaire des GROUPES (pas des membres) de la division,
+  // ~6 ms à 50 000 groupes (un million de membres) ; au-delà, un index
+  // partiel `WHERE members < 20` le ramène à 0,1 ms.
+  // UNE lecture : les groupes qui ont de la place, plus le dernier. `> 0` :
+  // un groupe vidé par des départs n'existe plus, il n'a donc pas de place
+  // — comme quand on comptait les membres (`cohortToJoin`).
+  return tx.$queryRaw<LeagueGroupCount[]>`
+    SELECT "cohort", "members" FROM "LeagueCohort"
+    WHERE "periodKey" = ${periodKey}
+      AND "division" = ${division}::"LeagueDivision"
+      AND "members" > 0
+      AND ("members" < ${LEAGUE_GROUP_SIZE} OR "cohort" = (
+        SELECT MAX("cohort") FROM "LeagueCohort"
+        WHERE "periodKey" = ${periodKey}
+          AND "division" = ${division}::"LeagueDivision"
+          AND "members" > 0
+      ))
+    ORDER BY "cohort"
+  `;
 }
 
 /**

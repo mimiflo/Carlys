@@ -97,6 +97,22 @@ describe('Ligues — groupes de vingt (e2e)', () => {
     leagues = app.get(LeaguesRepository);
   });
 
+  // Après CHAQUE scénario — ouverture, rangement, règlement, réalignement,
+  // suppression — l'effectif tenu par la base (`LeagueCohort`, déclencheur)
+  // doit valoir un comptage des membres, partout.
+  afterEach(async () => {
+    const cle = (l: { periodKey: string; division: string; cohort: number }) =>
+      `${l.periodKey}|${l.division}|${l.cohort}`;
+    const comptes = await prisma.leagueMembership.groupBy({
+      by: ['periodKey', 'division', 'cohort'],
+      _count: { _all: true },
+    });
+    const tenus = await prisma.leagueCohort.findMany({ where: { members: { gt: 0 } } });
+    expect(Object.fromEntries(tenus.map((ligne) => [cle(ligne), ligne.members]))).toEqual(
+      Object.fromEntries(comptes.map((ligne) => [cle(ligne), ligne._count._all])),
+    );
+  });
+
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
     await prisma.$disconnect();
@@ -334,6 +350,76 @@ describe('Ligues — groupes de vingt (e2e)', () => {
     expect(rangee).toMatchObject({ division: 'PLATINE', cohort: 1, score: 70 });
     // Déjà à sa place : relire ne la déplace plus.
     expect(await leagues.placeInPeriod(moi.id, periode, 'PLATINE')).toBe(1);
+  });
+
+  it('des rangements SIMULTANÉS en sens opposé ne s’interbloquent jamais', async () => {
+    // Chaque déplacement décrémente le groupe de départ et incrémente celui
+    // d'arrivée. Sans le verrou de la division de DÉPART, OR → ARGENT et
+    // ARGENT → OR prenaient les deux compteurs en croix : « deadlock
+    // detected », et un 500.
+    const periode = '2099-W07';
+    const ors = await figurants(10, 'EFE');
+    const argents = await figurants(10, 'EFF');
+    await prisma.leagueMembership.createMany({
+      data: [
+        ...ors.map((user) => ({ userId: user.id, periodKey: periode, division: 'OR' as const })),
+        ...argents.map((user) => ({
+          userId: user.id,
+          periodKey: periode,
+          division: 'ARGENT' as const,
+        })),
+      ],
+    });
+
+    await expect(
+      Promise.all([
+        ...ors.map((user) => leagues.placeInPeriod(user.id, periode, 'ARGENT')),
+        ...argents.map((user) => leagues.placeInPeriod(user.id, periode, 'OR')),
+      ]),
+    ).resolves.toHaveLength(20);
+    expect(await tailles(periode, 'OR')).toEqual({ 0: 10 });
+    expect(await tailles(periode, 'ARGENT')).toEqual({ 0: 10 });
+  });
+
+  it('l’effectif tenu par la base suit chaque écriture, suppression de compte comprise', async () => {
+    // Le placement ne compte plus les membres : il lit `LeagueCohort`, tenu
+    // par un déclencheur. Il doit dire exactement ce que dirait un comptage.
+    const periode = '2099-W06';
+    const effectifs = async () =>
+      Object.fromEntries(
+        (
+          await prisma.leagueCohort.findMany({
+            where: { periodKey: periode, division: 'ARGENT', members: { gt: 0 } },
+            orderBy: { cohort: 'asc' },
+          })
+        ).map((ligne) => [ligne.cohort, ligne.members]),
+      );
+    const vingt = await figurants(LEAGUE_GROUP_SIZE, 'EFA');
+    await prisma.leagueMembership.createMany({
+      data: vingt.map((user) => ({ userId: user.id, periodKey: periode, division: 'ARGENT' })),
+    });
+    const deux = await figurants(2, 'EFB');
+    for (const user of deux) {
+      await leagues.openPeriod(user.id, periode, 'ARGENT');
+    }
+    expect(await effectifs()).toEqual(await tailles(periode, 'ARGENT'));
+    expect(await effectifs()).toEqual({ 0: LEAGUE_GROUP_SIZE, 1: 2 });
+
+    // Un compte supprimé (cascade) libère sa place : le suivant la reprend.
+    const [parti] = vingt;
+    await prisma.user.delete({ where: { id: parti!.id } });
+    expect(await effectifs()).toEqual({ 0: LEAGUE_GROUP_SIZE - 1, 1: 2 });
+    const suivant = await un('EFC');
+    await leagues.openPeriod(suivant.id, periode, 'ARGENT');
+    expect(await effectifs()).toEqual({ 0: LEAGUE_GROUP_SIZE, 1: 2 });
+
+    // Un groupe VIDÉ n'existe plus : il n'a pas de place, le suivant s'ouvre
+    // après le dernier — comme quand on comptait les membres.
+    await prisma.user.deleteMany({ where: { id: { in: deux.map((user) => user.id) } } });
+    const tardif = await un('EFD');
+    await leagues.openPeriod(tardif.id, periode, 'ARGENT');
+    expect(await effectifs()).toEqual({ 0: LEAGUE_GROUP_SIZE, 1: 1 });
+    expect(await effectifs()).toEqual(await tailles(periode, 'ARGENT'));
   });
 
   it('le classement servi est celui de MON groupe, blocages tus sans décaler les rangs', async () => {

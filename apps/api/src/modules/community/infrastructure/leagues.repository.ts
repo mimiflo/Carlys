@@ -129,7 +129,14 @@ export class LeaguesRepository {
       return ligne.cohort; // Le cas courant : déjà à sa place.
     }
     return this.prisma.$transaction(async (tx) => {
-      await lockGroups(tx, [{ periodKey, division }]);
+      // La division de DÉPART aussi : le déplacement décrémente son effectif
+      // (`LeagueCohort`, tenu par la base). Sans son verrou, deux
+      // déplacements en sens opposé prenaient les deux compteurs en croix —
+      // interblocage. Les verrous se prennent dans l'ordre global.
+      await lockGroups(tx, [
+        { periodKey, division },
+        ...(ligne === null ? [] : [{ periodKey, division: ligne.division }]),
+      ]);
       const cohort = await this.createInGroup(tx, userId, periodKey, division);
       await tx.leagueMembership.updateMany({
         where: { userId, periodKey, settledAt: null, division: { not: division } },
@@ -364,7 +371,13 @@ export class LeaguesRepository {
     if (deplacements.length === 0) {
       return;
     }
-    await lockGroups(tx, deplacements);
+    // Arrivées ET départs : chaque déplacement décrémente l'effectif de son
+    // groupe de départ (`LeagueCohort`) ; tous ces compteurs sont couverts
+    // par un verrou pris dans l'ordre global, avant tout verrou de ligne.
+    await lockGroups(tx, [
+      ...deplacements,
+      ...deplacements.map(({ periodKey: cle, depart }) => ({ periodKey: cle, division: depart })),
+    ]);
     // Un comptage par division d'arrivée, un seul `UPDATE` pour tout le lot :
     // le résultat est celui d'un `groupWithRoom` et d'une écriture par
     // membre, dans le même ordre, sans leurs allers-retours.
@@ -392,7 +405,9 @@ export class LeaguesRepository {
     tx: Prisma.TransactionClient,
     periodKey: string,
     results: ReadonlyArray<SettlementResult>,
-  ): Promise<Array<{ userId: string; periodKey: string; division: LeagueDivision }>> {
+  ): Promise<
+    Array<{ userId: string; periodKey: string; division: LeagueDivision; depart: LeagueDivision }>
+  > {
     if (results.length === 0) {
       return [];
     }
@@ -408,7 +423,14 @@ export class LeaguesRepository {
       return suivante !== undefined &&
         suivante.settledAt === null &&
         suivante.division !== nextDivision
-        ? [{ userId, periodKey: suivante.periodKey, division: nextDivision }]
+        ? [
+            {
+              userId,
+              periodKey: suivante.periodKey,
+              division: nextDivision,
+              depart: suivante.division,
+            },
+          ]
         : [];
     });
   }

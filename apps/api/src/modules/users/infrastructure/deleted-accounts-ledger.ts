@@ -65,6 +65,14 @@ export class PrismaDeletedAccountsLedger implements DeletedAccountsLedger {
    * la lecture et l'écriture n'est pas touché.
    */
   async eraseAccount(id: string): Promise<boolean> {
+    // La LIGUE d'abord, dans une écriture courte à elle : chaque ligne
+    // supprimée décrémente l'effectif de son groupe (`LeagueCohort`). Dans la
+    // longue cascade ci-dessous, ce verrou de ligne aurait tenu le temps de
+    // supprimer séances et séries — et chaque placement dans ce groupe,
+    // verrou de division en main, aurait attendu derrière.
+    await this.prisma.leagueMembership.deleteMany({
+      where: { userId: id, user: { status: UserStatus.DELETED } },
+    });
     return this.prisma.$transaction(
       async (tx) => {
         const encore = await tx.user.count({ where: { id, status: UserStatus.DELETED } });
