@@ -62,6 +62,10 @@ class AccountBoundCache<T> extends AsyncNotifier<T> {
     }
     return _read(ref);
   }
+
+  /// Montre une valeur d'avance — le geste sous le doigt, que l'écriture
+  /// confirmera ou qu'une relecture remplacera.
+  void show(T value) => state = AsyncData(value);
 }
 
 /// Déclare un [AccountBoundCache] : `accountBoundCache(lecture, none: vide)`.

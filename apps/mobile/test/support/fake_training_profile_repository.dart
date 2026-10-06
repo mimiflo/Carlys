@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
 import 'package:carlys_mobile/features/workout_program/domain/repositories/training_profile_repository.dart';
@@ -19,12 +21,18 @@ class FakeTrainingProfileRepository implements TrainingProfileRepository {
 
   TrainingProfile profile;
   bool failFetch = false;
+  bool failPatch = false;
+  int fetches = 0;
+
+  /// Tant qu'elle n'est pas complétée, l'écriture est « en vol ».
+  Completer<void>? gate;
 
   /// Chaque écriture de matériel, telle qu'envoyée : l'état complet.
   final List<List<String>> equipmentWrites = [];
 
   @override
   Future<TrainingProfile> fetch() async {
+    fetches++;
     if (failFetch) {
       throw const NetworkException('hors ligne (voulu par le test)');
     }
@@ -38,17 +46,18 @@ class FakeTrainingProfileRepository implements TrainingProfileRepository {
     int? sessionMinutesTarget,
     List<String>? equipmentSlugs,
   }) async {
+    await gate?.future;
+    if (failPatch) {
+      throw const NetworkException('hors ligne (voulu par le test)');
+    }
     if (equipmentSlugs != null) {
       equipmentWrites.add(List.of(equipmentSlugs));
     }
-    profile = TrainingProfile(
-      goal: profile.goal,
-      experience: experience ?? profile.experience,
-      weeklySessionsTarget:
-          weeklySessionsTarget ?? profile.weeklySessionsTarget,
-      sessionMinutesTarget:
-          sessionMinutesTarget ?? profile.sessionMinutesTarget,
-      equipmentSlugs: equipmentSlugs ?? profile.equipmentSlugs,
+    profile = profile.copyWith(
+      experience: experience,
+      weeklySessionsTarget: weeklySessionsTarget,
+      sessionMinutesTarget: sessionMinutesTarget,
+      equipmentSlugs: equipmentSlugs,
     );
   }
 }

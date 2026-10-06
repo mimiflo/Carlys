@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../authentication/presentation/controllers/account_bound_cache.dart';
+import '../../../authentication/presentation/controllers/account_session.dart';
 import '../../data/repositories/training_profile_repository_impl.dart';
 import '../../domain/entities/training_profile.dart';
 
@@ -23,9 +24,11 @@ final trainingProfileProvider = accountBoundCache<TrainingProfile>(
   ),
 );
 
-/// Écritures des entrées de génération : chaque geste écrit SON champ puis
-/// invalide la lecture — l'écran reflète toujours l'état serveur, jamais un
-/// état local optimiste qui divergerait.
+/// Écritures des entrées de génération : chaque geste se VOIT sous le
+/// doigt, puis écrit SON champ. Un PATCH réussi laisse au serveur ce que
+/// l'écran montre déjà : pas de relecture — avant, chaque choix attendait
+/// l'écriture PUIS la relecture. Un refus fait relire : l'écran redit ce
+/// que le serveur tient.
 ///
 /// `Provider` simple (PAS autoDispose) : la référence est capturée dans des
 /// callbacks tardifs — même leçon que les actions communauté.
@@ -51,58 +54,106 @@ class TrainingProfileActions {
         sessionMinutesTarget: minutes,
       );
 
-  /// Coche ou décoche UN équipement.
-  ///
-  /// SÉRIALISÉ : deux coches rapides s'enchaînent au lieu de se courir
-  /// après — chaque bascule relit l'état serveur À SON TOUR avant de
-  /// calculer la liste complète, sinon la seconde écraserait la première
-  /// (la liste est un remplacement complet). Un échec ne casse pas la
-  /// chaîne : la bascule suivante repart de l'état serveur réel.
-  Future<void> toggleEquipment(String slug) {
-    final task = _equipmentChain.then((_) => _toggleEquipment(slug));
-    // La chaîne avale l'échec pour survivre ; l'appelant, lui, voit le sien.
-    _equipmentChain = task.then((_) {}, onError: (Object _) {});
-    return task;
-  }
-
-  Future<void> _toggleEquipment(String slug) async {
-    // Une lecture restée en ERREUR se rejouerait telle quelle à chaque
-    // bascule (`.future` rend l'échec en cache) : on la relance d'abord —
-    // le réseau revenu, la section matériel revit sans passer par
-    // « Réessayer ».
-    if (_ref.read(trainingProfileProvider).hasError) {
-      _ref.invalidate(trainingProfileProvider);
-    }
-    final current = await _ref.read(trainingProfileProvider.future);
-    final owned = current.equipmentSlugs.toSet();
+  /// Coche ou décoche UN équipement, sur la liste MONTRÉE — elle porte déjà
+  /// les coches précédentes encore en vol : deux coches rapides ne
+  /// s'écrasent pas (la liste est un remplacement complet).
+  Future<void> toggleEquipment(String slug) => _whenShown((shown) {
+    final owned = shown.equipmentSlugs.toSet();
     if (!owned.add(slug)) {
       owned.remove(slug);
     }
-    await _patch(equipmentSlugs: owned.toList());
+    return _patch(equipmentSlugs: owned.toList());
+  });
+
+  /// Lance [gesture] sur ce que l'écran montre. Rien de montré, ou une
+  /// lecture en vol (elle reviendrait ÉCRASER le geste montré d'avance) :
+  /// on l'attend d'abord — les gestes ainsi retenus partent dans l'ordre.
+  /// Une lecture restée en ERREUR se rejouerait telle quelle (`.future`
+  /// rend l'échec en cache) : on la relance.
+  Future<void> _whenShown(
+    Future<void> Function(TrainingProfile shown) gesture,
+  ) {
+    final cache = _ref.read(trainingProfileProvider);
+    final shown = cache.valueOrNull;
+    if (shown != null && !cache.isLoading) return gesture(shown);
+    if (cache.hasError) _ref.invalidate(trainingProfileProvider);
+    return _ref
+        .read(trainingProfileProvider.future)
+        .then((_) => _whenShown(gesture));
   }
 
-  Future<void> _equipmentChain = Future<void>.value();
+  /// SÉRIALISÉES : les écritures arrivent au serveur dans l'ordre des
+  /// gestes. La chaîne avale l'échec ; l'appelant, lui, voit le sien.
+  Future<void> _chain = Future<void>.value();
+  int _inFlight = 0;
+
+  /// Ce que le serveur tient, d'après les écritures revenues : la valeur
+  /// montrée quand la file était vide, plus chaque PATCH réussi. Un refus y
+  /// REVIENT avant de relire — une relecture qui échoue aussi (hors ligne)
+  /// garderait sinon le choix refusé à l'écran, Riverpod conservant la
+  /// dernière valeur dans l'erreur.
+  TrainingProfile? _confirmed;
+
+  /// La session des écritures en vol : le compte qui arrive ne reçoit ni
+  /// les écritures ni la valeur confirmée de celui qui part.
+  int? _session;
+  bool _refused = false;
 
   Future<void> _patch({
     TrainingExperience? experience,
     int? weeklySessionsTarget,
     int? sessionMinutesTarget,
     List<String>? equipmentSlugs,
-  }) async {
-    await _ref
-        .read(trainingProfileRepositoryProvider)
-        .patch(
-          experience: experience,
-          weeklySessionsTarget: weeklySessionsTarget,
-          sessionMinutesTarget: sessionMinutesTarget,
-          equipmentSlugs: equipmentSlugs,
-        );
+  }) => _whenShown((shown) {
+    if (_inFlight++ == 0) {
+      _confirmed = shown;
+      _session = _ref.read(accountSessionProvider);
+    }
+    TrainingProfile written(TrainingProfile base) => base.copyWith(
+      experience: experience,
+      weeklySessionsTarget: weeklySessionsTarget,
+      sessionMinutesTarget: sessionMinutesTarget,
+      equipmentSlugs: equipmentSlugs,
+    );
+    _ref.read(trainingProfileProvider.notifier).show(written(shown));
+    final task = _chain.then((_) async {
+      if (!_sameSession) return;
+      await _ref
+          .read(trainingProfileRepositoryProvider)
+          .patch(
+            experience: experience,
+            weeklySessionsTarget: weeklySessionsTarget,
+            sessionMinutesTarget: sessionMinutesTarget,
+            equipmentSlugs: equipmentSlugs,
+          );
+      _confirmed = written(_confirmed ?? shown);
+    });
+    _chain = task.then((_) {}, onError: (Object _) {});
+    return task.then(
+      (_) => _settle(),
+      onError: (Object error, StackTrace stack) {
+        _refused = true;
+        _settle();
+        Error.throwWithStackTrace(error, stack);
+      },
+    );
+  });
+
+  bool get _sameSession => _ref.read(accountSessionProvider) == _session;
+
+  /// La dernière écriture revenue : après un refus, l'écran revient à la
+  /// valeur confirmée, puis relit.
+  void _settle() {
+    if (--_inFlight > 0) return;
+    final confirmed = _confirmed;
+    final refused = _refused;
+    _confirmed = null;
+    _refused = false;
+    if (!refused || !_sameSession) return;
+    if (confirmed != null) {
+      _ref.read(trainingProfileProvider.notifier).show(confirmed);
+    }
     _ref.invalidate(trainingProfileProvider);
-    // La RELECTURE peut échouer alors que l'écriture a réussi (réseau tombé
-    // juste après le PATCH) : l'attendre fait remonter cet échec au geste —
-    // sans quoi l'écran gardait l'ancienne valeur SANS AUCUN SIGNAL, alors
-    // que le serveur portait déjà la nouvelle.
-    await _ref.read(trainingProfileProvider.future);
   }
 }
 

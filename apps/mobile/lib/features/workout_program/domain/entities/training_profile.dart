@@ -65,4 +65,19 @@ class TrainingProfile {
 
   /// Slugs de la taxonomie du catalogue, triés par nom d'équipement.
   final List<String> equipmentSlugs;
+
+  /// Le même relevé, les champs FOURNIS remplacés — ce qu'un PATCH réussi
+  /// laisse au serveur.
+  TrainingProfile copyWith({
+    TrainingExperience? experience,
+    int? weeklySessionsTarget,
+    int? sessionMinutesTarget,
+    List<String>? equipmentSlugs,
+  }) => TrainingProfile(
+    goal: goal,
+    experience: experience ?? this.experience,
+    weeklySessionsTarget: weeklySessionsTarget ?? this.weeklySessionsTarget,
+    sessionMinutesTarget: sessionMinutesTarget ?? this.sessionMinutesTarget,
+    equipmentSlugs: equipmentSlugs ?? this.equipmentSlugs,
+  );
 }

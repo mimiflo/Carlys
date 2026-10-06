@@ -79,7 +79,7 @@ void main() {
     expect(find.text('Haltères'), findsOneWidget);
   });
 
-  testWidgets('choisir une expérience écrit SON champ puis relit', (
+  testWidgets('choisir une expérience écrit SON champ, et lui seul', (
     tester,
   ) async {
     final repo = FakeTrainingProfileRepository();

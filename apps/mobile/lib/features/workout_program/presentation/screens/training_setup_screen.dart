@@ -14,8 +14,8 @@ import '../widgets/training_goal_sheet.dart';
 import '../widgets/training_setup_sections.dart';
 
 /// « Préparer mon programme » : les objectifs d'entraînement en un écran —
-/// objectif, expérience, rythme, matériel. Chaque geste écrit SON champ au
-/// serveur puis relit : l'écran reflète toujours l'état serveur.
+/// objectif, expérience, rythme, matériel. Chaque geste se voit aussitôt,
+/// puis écrit SON champ au serveur ; un refus remet l'état serveur.
 ///
 /// Aucun bouton « Générer » : ces réponses servent à l'appli entière (le
 /// coach les lit pour composer une séance ou un programme), pas à un seul
@@ -27,8 +27,8 @@ class TrainingSetupScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(trainingProfileProvider);
     // `valueOrNull` GARDE la dernière valeur pendant un rafraîchissement :
-    // chaque écriture invalide le provider, et sans cette lecture l'écran
-    // entier clignoterait en chargement à chaque geste.
+    // un refus fait relire le provider, et sans cette lecture l'écran
+    // entier clignoterait en chargement.
     final value = profile.valueOrNull;
     final goal = ref.watch(currentTrainingGoalProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -50,8 +50,8 @@ class TrainingSetupScreen extends ConsumerWidget {
                 tagline: 'Un programme à ton image',
               ),
               const SizedBox(height: AppSpacing.gapRow),
-              // L'objectif vient de `AuthUser` (rafraîchi par sa feuille),
-              // jamais d'une copie locale qui divergerait.
+              // L'objectif vient de `AuthUser` (rafraîchi par sa feuille,
+              // montré d'avance le temps de l'écriture).
               SetupSummaryCard(
                 icon: AppIcons.goal,
                 title: goal?.label ?? 'Choisir mon objectif',
@@ -149,7 +149,7 @@ class TrainingSetupScreen extends ConsumerWidget {
     );
   }
 
-  /// Toute écriture passe ici : l'échec s'affiche, l'état reste serveur.
+  /// Toute écriture passe ici : l'échec s'affiche, l'écran se remet.
   Future<void> _ecrire(
     BuildContext context,
     WidgetRef ref,

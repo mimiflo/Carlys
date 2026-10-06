@@ -107,8 +107,8 @@ class CoachGoalScreen extends ConsumerWidget {
     );
   }
 
-  /// Chaque choix s'écrit au serveur, puis l'écran relit : un échec
-  /// s'affiche et rien ne change.
+  /// Chaque choix se voit aussitôt puis s'écrit au serveur : un échec
+  /// s'affiche et l'écran se remet.
   Future<void> _ecrire(
     BuildContext context,
     Future<void> Function() action,

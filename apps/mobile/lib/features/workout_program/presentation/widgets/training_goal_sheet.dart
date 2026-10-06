@@ -9,10 +9,11 @@ import '../providers/training_goal_providers.dart';
 
 /// Feuille « Ton objectif d'entraînement » : huit objectifs, un choix,
 /// modifiable à tout moment. La sélection affichée vient de
-/// `AuthUser.trainingGoal` (une seule source de vérité) ; choisir écrit au
-/// serveur puis rafraîchit l'utilisateur, et un échec s'affiche sans rien
-/// changer. Même grammaire de cartes que la voix du Mentor : image, nom,
-/// ce que l'objectif vise, sélection marquée.
+/// `AuthUser.trainingGoal`, ou du choix montré d'avance le temps de son
+/// écriture : choisir ferme la feuille aussitôt, le serveur confirme
+/// derrière, et un échec s'affiche en remettant l'objectif d'avant. Même
+/// grammaire de cartes que la voix du Mentor : image, nom, ce que
+/// l'objectif vise, sélection marquée.
 Future<void> showTrainingGoalSheet(BuildContext context) {
   return showAppSheet<void>(
     context,
@@ -69,17 +70,17 @@ class _TrainingGoalSheet extends ConsumerWidget {
     WidgetRef ref,
     TrainingGoal goal,
   ) async {
-    final notices = AppNotices.of(context);
     // Même garde que la feuille de voix : la route de LA feuille, pas le
-    // navigateur racine (toujours « monté ») — sinon un second choix
-    // pendant l'appel réseau fermait l'écran du dessous.
+    // navigateur racine (toujours « monté ») — sinon un second toucher
+    // pendant la fermeture fermait l'écran du dessous.
     final route = ModalRoute.of(context);
-    final navigator = Navigator.of(context);
+    if (!(route?.isCurrent ?? false)) return;
+    final notices = AppNotices.of(context);
+    // Le choix se voit aussitôt (montré d'avance) : la feuille se ferme
+    // sans attendre le serveur, qui confirme — ou l'écran se remet.
+    Navigator.of(context).pop();
     try {
       await ref.read(trainingGoalActionsProvider).choose(goal);
-      if (context.mounted && (route?.isCurrent ?? false)) {
-        navigator.pop();
-      }
       notices.show(
         'Objectif retenu : ${goal.label}.',
         tone: AppNoticeTone.success,
