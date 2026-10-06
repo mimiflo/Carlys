@@ -53,8 +53,12 @@ export class FoodsService {
     limit: number,
   ): Promise<{ items: FoodContract[]; source: FoodSource }> {
     const [first, ...others] = searchWords(query);
-    const rows = first === undefined ? [] : await this.foods.search([first, ...others], limit);
-    return { items: rows.map(presentFood), source: await this.source() };
+    // Deux lectures indépendantes, à CHAQUE frappe : en parallèle.
+    const [rows, source] = await Promise.all([
+      first === undefined ? [] : this.foods.search([first, ...others], limit),
+      this.source(),
+    ]);
+    return { items: rows.map(presentFood), source };
   }
 
   /**

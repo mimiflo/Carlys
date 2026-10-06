@@ -130,10 +130,6 @@ export class CoachWorkerPool {
       downUntil: w.downUntil > now ? new Date(w.downUntil).toISOString() : null,
     }));
   }
-
-  get size(): number {
-    return this.workers.length;
-  }
 }
 
 function hostOf(url: string): string {

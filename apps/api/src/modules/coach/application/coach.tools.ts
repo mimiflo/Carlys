@@ -20,6 +20,7 @@ import {
   filtersFromSearch,
   matchByName,
   primaryOnly,
+  text,
 } from './coach-exercise-search';
 import {
   coachBodyMetricView,
@@ -109,7 +110,7 @@ export class CoachTools {
 
       case 'get_workout_template':
         return coachTemplateView(
-          await this.templates.templateDetail(userId, asString(input.templateId) ?? ''),
+          await this.templates.templateDetail(userId, text(input.templateId) ?? ''),
         );
 
       case 'get_recent_sessions': {
@@ -209,10 +210,6 @@ export class CoachTools {
   private shown(items: readonly ExerciseSummary[], muscle: string | undefined, limit: number) {
     return primaryOnly(items, muscle).slice(0, limit).map(coachExerciseView);
   }
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 /** Entier borné à [1, max] ; tout ce qui n'en est pas un retombe sur le défaut. */

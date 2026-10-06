@@ -5,6 +5,7 @@ import {
   type MuscleGroup,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { cursorPage } from '../../../common/utilities/cursor-page';
 import { AppConfigService } from '../../../config/app-config.service';
 import { CacheService } from '../../../infrastructure/cache/cache.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
@@ -61,15 +62,9 @@ export class ExercisesService {
       this.exercises.listPage(filters, limit, cursor),
       this.exercises.countMatching(filters),
     ]);
-    const hasMore = rows.length > limit;
-    const items = rows
-      .slice(0, limit)
-      .map((row) => presentExerciseSummary(row, this.config.s3PublicBaseUrl));
     const page: ExercisesPage = {
-      items,
-      hasMore,
+      ...cursorPage(rows, limit, (row) => presentExerciseSummary(row, this.config.s3PublicBaseUrl)),
       total,
-      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
     };
 
     await this.cache.setJson(cacheKey, page, LIST_TTL_SECONDS);

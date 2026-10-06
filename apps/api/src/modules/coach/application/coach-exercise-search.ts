@@ -74,7 +74,8 @@ function required(term: string, entries: readonly CatalogEntry[], what: string):
   return slug;
 }
 
-const text = (value: unknown) =>
+/** Texte non vide, rogné ; tout le reste rend `undefined`. */
+export const text = (value: unknown) =>
   typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 
 type Catalog = { muscleGroups: readonly CatalogEntry[]; equipment: readonly CatalogEntry[] };

@@ -196,6 +196,9 @@ export class CoachRepository {
     title: string | null;
   }): Promise<MessageWithProposal> {
     return this.prisma.$transaction(async (tx) => {
+      // UNE écriture : le message, sa proposition et ses séries, son
+      // programme proposé, relus d'un même geste (`include`).
+      const proposal = input.proposal;
       const message = await tx.coachMessage.create({
         data: {
           id: input.id,
@@ -207,59 +210,44 @@ export class CoachRepository {
           steps: input.steps,
           thinkingSeconds: input.thinkingSeconds,
           createdTemplateId: input.createdTemplateId ?? null,
-        },
-      });
-
-      if (input.proposal !== null) {
-        await tx.coachSessionProposal.create({
-          data: {
-            id: input.proposal.id,
-            messageId: message.id,
-            name: input.proposal.name,
-            estimatedMinutes: input.proposal.estimatedMinutes,
-            items: {
-              create: input.proposal.items.map((item, index) => ({
-                id: input.proposal!.itemIds[index]!,
-                exercisePosition: item.exercisePosition,
-                exerciseId: item.exerciseId,
-                exerciseName: item.exerciseName,
-                setPosition: item.setPosition,
-                kind: item.kind,
-                targetReps: item.targetReps,
-                targetWeightKg: item.targetWeightKg,
-                restSeconds: item.restSeconds,
-              })),
+          ...(proposal !== null && {
+            proposal: {
+              create: {
+                id: proposal.id,
+                name: proposal.name,
+                estimatedMinutes: proposal.estimatedMinutes,
+                items: {
+                  create: proposal.items.map((item, index) => ({
+                    id: proposal.itemIds[index]!,
+                    exercisePosition: item.exercisePosition,
+                    exerciseId: item.exerciseId,
+                    exerciseName: item.exerciseName,
+                    setPosition: item.setPosition,
+                    kind: item.kind,
+                    targetReps: item.targetReps,
+                    targetWeightKg: item.targetWeightKg,
+                    restSeconds: item.restSeconds,
+                  })),
+                },
+              },
             },
-          },
-        });
-      }
-
-      if (input.programProposal !== null) {
-        await tx.coachProgramProposal.create({
-          data: { ...input.programProposal, messageId: message.id },
-        });
-      }
+          }),
+          ...(input.programProposal !== null && {
+            programProposal: { create: input.programProposal },
+          }),
+        },
+        include: PROPOSITION_ORDONNEE,
+      });
 
       // `updatedAt` du fil remonte : la liste est ordonnée par activité.
       await tx.coachConversation.update({
         where: { id: input.conversationId },
         data: input.title === null ? {} : { title: input.title },
       });
-
-      return tx.coachMessage.findUniqueOrThrow({
-        where: { id: message.id },
-        include: PROPOSITION_ORDONNEE,
-      });
+      return message;
     });
   }
 
-  /**
-   * Profil Carlys de l'utilisateur — une colonne indexée, rien d'autre.
-   *
-   * Lecture Prisma directe plutôt que par le module users : même précédent
-   * que `NutritionRepository.findProfile`, pour une préférence déclarée qui
-   * aiguille le ton du coach à chaque tour.
-   */
   /**
    * La voix complète du Mentor en UNE lecture : profil Carlys et style,
    * les deux axes que le briefing compose. Une seule requête plutôt que

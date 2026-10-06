@@ -64,7 +64,12 @@ export class CoachTurnRunner {
     const { messageId } = admission;
     // Le contexte AVANT le compteur : ses lectures se dégradent en silence,
     // aucune ne brûle un tour de quota (voir CoachContextBuilder).
-    const context = await this.context.build(userId, conversation, messageId, content);
+    // La séance à modifier (ADR 0014) se lit EN MÊME TEMPS : rien ne lie
+    // les deux lectures.
+    const [context, base] = await Promise.all([
+      this.context.build(userId, conversation, messageId, content),
+      this.actions.baseOf(userId, intent),
+    ]);
 
     // Le compteur et la question passent APRÈS la file, AVANT le modèle :
     // une demande refusée par la file ou annulée en attente n'a rien coûté,
@@ -77,9 +82,8 @@ export class CoachTurnRunner {
     // Ce qu'il fait avant d'écrire, et combien de temps : montré en direct,
     // archivé avec la réponse (coach-steps.ts).
     const reflection = coachReflection(stream.onStep);
-    // Une séance exigée : de quoi la composer, et la séance à modifier (ADR 0014).
+    // Une séance exigée : de quoi la composer.
     let composition: CoachComposition | null = null;
-    const base = await this.actions.baseOf(userId, intent);
     const output = await this.gateway
       .generate(
         admission,
