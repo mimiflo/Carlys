@@ -1,4 +1,3 @@
-import '../entities/generation_report.dart';
 import '../entities/program.dart';
 import '../entities/program_calendar.dart';
 
@@ -22,7 +21,8 @@ abstract interface class ProgramRepository {
   /// matériel vivent déjà au profil. L'identifiant vient de l'appareil, comme
   /// pour `save` — et rejouer le même rend le programme tel quel, sans
   /// régénérer. Pour en obtenir un autre, il faut un NOUVEL identifiant.
-  Future<GeneratedProgramResult> generate(String programId, {String? name});
+  /// Rend l'identifiant du programme engendré.
+  Future<String> generate(String programId);
 
   /// Supprime (suppression douce côté serveur, idempotente).
   Future<void> delete(String programId);

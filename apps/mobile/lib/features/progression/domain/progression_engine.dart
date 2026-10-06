@@ -10,6 +10,7 @@ library;
 import 'dart:math' as math;
 
 import '../../../core/utilities/civil_days.dart';
+import '../../../core/utilities/formatting.dart';
 import 'progression.dart';
 
 /// Fenêtre d'observation, en jours.
@@ -273,7 +274,7 @@ ProgressionAxis _equilibre(ProgressionFacts facts) {
     ratio = math.max(0, 1 - (perWeek - 4) / 3);
   }
 
-  final rounded = perWeek.toStringAsFixed(1).replaceAll('.', ',');
+  final rounded = formatDecimal(perWeek);
   final wording = perWeek > 4
       ? '$rounded séances par semaine : pense à intercaler du repos.'
       : perWeek < 2

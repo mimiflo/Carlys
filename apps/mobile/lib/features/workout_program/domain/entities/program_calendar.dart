@@ -105,7 +105,6 @@ class ProgramCalendarWeek {
     required this.weekNumber,
     required this.today,
     required this.days,
-    this.currentWeek,
   });
 
   final String programId;
@@ -113,14 +112,11 @@ class ProgramCalendarWeek {
   final int weeksCount;
   final DayKey startsOn;
 
-  /// Semaine servie, et celle qui contient aujourd'hui (`null` hors du plan).
+  /// Semaine servie.
   final int weekNumber;
-  final int? currentWeek;
 
   /// Aujourd'hui DANS LE FUSEAU DE LA PERSONNE, décidé par le serveur :
   /// l'écran ne recalcule pas ce qu'il vient de recevoir.
   final DayKey today;
   final List<ProgramCalendarDay> days;
-
-  bool get isCurrentWeek => currentWeek == weekNumber;
 }

@@ -1,6 +1,8 @@
 /// Entités du domaine progression (immuables, écrites à la main).
 library;
 
+import '../../../../core/utilities/formatting.dart';
+
 /// Période d'analyse des statistiques.
 enum ProgressPeriod {
   week('week', 'Semaine'),
@@ -86,10 +88,9 @@ class PersonalRecordEntry {
   final double? weightKg;
   final DateTime achievedAt;
 
+  /// À la française : « 82,5 kg », « 12 000 kg » — jamais « 82.5 kg ».
   String get formattedValue {
-    final rounded = value == value.roundToDouble()
-        ? value.round().toString()
-        : value.toStringAsFixed(1);
+    final rounded = formatDecimal(value);
     return type == PersonalRecordType.maxReps ? '$rounded rép.' : '$rounded kg';
   }
 }

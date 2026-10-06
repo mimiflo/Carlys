@@ -100,16 +100,7 @@ class QuoteFacts {
   final bool masteryPending;
 
   /// Une séance a-t-elle été terminée AUJOURD'HUI ?
-  bool get trainedToday {
-    final derniere = lastCompletedAt?.toLocal();
-    if (derniere == null) {
-      return false;
-    }
-    final jour = today.toLocal();
-    return derniere.year == jour.year &&
-        derniere.month == jour.month &&
-        derniere.day == jour.day;
-  }
+  bool get trainedToday => daysSinceLast == 0;
 
   /// Jours écoulés depuis la dernière séance terminée, ou `null`.
   int? get daysSinceLast {

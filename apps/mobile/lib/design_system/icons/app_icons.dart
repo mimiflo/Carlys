@@ -220,7 +220,6 @@ abstract final class AppIcons {
   static const IconData dayDone = Icons.check_circle_outline_rounded;
   static const IconData dayMissed = Icons.remove_circle_outline_rounded;
   static const IconData dayUpcoming = Icons.schedule_rounded;
-  static const IconData startDay = Icons.play_circle_outline_rounded;
 
   /// Le calendrier en trait fin, quand il DÉSIGNE un programme plutôt que
   /// d'ouvrir une date ([calendar], plein, fait cela).

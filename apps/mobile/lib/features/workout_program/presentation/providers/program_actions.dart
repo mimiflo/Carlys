@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utilities/creation_identity.dart';
 import '../../data/repositories/program_repository_impl.dart';
-import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
 import '../../domain/entities/program_calendar.dart';
 import '../../domain/program_day_move.dart';
@@ -149,17 +148,16 @@ class ProgramActions {
     });
   }
 
-  /// Engendre un programme depuis le profil, et rend son plan avec son
-  /// EXPLICATION.
+  /// Engendre un programme depuis le profil, et rend son identifiant.
   ///
   /// L'identifiant naît ici, sur l'appareil : chaque appel en produit un
   /// NOUVEAU, donc « régénérer » rend un autre programme au lieu de renvoyer
   /// le même. Le serveur s'en sert comme graine, et rejouer un identifiant
   /// déjà connu rendrait le plan tel quel — ce qui protège les retouches de
   /// la personne, mais n'est pas ce qu'on veut quand elle redemande.
-  Future<GeneratedProgramResult> generate() async {
+  Future<String> generate() async {
     final id = _uuid.v4();
-    late GeneratedProgramResult result;
+    late String result;
     await _queue.write(id, () async {
       result = await _ref.read(programRepositoryProvider).generate(id);
       return null;

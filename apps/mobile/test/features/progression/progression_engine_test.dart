@@ -179,6 +179,26 @@ void main() {
     test('trop peu de séances ne remplit pas l’axe non plus', () {
       expect(ratioFor([0, 14]), lessThan(1));
     });
+
+    test('une moyenne ronde se dit sans décimale, une autre à la virgule', () {
+      String reasonFor(List<int> ages) => axisOf(
+        computeProgression(
+          ProgressionFacts(today: today, completedSessionDays: daysAgo(ages)),
+        ),
+        CarlysValue.equilibre,
+      ).reason;
+
+      // 8 séances sur 28 jours : 2 par semaine, jamais « 2,0 ».
+      expect(
+        reasonFor([0, 3, 7, 10, 14, 17, 21, 24]),
+        startsWith('2 séances par semaine'),
+      );
+      // 9 séances : 2,25 par semaine, arrondi à « 2,3 ».
+      expect(
+        reasonFor([0, 3, 7, 10, 14, 17, 21, 24, 26]),
+        startsWith('2,3 séances par semaine'),
+      );
+    });
   });
 
   group('titres', () {

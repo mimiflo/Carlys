@@ -37,20 +37,20 @@ class CoachProgramActions {
           minutes: proposal.sessionMinutes,
         );
 
-    final generated = await _ref.read(programActionsProvider).generate();
+    final programId = await _ref.read(programActionsProvider).generate();
 
     try {
       await _ref
           .read(coachRepositoryProvider)
           .markProgramProposalAccepted(
             proposalId: proposal.id,
-            programId: generated.programId,
+            programId: programId,
           );
     } on AppException catch (error) {
       // Le programme existe : c'est une mesure qui manque, pas un échec.
       _logger.warning('Acceptation du programme non notée', error: error);
     }
-    return generated.programId;
+    return programId;
   }
 }
 
