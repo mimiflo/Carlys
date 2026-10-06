@@ -85,18 +85,14 @@ ghcr_login
 IMG_ADMIN_PROD="$(image_admin "$SHA" production)"
 IMG_ADMIN_STAGING="$(image_admin "$SHA" staging)"
 
-# `docker manifest inspect` interroge le registre SANS télécharger l'image :
+# `image_publiee` (_update.sh) interroge le registre SANS télécharger l'image :
 # on veut savoir si le tag existe, pas rapatrier plusieurs centaines de Mio
 # avant de découvrir qu'il manque.
-manifest_exists() {
-  docker manifest inspect "$1" >/dev/null 2>&1
-}
-
-if ! manifest_exists "$IMG_ADMIN_PROD"; then
+if ! image_publiee "$IMG_ADMIN_PROD"; then
   # Distinguer les deux causes change complètement ce qu'il faut faire : soit
   # le sha n'a jamais été construit (mauvais sha), soit il l'a été mais la
   # garde légale a bloqué la variante de production.
-  if manifest_exists "$IMG_ADMIN_STAGING"; then
+  if image_publiee "$IMG_ADMIN_STAGING"; then
     die "L'image admin de PRODUCTION n'existe pas pour ce sha : $IMG_ADMIN_PROD" \
       "L'image de recette ($IMG_ADMIN_STAGING) existe, elle : le commit a bien" \
       "été construit, mais la variante de production n'a pas été produite." \
@@ -126,7 +122,7 @@ ok "image admin de production présente : $IMG_ADMIN_PROD"
 # évidemment exister au même sha : autant le dire ici plutôt que de laisser
 # deploy.sh échouer après la confirmation.
 for image in "$(image_api "$SHA")" "$(image_migrate "$SHA")"; do
-  manifest_exists "$image" || die \
+  image_publiee "$image" || die \
     "Image absente du registre : $image" \
     "Les trois images doivent exister au même sha (build once)." \
     "Vérifier que le workflow d'images a bien terminé pour $SHA."
