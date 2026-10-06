@@ -372,7 +372,7 @@ if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
     "Relire la sortie ci-dessus. Migration en échec (P3018) à corriger, ou" \
     "« already exists » puis P3009 sur une migration RENOMMÉE : docs/database/migrations.md." \
     "Pour rejouer la seule migration :" \
-    "  CARLYS_TAG=sha-$SHA $(dc_texte "$ENV_NAME" "$ENV_FILE") \\" \
+    "  CARLYS_TAG=sha-$SHA $(dc_texte "$ENV_NAME") \\" \
     "    run --rm migrate"
 fi
 ok "schéma à jour"
@@ -487,7 +487,7 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
     deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA(compose)"
   fi
   die "Bascule impossible : docker compose n'a pas démarré la pile." \
-    "Diagnostic : $(dc_texte "$ENV_NAME" "$ENV_FILE") ps" \
+    "Diagnostic : $(dc_texte "$ENV_NAME") ps" \
     "             docker compose -p $PROJECT logs --tail 100"
 fi
 ok "conteneurs démarrés sur sha-$SHA"
@@ -537,9 +537,9 @@ if [ -z "$PREVIOUS_SHA" ]; then
     "DEPLOYED n'a pas été écrit : $(deployed_file "$ENV_NAME") reste vide." \
     "Aucun trafic n'a été dégradé — rien ne servait avant celui-ci." \
     "La pile est laissée DEBOUT pour le diagnostic :" \
-    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs -f" \
+    "  $(dc_texte "$ENV_NAME") logs -f" \
     "Pour tout arrêter :" \
-    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") down"
+    "  $(dc_texte "$ENV_NAME") down"
 fi
 
 step "Retour arrière vers sha-$PREVIOUS_SHA"
@@ -555,8 +555,8 @@ docker pull --quiet "$(image_admin "$PREVIOUS_SHA" "$ENV_NAME")" >/dev/null 2>&1
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   die "RETOUR ARRIÈRE ÉCHOUÉ — intervention manuelle requise." \
     "L'environnement $ENV_NAME peut être hors service." \
-    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") ps" \
-    "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs --tail 200" \
+    "  $(dc_texte "$ENV_NAME") ps" \
+    "  $(dc_texte "$ENV_NAME") logs --tail 200" \
     "Le dernier sha connu comme sain est $PREVIOUS_SHA."
 fi
 
@@ -596,4 +596,4 @@ die "RETOUR ARRIÈRE ÉCHOUÉ : le sha précédent $PREVIOUS_SHA ne rend pas la 
   "DEPLOYED n'a pas été mis à jour : $(deployed_file "$ENV_NAME") décrit toujours le dernier état SAIN connu." \
   "Piste la plus fréquente : la migration qui vient d'être appliquée n'est pas" \
   "compatible avec le code précédent. Vérifier le schéma avant de redéployer." \
-  "  $(dc_texte "$ENV_NAME" "$ENV_FILE") logs --tail 200"
+  "  $(dc_texte "$ENV_NAME") logs --tail 200"

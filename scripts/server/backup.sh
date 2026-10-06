@@ -136,7 +136,7 @@ for env_name in "${TARGETS[@]}"; do
   if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -x postgres >/dev/null; then
     warn "postgres ne tourne pas pour $env_name (projet $project, sha déployé $deployed) — RIEN n'a été sauvegardé"
     warn "  cet environnement A été déployé : une base existe et n'est pas sauvegardée."
-    warn "  Diagnostic : $(dc_texte "$env_name" "$file") ps"
+    warn "  Diagnostic : $(dc_texte "$env_name") ps"
     failures=$((failures + 1))
     continue
   fi

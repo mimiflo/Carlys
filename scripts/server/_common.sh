@@ -416,17 +416,10 @@ dc() {
     "$@"
 }
 
-# `dc_texte <env> <fichier .env>` — la commande `docker compose` que `dc`
-# lance, À RECOPIER : pour les messages de diagnostic. Le seul .env n'y
-# suffit plus (ADR 0017), les réglages sont dans les couches qui le précèdent.
-dc_texte() {
-  local env_name="$1" file="$2" couche texte
-  texte="docker compose -p $(compose_project "$env_name" "$file")"
-  while IFS= read -r couche; do
-    [ -f "$couche" ] && texte+=" --env-file $couche"
-  done < <(env_couches "$file")
-  printf '%s -f %s' "$texte" "$CARLYS_COMPOSE_FILE"
-}
+# `dc_texte <env>` — la commande à RECOPIER des messages de diagnostic :
+# `carlysctl compose`, qui pose comme `dc` les couches ET CARLYS_CONFIG_DIR
+# (ADR 0017). Un `docker compose` nu échouait sur ce dernier.
+dc_texte() { printf 'carlysctl compose %s' "$1"; }
 
 # `coach_local_actif <fichier .env>` — vrai si le coach tourne sur le serveur
 # (service `ollama`) : CARLYS_OLLAMA_REPLICAS vaut un entier au moins égal à 1.
