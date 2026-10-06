@@ -177,7 +177,12 @@ scripts/server/deploy.sh staging 4f2a91c0be77
    être encaissé sans rien accorder (fournisseur sans secret de webhook ou
    sans produit) ; sans aucun moyen de paiement (la recette), il avertit que
    Premium ne s'obtient que par le back-office, et le déploiement continue ;
-5. `compose up -d` ;
+5. **relais de l'API** (`deploy_relais`) : les exemplaires neufs démarrent à
+   côté des anciens, l'amont Nginx passe sur eux une fois sains, les anciens
+   finissent leur travail puis s'arrêtent — aucune coupure. Neufs jamais
+   sains ⇒ **arrêt, rien n'a basculé**. Relais impossible (premier
+   déploiement, `CARLYS_SCALE_MAX` trop bas pour les deux générations) ⇒ la
+   bascule d'avant. Puis `compose up -d` pour le reste de la pile ;
 6. attente **bornée** de `/health/ready` puis de l'admin ;
 7. santé absente ⇒ retour au sha précédent lu dans `DEPLOYED` ;
    santé obtenue ⇒ nouvelle ligne dans `DEPLOYED`.

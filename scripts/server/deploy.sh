@@ -30,9 +30,13 @@
 #      aussi ce qui rend l'opération AUTOMATIQUE : les trois chemins de
 #      déploiement — mise à jour automatique, promote.sh, carlysctl deploy —
 #      passent tous par ici, personne n'a plus rien à taper ;
-#   5. bascule — après avoir laissé finir, BORNÉ, les réponses du coach et
-#      les analyses de photo en cours, qui mourraient avec l'ancien
-#      processus —, puis attente BORNÉE de la santé — /health/ready de l'API ET la
+#   5. bascule — l'API par RELAIS (deploy_relais, _scale.sh) : les neufs
+#      démarrent à côté des anciens, l'amont Nginx passe sur eux une fois
+#      sains, les anciens finissent leur travail, BORNÉ, puis s'arrêtent.
+#      Neufs jamais sains ⇒ ARRÊT, retirés, RIEN n'a basculé. Relais
+#      impossible (premier déploiement, plafond d'exemplaires) ⇒ la bascule
+#      d'avant, qui laisse finir, BORNÉ, les réponses du coach et les analyses
+#      de photo. Puis attente BORNÉE de la santé — /health/ready de l'API ET la
 #      page d'accueil de l'admin — bornée, sinon un service mort bloque le
 #      script au lieu de déclencher le retour arrière ;
 #   6. santé absente ⇒ retour au sha précédent lu dans DEPLOYED, contrôlé par
@@ -470,10 +474,29 @@ else
 fi
 
 # ── 7. Bascule ─────────────────────────────────────────────────────────────
-step "7/8 Bascule (compose up -d)"
-# Une réponse du coach en route mourrait avec l'ancien processus : on la
-# laisse finir (borné, voir _scale.sh).
-deploy_attendre_ia "$ENV_NAME" "$ENV_FILE"
+step "7/8 Bascule (relais de l'API, puis compose up -d)"
+# L'API d'abord, SANS COUPURE : les neufs démarrent à côté des anciens, l'amont
+# bascule quand ils sont sains, les anciens finissent leur travail puis
+# s'arrêtent (deploy_relais, _scale.sh). `up -d` ne fait ensuite que le reste
+# de la pile — l'API y est déjà à jour.
+relais=0
+deploy_relais "$ENV_NAME" "$ENV_FILE" || relais=$?
+case "$relais" in
+  0) ;;
+  1)
+    die "Les exemplaires neufs n'ont pas pu démarrer ou ne sont jamais devenus sains — RIEN n'a basculé." \
+      "api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}, l'amont Nginx n'a pas bougé." \
+      "Le schéma est migré (compatible avec la version précédente)." \
+      "Journaux : $(dc_texte "$ENV_NAME") logs --tail 200 api"
+    ;;
+  *)
+    # Relais impossible (premier déploiement, conteneur arrêté en trop,
+    # plafond d'exemplaires) :
+    # la bascule d'avant. Une réponse du coach en route mourrait avec
+    # l'ancien processus : on la laisse finir (borné, voir _scale.sh).
+    deploy_attendre_ia "$ENV_NAME" "$ENV_FILE"
+    ;;
+esac
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   # Compose a refusé de démarrer la pile. Le schéma est déjà migré (migration
   # compatible avec la version précédente : c'est la contrainte annoncée en
@@ -482,9 +505,19 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   if [ -n "$PREVIOUS_SHA" ]; then
     remettre_config
     export_tags "$PREVIOUS_SHA"
-    dc "$ENV_NAME" "$ENV_FILE" up -d || true
-    env_set_tag "$ENV_FILE" "sha-$PREVIOUS_SHA"
-    deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA(compose)"
+    if dc "$ENV_NAME" "$ENV_FILE" up -d; then
+      # Après un relais, l'amont visait les neufs : les conteneurs recréés
+      # ont pu prendre d'autres ports. Nginx doit les apprendre — combien en
+      # attendre, c'est la configuration restaurée qui le dit.
+      api_attendre_exemplaires_sains "$ENV_NAME" "$ENV_FILE" "$(api_replicas_wanted "$ENV_NAME" "$ENV_FILE")"
+      nginx_apply_upstream "$ENV_NAME" "$ENV_FILE" || warn "amont Nginx non réécrit après le retour arrière — voir carlysctl status $ENV_NAME"
+      env_set_tag "$ENV_FILE" "sha-$PREVIOUS_SHA"
+      deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA(compose)"
+    else
+      # DEPLOYED ne doit pas affirmer un retour qui n'a pas eu lieu : après
+      # un relais, l'API peut tourner encore sur sha-$SHA.
+      warn "le retour arrière n'a pas démarré la pile non plus — DEPLOYED n'est pas écrit."
+    fi
   fi
   die "Bascule impossible : docker compose n'a pas démarré la pile." \
     "Diagnostic : $(dc_texte "$ENV_NAME") ps" \

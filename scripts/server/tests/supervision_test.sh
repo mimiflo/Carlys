@@ -433,7 +433,7 @@ echo "réduire — l'exemplaire qui part est vidé par Nginx avant d'être arrê
 
 # `drainage` — deux exemplaires sains ; le travail de l'api-2 (port 3101) se
 # lit dans $BANC/travail-3101 et baisse d'une unité à chaque lecture.
-drainage() {
+preparer_drainage() {
   banc_preparer
   ENV_STAGING="$CARLYS_ROOT/staging/.env"
   printf 'carlys_staging-api-1|3100%s\ncarlys_staging-api-2|3101\n' "${3-}" > "$BANC/exemplaires"
@@ -458,6 +458,9 @@ FAUX
   mkdir -p "$BANC/nginx"
   export CARLYS_NGINX_CONF_DIR="$BANC/nginx" CARLYS_NGINX_TEST=true CARLYS_NGINX_RELOAD=recharger-nginx
   export CARLYS_SCALE_DRAIN_DELAY=0 CARLYS_SCALE_DRAIN_SECONDS="${2:-30}"
+}
+drainage() {
+  preparer_drainage "$@"
   appeler scale_apply staging "$ENV_STAGING" 1 > /dev/null || true
 }
 
@@ -569,6 +572,83 @@ banc_nettoyer
 drainage 0 30 '' 0 carlys_staging-api-3
 verifier "un conteneur arrêté en plus : rien n'est touché, ni l'amont ni personne" non \
   "$(grep -q -E '^(stop|nginx)' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+# Le RELAIS d'un déploiement (deploy_relais) : les neufs démarrent à côté de
+# l'ancien, l'amont bascule sur eux une fois sains, l'ancien finit son travail
+# (lu 2, 1, 0) puis s'arrête.
+# `relais <travail> <santé des neufs> [exemplaires] [conteneurs arrêtés]`
+relais() {
+  preparer_drainage "$1"
+  if [ "$#" -ge 3 ]; then printf '%s' "$3"; else printf 'carlys_staging-api-1|3100\n'; fi > "$BANC/exemplaires"
+  [ -z "${4-}" ] || printf '%s\n' "$4" > "$BANC/exemplaires.arretes"
+  [ -z "${RELAIS_PLAFOND-}" ] || printf 'CARLYS_SCALE_MAX=%s\n' "$RELAIS_PLAFOND" >> "$ENV_STAGING"
+  echo "$1" > "$BANC/travail-3100"
+  FAUX_NEUFS_SANTE="$2" CARLYS_REPLICA_HEALTH_TRIES=3 CARLYS_REPLICA_HEALTH_DELAY=0 \
+    CARLYS_DEPLOY_DRAIN_SECONDS=30 banc_lancer bash -euo pipefail -c \
+    '. "$0/_common.sh"; deploy_relais staging "$1"' "$BANC_SERVEUR" "$ENV_STAGING" > "$BANC/code"
+}
+relais 2 healthy
+verifier "relais : fait (code 0)" 0 "$(cat "$BANC/code")"
+verifier "… l'amont passe sur le neuf AVANT que l'ancien ne s'arrête" oui \
+  "$([ "$(banc_rang 'nginx 3111 ')" -gt 0 ] && [ "$(banc_rang 'nginx 3111 ')" -lt "$(banc_rang 'stop carlys_staging-api-1')" ] && echo oui || echo non)"
+verifier "… l'ancien a fini son travail (2, 1, 0) avant de partir" 0 "$(cat "$BANC/travail-3100")"
+verifier "… il ne reste que le neuf" "carlys_staging-api-2" "$(cut -d'|' -f1 "$BANC/exemplaires" | tr '\n' ' ' | sed 's/ $//')"
+verifier "… né à côté, sans recréer l'ancien" oui \
+  "$(grep -q -- 'up -d --no-deps --no-recreate --scale api=2 api' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+relais 0 unhealthy
+verifier "relais : neuf jamais sain — rien n'a basculé (code 1)" 1 "$(cat "$BANC/code")"
+verifier "… l'ancien sert toujours, le neuf est retiré" "carlys_staging-api-1" \
+  "$(cut -d'|' -f1 "$BANC/exemplaires" | tr '\n' ' ' | sed 's/ $//')"
+verifier "… et l'amont n'a jamais porté le neuf" non "$(grep -q 'nginx 3111' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+relais 0 healthy ''
+verifier "relais : premier déploiement, rien en service — bascule d'avant (code 2)" 2 "$(cat "$BANC/code")"
+banc_nettoyer
+
+relais 0 healthy $'carlys_staging-api-1|3100\n' carlys_staging-api-9
+verifier "relais : un conteneur arrêté en trop — bascule d'avant (code 2)" 2 "$(cat "$BANC/code")"
+verifier "… sans rien faire naître" non "$(grep -q -- '--scale' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+# Plafond à 2 (celui de la recette) : deux anciens + un neuf le dépasseraient.
+RELAIS_PLAFOND=2 relais 0 healthy $'carlys_staging-api-1|3100\ncarlys_staging-api-2|3101\n'
+verifier "relais : les deux générations dépasseraient le plafond — bascule d'avant (code 2)" 2 "$(cat "$BANC/code")"
+verifier "… sans rien faire naître" non "$(grep -q -- '--scale' "$FAUX_JOURNAL" && echo oui || echo non)"
+banc_nettoyer
+
+FAUX_UP_ECHEC=1 relais 0 healthy
+verifier "relais : le démarrage des neufs échoue — rien n'a basculé (code 1)" 1 "$(cat "$BANC/code")"
+verifier "… le neuf resté « Created » est retiré (ps -a)" non \
+  "$([ -s "$BANC/exemplaires.arretes" ] && echo oui || echo non)"
+verifier "… l'ancien sert toujours" "carlys_staging-api-1" "$(cut -d'|' -f1 "$BANC/exemplaires" | tr '\n' ' ' | sed 's/ $//')"
+banc_nettoyer
+
+# Nginx refuse de recharger l'amont qui porte le neuf (port 3111).
+preparer_amont_refuse() {
+  cat > "$BANC/bin/recharger-nginx" << 'FAUX'
+#!/usr/bin/env bash
+ports="$(grep -o '127.0.0.1:[0-9]*' "$CARLYS_NGINX_CONF_DIR"/*.conf | cut -d: -f2 | tr '\n' ' ')"
+printf 'nginx %s\n' "$ports" >> "$FAUX_JOURNAL"
+case "$ports" in *3111*) exit 1 ;; esac
+FAUX
+}
+relais_amont_refuse() {
+  preparer_drainage 0
+  printf 'carlys_staging-api-1|3100\n' > "$BANC/exemplaires"
+  preparer_amont_refuse
+  FAUX_NEUFS_SANTE=healthy CARLYS_REPLICA_HEALTH_TRIES=3 CARLYS_REPLICA_HEALTH_DELAY=0 \
+    banc_lancer bash -euo pipefail -c \
+    '. "$0/_common.sh"; deploy_relais staging "$1"' "$BANC_SERVEUR" "$ENV_STAGING" > "$BANC/code"
+}
+relais_amont_refuse
+verifier "relais : amont refusé — rien n'a basculé (code 1)" 1 "$(cat "$BANC/code")"
+verifier "… l'amont revient sur l'ancien AVANT que le neuf soit retiré" oui \
+  "$([ "$(banc_rang 'nginx 3100 ')" -gt "$(banc_rang 'nginx 3111 ')" ] && [ "$(banc_rang 'nginx 3100 ')" -lt "$(banc_rang 'stop carlys_staging-api-2')" ] && echo oui || echo non)"
+verifier "… l'ancien sert toujours, seul" "carlys_staging-api-1" "$(cut -d'|' -f1 "$BANC/exemplaires" | tr '\n' ' ' | sed 's/ $//')"
 banc_nettoyer
 
 banc_bilan

@@ -351,3 +351,133 @@ deploy_attendre_ia() {
     sleep "$delai"
   done
 }
+
+# `deploy_relais <env> <.env>` — la bascule de l'API SANS COUPURE.
+#
+# `up -d` recréait tous les exemplaires d'un coup : entre l'arrêt des anciens
+# (jusqu'à 30 s), le démarrage de Nest et la sonde de santé, puis l'amont
+# Nginx réécrit seulement après, l'API répondait 502 pendant 10 à 60 s — et
+# la recette se redéploie à chaque poussée. Ici, les neufs démarrent À CÔTÉ
+# des anciens (`--no-recreate --scale`), l'amont ne bascule qu'une fois ils
+# sont sains, puis les anciens finissent leur travail (requêtes, réponses du
+# coach, analyses de photo : comme scale_drainer) avant d'être arrêtés.
+#
+# Rend 0 : relais fait. Rend 1 : les neufs ne sont jamais devenus sains — ils
+# sont retirés, l'amont n'a pas bougé, RIEN n'a basculé. Rend 2 : relais
+# impossible (premier déploiement, conteneur arrêté en trop, ou les deux
+# générations dépasseraient le PLAFOND d'exemplaires — ses connexions
+# PostgreSQL et sa mémoire, pas seulement la plage de ports) — l'appelant
+# fait la bascule d'avant. Le schéma est déjà migré et reste compatible avec l'ancienne
+# version (contrainte de deploy.sh) : les deux générations le partagent.
+deploy_relais() {
+  local env_name="$1" file="$2" voulus plafond nom etat sante port i
+  local tentatives delai limite debut jeton reste travail illisible=non
+  local -a anciens=() anciens_ports=() neufs=() neufs_ports=()
+  voulus="$(api_replicas_wanted "$env_name" "$file")"
+  while IFS='|' read -r nom etat sante port; do
+    [ "$etat" = running ] && [ -n "$port" ] || continue
+    anciens+=("${nom#/}"); anciens_ports+=("$port")
+  done < <(api_replica_states "$env_name" "$file")
+  [ "${#anciens[@]}" -gt 0 ] || return 2
+  # Même garde que scale_drainer : un conteneur arrêté en plus, et Compose
+  # en compterait un de trop au moment d'ajouter les neufs.
+  [ "$(dc "$env_name" "$file" ps -a -q api 2>/dev/null | wc -l)" -eq "${#anciens[@]}" ] || return 2
+  # Les deux générations coexistent le temps du drainage : chacune garde son
+  # pool Prisma (10 connexions) et sa mémoire. Au-delà du plafond (qui
+  # intègre déjà la plage de ports), max_connections serait dépassé.
+  plafond="$(scale_max "$env_name" "$file")"
+  [ $((${#anciens[@]} + voulus)) -le "$plafond" ] || return 2
+
+  info "relais : $voulus exemplaire(s) neuf(s) à côté des ${#anciens[@]} en service"
+  if ! dc "$env_name" "$file" up -d --no-deps --no-recreate \
+    --scale "api=$((${#anciens[@]} + voulus))" api; then
+    _relais_retirer_neufs "$env_name" "$file" "${anciens[@]}"
+    return 1
+  fi
+
+  # Le budget de santé de la bascule d'avant (deploy.sh : 60 × 2 s), pas
+  # moins : un sha lent à démarrer qui passait ne doit pas échouer ici.
+  tentatives="${CARLYS_REPLICA_HEALTH_TRIES:-${CARLYS_HEALTH_TRIES:-60}}"
+  delai="${CARLYS_REPLICA_HEALTH_DELAY:-${CARLYS_HEALTH_DELAY:-2}}"
+  for ((i = 0; i < tentatives; i++)); do
+    neufs=(); neufs_ports=()
+    while IFS='|' read -r nom etat sante port; do
+      nom="${nom#/}"
+      case " ${anciens[*]} " in *" $nom "*) continue ;; esac
+      [ "$etat" = running ] && [ -n "$port" ] || continue
+      case "$sante" in healthy | sans-sonde) neufs+=("$nom"); neufs_ports+=("$port") ;; esac
+    done < <(api_replica_states "$env_name" "$file")
+    [ "${#neufs[@]}" -ge "$voulus" ] && break
+    sleep "$delai"
+  done
+  if [ "${#neufs[@]}" -lt "$voulus" ]; then
+    warn "relais : ${#neufs[@]} exemplaire(s) neuf(s) sain(s) sur $voulus après $((tentatives * delai)) s — retirés, les anciens servent toujours"
+    _relais_retirer_neufs "$env_name" "$file" "${anciens[@]}"
+    return 1
+  fi
+
+  if ! nginx_apply_upstream "$env_name" "$file" "${neufs_ports[@]}"; then
+    warn "relais : amont Nginx non réécrit — neufs retirés, les anciens servent toujours"
+    # L'amont sur les anciens D'ABORD : un rechargement en erreur a pu être
+    # appliqué quand même, et retirer les neufs avant laisserait des 502.
+    nginx_apply_upstream "$env_name" "$file" "${anciens_ports[@]}" || true
+    _relais_retirer_neufs "$env_name" "$file" "${anciens[@]}"
+    return 1
+  fi
+  ok "amont Nginx sur les neufs : ${neufs_ports[*]}"
+
+  # Les anciens finissent ce qu'on leur a confié, borné comme une bascule.
+  jeton="$(env_value METRICS_TOKEN "$file" '')"
+  limite="${CARLYS_DEPLOY_DRAIN_SECONDS:-$(env_value CARLYS_DEPLOY_DRAIN_SECONDS "$file" 120)}"
+  case "$limite" in '' | *[!0-9]*) limite=120 ;; esac
+  debut="$(maintenant)"
+  while :; do
+    # La pause d'abord : `reload` rend la main avant que les anciens
+    # processus de Nginx aient cessé de distribuer.
+    sleep "${CARLYS_SCALE_DRAIN_DELAY:-2}"
+    reste=0
+    for port in "${anciens_ports[@]}"; do
+      travail="$(metrics_travail "$port" "$jeton")"
+      case "$travail" in
+        0) ;;
+        '?') [ "$illisible" = oui ] || warn "relais : travail illisible sur le port $port (/metrics) — arrêté sans l'attendre"
+          illisible=oui ;;
+        *) reste=1 ;;
+      esac
+    done
+    [ "$reste" -eq 0 ] && break
+    if [ "$(($(maintenant) - debut))" -ge "$limite" ]; then
+      warn "relais : travail encore en cours sur les anciens après $limite s — arrêtés quand même"
+      break
+    fi
+  done
+  if docker stop "${anciens[@]}" >/dev/null && docker rm "${anciens[@]}" >/dev/null; then
+    ok "relais fait : ${anciens[*]} drainés puis retirés"
+  else
+    warn "relais : arrêt de ${anciens[*]} incomplet — les neufs servent ; voir carlysctl status $env_name"
+  fi
+  return 0
+}
+
+# `_relais_retirer_neufs <env> <.env> <anciens…>` — arrête et retire tout
+# exemplaire d'API qui n'est pas un des anciens : le relais a échoué, la
+# génération en service reste seule.
+_relais_retirer_neufs() {
+  local env_name="$1" file="$2" id nom
+  shift 2
+  local -a neufs=()
+  # TOUS les conteneurs du service, arrêtés et seulement créés compris : un
+  # `up --scale` qui échoue au démarrage (port pris) en laisse à l'état
+  # `Created`, que `ps -q` ne voit pas — et la garde de scale_drainer
+  # refuserait ensuite toute réduction.
+  while read -r id; do
+    [ -n "$id" ] || continue
+    nom="$(docker inspect --format '{{.Name}}' "$id" 2>/dev/null)" || continue
+    nom="${nom#/}"
+    case " $* " in *" $nom "*) continue ;; esac
+    neufs+=("$nom")
+  done < <(dc "$env_name" "$file" ps -a -q api 2>/dev/null || true)
+  [ "${#neufs[@]}" -gt 0 ] || return 0
+  docker stop "${neufs[@]}" >/dev/null 2>&1 || true
+  docker rm -f "${neufs[@]}" >/dev/null 2>&1 || true
+}

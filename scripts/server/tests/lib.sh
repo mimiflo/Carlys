@@ -175,6 +175,11 @@ case "${1-}" in
   login) cat > /dev/null; exit 0 ;;
   inspect)
     nom="${*: -1}"
+    # `--format '{{.Name}}'` : le nom seul, conteneur arrêté compris.
+    if [ "${3-}" = '{{.Name}}' ]; then
+      grep -q -x -e "$nom" -e "$nom|.*" "$exemplaires" "$exemplaires.arretes" 2>/dev/null && printf '/%s\n' "$nom"
+      exit 0
+    fi
     ligne="$(grep -m1 "^$nom|" "$exemplaires" 2>/dev/null)" || exit 0
     IFS='|' read -r _ port sante <<< "$ligne"
     printf '/%s|running|%s|%s\n' "$nom" "${sante:-healthy}" "$port"
@@ -183,6 +188,14 @@ case "${1-}" in
     shift
     for nom in "$@"; do sed -i "/^$nom|/d" "$exemplaires" 2>/dev/null; done
     exit 0 ;;
+  # `rm [-f]` : retire aussi les conteneurs arrêtés ou seulement créés.
+  rm)
+    shift; [ "${1-}" = -f ] && shift
+    for nom in "$@"; do
+      sed -i "/^$nom|/d" "$exemplaires" 2>/dev/null
+      sed -i "/^$nom\$/d" "$exemplaires.arretes" 2>/dev/null
+    done
+    exit 0 ;;
   pull | info | image) exit 0 ;;
   manifest)
     case " ${FAUX_IMAGES_ABSENTES:-} " in *" ${3##*:sha-} "*) exit 1 ;; esac
@@ -190,16 +203,41 @@ case "${1-}" in
   compose) shift ;;
   *) exit 0 ;;
 esac
-# Options globales de compose : ignorées.
+# Options globales de compose : ignorées (le projet est retenu, il nomme les
+# exemplaires que `up --scale` fait naître).
+projet=carlys
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --project-name | --env-file | --file | --profile | -p | -f) shift 2 ;;
+    --project-name | -p) projet="$2"; shift 2 ;;
+    --env-file | --file | --profile | -f) shift 2 ;;
     *) break ;;
   esac
 done
 sous="${1-}"; shift || true
 case "$sous" in
-  pull | up | down | logs | stop) exit 0 ;;
+  # `up --scale api=N` : les exemplaires qui manquent naissent, sur des ports
+  # libres, dans l'état de santé $FAUX_NEUFS_SANTE (healthy par défaut).
+  up)
+    cible=''
+    while [ "$#" -gt 0 ]; do
+      case "$1" in --scale) cible="${2#api=}"; shift 2 ;; *) shift ;; esac
+    done
+    if [ -n "$cible" ]; then
+      n="$( { [ -f "$exemplaires" ] && cat "$exemplaires"; } | wc -l)"
+      dernier="$( { [ -f "$exemplaires" ] && cut -d'|' -f1 "$exemplaires"; } | sed 's/.*-//' | sort -n | tail -n 1)"
+      # $FAUX_UP_ECHEC : le démarrage échoue (port pris) et laisse le
+      # premier neuf à l'état `Created`, que seul `ps -a` voit.
+      if [ -n "${FAUX_UP_ECHEC-}" ]; then
+        printf '%s-api-%s\n' "$projet" "$((${dernier:-0} + 1))" >> "$exemplaires.arretes"
+        exit 1
+      fi
+      while [ "$n" -lt "$cible" ]; do
+        dernier=$((${dernier:-0} + 1)); n=$((n + 1))
+        printf '%s-api-%s|%s|%s\n' "$projet" "$dernier" "$((3109 + dernier))" "${FAUX_NEUFS_SANTE:-healthy}" >> "$exemplaires"
+      done
+    fi
+    exit 0 ;;
+  pull | down | logs | stop) exit 0 ;;
   # Une écriture par service, espacées, comme docker compose : le lecteur
   # qui s'arrête au premier trouvé (`grep -q`) ferme le tube avant la
   # suivante. Sans la pause, cette course ne se voyait que sous charge.

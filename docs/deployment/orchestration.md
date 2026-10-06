@@ -43,7 +43,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Élaguer images, couches pendantes et cache de construction de plus d'une semaine à chaque passe (le filet de retour arrière est gardé ; jamais les volumes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **oui**            | minuterie            |
 | Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | **oui**            | minuterie            |
 | Importer la table d'aliments CIQUAL, téléchargée et vérifiée par son empreinte, une fois par version (`_ciqual.sh` ; à la main : `carlysctl ciqual-import <env>`) | **oui**            | minuterie            |
-| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, et les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui**            | minuterie            |
+| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, et les sessions closes (révoquées ou expirées) et jetons de renouvellement échus depuis plus de 30 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui**            | minuterie            |
 | Sauvegarder les bases **et les médias MinIO**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **oui**            | cron, 3 h du matin   |
 | **Déployer une nouvelle version**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
@@ -245,7 +245,25 @@ refusé), ou si un partant refuse de s'arrêter : l'amont est rétabli, le `.env
 garde l'ancien nombre, `carlysctl scale` rend 1, et le passage suivant
 réessaiera.
 
-**Le déploiement aussi laisse finir** (`deploy_attendre_ia`, `_scale.sh`).
+**Le déploiement relaie l'API sans coupure** (`deploy_relais`, `_scale.sh`).
+`up -d` recréait tous les exemplaires d'un coup : arrêt des anciens (jusqu'à
+30 s), démarrage de Nest, sonde de santé, puis seulement l'amont Nginx — 10 à
+60 s de 502 à chaque déploiement, et la recette se redéploie à chaque
+poussée. L'étape 7 démarre désormais les neufs À CÔTÉ des anciens
+(`up -d --no-deps --no-recreate --scale api=<anciens + voulus>`), attend
+qu'ils soient sains, fait passer l'amont sur eux, laisse les anciens finir ce
+qu'on leur a confié (requêtes, réponses du coach, analyses de photo, au plus
+`CARLYS_DEPLOY_DRAIN_SECONDS`) puis les arrête ; `up -d` ne fait ensuite que
+le reste de la pile. Des neufs jamais sains sont retirés, l'amont n'a pas
+bougé : RIEN n'a basculé, et le déploiement s'arrête en le disant. Les deux
+générations coexistent le temps du drainage : leur somme est bornée par
+`CARLYS_SCALE_MAX` (pools Prisma et mémoire, plage de ports comprise), soit
+3 + 3 au plus en production et 1 + 1 en recette ; au-delà, et au premier
+déploiement, c'est la bascule d'avant. L'admin, un seul
+conteneur sur un port fixe, est encore recréée par `up -d` : quelques
+secondes sur les pages publiques.
+
+**La bascule d'avant laisse finir** (`deploy_attendre_ia`, `_scale.sh`).
 Une bascule (`deploy.sh`, étape 7) recrée l'API : une réponse du coach en
 route mourait avec l'ancien processus, et le téléphone affichait « Le coach a
 besoin d'une connexion ». Le 5 octobre 2026, une poussée qui ne touchait que
