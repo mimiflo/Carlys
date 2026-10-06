@@ -114,7 +114,10 @@ aucune version antérieure ne reçoit de correctif.
   (par défaut `http://localhost:3001` en développement).
 - **Rate limiting** global via `@nestjs/throttler` : 100 requêtes / 60 secondes
   par défaut (`RATE_LIMIT_TTL_SECONDS`, `RATE_LIMIT_MAX_REQUESTS`,
-  constantes dans `packages/shared-config`).
+  constantes dans `packages/shared-config`), 600 sur les serveurs
+  (`infrastructure/server/config/commun.conf` : compté par adresse IP, que
+  partagent une salle de sport en wifi ou un CGNAT mobile). Les routes
+  sensibles gardent leurs seaux stricts.
 - **Adresse du client derrière un proxy** : `TRUST_PROXY_HOPS` (défaut `0`,
   `2` en production — le proxy réseau puis le Nginx du serveur) fixe le nombre
   de proxys de confiance ; sans lui, la limitation de débit et l'audit ne
@@ -477,7 +480,7 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | TruffleHog + `pnpm audit --audit-level high` en CI | En place |
 | Config Zod bloquante au démarrage | En place |
 | Validation `whitelist` + `forbidNonWhitelisted`, Helmet, CORS restreint | En place |
-| Rate limiting 100 req/60 s, corps limité à 1 Mo (multipart : 5 Mio et `MEDIA_MAX_UPLOAD_BYTES`) | En place |
+| Rate limiting 100 req/60 s (600 sur les serveurs), routes sensibles strictes, corps limité à 1 Mo (multipart : 5 Mio et `MEDIA_MAX_UPLOAD_BYTES`) | En place |
 | Enveloppes d'erreur sans fuite (5xx génériques, sauf le 503 écrit pour la personne) | En place |
 | `/metrics` protégé par Bearer token en production (comparaison temps constant) | En place |
 | Logs Pino avec `requestId` (posé avant les parseurs de corps), `authorization`/`cookie` rédigés, adresses e-mail en empreinte (audit compris, anciennes lignes vidées), recherche du back-office dans le corps d'un `POST` | En place |

@@ -237,7 +237,8 @@ est donc le navigateur, pas l'application mobile.
 
 ### 4.5 Limitation de tentatives et verrouillage
 
-- En complément du rate limiting global (100 req/60 s), les endpoints
+- En complément du rate limiting global (100 req/60 s, 600 sur les
+  serveurs), les endpoints
   d'authentification reçoivent des **limites dédiées plus strictes**
   (throttler par route).
 - **Compteur d'échecs par compte et par IP dans Redis** ; au-delà du seuil,

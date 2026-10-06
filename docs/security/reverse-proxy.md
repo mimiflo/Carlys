@@ -53,7 +53,10 @@ limites de taille de corps) — section 6.
 ### Qui lit `request.ip`, et pour quoi
 
 - le **rate limiting** (`@nestjs/throttler`, tracker par défaut `req.ip`) :
-  seau global de 100 requêtes / 60 s, et SEPT seaux stricts de 10 / 60 s :
+  seau global de 100 requêtes / 60 s par défaut — 600 sur les serveurs
+  (`config/commun.conf` : une salle de sport en wifi ou un CGNAT mobile met
+  des dizaines de personnes derrière une adresse) —, et SEPT seaux stricts
+  de 10 / 60 s :
   `login`, `register`, `verify-email`, `forgot-password`,
   `reset-password`, `admin/auth/login` — et `POST community/requests`,
   souvent oublié parce qu'il porte un autre nom de constante
