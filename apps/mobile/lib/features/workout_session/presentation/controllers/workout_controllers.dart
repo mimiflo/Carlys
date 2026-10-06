@@ -5,8 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../data/repositories/workout_repository_impl.dart';
+import '../../data/services/local_rest_alarm.dart';
 import '../../domain/entities/workout.dart';
 import '../providers/closure_acknowledgment.dart';
+import '../providers/rest_timer_support.dart';
+
+export '../providers/rest_timer_support.dart';
 
 /// Séance en cours (au plus une), en temps réel depuis la base locale.
 final activeWorkoutProvider = StreamProvider<WorkoutWithSets?>((ref) {
@@ -173,20 +177,6 @@ class WorkoutActions {
 
 final workoutActionsProvider = Provider<WorkoutActions>(WorkoutActions.new);
 
-/// État du minuteur de repos.
-class RestTimerState {
-  const RestTimerState({required this.total, required this.remaining});
-
-  final Duration total;
-  final Duration remaining;
-
-  double get progress =>
-      total.inSeconds == 0 ? 0 : remaining.inSeconds / total.inSeconds;
-}
-
-/// L'heure du minuteur de repos (remplacée en test : écran éteint simulé).
-final restClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
-
 /// Minuteur de repos entre les séries.
 ///
 /// Il compte jusqu'à une HEURE DE FIN. Écran éteint, le téléphone suspend
@@ -206,6 +196,8 @@ class RestTimerController extends Notifier<RestTimerState?> {
 
   void start(Duration duration) {
     _release();
+    // Le système sonnera la fin, écran éteint compris (RestAlarm).
+    unawaited(ref.read(restAlarmProvider).schedule(duration));
     _endsAt = ref.read(restClockProvider)().add(duration);
     state = RestTimerState(total: duration, remaining: duration);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
@@ -217,7 +209,9 @@ class RestTimerController extends Notifier<RestTimerState?> {
     final endsAt = _endsAt;
     if (current == null || endsAt == null) return;
     final left = endsAt.difference(ref.read(restClockProvider)());
-    if (left <= Duration.zero) return stop();
+    // Fini à l'écran : une alarme inexacte (Android 14+) sonnerait en pleine
+    // série suivante. Écran éteint, elle reste : c'est son rôle.
+    if (left <= Duration.zero) return _onScreen() ? stop() : _end();
     // À la seconde SUPÉRIEURE : jamais un « 0:00 » qui dure encore.
     final seconds = (left.inMilliseconds / 1000).ceil();
     state = RestTimerState(
@@ -226,7 +220,16 @@ class RestTimerController extends Notifier<RestTimerState?> {
     );
   }
 
+  /// Passé ou séance close : la fin programmée n'a plus lieu de sonner.
   void stop() {
+    unawaited(ref.read(restAlarmProvider).cancel());
+    _end();
+  }
+
+  bool _onScreen() =>
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
+  void _end() {
     _release();
     state = null;
   }

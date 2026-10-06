@@ -87,6 +87,7 @@ import 'package:carlys_mobile/features/workout_program/presentation/screens/prog
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_row.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/services/local_rest_alarm.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
@@ -105,6 +106,7 @@ import '../../test/support/fake_exercises_repository.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_push_messenger.dart';
+import '../../test/support/fake_rest_alarm.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_water_store.dart';
@@ -649,6 +651,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          restAlarmProvider.overrideWithValue(FakeRestAlarm()),
           appEnvironmentProvider.overrideWithValue(
             const AppEnvironment(
               flavor: AppFlavor.development,

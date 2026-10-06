@@ -1,9 +1,9 @@
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/services/local_rest_alarm.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/widgets/set_stepper_field.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_exercises_repository.dart';
+import '../../support/fake_rest_alarm.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/in_memory_workout_template_repository.dart';
 
@@ -87,6 +88,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          restAlarmProvider.overrideWithValue(FakeRestAlarm()),
           workoutRepositoryProvider.overrideWithValue(workouts),
           workoutTemplateRepositoryProvider.overrideWithValue(templates),
           exercisesRepositoryProvider.overrideWithValue(

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  L'icône de la notification de fin de repos n'est citée que par son NOM,
+  depuis Dart : l'élagage des ressources d'une release ne la voit pas
+  servir et la retirerait — la notification ne s'afficherait plus, sans
+  erreur. Elle est donc gardée ici, explicitement.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_rest" />

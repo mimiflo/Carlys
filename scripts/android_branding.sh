@@ -83,6 +83,57 @@ if ! grep -q 'android.intent.action.TTS_SERVICE' "$MANIFEST"; then
   rm -f "$MANIFEST.bak"
 fi
 
+# ── Fin de repos, écran éteint (flutter_local_notifications) ────────────────
+#
+# Le minuteur de repos programme une notification « Repos terminé » auprès du
+# SYSTÈME : écran noir, l'appli est suspendue et ne peut plus rien annoncer.
+# Le greffon ne déclare que POST_NOTIFICATIONS et VIBRATE ; une notification
+# PROGRAMMÉE demande en plus (son README, version 22) :
+#   - ses deux récepteurs, sans quoi l'alarme sonne dans le vide ;
+#   - RECEIVE_BOOT_COMPLETED, pour la reprogrammer après un redémarrage ;
+#   - SCHEDULE_EXACT_ALARM, pour sonner À L'HEURE : accordée d'office
+#     jusqu'à Android 13 ; refusée par défaut à partir d'Android 14, où la
+#     fin de repos reste programmée, en alarme inexacte (quelques secondes à
+#     quelques minutes de retard plutôt que le silence). Pas USE_EXACT_ALARM :
+#     réservée aux réveils et agendas, le Play Store la contrôle.
+for permission in RECEIVE_BOOT_COMPLETED SCHEDULE_EXACT_ALARM; do
+  if ! grep -q "android.permission.$permission\"" "$MANIFEST"; then
+    sed -i.bak "s|<application|<uses-permission android:name=\"android.permission.$permission\"/>\\
+    <application|" "$MANIFEST"
+    rm -f "$MANIFEST.bak"
+  fi
+done
+if ! grep -q 'ScheduledNotificationReceiver' "$MANIFEST"; then
+  sed -i.bak 's|</application>|    <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />\
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">\
+            <intent-filter>\
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>\
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>\
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />\
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>\
+            </intent-filter>\
+        </receiver>\
+    </application>|' "$MANIFEST"
+  rm -f "$MANIFEST.bak"
+fi
+
+# Le greffon s'appuie sur le DÉSUCRAGE Java (les API de date récentes sur les
+# vieux Android) : sans lui, la compilation échoue. Le gabarit de `flutter
+# create` porte un `compileOptions {` et aucun bloc `dependencies` ; un
+# gabarit qui changerait de forme est REFUSÉ ici plutôt que de produire un
+# APK qui ne compile pas plus loin.
+GRADLE="android/app/build.gradle.kts"
+if ! grep -q 'isCoreLibraryDesugaringEnabled' "$GRADLE"; then
+  sed -i.bak 's|compileOptions {|compileOptions {\
+        isCoreLibraryDesugaringEnabled = true|' "$GRADLE"
+  rm -f "$GRADLE.bak"
+  printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n' >> "$GRADLE"
+  grep -q 'isCoreLibraryDesugaringEnabled = true' "$GRADLE" || {
+    echo "$GRADLE : bloc compileOptions introuvable, désucrage non activé" >&2
+    exit 1
+  }
+fi
+
 # ── Pas de sauvegarde Android ───────────────────────────────────────────────
 #
 # Par défaut (`allowBackup` absent vaut « true »), Android copie les données de

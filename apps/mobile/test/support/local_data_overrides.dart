@@ -14,9 +14,11 @@
 library;
 
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/services/local_rest_alarm.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'fake_rest_alarm.dart';
 import 'fake_workout_repository.dart';
 import 'in_memory_workout_template_repository.dart';
 
@@ -26,6 +28,8 @@ List<Override> localDataOverrides([FakeWorkoutRepository? workouts]) {
   final seances = workouts ?? FakeWorkoutRepository();
   return [
     workoutRepositoryProvider.overrideWithValue(seances),
+    // La séance lance des repos : leur fin se programme sans greffon.
+    restAlarmProvider.overrideWithValue(FakeRestAlarm()),
     workoutTemplateRepositoryProvider.overrideWithValue(
       InMemoryWorkoutTemplateRepository(seances),
     ),

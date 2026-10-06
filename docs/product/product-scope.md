@@ -74,7 +74,7 @@ Liste complète du périmètre MVP, avec la tranche verticale qui la livre :
 | Bibliothèque d'exercices + recherche | Catalogue seedé (30+ exercices), recherche et filtres (groupe musculaire, équipement), cache Redis côté API | 3 |
 | Création de programme | Programmes d'entraînement personnels : semaines, jours, modèles de séances | 4 |
 | Séances d'entraînement | Séance active avec séries / poids / répétitions, notes ; identifiants UUID générés côté client pour le rejeu hors ligne | 4 |
-| Minuteur de repos | Chronomètre de repos entre séries, intégré à la séance active | 4 |
+| Minuteur de repos | Chronomètre de repos entre séries, intégré à la séance active ; exact même écran éteint (compté jusqu'à une heure de fin), et sa fin sonne par une notification programmée sur le téléphone | 4 |
 | Historique | Liste des séances passées et détail d'une ancienne séance | 4 |
 | Hors ligne + synchronisation | Base locale Drift/SQLite, file de synchronisation **idempotente** vers l'API (rejeu sans doublon) | 4 |
 | Records personnels | Détection et affichage des records (charges, volume) | 5 |
