@@ -8,8 +8,8 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../progress/data/repositories/progress_repository_impl.dart';
 import '../../../progress/domain/entities/progress.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 
 /// Objectif hebdomadaire de séances — référence commune de l'indice de forme
 /// et du bloc « Ta semaine ».
@@ -18,9 +18,7 @@ const int weeklySessionsTarget = 5;
 /// Vue « semaine » de l'accueil — indépendante de la période sélectionnée
 /// sur l'onglet Progression.
 final weekOverviewProvider = FutureProvider.autoDispose<ProgressOverviewEntity>(
-  (ref) {
-    return ref.watch(progressRepositoryProvider).overview(ProgressPeriod.week);
-  },
+  (ref) => ref.watch(overviewForPeriodProvider(ProgressPeriod.week).future),
 );
 
 /// Indice de forme : part de l'objectif hebdomadaire déjà réalisée, sur 100.

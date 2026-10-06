@@ -90,6 +90,8 @@ void main() {
     // Dans l'appli, les récompenses tiennent l'historique ouvert.
     container.listen(workoutHistoryProvider, (_, _) {});
     final tuile = container.listen(profileSessionsCountProvider, (_, _) {});
+    // L'accueil tient la semaine ouverte (et la garde deux minutes).
+    container.listen(overviewForPeriodProvider(ProgressPeriod.week), (_, _) {});
 
     WorkoutHistoryEntry seance(String id, LocalSyncState sync) =>
         WorkoutHistoryEntry(
@@ -108,6 +110,7 @@ void main() {
 
     historique.add([seance('150e', LocalSyncState.pending), ...rapatriees]);
     await container.read(lifetimeStatsProvider.future);
+    await container.read(overviewForPeriodProvider(ProgressPeriod.week).future);
     await pumpEventQueue();
     expect(tuile.read().valueOrNull, 149);
     // Le premier chargement de l'historique n'est pas un acquittement.
@@ -119,12 +122,21 @@ void main() {
     await pumpEventQueue();
     expect(tuile.read().valueOrNull, 150);
     expect(serveur.lectures, 2);
+    // La semaine aussi : sans cela, l'onglet Progrès montrait celle d'avant.
+    expect(serveur.semaines, 2);
   });
 }
 
 /// Le serveur, qui compte ses lectures des compteurs de vie entière.
 class _ServeurQuiCompte extends FakeProgressRepository {
   int lectures = 0;
+  int semaines = 0;
+
+  @override
+  Future<ProgressOverviewEntity> overview(ProgressPeriod period) {
+    if (period == ProgressPeriod.week) semaines++;
+    return super.overview(period);
+  }
 
   @override
   Future<LifetimeStats> lifetimeStats() {

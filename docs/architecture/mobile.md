@@ -611,9 +611,31 @@ Points structurants :
   les routes métier.
 - Interceptors cibles (Étape 2) : propagation d'un `x-request-id`
   (`packages/shared-config`), en-tête `Authorization: Bearer`, **renouvellement
-  automatique du token d'accès** sur 401 via le refresh token rotatif — une
-  seule requête de rafraîchissement en vol, les autres requêtes attendent puis
-  rejouent ; en cas d'échec, déconnexion propre.
+  automatique du token d'accès** via le refresh token rotatif — une seule
+  requête de rafraîchissement en vol, les autres attendent puis rejouent ; en
+  cas d'échec définitif (401), déconnexion propre.
+- **Renouvellement D'AVANCE** (`core/auth/token_deadline.dart`) : le jeton
+  d'accès vit 15 min, et au retour d'une pause plus longue toute la vague de
+  requêtes partait expirée (401, renouvellement, rejeu : trois allers-retours
+  avant le premier écran). Il se renouvelle désormais AVANT l'envoi, 60 s
+  avant son échéance. L'échéance se compte en DURÉE DE VIE (`exp − iat`, deux
+  instants du serveur) depuis que l'appareil a vu le jeton, jamais à l'horloge
+  du téléphone : un appareil en avance renouvelait sinon à chaque requête, et
+  chaque rotation perdue en route ferme la session côté serveur. Un
+  renouvellement raté ouvre une pause de 30 s ; une requête dont le
+  renouvellement d'avance a échoué n'en relance pas un second sur son 401.
+- **Le 401 ne se rejoue pas n'importe comment** : jamais sous le jeton d'un
+  AUTRE compte (déconnexion puis connexion pendant l'envoi), et jamais sur les
+  routes où il veut dire « mot de passe incorrect » (`change-password`,
+  suppression du compte) — chaque essai y compterait double contre le
+  verrouillage. Un jeton déjà remplacé par une requête voisine suffit au
+  rejeu, sans seconde rotation.
+- **Un seul pool de connexions** (`httpAdapterProvider`), partagé par le
+  client principal et celui du renouvellement, gardées 30 s : Dio les
+  fermait après 3 s, et presque chaque changement d'écran rouvrait TCP et TLS.
+- **L'accueil se préchauffe** pendant l'écran de démarrage
+  (`dashboard/presentation/providers/home_warmup.dart`) pour un habitué
+  connecté : ses lectures réseau partent pendant les 2,6 s du plancher.
 - Les datasources désérialisent les **enveloppes de réponse** de l'API
   (`{ data, meta, requestId }` / `{ error: { code, message, details, requestId } }`,
   contrats définis dans `packages/api-contracts`) et convertissent les erreurs
@@ -668,6 +690,16 @@ Points structurants :
   compte qui arrive. Une relecture ratée du MÊME compte garde, elle, sa
   valeur. `rewardFactsProvider` ne rend aucun fait sans session et attend
   toute source qui se recharge pour de nouvelles dépendances.
+- **Troisième forme : la lecture GARDÉE deux minutes** (`keepForAccount`,
+  `authentication/presentation/providers/keep_for_account.dart`), pour ce qui
+  bouge sans être écrit par la personne (fil d'amis, ligue, défis, plan, totaux
+  d'une période) : un provider auto-disposé se relisait à chaque retour sur
+  son onglet, un `accountBoundCache` ne se relit jamais seul. Gardée, elle est
+  servie telle quelle pendant deux minutes, puis relue par l'écran suivant ;
+  elle suit la session (relue au changement de compte, jamais lue sans
+  session) et ne garde jamais un échec. Ce qui l'écrit doit l'invalider : la
+  clôture acquittée relit les totaux de période, bloquer quelqu'un relit la
+  ligue et les défis.
 - **Quand purger** : l'expiration de session (401 au renouvellement, soit
   trente jours sans ouvrir l'application) n'est **pas** un changement de
   compte, et ne purge rien : c'est le même utilisateur, et effacer là

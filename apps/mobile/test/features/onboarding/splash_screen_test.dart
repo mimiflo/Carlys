@@ -4,7 +4,9 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
+import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
@@ -12,12 +14,15 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_p
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/splash_brand_intro.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
+import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_community_repository.dart';
+import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
@@ -38,7 +43,10 @@ import '../../support/local_data_overrides.dart';
 void main() {
   setUp(seedCompletedFirstRun);
 
-  Widget app({bool storedSession = true}) => ProviderScope(
+  Widget app({
+    bool storedSession = true,
+    FakeProgressRepository? progress,
+  }) => ProviderScope(
     overrides: [
       appEnvironmentProvider.overrideWithValue(
         const AppEnvironment(
@@ -54,7 +62,13 @@ void main() {
       // un minuteur en vol après la fin du test — l'écran est plus dense
       // qu'avant, donc la liste paresseuse les atteint désormais.
       ...localDataOverrides(),
-      progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
+      progressRepositoryProvider.overrideWithValue(
+        progress ?? FakeProgressRepository(),
+      ),
+      // L'écran de démarrage préchauffe l'accueil : métabolisme, repas du
+      // jour et fil d'amis partent pendant le plancher.
+      nutritionRepositoryProvider.overrideWithValue(FakeNutritionRepository()),
+      communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
@@ -142,6 +156,27 @@ void main() {
 
     expect(await clicheEnCache(tester), isFalse);
     expect(find.byType(SplashScreen), findsOneWidget);
+  });
+
+  testWidgets('l’habitué connecté : la semaine de l’accueil part PENDANT le '
+      'plancher', (tester) async {
+    final periodes = <ProgressPeriod>[];
+    final progress = FakeProgressRepository(
+      overviewFor: (period) {
+        periodes.add(period);
+        return overviewOf(period);
+      },
+    );
+    await tester.pumpWidget(app(progress: progress));
+    await tester.pump();
+    await tester.pump();
+
+    // L'écran de démarrage est encore là, et la lecture est déjà partie.
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(periodes, contains(ProgressPeriod.week));
+
+    await letHoldElapse(tester);
+    expect(find.byType(HomeScreen), findsOneWidget);
   });
 
   testWidgets('le plancher est un minimum, pas une addition', (tester) async {

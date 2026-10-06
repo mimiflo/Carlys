@@ -3,12 +3,19 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utilities/external_links.dart';
+import '../../../authentication/presentation/providers/keep_for_account.dart';
 import '../../data/repositories/subscription_repository_impl.dart';
 import '../../domain/entities/subscription.dart';
 
 /// Plan effectif de l'utilisateur (décidé côté serveur).
+///
+/// Gardé deux minutes : le Profil, poussé hors du menu, le relisait à chaque
+/// ouverture. Le retour d'un paiement l'invalide (`subscription_resume_refresh`).
 final planStatusProvider = FutureProvider.autoDispose<PlanStatus>((ref) {
-  return ref.watch(subscriptionRepositoryProvider).planStatus();
+  return keepForAccount(
+    ref,
+    () => ref.watch(subscriptionRepositoryProvider).planStatus(),
+  );
 });
 
 /// Droits effectifs, dans l'ordre servi par le serveur.

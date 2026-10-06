@@ -65,7 +65,7 @@ class ProgressScreen extends ConsumerWidget {
                 error: (_, __) => AppErrorState(
                   title: 'Statistiques indisponibles',
                   message: AppErrorState.retryConnectionMessage,
-                  onRetry: () => ref.invalidate(progressOverviewProvider),
+                  onRetry: () => ref.invalidate(overviewForPeriodProvider),
                 ),
                 data: (data) => _OverviewBlock(overview: data),
               ),

@@ -29,10 +29,11 @@ import 'community_providers.dart';
 ///
 /// SEULES CELLES QUI VIVENT. Depuis les onglets, l'écran ne regarde plus que
 /// les sources de l'onglet ouvert (et les demandes, pour la pastille). Une
-/// source auto-disposée que personne n'écoute n'existe pas : la lire la
-/// créerait, lancerait sa requête, et Riverpod la jetterait en fin de trame
-/// — un appel réseau pour rien. `ref.exists` écarte ces sources AVANT
-/// l'invalidation, qui les ferait sinon exister.
+/// source jamais lue n'existe pas : la lire la créerait et lancerait sa
+/// requête pour rien. `ref.exists` écarte ces sources AVANT l'invalidation,
+/// qui les ferait sinon exister. Celles d'un onglet vu dans les deux
+/// dernières minutes, GARDÉES (`keepForAccount`), sont relues aussi : le
+/// geste rafraîchit ce que la personne retrouvera en y revenant.
 ///
 /// L'attente n'est pas décorative : `RefreshIndicator` garde son anneau tant
 /// que ce futur n'est pas terminé, et le geste doit durer aussi longtemps

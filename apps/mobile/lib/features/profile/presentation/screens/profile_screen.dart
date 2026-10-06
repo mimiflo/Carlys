@@ -9,6 +9,7 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../community/presentation/providers/community_providers.dart';
 import '../../../community/presentation/providers/community_tab_state.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
+import '../../../subscription/presentation/providers/subscription_providers.dart';
 import '../../../workout_program/presentation/providers/program_providers.dart';
 import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
 import '../providers/profile_hub_providers.dart';
@@ -159,6 +160,7 @@ class ProfileScreen extends ConsumerWidget {
     ref
       ..invalidate(lifetimeStatsProvider)
       ..invalidate(communityFriendsProvider)
+      ..invalidate(planStatusProvider)
       ..invalidate(programsProvider);
     return ref
         .read(lifetimeStatsProvider.future)

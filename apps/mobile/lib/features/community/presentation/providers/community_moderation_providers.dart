@@ -36,6 +36,8 @@ class CommunityModerationActions {
       ..invalidate(communityFriendsProvider)
       ..invalidate(friendRequestsProvider)
       ..invalidate(encouragementsProvider)
+      ..invalidate(leagueProvider)
+      ..invalidate(friendChallengesProvider)
       ..invalidate(blockedUsersProvider);
   }
 

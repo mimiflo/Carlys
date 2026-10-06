@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../authentication/presentation/controllers/account_bound_cache.dart';
+import '../../../authentication/presentation/providers/keep_for_account.dart';
 import '../../data/repositories/progress_repository_impl.dart';
 import '../../domain/entities/progress.dart';
 
@@ -9,11 +10,22 @@ final progressPeriodProvider = StateProvider.autoDispose<ProgressPeriod>(
   (ref) => ProgressPeriod.week,
 );
 
+/// Statistiques agrégées d'UNE période, gardées deux minutes : l'accueil
+/// (la semaine) et l'onglet Progrès lisent la même, et revenir sur une
+/// période déjà vue ne la redemande plus.
+final overviewForPeriodProvider = FutureProvider.autoDispose
+    .family<ProgressOverviewEntity, ProgressPeriod>((ref, period) {
+      return keepForAccount(
+        ref,
+        () => ref.watch(progressRepositoryProvider).overview(period),
+      );
+    });
+
 /// Statistiques agrégées de la période sélectionnée.
 final progressOverviewProvider =
     FutureProvider.autoDispose<ProgressOverviewEntity>((ref) {
       final period = ref.watch(progressPeriodProvider);
-      return ref.watch(progressRepositoryProvider).overview(period);
+      return ref.watch(overviewForPeriodProvider(period).future);
     });
 
 /// Records personnels, tous exercices confondus.

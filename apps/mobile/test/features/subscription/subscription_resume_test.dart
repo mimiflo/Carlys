@@ -128,5 +128,12 @@ void main() {
     await tester.pump(SubscriptionResumeRefresh.webhookGrace);
     await container.read(planStatusProvider.future);
     expect(repository.planStatusReads, 4);
+
+    // Le plan est GARDÉ deux minutes après sa lecture (`keepForAccount`) :
+    // son minuteur tombe avec le conteneur, fermé ici et non dans le
+    // `tearDown`, que le banc de widgets ne voit qu'après son propre
+    // contrôle des minuteurs en attente.
+    watching.close();
+    container.dispose();
   });
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../dashboard/presentation/providers/home_warmup.dart';
 import '../../domain/first_run_step.dart';
 import '../controllers/first_run_controller.dart';
 import '../controllers/splash_gate.dart';
@@ -32,6 +33,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   bool _athletePrecached = false;
+  bool _homeWarmed = false;
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // page de bienvenue.
     ref.listenManual<FirstRunStep?>(firstRunStepProvider, (_, step) {
       if (step == FirstRunStep.welcome) _precacheAthlete();
+      if (step == FirstRunStep.done) _warmHome();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authControllerProvider.notifier).restore();
@@ -64,6 +67,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_athletePrecached || !mounted) return;
     _athletePrecached = true;
     unawaited(precacheImage(const AssetImage(AthletePhoto.asset), context));
+  }
+
+  /// L'habitué connecté va droit à l'accueil : ses lectures réseau partent
+  /// PENDANT le plancher, et l'accueil s'ouvre sur des sections prêtes.
+  /// Les écoutes tombent avec cet écran — l'accueil a pris le relais.
+  void _warmHome() {
+    if (_homeWarmed || !mounted) return;
+    if (ref.read(authControllerProvider) is! AuthAuthenticated) return;
+    _homeWarmed = true;
+    for (final provider in homeWarmup) {
+      ref.listenManual<Object?>(provider, (_, _) {});
+    }
   }
 
   @override

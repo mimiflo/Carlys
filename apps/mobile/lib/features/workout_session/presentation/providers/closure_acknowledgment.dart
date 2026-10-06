@@ -33,7 +33,10 @@ Stream<List<WorkoutHistoryEntry>> rereadServerCountsOnClosure(
     if (before != null && count > before) {
       ref
         ..invalidate(lifetimeStatsProvider)
-        ..invalidate(personalRecordsProvider);
+        ..invalidate(personalRecordsProvider)
+        // Les totaux de la période (accueil, onglet Progrès) : gardés deux
+        // minutes, ils montreraient la semaine d'avant la séance.
+        ..invalidate(overviewForPeriodProvider);
     }
     return entries;
   });
