@@ -223,7 +223,7 @@ model UserSession {
   userAgent      String?
   createdAt      DateTime  @default(now())
   lastUsedAt     DateTime  @default(now())
-  /// Expiration glissante : repoussée à chaque rotation du refresh token.
+  /// Échéance ABSOLUE, fixée à la connexion : la rotation ne la repousse pas.
   expiresAt      DateTime
   revokedAt      DateTime?
   revokedReason  String?

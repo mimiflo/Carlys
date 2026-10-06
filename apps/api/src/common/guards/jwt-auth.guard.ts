@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfigService } from '../../config/app-config.service';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { SessionCache } from '../../infrastructure/cache/session-cache';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 
@@ -20,8 +21,9 @@ interface AccessTokenPayload {
  * Guard global : toute route est authentifiée sauf marquage @Public().
  *
  * Vérifie le JWT (signature, expiration, issuer, audience) PUIS l'état de la
- * session en base : révoquer une session invalide immédiatement ses access
- * tokens, sans attendre leur expiration.
+ * session : révoquer une session invalide immédiatement ses access tokens,
+ * sans attendre leur expiration. L'état se lit d'abord dans [SessionCache],
+ * que toute fermeture invalide ; la base, sinon.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -30,6 +32,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwt: JwtService,
     private readonly config: AppConfigService,
     private readonly prisma: PrismaService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -63,21 +66,33 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Session expirée ou invalide.');
     }
 
-    const session = await this.prisma.userSession.findUnique({
-      where: { id: payload.sid },
-      select: { userId: true, revokedAt: true, expiresAt: true },
-    });
-    const sessionValid =
-      session !== null &&
-      session.userId === payload.sub &&
-      session.revokedAt === null &&
-      session.expiresAt.getTime() > Date.now();
-    if (!sessionValid) {
+    if (!(await this.sessionValid(payload))) {
       throw new UnauthorizedException('Session expirée ou invalide.');
     }
 
     request.authUser = { userId: payload.sub, sessionId: payload.sid };
     return true;
+  }
+
+  private async sessionValid({ sub, sid }: AccessTokenPayload): Promise<boolean> {
+    const cached = await this.sessions.lookup(sub, sid);
+    if (cached?.expiresAt != null && cached.expiresAt > Date.now()) {
+      return true;
+    }
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: sid },
+      select: { userId: true, revokedAt: true, expiresAt: true },
+    });
+    const valid =
+      session !== null &&
+      session.userId === sub &&
+      session.revokedAt === null &&
+      session.expiresAt.getTime() > Date.now();
+    if (valid && cached !== null) {
+      // Sans attendre : la requête n'a pas à payer l'écriture du cache.
+      void this.sessions.remember(sub, sid, session.expiresAt, cached.generation);
+    }
+    return valid;
   }
 
   private extractBearerToken(request: AuthenticatedRequest): string | undefined {

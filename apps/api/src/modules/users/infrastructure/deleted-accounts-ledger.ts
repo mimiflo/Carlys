@@ -25,8 +25,8 @@ function orphelinsAvant(before: Date): Prisma.SubscriptionEventWhereInput {
 }
 
 /**
- * Une session CLOSE avant `before` : révoquée, ou expirée (son expiration
- * glisse à chaque rotation, donc plus aucun renouvellement depuis).
+ * Une session CLOSE avant `before` : révoquée, ou expirée (échéance
+ * absolue, fixée à la connexion).
  */
 function sessionsClosesAvant(before: Date): Prisma.UserSessionWhereInput {
   return { OR: [{ revokedAt: { lt: before } }, { expiresAt: { lt: before } }] };

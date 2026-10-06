@@ -336,20 +336,26 @@ describe('AuthService', () => {
       );
     });
 
-    it('nominal : nouveau couple de jetons, expiration glissante', async () => {
+    it('nominal : nouveau couple de jetons, échéance de la session INCHANGÉE', async () => {
+      // Durée de vie absolue : se servir de l'appli ne repousse pas la
+      // reconnexion, 30 jours après la connexion.
+      const echeance = new Date(Date.now() + 3_600_000);
       const stubs = buildStubs();
-      stubs.sessions.findRefreshTokenByHash.mockResolvedValue(storedToken());
+      stubs.sessions.findRefreshTokenByHash.mockResolvedValue(
+        storedToken({}, { expiresAt: echeance }),
+      );
       const service = buildService(stubs);
 
       const tokens = await service.refresh('jeton-client', client);
 
       expect(tokens.refreshToken).toBe('nouveau-jeton');
       expect(tokens.accessToken).toBe('jwt');
+      expect(tokens.refreshTokenExpiresAt).toBe(echeance.toISOString());
       expect(stubs.sessions.rotateRefreshToken).toHaveBeenCalledWith(
         'token-1',
         'session-1',
         'hash-du-nouveau-jeton',
-        expect.any(Date),
+        echeance,
       );
     });
   });

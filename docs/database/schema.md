@@ -185,11 +185,13 @@ lecture.
 
 ### `UserSession` (implémenté)
 Une session **par appareil**. L'access token JWT référence la session (claim
-`sid`) : le guard vérifie son état en base à chaque requête, la révoquer
-invalide donc immédiatement ses access tokens.
+`sid`) : le guard vérifie son état à chaque requête (cache Redis invalidé à
+chaque fermeture, sinon la base) ; la révoquer invalide donc immédiatement
+ses access tokens.
 - Champs clés : `userId`, `deviceName`, `devicePlatform`, `ipAddress`,
-  `userAgent`, `expiresAt` (expiration **glissante**, repoussée à chaque
-  rotation), `lastUsedAt`, `revokedAt`, `revokedReason`
+  `userAgent`, `expiresAt` (échéance **absolue**, fixée à la connexion —
+  `REFRESH_TOKEN_TTL_DAYS`, 30 jours — que la rotation ne repousse pas : on
+  se reconnecte une fois par mois), `lastUsedAt`, `revokedAt`, `revokedReason`
   (`logout | user_revoked | user_revoked_all | password_reset |
   password_changed | refresh_reuse_detected | admin_suspension |
   social_link_unverified_email`). La suppression du compte, elle, SUPPRIME
@@ -214,11 +216,10 @@ SHA-256 (`tokenHash` unique).
 - Détection de réutilisation : présenter un jeton `ROTATED`/`REVOKED` →
   révocation de **toute la session** + événement d'audit.
 - **Durée** : chaque rotation écrit une ligne ; un jeton échu depuis plus de
-  30 jours est effacé par la même passe quotidienne. Compromis assumé : un
-  jeton `ROTATED` présenté révoque sa session (le piège qui éjecte un voleur
-  de la chaîne) ; effacé, il ne rend plus qu'un 401. Le piège tient donc
-  TTL + 30 jours après l'émission (60 par défaut). Le borner autrement
-  demande une durée de vie absolue de session — une décision produit.
+  30 jours est effacé par la même passe quotidienne. Le piège de
+  réutilisation n'y perd rien : tous les jetons d'une session portent son
+  échéance absolue, et ne partent que 30 jours après elle — quand plus
+  aucune chaîne qu'ils dénonceraient ne peut vivre.
   Balayage sans index sur `expiresAt`, une fois par jour, sur une table que
   la purge garde bornée ; un échec de cette passe est rapporté sans retarder
   l'effacement des comptes.

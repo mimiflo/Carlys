@@ -21,8 +21,19 @@
 >   encore `ACTIVE` (mise à jour conditionnelle en transaction) ; deux refresh
 >   concurrents du même jeton → le second est traité comme une réutilisation.
 > - **Révocation immédiate** : le guard vérifie le JWT (signature, expiration,
->   `issuer`, `audience`) **puis** l'état de la session en base — révoquer une
->   session invalide ses access tokens sans attendre leur expiration.
+>   `issuer`, `audience`) **puis** l'état de la session — révoquer une
+>   session invalide ses access tokens sans attendre leur expiration. L'état
+>   se lit d'abord dans un cache Redis (`SessionCache` : un hachage par
+>   compte, sessions VALIDES seulement, 30 s au plus) que toute fermeture
+>   invalide après son commit ; une génération, changée à chaque fermeture,
+>   empêche un garde qui a lu la base juste avant de remettre l'entrée juste
+>   après (`test/session-cache.e2e-spec.ts`). Redis absent, en erreur ou plus
+>   lent que 250 ms : la base, comme avant. Une invalidation qui échoue laisse
+>   au plus 30 s à la session fermée.
+> - **Durée de vie absolue** : 30 jours depuis la connexion
+>   (`REFRESH_TOKEN_TTL_DAYS`) ; la rotation ne repousse pas l'échéance, on se
+>   reconnecte une fois par mois. L'appli garde ses données locales (même
+>   compte) et sa file de synchronisation repart à la reconnexion.
 > - **Verrouillage** : compteur Redis par e-mail normalisé, fenêtre reposée à
 >   chaque échec ; si Redis est indisponible, fail-open journalisé (le rate
 >   limiting HTTP global reste actif). La connexion du **back-office**
@@ -130,14 +141,16 @@ Notes :
 
 L'access token n'est **pas** stocké côté serveur ; sa révocation effective est
 bornée par sa courte durée de vie. Les opérations sensibles (changement de mot
-de passe, suppression de compte) revérifieront l'état de la session en base.
+de passe, suppression de compte) revérifient l'état de la session (cache
+Redis des sessions invalidé à chaque fermeture, sinon la base).
 
 ### 3.2 Refresh token (opaque, rotatif)
 
 - Valeur aléatoire (≥ 32 octets CSPRNG), encodée URL-safe, **opaque** (aucune
   donnée embarquée).
 - Stocké en base sous forme de **hash** (SHA-256, cf. §2), avec `familyId`,
-  `sessionId`, `expiresAt` (durée de vie longue, par ex. 30 jours glissants).
+  `sessionId`, `expiresAt` (30 jours depuis la CONNEXION, absolus : la
+  rotation ne repousse pas l'échéance de la session).
 - **Usage unique** : chaque appel à `/auth/refresh` marque le token
   `consumedAt`, en émet un nouveau (`replacedById`) et renvoie la nouvelle paire
   access + refresh.

@@ -381,6 +381,44 @@ describe('Authentification (e2e)', () => {
     expect(reuseAudit).not.toBeNull();
   });
 
+  it('la session vit 30 jours depuis la CONNEXION : renouveler ne repousse rien', async () => {
+    const login = await api()
+      .post('/api/v1/auth/login')
+      .send({ email, password, deviceName: 'Appareil mensuel' })
+      .expect(200);
+    const tokens = data<AuthResult>(login.body).tokens;
+    const avant = await prisma.userSession.findFirstOrThrow({
+      where: { user: { email }, deviceName: 'Appareil mensuel' },
+    });
+
+    const refreshed = data<AuthTokens>(
+      (
+        await api()
+          .post('/api/v1/auth/refresh')
+          .send({ refreshToken: tokens.refreshToken })
+          .expect(200)
+      ).body,
+    );
+    const apres = await prisma.userSession.findUniqueOrThrow({ where: { id: avant.id } });
+    expect(apres.expiresAt.toISOString()).toBe(avant.expiresAt.toISOString());
+    expect(refreshed.refreshTokenExpiresAt).toBe(avant.expiresAt.toISOString());
+
+    // L'échéance de la SESSION passée — le jeton, lui, reste « valide » —,
+    // plus de renouvellement : on se reconnecte.
+    await prisma.userSession.update({
+      where: { id: avant.id },
+      data: { expiresAt: new Date(Date.now() - 1_000) },
+    });
+    await api()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: refreshed.refreshToken })
+      .expect(401);
+    await api()
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${refreshed.accessToken}`)
+      .expect(401);
+  });
+
   it('liste les appareils et révoque une session ciblée', async () => {
     const login = await api()
       .post('/api/v1/auth/login')

@@ -205,7 +205,7 @@ grep -oE '\$\{[A-Z_][A-Z_0-9]*' docker-compose.yml | tr -d '${' | sort -u
 | `JWT_ACCESS_SECRET` | **Requis** (≥ 32 caractères) — signature des access tokens | `openssl rand -base64 48` |
 | `JWT_ACCESS_TTL_SECONDS` | Durée de vie de l'access token | `900` |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | Claims vérifiés à chaque requête | `carlys-api` / `carlys-mobile` |
-| `REFRESH_TOKEN_TTL_DAYS` | Durée de vie (glissante) des sessions | `30` |
+| `REFRESH_TOKEN_TTL_DAYS` | Durée de vie des sessions, comptée depuis la connexion (absolue : on se reconnecte au-delà) | `30` |
 | `AUTH_MAX_LOGIN_ATTEMPTS` / `AUTH_LOCKOUT_MINUTES` | Verrouillage temporaire après échecs | `5` / `15` |
 | `ARGON2_MEMORY_KIB` / `ARGON2_TIME_COST` / `ARGON2_PARALLELISM` | Paramètres Argon2id (défauts OWASP) | `19456` / `2` / `1` |
 | `EMAIL_VERIFICATION_TTL_HOURS` / `PASSWORD_RESET_TTL_MINUTES` | Durée des jetons envoyés par e-mail | `24` / `60` |

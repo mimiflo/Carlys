@@ -7,6 +7,7 @@ import {
   type UserSession,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { SessionCache } from '../../../infrastructure/cache/session-cache';
 
 export interface CreateSessionInput {
   userId: string;
@@ -22,10 +23,18 @@ export type RefreshTokenWithSession = RefreshToken & {
   session: UserSession & { user: User };
 };
 
-/** Accès Prisma des sessions et refresh tokens. */
+/**
+ * Accès Prisma des sessions et refresh tokens. Toute fermeture invalide le
+ * cache du garde JWT ([SessionCache]) APRÈS son commit — ici, et dans le
+ * seul autre écrivain qui ferme des sessions,
+ * `AdminUsersRepository.revokeUserSessions` (suspension).
+ */
 @Injectable()
 export class SessionsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: SessionCache,
+  ) {}
 
   /** Crée la session et son premier refresh token en une transaction. */
   create(input: CreateSessionInput): Promise<UserSession> {
@@ -53,13 +62,13 @@ export class SessionsRepository {
 
   /**
    * Rotation atomique : l'ancien jeton passe à ROTATED, un nouveau jeton
-   * ACTIVE est créé et l'expiration de la session glisse.
+   * ACTIVE est créé (à l'échéance de la session, qui ne glisse plus).
    */
   async rotateRefreshToken(
     oldTokenId: string,
     sessionId: string,
     newTokenHash: string,
-    newExpiresAt: Date,
+    sessionExpiresAt: Date,
   ): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       // Rotation conditionnelle : seul le premier des refresh concurrents
@@ -72,11 +81,11 @@ export class SessionsRepository {
         return false;
       }
       await tx.refreshToken.create({
-        data: { sessionId, tokenHash: newTokenHash, expiresAt: newExpiresAt },
+        data: { sessionId, tokenHash: newTokenHash, expiresAt: sessionExpiresAt },
       });
       await tx.userSession.update({
         where: { id: sessionId },
-        data: { lastUsedAt: new Date(), expiresAt: newExpiresAt },
+        data: { lastUsedAt: new Date() },
       });
       return true;
     });
@@ -92,7 +101,7 @@ export class SessionsRepository {
    * réenregistrent à leur prochain démarrage.
    */
   async revokeSession(sessionId: string, reason: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    const userId = await this.prisma.$transaction(async (tx) => {
       const session = await tx.userSession.update({
         where: { id: sessionId },
         data: { revokedAt: new Date(), revokedReason: reason },
@@ -104,7 +113,9 @@ export class SessionsRepository {
       await tx.deviceToken.deleteMany({
         where: { userId: session.userId, OR: [{ sessionId }, { sessionId: null }] },
       });
+      return session.userId;
     });
+    await this.cache.forget(userId);
   }
 
   /**
@@ -139,6 +150,7 @@ export class SessionsRepository {
         data: { revokedAt: new Date(), revokedReason: reason },
       }),
     ]);
+    await this.cache.forget(userId);
   }
 
   /**
@@ -151,6 +163,11 @@ export class SessionsRepository {
    */
   async deleteAllSessions(userId: string, tx: Prisma.TransactionClient): Promise<void> {
     await tx.userSession.deleteMany({ where: { userId } });
+  }
+
+  /** Après le COMMIT de [deleteAllSessions] : dans la transaction, trop tôt. */
+  forgetCachedSessions(userId: string): Promise<void> {
+    return this.cache.forget(userId);
   }
 
   findSessionById(sessionId: string): Promise<UserSession | null> {

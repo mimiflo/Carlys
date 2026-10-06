@@ -17,7 +17,7 @@ import { ReauthenticationService } from './reauthentication.service';
 
 interface Stubs {
   users: { findPasswordHash: jest.Mock; deleteAccount: jest.Mock; findActiveById: jest.Mock };
-  sessions: { deleteAllSessions: jest.Mock };
+  sessions: { deleteAllSessions: jest.Mock; forgetCachedSessions: jest.Mock };
   passwords: { verify: jest.Mock };
   lockout: { reserveAttempt: jest.Mock; reset: jest.Mock };
   audit: { record: jest.Mock };
@@ -33,7 +33,10 @@ function buildStubs(): Stubs {
       deleteAccount: jest.fn().mockResolvedValue(undefined),
       findActiveById: jest.fn().mockResolvedValue({ id: 'user-1', email: 'lea@exemple.fr' }),
     },
-    sessions: { deleteAllSessions: jest.fn().mockResolvedValue(undefined) },
+    sessions: {
+      deleteAllSessions: jest.fn().mockResolvedValue(undefined),
+      forgetCachedSessions: jest.fn().mockResolvedValue(undefined),
+    },
     passwords: { verify: jest.fn().mockResolvedValue(true) },
     lockout: {
       reserveAttempt: jest.fn().mockResolvedValue({ locked: false }),
@@ -151,6 +154,8 @@ describe('AccountService', () => {
     const tx = { marqueur: 'transaction' } as unknown as Prisma.TransactionClient;
     await within(tx);
     expect(stubs.sessions.deleteAllSessions).toHaveBeenCalledWith('user-1', tx);
+    // Le cache du garde JWT oublie les sessions APRÈS le commit.
+    expect(stubs.sessions.forgetCachedSessions).toHaveBeenCalledWith('user-1');
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'account.deleted', userId: 'user-1' }),
     );

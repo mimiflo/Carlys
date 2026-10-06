@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { type Prisma, UserStatus, WorkoutSessionStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { SessionCache } from '../../../infrastructure/cache/session-cache';
 
 export type ManagedUserRow = Prisma.UserGetPayload<{
   include: { profile: true; entitlements: true };
@@ -30,7 +31,10 @@ export type ManagedSubscriptionRow = Prisma.SubscriptionGetPayload<{
 /** Les comptes MOBILES vus du back-office : lecture, statut, droits manuels. */
 @Injectable()
 export class AdminUsersRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessionCache: SessionCache,
+  ) {}
 
   listUsers(search: string | undefined, limit: number, cursor?: string): Promise<ManagedUserRow[]> {
     return this.prisma.user.findMany({
@@ -92,6 +96,7 @@ export class AdminUsersRepository {
       }),
       this.prisma.deviceToken.deleteMany({ where: { userId } }),
     ]);
+    await this.sessionCache.forget(userId);
     return revoked.count;
   }
 

@@ -34,12 +34,11 @@ export const ORPHAN_PAYMENT_EVENT_RETENTION_DAYS = 90;
  * compte : des dizaines de lignes par personne et par jour, pour toujours,
  * et autant de sessions mortes avec leur adresse IP et leur `userAgent`.
  *
- * LE COMPROMIS, assumé : un jeton ROTATED est un PIÈGE — présenté, il
- * révoque toute sa session, donc éjecte qui en aurait volé la suite. Effacé,
- * il ne rend plus qu'un 401. Le piège tient donc TTL + 30 jours après
- * l'émission du jeton (60 jours par défaut), plus « pour toujours ». Le
- * borner autrement, c'est une durée de vie ABSOLUE de session (reconnexion
- * forcée) : une décision produit, pas une purge.
+ * Sans rien céder au piège de réutilisation : un jeton ROTATED présenté
+ * révoque toute sa session, donc éjecte qui en aurait volé la suite. Tous
+ * les jetons d'une session partagent son échéance, ABSOLUE (fixée à la
+ * connexion, voir `AuthService.refresh`) : effacés 30 jours après elle, ils
+ * survivent à toute chaîne qu'ils pourraient dénoncer.
  */
 export const DEAD_SESSION_RETENTION_DAYS = 30;
 

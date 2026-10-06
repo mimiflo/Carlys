@@ -154,12 +154,18 @@ export class AuthService {
       throw new UnauthorizedException('Session expirée ou invalide.');
     }
 
+    // Durée de vie ABSOLUE : le jeton neuf hérite de l'échéance de la
+    // session, fixée à la connexion (REFRESH_TOKEN_TTL_DAYS). Une expiration
+    // glissante gardait ouverte pour toujours la session d'un voleur qui
+    // renouvelait à temps ; bornée, une chaîne volée meurt avec elle — et
+    // le piège de réutilisation (jeton ROTATED) lui survit toujours, la purge
+    // ne l'effaçant que 30 jours après cette échéance.
     const next = this.tokens.generateRefreshToken();
     const rotated = await this.sessions.rotateRefreshToken(
       stored.id,
       session.id,
       next.tokenHash,
-      next.expiresAt,
+      session.expiresAt,
     );
     if (!rotated) {
       // Un refresh concurrent a consommé ce jeton entre la lecture et la
@@ -179,7 +185,7 @@ export class AuthService {
       accessToken,
       accessTokenExpiresIn: this.config.jwtAccessTtlSeconds,
       refreshToken: next.token,
-      refreshTokenExpiresAt: next.expiresAt.toISOString(),
+      refreshTokenExpiresAt: session.expiresAt.toISOString(),
     };
   }
 

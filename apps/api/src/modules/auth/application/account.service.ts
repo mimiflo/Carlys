@@ -161,6 +161,7 @@ export class AccountService {
       await this.billing.markStopped(stopped, tx);
       await this.community.withdraw(userId, tx);
     });
+    await this.sessions.forgetCachedSessions(userId);
     this.audit.record({
       ...(by === 'operator'
         ? { action: 'account.deleted_by_operator', actorType: 'SYSTEM' as const }

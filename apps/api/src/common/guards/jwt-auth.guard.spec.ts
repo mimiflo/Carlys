@@ -3,6 +3,7 @@ import { type Reflector } from '@nestjs/core';
 import { type JwtService } from '@nestjs/jwt';
 import { type AppConfigService } from '../../config/app-config.service';
 import { type PrismaService } from '../../database/prisma/prisma.service';
+import { type SessionCache } from '../../infrastructure/cache/session-cache';
 import { type AuthenticatedRequest } from '../types/authenticated-request';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -18,6 +19,8 @@ interface GuardStubs {
   reflector: { getAllAndOverride: jest.Mock };
   jwt: { verifyAsync: jest.Mock };
   findSession: jest.Mock;
+  /** Par défaut : Redis indisponible (`null`), la base décide. */
+  cache: { lookup: jest.Mock; remember: jest.Mock };
 }
 
 function buildGuard(stubs: GuardStubs): JwtAuthGuard {
@@ -35,6 +38,7 @@ function buildGuard(stubs: GuardStubs): JwtAuthGuard {
     stubs.jwt as unknown as JwtService,
     config,
     prisma,
+    stubs.cache as unknown as SessionCache,
   );
 }
 
@@ -49,8 +53,11 @@ function buildStubs(): GuardStubs {
       revokedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
     }),
+    cache: { lookup: jest.fn().mockResolvedValue(null), remember: jest.fn() },
   };
 }
+
+const bearer = () => contextFor({ headers: { authorization: 'Bearer jeton' } });
 
 describe('JwtAuthGuard', () => {
   it('laisse passer les routes @Public sans lire le jeton', async () => {
@@ -125,5 +132,51 @@ describe('JwtAuthGuard', () => {
 
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
     expect(request.authUser).toEqual({ userId: 'user-1', sessionId: 'session-1' });
+  });
+
+  describe('cache des sessions', () => {
+    it('session valide en cache : la base n’est pas lue', async () => {
+      const stubs = buildStubs();
+      stubs.cache.lookup.mockResolvedValue({ expiresAt: Date.now() + 60_000, generation: 'g' });
+
+      await expect(buildGuard(stubs).canActivate(bearer())).resolves.toBe(true);
+      expect(stubs.cache.lookup).toHaveBeenCalledWith('user-1', 'session-1');
+      expect(stubs.findSession).not.toHaveBeenCalled();
+    });
+
+    it('absente du cache : la base décide, puis la session est retenue avec la génération lue', async () => {
+      const stubs = buildStubs();
+      stubs.cache.lookup.mockResolvedValue({ expiresAt: null, generation: 'g-7' });
+
+      await expect(buildGuard(stubs).canActivate(bearer())).resolves.toBe(true);
+      expect(stubs.findSession).toHaveBeenCalled();
+      expect(stubs.cache.remember).toHaveBeenCalledWith(
+        'user-1',
+        'session-1',
+        expect.any(Date),
+        'g-7',
+      );
+    });
+
+    it('échéance en cache dépassée : la base décide (et refuse une session révoquée)', async () => {
+      const stubs = buildStubs();
+      stubs.cache.lookup.mockResolvedValue({ expiresAt: Date.now() - 1, generation: '' });
+      stubs.findSession.mockResolvedValue({
+        userId: 'user-1',
+        revokedAt: new Date(),
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      await expect(buildGuard(stubs).canActivate(bearer())).rejects.toThrow(UnauthorizedException);
+      expect(stubs.cache.remember).not.toHaveBeenCalled();
+    });
+
+    it('Redis indisponible : la base décide, rien n’est écrit', async () => {
+      const stubs = buildStubs();
+
+      await expect(buildGuard(stubs).canActivate(bearer())).resolves.toBe(true);
+      expect(stubs.findSession).toHaveBeenCalled();
+      expect(stubs.cache.remember).not.toHaveBeenCalled();
+    });
   });
 });
