@@ -76,6 +76,7 @@ import 'package:carlys_mobile/features/progression/presentation/widgets/seal_eng
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
+import 'package:carlys_mobile/features/training/presentation/widgets/resume_workout_card.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
@@ -242,6 +243,44 @@ WorkoutWithSets activeWorkoutOf() {
       set(0, 'Développé couché', 12, 40),
       set(1, 'Développé couché', 10, 60),
       set(2, 'Développé couché', 8, 70),
+    ],
+  );
+}
+
+/// « Push force », tout juste close : le bilan de la maquette d'octobre 2026
+/// — 48 minutes, dix séries, trois exercices.
+WorkoutWithSets completedWorkoutOf() {
+  final startedAt = DateTime.now().toUtc().subtract(
+    const Duration(minutes: 50),
+  );
+  var position = 0;
+  List<WorkoutSetEntry> sets(String name, int count, int reps, double kg) => [
+    for (var i = 0; i < count; i++)
+      WorkoutSetEntry(
+        id: 'fin-${position++}',
+        exerciseName: name,
+        position: position,
+        kind: SetKind.normal,
+        reps: reps,
+        weightKg: kg,
+        completedAt: startedAt.add(Duration(minutes: 4 * position)),
+        syncState: LocalSyncState.synced,
+      ),
+  ];
+  return WorkoutWithSets(
+    session: WorkoutInfo(
+      id: 'session-fin',
+      name: 'Push force',
+      status: WorkoutStatus.completed,
+      startedAt: startedAt,
+      endedAt: startedAt.add(const Duration(minutes: 48)),
+      durationSeconds: 48 * 60,
+      syncState: LocalSyncState.synced,
+    ),
+    sets: [
+      ...sets('Développé couché', 4, 8, 80),
+      ...sets('Développé épaules', 3, 10, 40),
+      ...sets('Extension triceps à la poulie', 3, 10, 25),
     ],
   );
 }
@@ -1520,12 +1559,84 @@ void main() {
   });
 
   testWidgets('hub Training', (tester) async {
-    await pumpApp(tester);
+    // Une séance en cours : la carte « Reprends ta séance » est le haut de
+    // l'écran de la maquette.
+    final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
+    await pumpApp(tester, workouts: workouts);
     await goTab(tester, 'Training');
+    // La photo d'haltères : décodage en temps réel avant capture.
+    final context = tester.element(find.byType(AppBottomBar));
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(ResumeWorkoutCard.photoAsset),
+        context,
+      ),
+    );
+    await settle(tester);
     await capture(
       tester,
       '27-training-hub',
       shows: find.byType(TrainingHubScreen),
+    );
+
+    // Le bas du hub : le calendrier et la bannière du sommet.
+    await tester.runAsync(
+      () => precacheImage(const AssetImage(SummitIllustration.asset), context),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Un pas de plus demain.'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '27b-training-hub-bas',
+      shows: find.text('Un pas de plus demain.'),
+    );
+  });
+
+  testWidgets('bilan de séance', (tester) async {
+    final workouts = FakeWorkoutRepository()..active = completedWorkoutOf();
+    await pumpApp(tester, workouts: workouts);
+    final context = tester.element(find.byType(AppBottomBar));
+    await tester.runAsync(
+      () => precacheImage(const AssetImage(SummitIllustration.asset), context),
+    );
+    unawaited(
+      GoRouter.of(context).push(AppRoutes.workoutDetail('session-fin')),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '41-bilan-seance',
+      shows: find.text('Séance terminée !'),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Retour à l’entraînement'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '41b-bilan-seance-bas',
+      shows: find.text('Retour à l’entraînement'),
+    );
+
+    // Le crayon : la carte passe en correction.
+    await tester.scrollUntilVisible(
+      find.byTooltip('Corriger'),
+      -200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.byTooltip('Corriger'));
+    await settle(tester);
+    await capture(
+      tester,
+      '41c-bilan-seance-correction',
+      shows: find.textContaining('Touche une série'),
     );
   });
 

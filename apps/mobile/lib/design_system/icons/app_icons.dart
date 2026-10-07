@@ -226,6 +226,15 @@ abstract final class AppIcons {
   static const IconData calendarOutline = Icons.calendar_month_outlined;
   static const IconData programOutline = Icons.event_note_outlined;
 
+  /// Les modèles de séance prêts à lancer (« Mes séances » du hub Training).
+  static const IconData sessionTemplates = Icons.assignment_turned_in_outlined;
+
+  /// Le calendrier des séances passées (« Calendrier & historique »).
+  static const IconData trainingHistory = Icons.event_repeat_rounded;
+
+  /// Le nombre de séries d'une séance (tuile du bilan).
+  static const IconData setsCount = Icons.format_list_bulleted_rounded;
+
   /// Détacher la séance rattachée à un jour — l'inverse du lien, pas sa
   /// suppression : la séance reste, seul le rattachement tombe.
   static const IconData unlink = Icons.link_off_rounded;

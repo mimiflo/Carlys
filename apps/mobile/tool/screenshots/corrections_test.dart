@@ -14,7 +14,8 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/domain/nutrition_explanations.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolism_view.dart';
-import 'package:carlys_mobile/features/workout_history/presentation/widgets/finished_set_row.dart';
+import 'package:carlys_mobile/features/workout_history/domain/services/exercise_breakdown.dart';
+import 'package:carlys_mobile/features/workout_history/presentation/widgets/exercise_summary_card.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,10 +154,11 @@ void main() {
     await capture(tester, 'plancher-03-explication');
   });
 
-  /// Les séries d'une séance terminée, telles que l'écran de détail les
-  /// empile. On monte la LIGNE plutôt que l'écran entier : le geste part
-  /// d'elle, et l'écran complet demanderait toute la pile de providers pour
-  /// ne rien montrer de plus.
+  /// Les séries d'une séance terminée, telles que le bilan les range : une
+  /// carte par exercice, la première dépliée et passée EN CORRECTION. On
+  /// monte les cartes plutôt que l'écran entier : le geste part d'elles, et
+  /// l'écran complet demanderait toute la pile de providers pour ne rien
+  /// montrer de plus.
   Future<void> pumpSeries(WidgetTester tester) async {
     telephone(tester);
     await tester.pumpWidget(
@@ -165,21 +167,21 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.dark(),
           home: Scaffold(
-            appBar: AppBar(title: const Text('Séance')),
             body: SafeArea(
-              child: Builder(
-                builder: (context) => ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  children: [
-                    Text(
-                      'Séries',
-                      style: Theme.of(context).textTheme.titleLarge,
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                children: [
+                  for (final (index, exercice) in breakdownByExercise(
+                    _series,
+                  ).indexed) ...[
+                    ExerciseSummaryCard(
+                      sessionId: 'seance',
+                      exercise: exercice,
+                      initiallyExpanded: index == 0,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    for (final serie in _series)
-                      FinishedSetRow(sessionId: 'seance', set: serie),
+                    const SizedBox(height: AppSpacing.gapTile),
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -187,16 +189,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Corriger'));
+    await tester.pumpAndSettle();
   }
 
-  /// La série fautive est la PREMIÈRE : deux lignes portent « Squat », et
-  /// sans ce choix explicite le geste tomberait sur celle qui est juste.
-  Finder serieFautive() => find.text('Squat').first;
+  /// La série fautive : la seule à 200 kg.
+  Finder serieFautive() => find.text('200 kg');
 
   testWidgets('correction — les séries d’une séance terminée', (tester) async {
     await pumpSeries(tester);
 
-    expect(find.text('5 × 200 kg'), findsOneWidget);
+    expect(serieFautive(), findsOneWidget);
     await capture(tester, 'correction-01-series');
   });
 

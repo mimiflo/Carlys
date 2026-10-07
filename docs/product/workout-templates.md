@@ -902,10 +902,12 @@ puis purgé après un court délai de rétention, comme les tombstones.
 
 ### 6.6 Détail d'une séance passée
 
-`WorkoutDetailScreen` affiche `templateName` en sous-titre quand il existe, et
-chaque série montre sa cible quand elle en avait une : « 7 × 60 kg
-(prévu 8 × 60) ». Les données viennent de `plannedReps` / `plannedWeightKg` de
-la série — donc **toujours disponibles**, même modèle supprimé.
+`WorkoutDetailScreen` — le **bilan de séance** depuis octobre 2026 — affiche
+« Modèle · <templateName> » sous le nom de la séance quand le modèle porte un
+autre nom, et chaque série montre sa cible sous ses valeurs quand elle en avait
+une : « 60 kg | 7 », puis « Prévu 8 × 60 kg ». Les données viennent de
+`plannedReps` / `plannedWeightKg` de la série — donc **toujours disponibles**,
+même modèle supprimé.
 
 ---
 

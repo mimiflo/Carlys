@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
+import '../utils/set_labels.dart';
 
 /// Une ligne du tableau des séries de l'exercice : rang, charge (ou durée),
 /// répétitions (ou distance), état.
@@ -19,6 +20,7 @@ class ExerciseSetRow extends StatelessWidget {
     this.current = false,
     this.plannedWeightKg,
     this.plannedReps,
+    this.finished = false,
     super.key,
   });
 
@@ -37,6 +39,11 @@ class ExerciseSetRow extends StatelessWidget {
   /// Cible du programme, montrée sur la ligne en cours.
   final double? plannedWeightKg;
   final int? plannedReps;
+
+  /// Ligne du BILAN d'une séance terminée : les unités dans les cellules
+  /// (« 80 kg »), et la cible affichée au moment de la validation sous les
+  /// valeurs — l'écart prévu/réalisé reste lisible des mois plus tard.
+  final bool finished;
 
   static const double _statusIconSize = 24;
 
@@ -79,9 +86,9 @@ class ExerciseSetRow extends StatelessWidget {
                 ),
                 // Un échauffement, une série dégressive : ce que la série
                 // ÉTAIT, sous ses valeurs.
-                if (entry != null && entry.kind != SetKind.normal)
+                if (_note(entry) case final note?)
                   Text(
-                    entry.kind.label,
+                    note,
                     style: AppTypography.label.copyWith(
                       color: AppColors.darkTextSecondary,
                     ),
@@ -146,15 +153,29 @@ class ExerciseSetRow extends StatelessWidget {
 
     return Semantics(
       label:
-          'Série ${formatThousands(position)} : ${_detail(entry)}'
+          'Série ${formatThousands(position)} : ${spokenSetValue(entry)}'
           '${entry.syncState == LocalSyncState.synced ? '' : ', en attente de synchronisation'}',
-      hint: 'Appui long pour supprimer',
+      hint: onDelete == null ? null : 'Appui long pour supprimer',
       excludeSemantics: true,
       child: GestureDetector(
         onLongPress: onDelete == null ? null : () => _confirmDelete(context),
         child: row,
       ),
     );
+  }
+
+  /// Sous les valeurs : ce que la série ÉTAIT (échauffement, dégressive)
+  /// et, au bilan, la cible qu'elle visait (« Prévu 8 × 60 kg »).
+  String? _note(WorkoutSetEntry? entry) {
+    if (entry == null) {
+      return null;
+    }
+    final planned = finished ? plannedLabel(entry) : null;
+    final parts = [
+      if (entry.kind != SetKind.normal) entry.kind.label,
+      ?planned,
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
   }
 
   /// « , cible 82,5 kg × 6 » : ce que la ligne en cours AFFICHE, pour le
@@ -191,32 +212,11 @@ class ExerciseSetRow extends StatelessWidget {
         distance == null ? '—' : '${formatThousands(distance)} m',
       );
     }
+    final kg = finished ? ' kg' : '';
     return (
-      entry.weightKg == null ? '—' : formatDecimal(entry.weightKg!),
+      entry.weightKg == null ? '—' : '${formatDecimal(entry.weightKg!)}$kg',
       entry.reps == null ? '—' : formatThousands(entry.reps!),
     );
-  }
-
-  /// Ce qu'une série montre, DANS SON UNITÉ.
-  ///
-  /// Une série chronométrée affichée « — kg × — » se lit comme une série
-  /// ratée, alors qu'elle est complète : c'est juste qu'elle ne se compte pas
-  /// en charge. On lit donc d'abord ce qui est renseigné.
-  String _detail(WorkoutSetEntry entry) {
-    final kind = entry.kind != SetKind.normal ? ' · ${entry.kind.label}' : '';
-    if (entry.durationSeconds != null) {
-      final duree = formatDuration(entry.durationSeconds!);
-      final distance = entry.distanceMeters;
-      final parcouru = distance == null
-          ? ''
-          : ' · ${formatThousands(distance)} m';
-      return '${duree.value} ${duree.unit}$parcouru$kind';
-    }
-    final weight = entry.weightKg == null
-        ? '—'
-        : formatDecimal(entry.weightKg!);
-    final reps = entry.reps == null ? '—' : formatThousands(entry.reps!);
-    return '$weight kg × $reps$kind';
   }
 
   Future<void> _confirmDelete(BuildContext context) async {

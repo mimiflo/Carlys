@@ -39,7 +39,10 @@ void main() {
         ],
       );
 
-  Future<FakeWorkoutRepository> monter(WidgetTester tester) async {
+  Future<FakeWorkoutRepository> monter(
+    WidgetTester tester, {
+    bool corriger = true,
+  }) async {
     final repository = FakeWorkoutRepository()..active = terminee();
     await tester.pumpWidget(
       ProviderScope(
@@ -51,16 +54,24 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (corriger) {
+      // Le crayon passe la carte de l'exercice en correction.
+      await tester.tap(find.byTooltip('Corriger'));
+      await tester.pumpAndSettle();
+    }
     return repository;
   }
+
+  /// La ligne de la série fautive, dans le tableau du bilan.
+  Finder ligne() => find.text('200 kg');
 
   testWidgets('la série s’ouvre en correction, et la valeur change', (
     tester,
   ) async {
     final repository = await monter(tester);
-    expect(find.text('5 × 200 kg'), findsOneWidget);
+    expect(ligne(), findsOneWidget);
 
-    await tester.tap(find.text('Squat'));
+    await tester.tap(ligne());
     await tester.pumpAndSettle();
     expect(find.text('Corriger la série'), findsOneWidget);
 
@@ -88,7 +99,7 @@ void main() {
 
   testWidgets('la feuille dit que le record va être recalculé', (tester) async {
     await monter(tester);
-    await tester.tap(find.text('Squat'));
+    await tester.tap(ligne());
     await tester.pumpAndSettle();
 
     // Personne ne devine qu'un record peut DESCENDRE : la conséquence se dit
@@ -102,7 +113,7 @@ void main() {
 
   testWidgets('une correction annulée n’écrit rien', (tester) async {
     final repository = await monter(tester);
-    await tester.tap(find.text('Squat'));
+    await tester.tap(ligne());
     await tester.pumpAndSettle();
 
     // Fermer la feuille sans valider.
@@ -117,7 +128,7 @@ void main() {
   ) async {
     final repository = await monter(tester);
 
-    await tester.longPress(find.text('Squat'));
+    await tester.longPress(ligne());
     await tester.pumpAndSettle();
     expect(find.text('Supprimer cette série ?'), findsOneWidget);
     expect(find.textContaining('recalculés'), findsOneWidget);
@@ -149,7 +160,7 @@ void main() {
     ) async {
       final repository = await monter(tester);
 
-      await tester.longPress(find.text('Squat'));
+      await tester.longPress(ligne());
       await tester.pumpAndSettle();
       expect(find.text('Supprimer cette série ?'), findsOneWidget);
       await renoncer();
@@ -176,7 +187,7 @@ void main() {
     });
   });
 
-  testWidgets('la ligne annonce sa valeur AVANT de proposer la correction', (
+  testWidgets('la ligne annonce sa valeur, puis ce qu’on peut en faire', (
     tester,
   ) async {
     final handle = tester.ensureSemantics();
@@ -184,11 +195,24 @@ void main() {
 
     // La donnée d'abord, le geste ensuite : le lecteur d'écran donne le fait
     // avant d'annoncer ce qu'on peut en faire.
-    expect(
-      tester.getSemantics(find.text('Squat')).label,
-      'Squat, 5 répétitions, 200 kilos. Corriger',
+    final noeud = tester.getSemantics(
+      find.bySemanticsLabel('Série 1 : 200 kg × 5'),
     );
+    expect(noeud.hint, 'Toucher pour corriger, appui long pour supprimer');
+    expect(noeud.flagsCollection.isButton, isTrue);
 
     handle.dispose();
+  });
+
+  testWidgets('hors correction, la ligne se lit seulement', (tester) async {
+    await monter(tester, corriger: false);
+
+    // Déplier une carte pour la relire n'ouvre aucune feuille par mégarde.
+    await tester.tap(ligne());
+    await tester.pumpAndSettle();
+    expect(find.text('Corriger la série'), findsNothing);
+    await tester.longPress(ligne());
+    await tester.pumpAndSettle();
+    expect(find.text('Supprimer cette série ?'), findsNothing);
   });
 }

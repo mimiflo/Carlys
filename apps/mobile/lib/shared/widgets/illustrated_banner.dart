@@ -20,9 +20,10 @@ import 'summit_illustration.dart';
 class IllustratedBanner extends StatelessWidget {
   const IllustratedBanner({
     required this.title,
-    required this.body,
+    this.body,
     this.titleAccent,
     this.onTap,
+    this.summitShift = 0,
     super.key,
   });
 
@@ -30,11 +31,19 @@ class IllustratedBanner extends StatelessWidget {
 
   /// Une seconde ligne de titre, en violet clair (« grands résultats. »).
   final String? titleAccent;
-  final String body;
+
+  /// Nul : la bannière n'est qu'un titre (« Un effort aujourd'hui. / Un pas
+  /// de plus demain. » du hub Training).
+  final String? body;
 
   /// Nul : la bannière n'est qu'un mot d'encouragement — ni chevron, ni
   /// rôle de bouton. Un chevron qui ne mène nulle part serait une promesse.
   final VoidCallback? onTap;
+
+  /// Glisse le sommet vers la droite (rogné par la carte) et rend autant de
+  /// largeur au texte : un titre de deux lignes sans corps (« Un effort
+  /// aujourd'hui. ») tient alors sur deux lignes, et non quatre.
+  final double summitShift;
 
   /// Marge entre la fin du texte et l'endroit où l'image devient pleine :
   /// le bord de la lune y commence, et un glyphe qui le toucherait perdrait
@@ -52,7 +61,8 @@ class IllustratedBanner extends StatelessWidget {
         // de texte : agrandi, il passe à la ligne au lieu de glisser sur la
         // lune. À la taille normale, il tient dans la borne.
         final textMaxWidth =
-            SummitIllustration.opaqueFromFor(constraints.maxWidth) -
+            SummitIllustration.opaqueFromFor(constraints.maxWidth) +
+            summitShift -
             textClearance -
             AppSpacing.md;
 
@@ -97,7 +107,13 @@ class IllustratedBanner extends StatelessWidget {
 
         return Stack(
           children: [
-            const Positioned.fill(child: SummitIllustration()),
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: summitShift,
+              right: -summitShift,
+              child: const SummitIllustration(),
+            ),
             if (onTap == null)
               row
             else
@@ -133,7 +149,7 @@ class _Wording extends StatelessWidget {
 
   final String title;
   final String? titleAccent;
-  final String body;
+  final String? body;
 
   @override
   Widget build(BuildContext context) {
@@ -152,13 +168,15 @@ class _Wording extends StatelessWidget {
             titleAccent!,
             style: titleStyle.copyWith(color: AppColors.primaryLight),
           ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          body,
-          style: AppTypography.body.copyWith(
-            color: AppColors.darkTextSecondary,
+        if (body case final body?) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            body,
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

@@ -116,6 +116,16 @@ double? parseDecimalInput(String raw) {
   return (value: formatThousands(kilograms), unit: 'kg');
 }
 
+/// « 48 min » ; au-delà de l'heure « 1 h 05 » ; « 1 min » au moins — une
+/// séance close après trente secondes n'a pas duré « 0 min ».
+String formatMinutes(int seconds) {
+  final minutes = seconds <= 0 ? 0 : ((seconds + 59) ~/ 60);
+  if (minutes < 60) {
+    return '$minutes min';
+  }
+  return '${minutes ~/ 60} h ${(minutes % 60).toString().padLeft(2, '0')}';
+}
+
 /// « 54 MIN » ; au-delà de l'heure « 1 H 05 ».
 String formatDurationShort(int seconds) {
   final minutes = seconds ~/ 60;

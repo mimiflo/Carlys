@@ -64,6 +64,11 @@ class SummitIllustration extends StatelessWidget {
   /// ne serait que de 0,88 au bord de la lune.
   static const List<double> fadeStops = [0, 0.3];
 
+  /// Décalage vers la droite du sommet quand le texte d'à côté doit tenir
+  /// sur une ligne de plus (« Séance terminée ! », « Un effort
+  /// aujourd'hui. ») : la carte rogne le surplus, le fanion reste visible.
+  static const double wideTextShift = 48;
+
   static const _logger = AppLogger('SummitIllustration');
 
   /// Largeur de la boîte de l'image dans une carte de [cardWidth] points.

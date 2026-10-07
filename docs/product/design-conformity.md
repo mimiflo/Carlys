@@ -698,6 +698,34 @@ et refuse les classes qui la contourneraient (`text-primary`, `text-danger`,
 `text-accent`, blanc sur `bg-danger`, survol par opacité). Côté mobile, les formules vivent dans
 `test/support/contrast.dart`.
 
+## Training et bilan de séance, refondus sur maquette (octobre 2026)
+
+Deux maquettes fournies le 7 octobre 2026, traduites avec le design system :
+
+- **Training** (`training_hub_screen.dart`) : en-tête « Training / TON
+  ENTRAÎNEMENT, TON RYTHME » (`AppScreenHeader`) ; la carte « Reprends ta
+  séance » (`ResumeWorkoutCard`) — n'existe QUE s'il y a une séance en cours ;
+  « Ton espace training » en tuiles (`TrainingSpace`) : l'orange pour ce qui
+  est à soi (séances, historique), le violet pour ce que l'appli propose ;
+  la bannière du sommet sans corps (`IllustratedBanner`, `summitShift` pour
+  que le titre tienne sur deux lignes).
+- **Bilan de séance** (`workout_detail_screen.dart`) : en-tête centré, carte
+  « Séance terminée ! » devant le sommet (au violet — une séance close n'est
+  pas une célébration de franchissement), trois tuiles durée / séries /
+  volume, puis une carte par exercice (`breakdownByExercise`), la première
+  dépliée. Le **crayon** passe la carte en correction : toucher une série la
+  corrige, l'appui long la supprime — hors correction, le tableau se lit
+  seulement. « Retour à l'entraînement » mène à l'onglet Training.
+
+Écarts :
+
+| Élément | Maquette | Rendu | Pourquoi |
+| --- | --- | --- | --- |
+| Photo d'haltères | photo nette | découpée dans la maquette (356 × 285 px, `halteres.webp`) | aucune photo source fournie ; à remplacer dès qu'elle l'est |
+| Icône par exercice | haltère, poulie… | l'haltère pour tous | le bilan ne connaît pas le matériel de l'exercice |
+| Icône du coach | bulle étincelée | `AppIcons.coach`, celle du reste de l'appli | une seule icône pour le coach partout |
+| Flèche du bouton final | à droite du libellé | à gauche (`AppCtaButton`) | le bouton d'appel du design system pose son icône devant |
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |

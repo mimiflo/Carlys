@@ -78,6 +78,13 @@ void main() {
     body: 'Chaque séance te rapproche de la prochaine ligue.',
   );
 
+  /// Le mot du hub Training : sans corps, le sommet décalé vers la droite.
+  const hub = IllustratedBanner(
+    title: 'Un effort aujourd’hui.',
+    titleAccent: 'Un pas de plus demain.',
+    summitShift: SummitIllustration.wideTextShift,
+  );
+
   /// La bannière comme sur le profil : un écran de [width] points en
   /// densité 3, la gouttière de 16, le texte système à [scale].
   Future<void> pumpBanner(
@@ -165,7 +172,11 @@ void main() {
     (800, 1), // tablette
   ];
   for (final (width, scale) in cases) {
-    for (final (variant, banner) in [('porte', door()), ('mot', cheer)]) {
+    for (final (variant, banner) in [
+      ('porte', door()),
+      ('mot', cheer),
+      ('hub', hub),
+    ]) {
       testWidgets('$variant, $width pt, texte ×${scale.toStringAsFixed(2)} : '
           'le texte reste à gauche de la lune, rien ne déborde', (
         tester,
@@ -191,7 +202,7 @@ void main() {
         for (final label in [
           banner.title,
           ?banner.titleAccent,
-          banner.body.substring(0, 5),
+          ?banner.body?.substring(0, 5),
         ]) {
           final text = tester.getRect(find.textContaining(label));
           expect(

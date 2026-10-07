@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
-import '../widgets/finished_set_row.dart';
+import '../../domain/services/exercise_breakdown.dart';
+import '../widgets/exercise_summary_card.dart';
 import '../widgets/workout_conflict_card.dart';
 import '../widgets/workout_retry_sync_card.dart';
+import '../widgets/workout_summary_hero.dart';
+import '../widgets/workout_summary_stats.dart';
 
-/// Détail (et résumé de fin) d'une séance.
+/// Le BILAN d'une séance (maquette d'octobre 2026) : l'écran qui suit la
+/// clôture, et celui qu'ouvre une séance de l'historique.
 class WorkoutDetailScreen extends ConsumerWidget {
   const WorkoutDetailScreen({required this.sessionId, super.key});
 
@@ -19,133 +26,149 @@ class WorkoutDetailScreen extends ConsumerWidget {
     final detail = ref.watch(workoutDetailProvider(sessionId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Séance')),
       body: SafeArea(
-        child: detail.when(
-          loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          // La séance absente a sa propre branche (`data` nul, ci-dessous) :
-          // arriver ICI, c'est une vraie panne de lecture locale, le cas même
-          // où réessayer a un sens.
-          error: (_, __) => AppErrorState(
-            title: 'Séance indisponible',
-            onRetry: () => ref.invalidate(workoutDetailProvider(sessionId)),
-          ),
-          data: (workout) => workout == null
-              ? const AppEmptyState(
-                  title: 'Séance introuvable',
-                  icon: AppIcons.history,
-                )
-              : _DetailBody(workout: workout),
+        bottom: false,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
+              child: AppScreenHeader.centered(
+                title: 'Bilan de séance',
+                tagline: 'Chaque effort compte',
+              ),
+            ),
+            Expanded(
+              child: detail.when(
+                loading: () => const AppLoadingIndicator(label: 'Chargement'),
+                // La séance absente a sa propre branche (`data` nul,
+                // ci-dessous) : arriver ICI, c'est une vraie panne de lecture
+                // locale, le cas même où réessayer a un sens.
+                error: (_, __) => AppErrorState(
+                  title: 'Séance indisponible',
+                  onRetry: () =>
+                      ref.invalidate(workoutDetailProvider(sessionId)),
+                ),
+                data: (workout) => workout == null
+                    ? const AppEmptyState(
+                        title: 'Séance introuvable',
+                        icon: AppIcons.history,
+                      )
+                    : _SummaryBody(workout: workout),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _DetailBody extends StatelessWidget {
-  const _DetailBody({required this.workout});
+class _SummaryBody extends StatelessWidget {
+  const _SummaryBody({required this.workout});
 
   final WorkoutWithSets workout;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final session = workout.session;
-    final templateName = session.templateName;
+    final exercises = breakdownByExercise(workout.sets);
+    final count = exercises.length;
 
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      primary: true,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        MediaQuery.paddingOf(context).bottom + AppSpacing.md,
+      ),
       children: [
-        // Provenance de la séance : dénormalisée au lancement, donc lisible
-        // pour toujours — même modèle renommé ou supprimé depuis.
-        if (templateName != null) ...[
-          Text('Modèle · $templateName', style: theme.textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.xs),
-        ],
-        Row(
-          children: [
-            AppBadge(
-              label: session.status.label,
-              variant: session.status == WorkoutStatus.completed
-                  ? AppBadgeVariant.primary
-                  : AppBadgeVariant.neutral,
+        WorkoutSummaryHero(session: session),
+        if (session.syncState != LocalSyncState.synced) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AppBadge(
+              label: session.syncState.label,
+              variant: switch (session.syncState) {
+                LocalSyncState.failed ||
+                LocalSyncState.conflict => AppBadgeVariant.warning,
+                LocalSyncState.pending ||
+                LocalSyncState.synced => AppBadgeVariant.neutral,
+              },
             ),
-            const SizedBox(width: AppSpacing.xs),
-            if (session.syncState != LocalSyncState.synced)
-              AppBadge(
-                label: session.syncState.label,
-                variant: switch (session.syncState) {
-                  LocalSyncState.failed ||
-                  LocalSyncState.conflict => AppBadgeVariant.warning,
-                  LocalSyncState.pending ||
-                  LocalSyncState.synced => AppBadgeVariant.neutral,
-                },
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
+          ),
+        ],
         // Le serveur a refusé la clôture : le choix est proposé ici, sur la
         // séance elle-même, là où l'utilisateur voit ce qu'il tranche.
         if (session.syncState == LocalSyncState.conflict) ...[
-          WorkoutConflictCard(session: session),
           const SizedBox(height: AppSpacing.md),
+          WorkoutConflictCard(session: session),
         ],
         // Envoi mis de côté après trop d'erreurs serveur : le rejeu
         // automatique n'a lieu qu'à la prochaine ouverture. Le geste est
         // proposé ici, sur la séance concernée.
         if (session.syncState == LocalSyncState.failed) ...[
-          WorkoutRetrySyncCard(session: session),
           const SizedBox(height: AppSpacing.md),
+          WorkoutRetrySyncCard(session: session),
         ],
+        const SizedBox(height: AppSpacing.md),
+        WorkoutSummaryStats(workout: workout),
+        const SizedBox(height: AppSpacing.gapSection),
         Row(
           children: [
-            _Metric(label: 'Séries', value: '${workout.setsCount}'),
-            _Metric(
-              label: 'Volume',
-              value: '${workout.totalVolumeKg.round()} kg',
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  'Détail des exercices',
+                  style: AppTypography.heading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
+                ),
+              ),
             ),
-            _Metric(
-              label: 'Durée',
-              value: session.durationSeconds == null
-                  ? '—'
-                  : '${session.durationSeconds! ~/ 60} min',
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              '${formatThousands(count)} exercice${count > 1 ? 's' : ''}',
+              style: AppTypography.body.copyWith(color: AppColors.primaryLight),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        Text('Séries', style: theme.textTheme.titleLarge),
         const SizedBox(height: AppSpacing.sm),
-        for (final set in workout.sets)
-          FinishedSetRow(sessionId: session.id, set: set),
-      ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: AppTypography.resized(
-              AppTypography.metric,
-              24,
-            ).copyWith(color: theme.colorScheme.primary),
+        if (exercises.isEmpty)
+          const AppEmptyState(
+            title: 'Aucune série enregistrée',
+            icon: AppIcons.workout,
           ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: theme.textTheme.bodySmall),
+        for (final (index, exercise) in exercises.indexed) ...[
+          ExerciseSummaryCard(
+            key: ValueKey(exercise.id),
+            sessionId: session.id,
+            exercise: exercise,
+            initiallyExpanded: index == 0,
+          ),
+          const SizedBox(height: AppSpacing.gapTile),
         ],
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Les séries enregistrées restent consultables dans ton historique.',
+          style: AppTypography.label.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppCtaButton(
+          label: 'Retour à l’entraînement',
+          icon: AppIcons.arrowForward,
+          onPressed: () => context.go(AppRoutes.training),
+        ),
+      ],
     );
   }
 }

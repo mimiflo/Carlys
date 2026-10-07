@@ -142,4 +142,11 @@ void main() {
       );
     });
   });
+
+  test('formatMinutes : « 48 min », « 1 h 05 », jamais « 0 min »', () {
+    expect(formatMinutes(48 * 60), '48 min');
+    expect(formatMinutes(30), '1 min');
+    expect(formatMinutes(0), '0 min');
+    expect(formatMinutes(65 * 60), '1 h 05');
+  });
 }
