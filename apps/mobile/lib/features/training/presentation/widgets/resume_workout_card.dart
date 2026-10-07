@@ -96,10 +96,13 @@ class _Wording extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Une pastille d'en-tête, pas une icône de tuile : la taille
+              // de la maquette, celle du résumé de semaine du programme.
               const AppIconBadge(
                 icon: AppIcons.play,
                 color: AppColors.accent,
                 background: AppColors.accentBadgeBg,
+                size: 36,
               ),
               const SizedBox(width: AppSpacing.sm),
               Flexible(
