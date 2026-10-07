@@ -16,11 +16,14 @@ class ResumeWorkoutCard extends StatelessWidget {
 
   final VoidCallback onResume;
 
-  /// WebP 356 × 285, tiré de la maquette fournie.
+  /// WebP 569 × 285, tiré de la maquette fournie : la photo d'origine
+  /// (356 × 285) prolongée vers la gauche par son propre fond, flouté — les
+  /// haltères gardent la taille de la maquette, le fond court sous le texte.
   static const String photoAsset = 'assets/illustrations/halteres.webp';
 
-  /// Part de la largeur de la carte prise par la photo.
-  static const double photoWidthFactor = 0.52;
+  /// Part de la largeur de la carte prise par la photo : les trois quarts,
+  /// comme la maquette, où son fond sombre court jusque derrière le texte.
+  static const double photoWidthFactor = 0.75;
 
   /// Part de la largeur laissée au texte : il s'arrête où la photo devient
   /// pleine.
@@ -46,6 +49,9 @@ class ResumeWorkoutCard extends StatelessWidget {
                 top: 0,
                 right: 0,
                 width: width * photoWidthFactor,
+                // Jusqu'au bouton, comme la maquette : plus bas, la photo
+                // grandirait avec la carte et les haltères passeraient sous
+                // le titre.
                 bottom: AppSpacing.touchTarget + AppSpacing.md,
                 child: _FadedPhoto(logger: _logger),
               ),
@@ -140,17 +146,20 @@ class _FadedPhoto extends StatelessWidget {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [AppColors.neutral0, AppColors.neutral0Clear],
-        stops: [0.7, 1],
+        stops: [0.8, 1],
       ).createShader(rect),
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
         shaderCallback: (rect) => const LinearGradient(
           colors: [AppColors.neutral0Clear, AppColors.neutral0],
-          stops: [0, 0.35],
+          // Un fondu LONG, sur plus de la moitié de la photo : sans bord
+          // visible, elle se fond dans la carte comme sur la maquette.
+          stops: [0, 0.45],
         ).createShader(rect),
         child: Image.asset(
           ResumeWorkoutCard.photoAsset,
           fit: BoxFit.cover,
+          alignment: Alignment.centerRight,
           excludeFromSemantics: true,
           // Une photo absente laisse la carte nue — le texte et le bouton
           // suffisent — mais se DIT dans les journaux.
