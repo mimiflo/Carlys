@@ -721,7 +721,7 @@ Deux maquettes fournies le 7 octobre 2026, traduites avec le design system :
 
 | Élément | Maquette | Rendu | Pourquoi |
 | --- | --- | --- | --- |
-| Photo d'haltères | photo nette | découpée dans la maquette (356 × 285 px, `halteres.webp`) | aucune photo source fournie ; à remplacer dès qu'elle l'est |
+| Photo d'haltères | photo nette | découpée dans la maquette, agrandie ×3 et accentuée, fond prolongé à gauche (1708 × 855 px, `halteres.webp`) | aucune photo source fournie, et ChatGPT (Codex) n'expose pas l'outil d'image à ce compte le 7 octobre 2026 ; à remplacer par une photo générée dès qu'il le fera |
 | Icône par exercice | haltère, poulie… | l'haltère pour tous | le bilan ne connaît pas le matériel de l'exercice |
 | Icône du coach | bulle étincelée | `AppIcons.coach`, celle du reste de l'appli | une seule icône pour le coach partout |
 | Flèche du bouton final | à droite du libellé | à gauche (`AppCtaButton`) | le bouton d'appel du design system pose son icône devant |

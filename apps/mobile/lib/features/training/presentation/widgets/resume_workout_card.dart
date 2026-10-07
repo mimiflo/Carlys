@@ -16,9 +16,11 @@ class ResumeWorkoutCard extends StatelessWidget {
 
   final VoidCallback onResume;
 
-  /// WebP 569 × 285, tiré de la maquette fournie : la photo d'origine
-  /// (356 × 285) prolongée vers la gauche par son propre fond, flouté — les
-  /// haltères gardent la taille de la maquette, le fond court sous le texte.
+  /// WebP 1708 × 855 (31 Ko), tiré de la maquette fournie : la photo
+  /// d'origine agrandie ×3 (Lanczos, débruitée, accentuée) pour rester nette
+  /// à la densité ×3, puis prolongée vers la gauche par son propre fond
+  /// flouté — les haltères gardent la taille de la maquette, le fond court
+  /// sous le texte.
   static const String photoAsset = 'assets/illustrations/halteres.webp';
 
   /// Part de la largeur de la carte prise par la photo : les trois quarts,
