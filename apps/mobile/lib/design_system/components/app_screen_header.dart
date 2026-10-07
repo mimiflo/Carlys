@@ -29,7 +29,7 @@ import 'app_whole_words_text.dart';
 class AppScreenHeader extends StatelessWidget {
   const AppScreenHeader({
     required this.title,
-    required this.tagline,
+    required String this.tagline,
     this.actions = const [],
     this.showBack = true,
     super.key,
@@ -38,7 +38,7 @@ class AppScreenHeader extends StatelessWidget {
   /// Retour à gauche, titre centré, actions à droite (voir la classe).
   const AppScreenHeader.centered({
     required this.title,
-    required this.tagline,
+    this.tagline,
     this.actions = const [],
     this.showBack = true,
     super.key,
@@ -46,8 +46,9 @@ class AppScreenHeader extends StatelessWidget {
 
   final String title;
 
-  /// Écrite en capitales à l'affichage.
-  final String tagline;
+  /// Écrite en capitales à l'affichage. Facultative pour la variante
+  /// centrée : un titre qui se suffit (« Fiche exercice ») s'en passe.
+  final String? tagline;
 
   /// Des `AppRoundIconButton`, en général.
   final List<Widget> actions;
@@ -79,7 +80,7 @@ class AppScreenHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(tagline.toUpperCase(), style: _taglineStyle),
+        Text(tagline!.toUpperCase(), style: _taglineStyle),
       ],
     );
     return Column(
@@ -194,12 +195,14 @@ class AppScreenHeader extends StatelessWidget {
                 style: _centeredTitleStyle(width, scaler, direction),
               ),
             ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              tagline.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: _taglineStyle,
-            ),
+            if (tagline case final tagline?) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                tagline.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: _taglineStyle,
+              ),
+            ],
           ],
         );
     return LayoutBuilder(

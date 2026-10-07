@@ -178,8 +178,8 @@ void main() {
 
     // Éditeur vide : rien n'est enregistrable tant qu'il manque un nom ou un
     // exercice.
-    expect(find.text('Nouveau modèle'), findsOneWidget);
-    expect(find.text('AUCUN EXERCICE'), findsOneWidget);
+    expect(find.text('Nouvelle séance'), findsOneWidget);
+    expect(find.text('Aucun exercice'), findsOneWidget);
     expect(saveButton(tester).onPressed, isNull);
 
     await tester.enterText(
@@ -194,15 +194,15 @@ void main() {
     await tester.tap(find.text('Développé couché').last);
     await tester.pumpAndSettle();
 
-    // La ligne s'ouvre sur sa première série prévue, réglable au pas-à-pas.
-    expect(find.text('SÉRIE 1'), findsOneWidget);
-    expect(find.text('1 EXERCICE · 1 SÉRIE PRÉVUE'), findsOneWidget);
+    // La ligne s'ouvre sur le tableau de ses séries : une première, prévue.
+    expect(find.text('SÉRIE'), findsOneWidget);
+    expect(find.text('1 exercice · 1 série prévue'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Ajouter une série'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ajouter une série'));
     await tester.pumpAndSettle();
-    expect(find.text('1 EXERCICE · 2 SÉRIES PRÉVUES'), findsOneWidget);
+    expect(find.text('1 exercice · 2 séries prévues'), findsOneWidget);
 
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();

@@ -108,12 +108,13 @@ class TemplateDraft {
     this.notes,
     this.estimatedDurationMinutes,
     this.dirty = false,
+    this.isNew = false,
   });
 
   /// Brouillon vide d'une **création** : l'UUID est déjà celui du futur
   /// modèle, généré sur l'appareil avant toute écriture.
   const TemplateDraft.empty(String id)
-    : this(id: id, name: '', exercises: const []);
+    : this(id: id, name: '', exercises: const [], isNew: true);
 
   /// Brouillon amorcé sur un modèle existant — c'est la seule différence
   /// entre créer et modifier.
@@ -154,6 +155,10 @@ class TemplateDraft {
   /// Modifications non enregistrées : conditionne la confirmation de sortie.
   final bool dirty;
 
+  /// Une création, et non la modification d'un modèle existant : l'en-tête
+  /// le dit (« Nouvelle séance » / « Modifier une séance »).
+  final bool isNew;
+
   /// Enregistrable : un nom et au moins un exercice, comme côté serveur.
   bool get canSave => name.trim().isNotEmpty && exercises.isNotEmpty;
 
@@ -176,6 +181,7 @@ class TemplateDraft {
           : estimatedDurationMinutes(),
       exercises: exercises ?? this.exercises,
       dirty: dirty,
+      isNew: isNew,
     );
   }
 

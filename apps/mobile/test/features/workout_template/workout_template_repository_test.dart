@@ -266,6 +266,21 @@ void main() {
         ),
         throwsA(isA<InvalidTemplateException>()),
       );
+      // Trois décimales : la colonne serveur est en Decimal(6,2).
+      await expectLater(
+        repository.saveTemplate(
+          const SaveTemplateInput(
+            name: 'Charge trop fine',
+            exercises: [
+              TemplateExerciseInput(
+                exerciseName: 'Squat',
+                sets: [PlannedSetInput(targetWeightKg: 2.125)],
+              ),
+            ],
+          ),
+        ),
+        throwsA(isA<InvalidTemplateException>()),
+      );
 
       expect(await db.select(db.localWorkoutTemplates).get(), isEmpty);
       expect(await operations(), isEmpty);

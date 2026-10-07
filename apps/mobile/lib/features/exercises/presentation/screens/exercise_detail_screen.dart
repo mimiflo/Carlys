@@ -8,64 +8,56 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 import '../providers/exercise_catalog_providers.dart';
 import '../widgets/exercise_action_bar.dart';
-import '../widgets/exercise_glass_button.dart';
-import '../widgets/exercise_media_header.dart';
+import '../widgets/exercise_identity.dart';
+import '../widgets/exercise_media_card.dart';
 import '../widgets/exercise_muscles_card.dart';
 import '../widgets/exercise_records_tiles.dart';
 import '../widgets/exercise_steps_section.dart';
 
-/// Fiche exercice (maquette 2e) : média placeholder plein cadre, records
-/// réels, muscles sollicités, exécution numérotée et barre d'action basse.
+/// Fiche exercice (maquette d'octobre 2026) : en-tête centré, photo en
+/// carte, nom et puces, records réels, muscles et leur rôle, exécution
+/// numérotée, et la barre d'action basse.
 class ExerciseDetailScreen extends ConsumerWidget {
   const ExerciseDetailScreen({required this.idOrSlug, super.key});
 
   final String idOrSlug;
-
-  /// Décalage du bouton de retour sous la barre d'état (maquette).
-  static const double _backButtonTop = 18;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(exerciseDetailProvider(idOrSlug));
 
     return Scaffold(
-      body: Stack(
-        children: [
-          detail.when(
-            loading: () => const AppLoadingIndicator(label: 'Chargement'),
-            error: (error, _) => error is ForbiddenException
-                ? const _PremiumRequiredState()
-                : AppErrorState(
-                    title: 'Exercice indisponible',
-                    message: AppErrorState.retryConnectionMessage,
-                    onRetry: () =>
-                        ref.invalidate(exerciseDetailProvider(idOrSlug)),
-                  ),
-            data: (exercise) => _ExerciseDetailBody(exercise: exercise),
-          ),
-          // Le retour reste accessible quel que soit l'état de la fiche.
-          // Sa boîte tactile déborde de l'ornement : on la recule d'autant
-          // pour que l'ornement tombe exactement sur la marge de la maquette.
-          Positioned(
-            top:
-                MediaQuery.paddingOf(context).top +
-                _backButtonTop -
-                ExerciseGlassButton.inset,
-            left: AppSpacing.gutter - ExerciseGlassButton.inset,
-            child: ExerciseGlassButton(
-              icon: AppIcons.back,
-              semanticLabel: 'Revenir à la bibliothèque',
-              onPressed: () {
-                final router = GoRouter.of(context);
-                if (router.canPop()) {
-                  router.pop();
-                } else {
-                  router.go(AppRoutes.exercises);
-                }
-              },
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Le retour reste accessible quel que soit l'état de la fiche.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.xs,
+                AppSpacing.gutter,
+                AppSpacing.sm,
+              ),
+              child: const AppScreenHeader.centered(title: 'Fiche exercice'),
             ),
-          ),
-        ],
+            Expanded(
+              child: detail.when(
+                loading: () => const AppLoadingIndicator(label: 'Chargement'),
+                error: (error, _) => error is ForbiddenException
+                    ? const _PremiumRequiredState()
+                    : AppErrorState(
+                        title: 'Exercice indisponible',
+                        message: AppErrorState.retryConnectionMessage,
+                        onRetry: () =>
+                            ref.invalidate(exerciseDetailProvider(idOrSlug)),
+                      ),
+                data: (exercise) => _ExerciseDetailBody(exercise: exercise),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -82,30 +74,25 @@ class _ExerciseDetailBody extends StatelessWidget {
       children: [
         Expanded(
           child: ListView(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              0,
+              AppSpacing.gutter,
+              AppSpacing.gapSection,
+            ),
             children: [
-              ExerciseMediaHeader(exercise: exercise),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.gutter,
-                  AppSpacing.md,
-                  AppSpacing.gutter,
-                  AppSpacing.gapSection,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ExerciseRecordsTiles(
-                      exerciseId: exercise.id,
-                      exerciseName: exercise.name,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ExerciseMusclesCard(muscles: exercise.muscles),
-                    const SizedBox(height: AppSpacing.md),
-                    ExerciseStepsSection(steps: exercise.instructions),
-                  ],
-                ),
+              ExerciseMediaCard(exercise: exercise),
+              const SizedBox(height: AppSpacing.md),
+              ExerciseIdentity(exercise: exercise),
+              const SizedBox(height: AppSpacing.gapSection),
+              ExerciseRecordsTiles(
+                exerciseId: exercise.id,
+                exerciseName: exercise.name,
               ),
+              const SizedBox(height: AppSpacing.md),
+              ExerciseMusclesCard(muscles: exercise.muscles),
+              const SizedBox(height: AppSpacing.md),
+              ExerciseStepsSection(steps: exercise.instructions),
             ],
           ),
         ),

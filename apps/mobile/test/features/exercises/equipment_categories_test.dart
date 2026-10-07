@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
-import 'package:carlys_mobile/features/workout_program/presentation/utils/equipment_categories.dart';
+import 'package:carlys_mobile/features/exercises/presentation/utils/equipment_categories.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

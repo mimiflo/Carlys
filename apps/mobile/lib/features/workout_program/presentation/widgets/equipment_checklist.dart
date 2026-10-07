@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../exercises/domain/entities/exercise.dart';
-import '../utils/equipment_categories.dart';
+import '../../../exercises/presentation/utils/equipment_categories.dart';
 import 'equipment_check_row.dart';
 
 /// Le matériel, rangé par FAMILLE : une carte repliée par famille dit ce qui

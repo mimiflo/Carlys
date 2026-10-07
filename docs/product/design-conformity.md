@@ -726,6 +726,36 @@ Deux maquettes fournies le 7 octobre 2026, traduites avec le design system :
 | Icône du coach | bulle étincelée | `AppIcons.coach`, celle du reste de l'appli | une seule icône pour le coach partout |
 | Flèche du bouton final | à droite du libellé | à gauche (`AppCtaButton`) | le bouton d'appel du design system pose son icône devant |
 
+## Fiche exercice et éditeur de séance, refondus sur maquette (octobre 2026)
+
+Deux maquettes fournies le 7 octobre 2026 :
+
+- **Fiche exercice** (`exercise_detail_screen.dart`) : en-tête centré
+  « Fiche exercice » (`AppScreenHeader.centered`, sans sous-titre) ; la photo
+  en carte
+  (`ExerciseMediaCard`) ; le nom et deux puces — muscle principal, matériel
+  avec son glyphe (`ExerciseIdentity`) ; « Tes records » en trois tuiles à
+  pastille ; « Muscles sollicités » en lignes Principal / Secondaire ;
+  « Exécution » en carte numérotée.
+- **Modifier une séance** (`template_editor_screen.dart`) : en-tête centré
+  « Modifier une séance » (« Nouvelle séance » à la création) / « COMPOSE TON
+  ENTRAÎNEMENT » ; nom, durée et notes en carte ; « Exercices » et leur
+  nombre ; chaque exercice déplié montre le tableau SÉRIE · KG · REPS ·
+  REPOS saisi au clavier (`PlannedSetsTable`), « Type de série » pour toutes
+  les séries, « Ajouter une série », « Retirer cet exercice » ; « Ajouter un
+  exercice » en pointillés ; barre basse Annuler / Enregistrer.
+
+Écarts :
+
+| Élément | Maquette | Rendu | Pourquoi |
+| --- | --- | --- | --- |
+| « Voir le mouvement » | bouton lecture sur la photo | n'apparaît qu'avec une photo, et l'ouvre en grand (zoom) | le catalogue ne porte aucune vidéo ; sans photo, rien à voir |
+| Photo du mouvement | plein cadre | entière (`contain`) sur le dégradé sombre | les photos de l'administration sont détourées ; la capture utilise la photo de la maquette, retouchée, comme photo de test |
+| Type de série | un sélecteur par exercice | le sélecteur règle toutes les séries ; le rang d'une ligne (coloré selon le type) en change une seule | le domaine porte un type PAR série (l'échauffement précède les séries de travail) |
+| Pastille d'exercice | haltère, poulie… | l'haltère pour tous | le modèle de séance ne connaît pas le matériel de l'exercice |
+| Type de mouvement (« Renforcement ») | absent | absent | la maquette ne le montre plus ; le muscle et le matériel le remplacent en puces |
+| Compteurs de caractères | absents | absents, la borne tient toujours (`AppTextField.showCounter`) | — |
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |
@@ -744,7 +774,7 @@ Deux maquettes fournies le 7 octobre 2026, traduites avec le design system :
 | Progression | Tuile « Assiduité » remplacée si la période ne permet pas le calcul | Historique insuffisant |
 | Historique | Colonne « KCAL » des cartes de séance absente | Pas de dépense estimée par séance |
 | Fiche exercice | Tuiles séries/répétitions/repos remplacées par les records réels | Pas de prescription par exercice |
-| Fiche exercice | Jauges « muscles sollicités » = principal/secondaire | L'API expose `isPrimary`, pas un pourcentage |
+| Fiche exercice | « Muscles sollicités » : Principal / Secondaire, sans jauge | L'API expose `isPrimary`, pas un pourcentage |
 | Abonnement | ÉCART FERMÉ : offres servies par `GET /subscriptions/offers`, achat par Stripe Checkout, gestion par le portail de facturation | Voir `subscription-purchase.md` |
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Profil (maquette du 23 septembre 2026) | « Mes contenus sauvegardés » absent, « Bronze » retiré de « Mes badges », pourcentage de l'objectif suivi de sa base (« du programme »), flèche de retour au lieu de la barre d'onglets | Écarts VOULUS, détaillés dans `profile.md` : aucune sauvegarde de contenu dans le domaine ; une ligue ne se reporte jamais dans le profil ; un pourcentage nomme sa base ; le profil s'ouvre en plein écran depuis l'avatar |

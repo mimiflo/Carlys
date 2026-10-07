@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../workout_session/domain/entities/workout.dart';
 import '../utils/template_draft.dart';
-import 'planned_set_row.dart';
+import 'planned_sets_table.dart';
+import 'set_kind_sheet.dart';
 
-/// Une **ligne d'exercice** de l'éditeur : repliée elle résume le programme
-/// (« 4 séries · 8 reps à 70 kg »), dépliée elle montre chaque série prévue.
+/// Une **ligne d'exercice** de l'éditeur (maquette d'octobre 2026) : repliée
+/// elle résume le programme (« 4 séries · 8 reps à 70 kg »), dépliée elle
+/// montre le tableau des séries, leur type, l'ajout et le retrait.
 class TemplateExerciseTile extends StatelessWidget {
   const TemplateExerciseTile({
     required this.exercise,
@@ -17,6 +20,7 @@ class TemplateExerciseTile extends StatelessWidget {
     required this.onAddSet,
     required this.onChangeSet,
     required this.onRemoveSet,
+    required this.onSetKindForAll,
     required this.dragHandle,
     super.key,
   });
@@ -31,6 +35,7 @@ class TemplateExerciseTile extends StatelessWidget {
   final VoidCallback onAddSet;
   final void Function(int setIndex, DraftSet set) onChangeSet;
   final void Function(int setIndex) onRemoveSet;
+  final ValueChanged<SetKind> onSetKindForAll;
 
   /// Poignée de réordonnancement fournie par la liste (elle seule sait quel
   /// index elle déplace).
@@ -38,12 +43,8 @@ class TemplateExerciseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardSecondaryAll,
-        border: Border.all(color: AppColors.darkBorder),
-      ),
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -55,30 +56,43 @@ class TemplateExerciseTile extends StatelessWidget {
             dragHandle: dragHandle,
           ),
           if (expanded) ...[
-            const Divider(height: 1, color: AppColors.darkBorder),
+            const Divider(
+              height: 1,
+              indent: AppSpacing.sm,
+              endIndent: AppSpacing.sm,
+              color: AppColors.rowDivider,
+            ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                AppSpacing.sm,
+                AppSpacing.xxs,
+                AppSpacing.xs,
+              ),
+              child: PlannedSetsTable(
+                exercise: exercise,
+                onChangeSet: onChangeSet,
+                onRemoveSet: onRemoveSet,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.sm,
+                AppSpacing.xs,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (
-                    var index = 0;
-                    index < exercise.sets.length;
-                    index++
-                  ) ...[
-                    if (index > 0) const SizedBox(height: AppSpacing.xs),
-                    PlannedSetRow(
-                      position: index + 1,
-                      set: exercise.sets[index],
-                      onChanged: (set) => onChangeSet(index, set),
-                      onRemove: () => onRemoveSet(index),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.xs),
+                  SetKindSelector(
+                    sets: exercise.sets,
+                    onChoose: onSetKindForAll,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   AppButton(
                     label: 'Ajouter une série',
                     variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.small,
                     icon: AppIcons.add,
                     isExpanded: true,
                     onPressed: onAddSet,
@@ -89,7 +103,7 @@ class TemplateExerciseTile extends StatelessWidget {
                       onPressed: onRemove,
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.danger,
-                        textStyle: AppTypography.label,
+                        textStyle: AppTypography.body,
                       ),
                       child: const Text('Retirer cet exercice'),
                     ),
@@ -104,7 +118,7 @@ class TemplateExerciseTile extends StatelessWidget {
   }
 }
 
-/// Ligne repliée : poignée, nom, résumé du programme et chevron.
+/// Ligne repliée : poignée, pastille, nom, résumé du programme et chevron.
 class _Summary extends StatelessWidget {
   const _Summary({
     required this.exercise,
@@ -128,58 +142,67 @@ class _Summary extends StatelessWidget {
       label:
           'Exercice ${formatThousands(position)} : ${exercise.name}, '
           '${summarize(exercise)}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onToggle,
-          borderRadius: AppRadius.cardSecondaryAll,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                dragHandle,
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: AppRadius.lgAll,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xs,
+            AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              dragHandle,
+              const SizedBox(width: AppSpacing.xs),
+              const AppIconBadge(
+                icon: AppIcons.equipmentDumbbell,
+                size: 48,
+                color: AppColors.primaryLight,
+                background: AppColors.primaryBadgeBg,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: ExcludeSemantics(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         exercise.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.resized(
-                          AppTypography.subheading,
-                          14,
-                        ).copyWith(color: AppColors.darkTextPrimary),
+                        style: AppTypography.subheading.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        summarize(exercise).toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelMono.copyWith(
-                          color: AppColors.darkTextTertiary,
+                        expanded
+                            ? _plannedSets(exercise.sets.length)
+                            : summarize(exercise),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.primaryLight,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  expanded ? AppIcons.collapse : AppIcons.expand,
-                  size: 22,
-                  color: AppColors.darkTextTertiary,
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                expanded ? AppIcons.collapse : AppIcons.expand,
+                color: AppColors.primaryLight,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
+
+/// « 4 séries prévues » : dépliée, la ligne n'a plus à résumer le tableau.
+String _plannedSets(int count) =>
+    '${formatThousands(count)} série${count > 1 ? 's' : ''} '
+    'prévue${count > 1 ? 's' : ''}';
 
 /// « 4 séries · 8 reps à 70 kg » — la charge n'apparaît que si elle est
 /// prévue, et seulement quand toutes les séries visent la même chose.

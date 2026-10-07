@@ -46,18 +46,24 @@ class TemplateEditorBottomBar extends StatelessWidget {
           children: [
             Text(
               _summary(),
-              style: AppTypography.labelMono.copyWith(
-                color: AppColors.darkTextTertiary,
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
-                TextButton(
-                  onPressed: saving ? null : onCancel,
-                  child: const Text('Annuler'),
+                Expanded(
+                  child: AppButton(
+                    label: 'Annuler',
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.large,
+                    isExpanded: true,
+                    onPressed: saving ? null : onCancel,
+                  ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
+                const SizedBox(width: AppSpacing.sm),
                 // L'unique action accent de l'écran. Désactivé, le bouton
                 // retombe sur la plaque sombre ; en enregistrement, il y
                 // pose un indicateur au violet du thème.
@@ -65,6 +71,7 @@ class TemplateEditorBottomBar extends StatelessWidget {
                   child: AppCtaButton(
                     label: 'Enregistrer',
                     icon: AppIcons.check,
+                    glow: false,
                     onPressed: canSave ? onSave : null,
                     isLoading: saving,
                     semanticLabel: 'Enregistrer le modèle',
@@ -81,12 +88,12 @@ class TemplateEditorBottomBar extends StatelessWidget {
 
   String _summary() {
     if (exercisesCount == 0) {
-      return 'AUCUN EXERCICE';
+      return 'Aucun exercice';
     }
-    return '${formatThousands(exercisesCount)} EXERCICE'
-        '${exercisesCount > 1 ? 'S' : ''} · '
-        '${formatThousands(plannedSetsCount)} SÉRIE'
-        '${plannedSetsCount > 1 ? 'S' : ''} PRÉVUE'
-        '${plannedSetsCount > 1 ? 'S' : ''}';
+    return '${formatThousands(exercisesCount)} exercice'
+        '${exercisesCount > 1 ? 's' : ''} · '
+        '${formatThousands(plannedSetsCount)} série'
+        '${plannedSetsCount > 1 ? 's' : ''} prévue'
+        '${plannedSetsCount > 1 ? 's' : ''}';
   }
 }

@@ -38,6 +38,15 @@ abstract final class AppIcons {
   static const IconData nutrition = Icons.restaurant_rounded;
   static const IconData timer = Icons.timer_rounded;
   static const IconData history = Icons.history_rounded;
+
+  /// Les records d'un exercice (fiche) : la charge garde le glyphe de
+  /// l'haltère, les répétitions tournent, le volume s'empile.
+  static const IconData recordReps = Icons.autorenew_rounded;
+
+  /// Le muscle principal d'un exercice (puce de la fiche) : la maquette lui
+  /// donne l'haltère.
+  static const IconData muscleGroup = equipmentDumbbell;
+  static const IconData recordVolume = Icons.layers_rounded;
   static const IconData record = Icons.emoji_events_rounded;
   static const IconData bodyMetrics = Icons.monitor_weight_rounded;
 
@@ -88,6 +97,12 @@ abstract final class AppIcons {
   /// Le cap d'une identité Carlys : ce sur quoi on bâtit.
   static const IconData foundation = Icons.foundation_rounded;
   static const IconData minus = Icons.remove_rounded;
+
+  /// Retirer une série prévue (éditeur de séance).
+  static const IconData removeSet = Icons.remove_circle_rounded;
+
+  /// Ajouter un exercice à une séance (bouton pointillé de l'éditeur).
+  static const IconData addExercise = Icons.add_circle_rounded;
   static const IconData recovery = Icons.battery_charging_full_rounded;
 
   /// Jour tenu dans la série de constance.

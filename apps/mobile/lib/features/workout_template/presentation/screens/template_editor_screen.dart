@@ -52,7 +52,20 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(title: _title(draft)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.gutter,
+                  AppSpacing.xs,
+                  AppSpacing.gutter,
+                  AppSpacing.md,
+                ),
+                child: AppScreenHeader.centered(
+                  title: draft?.isNew ?? false
+                      ? 'Nouvelle séance'
+                      : 'Modifier une séance',
+                  tagline: 'Compose ton entraînement',
+                ),
+              ),
               Expanded(
                 child: editor.when(
                   loading: () =>
@@ -84,11 +97,6 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
         ),
       ),
     );
-  }
-
-  String _title(TemplateDraft? draft) {
-    final name = draft?.name.trim() ?? '';
-    return name.isEmpty ? 'Nouveau modèle' : name;
   }
 
   /// Enregistre : validation des bornes partagées avec l'API, écriture Drift
@@ -140,44 +148,6 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
       cancelLabel: 'Continuer l’édition',
       destructive: true,
       icon: AppIcons.confirmLeave,
-    );
-  }
-}
-
-/// En-tête de l'éditeur : retour et nom du modèle en cours de composition.
-class _Header extends StatelessWidget {
-  const _Header({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xs,
-        AppSpacing.xs,
-        AppSpacing.gutter,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          // La flèche commune, et non sa copie : cet en-tête en redessinait
-          // une à l'identique, géométrie comprise, mais sans la garde qui
-          // l'efface quand il n'y a rien à dépiler.
-          const AppBackButton(),
-          const SizedBox(width: AppSpacing.xxs),
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.pageTitle.copyWith(
-                color: AppColors.darkTextPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

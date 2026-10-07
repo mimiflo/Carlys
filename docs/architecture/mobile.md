@@ -580,7 +580,7 @@ Parcours : accueil ou profil → `/templates` → éditeur `/templates/:id` →
 | Écran / brique                        | Rôle                                                        |
 | ------------------------------------- | ----------------------------------------------------------- |
 | `TemplatesScreen`                     | Liste locale, temps réel ; état vide, pastille de synchronisation par modèle |
-| `TemplateEditorScreen` + `TemplateEditorForm`, `TemplateExerciseTile`, `PlannedSetRow`, `TemplateEditorBottomBar` | Composition : nom, notes, durée, exercices réordonnables, séries prévues au pas-à-pas |
+| `TemplateEditorScreen` + `TemplateEditorForm`, `TemplateEditorIdentity`, `TemplateExerciseTile`, `PlannedSetsTable`, `TemplateEditorBottomBar` | Composition : nom, notes, durée, exercices réordonnables, séries prévues en tableau (kg, reps, repos saisis au clavier, type par série ou pour toutes) |
 | `TemplateEditorController` (`TemplateDraft`) | Brouillon **en mémoire** ; l'écriture Drift et la mise en file n'ont lieu qu'à « Enregistrer » |
 | `guidanceFor(SessionPlan)` (`session_guidance.dart`) | Fonction pure : traduit le plan en consigne d'écran (sur-titre, cible, compteurs) |
 | `RecordPlannedSet`                    | Valide une série : appariement au plan → écriture → item honoré |

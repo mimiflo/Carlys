@@ -26,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.minLines,
     this.maxLength,
+    this.showCounter = true,
     this.helper,
     this.inlineLabel = false,
     this.autofocus = false,
@@ -81,6 +82,10 @@ class AppTextField extends StatelessWidget {
 
   /// Longueur maximale acceptée — reprend la borne partagée avec l'API.
   final int? maxLength;
+
+  /// Faux : la borne tient toujours, sans le compteur « 0/60 » sous le
+  /// champ — là où une maquette serrée n'en a pas la place.
+  final bool showCounter;
 
   /// Ligne d'aide sous le champ (contrainte, précision), dans le style du
   /// thème — jamais un second libellé.
@@ -184,6 +189,7 @@ class AppTextField extends StatelessWidget {
         hintText: hintRepeatsLabel ? null : hint,
         helperText: helper,
         errorText: errorText,
+        counterText: showCounter ? null : '',
         prefixIcon: prefixIcon == null
             ? null
             : Icon(prefixIcon, color: prefixIconColor),

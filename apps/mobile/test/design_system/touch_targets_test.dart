@@ -1,7 +1,6 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
-import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_glass_button.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_library_header.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/workout_template/presentation/widgets/templates_header.dart';
@@ -162,36 +161,6 @@ void main() {
       tester.getSize(filtre.first),
       const Size.square(AppSpacing.touchTarget),
     );
-  });
-
-  testWidgets('le bouton verre répond au-delà de son ornement', (tester) async {
-    var pressed = 0;
-    await tester.pumpWidget(
-      harness(
-        ExerciseGlassButton(
-          icon: AppIcons.back,
-          semanticLabel: 'Retour',
-          onPressed: () => pressed++,
-        ),
-      ),
-    );
-
-    final button = find.byType(ExerciseGlassButton);
-    expect(tester.getSize(button), const Size.square(AppSpacing.touchTarget));
-    // L'ornement, lui, garde ses 40 points au centre.
-    final ornament = find.descendant(
-      of: button,
-      matching: find.byType(BackdropFilter),
-    );
-    expect(
-      tester.getSize(ornament),
-      const Size.square(ExerciseGlassButton.ornamentSize),
-    );
-    expect(tester.getCenter(ornament), tester.getCenter(button));
-
-    await tester.tapAt(corner(tester, button));
-    await tester.pump();
-    expect(pressed, 1);
   });
 
   testWidgets('la flèche de retour occupe la boîte tactile', (tester) async {

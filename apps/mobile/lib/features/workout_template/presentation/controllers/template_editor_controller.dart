@@ -119,6 +119,14 @@ class TemplateEditorController
     _replaceSets(exerciseIndex, sets);
   }
 
+  /// Le même type pour TOUTES les séries d'un exercice (« Type de série ») ;
+  /// chaque série garde la possibilité d'en changer seule.
+  void setKindForAll(int exerciseIndex, SetKind kind) =>
+      _replaceSets(exerciseIndex, [
+        for (final set in _draft.exercises[exerciseIndex].sets)
+          set.copyWith(kind: kind),
+      ]);
+
   void _replaceSets(int exerciseIndex, List<DraftSet> sets) {
     final exercises = [..._draft.exercises];
     exercises[exerciseIndex] = exercises[exerciseIndex].copyWith(sets: sets);

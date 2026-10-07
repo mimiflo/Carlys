@@ -817,23 +817,25 @@ part d'un brouillon vide.
 
 **Contenu.**
 
-1. `AppTextField` « Nom de la séance » (obligatoire, ≤ 120) ;
-2. `AppTextField` multiligne « Notes » (facultatif) et « Durée estimée »
-   (facultatif, en minutes) ;
-3. liste réordonnable des lignes d'exercice (`ReorderableListView`) — chaque
-   ligne : nom de l'exercice, nombre de séries prévues, un chevron ;
-4. dépliée, une ligne montre ses séries prévues : `SetStepperField` **réutilisé**
-   pour charge et répétitions, un champ repos, le `kind`
-   (`AppPill` sélectionnable Échauffement / Série / Dégressive), et
-   « Ajouter une série » / « Dupliquer la dernière série » ;
-5. « Ajouter un exercice » ouvre `showExercisePickerSheet` — **le sélecteur
+1. en carte, `AppTextField` « Nom de la séance » (obligatoire, ≤ 120), puis
+   « Durée estimée » (facultatif, en minutes) et « Notes » (facultatif) côte
+   à côte ;
+2. liste réordonnable des lignes d'exercice (`ReorderableListView`) — chaque
+   ligne : poignée, nom de l'exercice, résumé des séries prévues, un chevron ;
+3. dépliée, une ligne montre le **tableau** de ses séries (`PlannedSetsTable`,
+   maquette d'octobre 2026) : SÉRIE · KG · REPS · REPOS, saisis au clavier
+   numérique dans les bornes partagées avec l'API ; le rang dit le type de
+   la série et, touché, en change le type pour elle seule ; « Type de série »
+   le change pour toutes ; « Ajouter une série » recopie la dernière ;
+4. « Ajouter un exercice » ouvre `showExercisePickerSheet` — **le sélecteur
    existant**, y compris son option « exercice libre » ;
-6. barre basse : « Enregistrer » (accent, désactivée si nom vide ou zéro
+5. barre basse : « Enregistrer » (accent, désactivée si nom vide ou zéro
    exercice) et « Annuler ».
 
 **Découpage obligatoire** (widget < 250 lignes) : `template_editor_screen.dart`
 (coquille), `template_editor_form.dart`, `template_exercise_tile.dart`,
-`planned_set_row.dart`, `template_editor_bottom_bar.dart`.
+`planned_sets_table.dart`, `planned_number_cell.dart`, `set_kind_sheet.dart`,
+`template_editor_identity.dart`, `template_editor_bottom_bar.dart`.
 
 **Le brouillon vit en mémoire** dans un `Notifier` dédié ; l'écriture Drift +
 mise en file n'a lieu qu'à « Enregistrer ». C'est une exception assumée à

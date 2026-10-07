@@ -141,6 +141,13 @@ PlannedSet _normalizeSet({
       'La charge prévue doit être comprise entre 0 et 1 000 kg.',
     );
   }
+  // Deux décimales au plus : la colonne serveur est en Decimal(6,2), et
+  // « 2,125 » y serait refusé à la synchronisation, en `failed`.
+  if (weight != null && (weight * 100 - (weight * 100).round()).abs() > 1e-6) {
+    throw const InvalidTemplateException(
+      'La charge prévue se donne à deux décimales au plus.',
+    );
+  }
   final rest = set.restSeconds;
   if (rest != null &&
       (rest < 0 || rest > WorkoutTemplateLimits.restSecondsMax)) {

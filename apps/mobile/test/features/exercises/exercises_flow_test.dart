@@ -5,6 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_identity.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:flutter/material.dart';
@@ -100,9 +101,16 @@ void main() {
       await tester.tap(squatCard);
       await tester.pumpAndSettle();
 
-      // La fiche ouvre sur son en-tête média : sur-titre « GROUPE · TYPE »
-      // puis le nom du mouvement.
-      expect(find.text('QUADRICEPS · RENFORCEMENT'), findsOneWidget);
+      // La fiche ouvre sur son en-tête, puis le nom du mouvement et ses
+      // puces : le muscle principal, le matériel.
+      expect(find.text('Fiche exercice'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ExerciseIdentity),
+          matching: find.text('quadriceps'),
+        ),
+        findsOneWidget,
+      );
       await tester.scrollUntilVisible(
         find.text('Muscles sollicités'),
         150,

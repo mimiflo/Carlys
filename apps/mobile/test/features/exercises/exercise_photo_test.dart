@@ -4,7 +4,7 @@ import 'package:carlys_mobile/core/media/remote_image.dart';
 import 'package:carlys_mobile/core/media/remote_image_cache.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
-import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_media_header.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_media_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -148,9 +148,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fiche : l’en-tête affiche la photo, titre inchangé', (
-    tester,
-  ) async {
+  testWidgets('fiche : la carte affiche la photo entière', (tester) async {
     final cache = _Cache();
     final exercise = detailOf(
       summary(
@@ -161,10 +159,9 @@ void main() {
       ),
     );
 
-    await _pump(tester, cache, ExerciseMediaHeader(exercise: exercise));
+    await _pump(tester, cache, ExerciseMediaCard(exercise: exercise));
 
     expect(cache.asked, ['http://s/image/squat.webp']);
-    expect(find.text('Squat'), findsOneWidget);
     expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 
@@ -173,13 +170,13 @@ void main() {
   ) async {
     final exercise = detailOf(summary('id-1', 'Squat', group: 'quadriceps'));
 
-    await _pump(tester, _Cache(), ExerciseMediaHeader(exercise: exercise));
+    await _pump(tester, _Cache(), ExerciseMediaCard(exercise: exercise));
 
     expect(find.byIcon(AppIcons.workout), findsOneWidget);
-    expect(find.text('Squat'), findsOneWidget);
+    final size = tester.getSize(find.byType(ExerciseMediaCard));
     expect(
-      tester.getSize(find.byType(ExerciseMediaHeader)).height,
-      ExerciseMediaHeader.height,
+      size.width / size.height,
+      closeTo(ExerciseMediaCard.aspectRatio, 0.01),
     );
   });
 }

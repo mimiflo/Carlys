@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/widgets/exercise_picker_sheet.dart';
-import '../../domain/entities/workout_template.dart';
 import '../controllers/template_editor_controller.dart';
 import '../utils/template_draft.dart';
+import 'template_editor_identity.dart';
 import 'template_exercise_tile.dart';
 
 /// Formulaire de l'éditeur : identité du modèle puis ses lignes d'exercice,
@@ -59,13 +59,16 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return ReorderableListView.builder(
+      // Le pavé numérique d'iOS n'a pas de touche Entrée : faire défiler la
+      // composition ferme le clavier.
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
         0,
         AppSpacing.gutter,
         AppSpacing.lg + bottomInset,
       ),
-      header: _Identity(
+      header: TemplateEditorIdentity(
         name: _name,
         notes: _notes,
         duration: _duration,
@@ -73,15 +76,12 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
         onNotes: _controller.setNotes,
         onDuration: _controller.setEstimatedDuration,
         exercisesCount: exercises.length,
-        onAdd: _addExercise,
       ),
       footer: Padding(
-        padding: const EdgeInsets.only(top: AppSpacing.sm),
-        child: AppButton(
+        padding: const EdgeInsets.only(top: AppSpacing.xxs),
+        child: AppDashedButton(
           label: 'Ajouter un exercice',
-          variant: AppButtonVariant.secondary,
-          icon: AppIcons.add,
-          isExpanded: true,
+          icon: AppIcons.addExercise,
           onPressed: _addExercise,
         ),
       ),
@@ -91,7 +91,7 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
         final exercise = exercises[index];
         return Padding(
           key: ValueKey(exercise.localId),
-          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: TemplateExerciseTile(
             exercise: exercise,
             position: index + 1,
@@ -106,14 +106,14 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
             onChangeSet: (setIndex, set) =>
                 _controller.updateSet(index, setIndex, set),
             onRemoveSet: (setIndex) => _controller.removeSet(index, setIndex),
+            onSetKindForAll: (kind) => _controller.setKindForAll(index, kind),
             dragHandle: ReorderableDragStartListener(
               index: index,
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
                 child: Icon(
                   AppIcons.dragHandle,
-                  size: 20,
-                  color: AppColors.darkTextTertiary,
+                  color: AppColors.darkTextSecondary,
                 ),
               ),
             ),
@@ -139,83 +139,5 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
     if (added != null && mounted) {
       setState(() => _expanded = added.localId);
     }
-  }
-}
-
-/// Identité du modèle : nom, durée estimée, notes, puis l'en-tête de section
-/// des exercices.
-class _Identity extends StatelessWidget {
-  const _Identity({
-    required this.name,
-    required this.notes,
-    required this.duration,
-    required this.onName,
-    required this.onNotes,
-    required this.onDuration,
-    required this.exercisesCount,
-    required this.onAdd,
-  });
-
-  final TextEditingController name;
-  final TextEditingController notes;
-  final TextEditingController duration;
-  final ValueChanged<String> onName;
-  final ValueChanged<String> onNotes;
-  final ValueChanged<String> onDuration;
-  final int exercisesCount;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppTextField(
-          label: 'Nom de la séance',
-          controller: name,
-          hint: 'Push force',
-          textInputAction: TextInputAction.next,
-          maxLength: WorkoutTemplateLimits.nameMax,
-          onChanged: onName,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppTextField(
-          label: 'Durée estimée (minutes)',
-          controller: duration,
-          hint: 'Facultatif',
-          keyboardType: TextInputType.number,
-          onChanged: onDuration,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppTextField(
-          label: 'Notes',
-          controller: notes,
-          hint: 'Facultatif',
-          maxLines: 3,
-          maxLength: WorkoutTemplateLimits.notesMax,
-          onChanged: onNotes,
-        ),
-        const SizedBox(height: AppSpacing.gapSection),
-        AppSectionHeader(
-          title: 'Exercices',
-          trailing: 'Ajouter',
-          trailingIcon: AppIcons.add,
-          trailingTone: AppSectionTrailingTone.primary,
-          onTrailingTap: onAdd,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (exercisesCount == 0)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              'Aucun exercice pour l’instant. Ajoutes-en depuis le catalogue, '
-              'puis règle les séries prévues.',
-              style: AppTypography.body.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
-            ),
-          ),
-      ],
-    );
   }
 }
