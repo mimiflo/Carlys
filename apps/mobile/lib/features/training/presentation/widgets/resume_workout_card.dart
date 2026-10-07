@@ -23,13 +23,21 @@ class ResumeWorkoutCard extends StatelessWidget {
   /// sous le texte.
   static const String photoAsset = 'assets/illustrations/halteres.webp';
 
-  /// Part de la largeur de la carte prise par la photo : les trois quarts,
-  /// comme la maquette, où son fond sombre court jusque derrière le texte.
-  static const double photoWidthFactor = 0.75;
+  /// Rapport largeur / hauteur du fichier.
+  static const double photoAspect = 1708 / 855;
 
-  /// Part de la largeur laissée au texte : il s'arrête où la photo devient
-  /// pleine.
-  static const double textWidthFactor = 0.6;
+  /// Part de la largeur du FICHIER prise par les haltères : la photo
+  /// d'origine, à droite ; à gauche, son fond prolongé.
+  static const double subjectShareOfPhoto = 1 / 1.6;
+
+  /// Part de la largeur de la CARTE laissée aux haltères, à droite. La photo
+  /// se dimensionne sur elle, jamais sur la hauteur de la carte : un texte
+  /// agrandi fait grandir la carte, et les haltères passaient alors sous le
+  /// titre.
+  static const double subjectShareOfCard = 0.37;
+
+  /// Part de la largeur laissée au texte : il s'arrête avant les haltères.
+  static const double textWidthFactor = 1 - subjectShareOfCard - 0.03;
 
   static const _logger = AppLogger('ResumeWorkoutCard');
 
@@ -45,16 +53,14 @@ class ResumeWorkoutCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
+          final photoWidth = width * subjectShareOfCard / subjectShareOfPhoto;
           return Stack(
             children: [
               Positioned(
                 top: 0,
                 right: 0,
-                width: width * photoWidthFactor,
-                // Jusqu'au bouton, comme la maquette : plus bas, la photo
-                // grandirait avec la carte et les haltères passeraient sous
-                // le titre.
-                bottom: AppSpacing.touchTarget + AppSpacing.md,
+                width: photoWidth,
+                height: photoWidth / photoAspect,
                 child: _FadedPhoto(logger: _logger),
               ),
               Padding(
