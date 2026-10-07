@@ -53,13 +53,22 @@ Future<void> reloadCommunity(WidgetRef ref) async {
     friendChallengesProvider,
     leagueProvider,
     blockedUsersProvider,
-    sharesProgressProvider,
   ].where(ref.exists).toList();
+  // Cache de compte, pas lecture gardée : il vit tant que l'appli. Pas
+  // relu pendant une bascule en vol : le GET reviendrait avec la valeur
+  // d'avant et démentirait le geste montré.
+  final shares =
+      ref.exists(sharesProgressProvider) &&
+      !ref.read(communityActionsProvider).sharesWriting;
   for (final source in live) {
     ref.invalidate(source);
   }
+  if (shares) ref.invalidate(sharesProgressProvider);
   try {
-    await Future.wait([for (final source in live) ref.read(source.future)]);
+    await Future.wait([
+      for (final source in live) ref.read(source.future),
+      if (shares) ref.read(sharesProgressProvider.future),
+    ]);
   } on Exception catch (error) {
     AppLogger('community').warning('Communauté non rafraîchie', error: error);
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
@@ -223,9 +225,24 @@ class FakeCommunityRepository implements CommunityRepository {
     return shares;
   }
 
+  /// Retient [setSharesProgress] tant qu'il n'est pas complété : le temps
+  /// d'un aller-retour réseau.
+  Completer<void>? sharesGate;
+
+  /// Le serveur refuse l'écriture du partage, la lecture reste possible.
+  bool failSharesWrite = false;
+
+  /// Valeurs reçues par [setSharesProgress], dans l'ordre d'arrivée.
+  final List<bool> sharesWrites = [];
+
   @override
   Future<void> setSharesProgress({required bool value}) async {
+    await sharesGate?.future;
     _guard();
+    if (failSharesWrite) {
+      throw const NetworkException('partage refusé (voulu par le test)');
+    }
+    sharesWrites.add(value);
     shares = value;
   }
 

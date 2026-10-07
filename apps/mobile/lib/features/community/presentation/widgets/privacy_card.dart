@@ -8,12 +8,17 @@ class PrivacyCard extends StatelessWidget {
   const PrivacyCard({
     required this.sharesProgress,
     required this.onChanged,
+    this.onRetry,
     super.key,
   });
 
   /// `null` tant que la préférence n'est pas chargée (interrupteur inactif).
   final bool? sharesProgress;
   final ValueChanged<bool> onChanged;
+
+  /// Non nul quand la lecture a ÉCHOUÉ : la carte le dit et propose de
+  /// réessayer — sinon l'interrupteur restait grisé, sans un mot.
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +44,11 @@ class PrivacyCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Ta série et tes séances de la semaine, visibles par tes '
-                    'amis. Désactivé : ils ne voient que ton nom.',
+                    onRetry != null
+                        ? 'Ton réglage n’a pas pu être lu.'
+                        : 'Ta série et tes séances de la semaine, visibles '
+                              'par tes amis. Désactivé : ils ne voient que ton '
+                              'nom.',
                     style: AppTypography.label.copyWith(
                       color: AppColors.darkTextTertiary,
                     ),
@@ -49,10 +57,17 @@ class PrivacyCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Switch(
-              value: sharesProgress ?? true,
-              onChanged: sharesProgress == null ? null : onChanged,
-            ),
+            if (onRetry case final retry?)
+              IconButton(
+                onPressed: retry,
+                tooltip: 'Réessayer',
+                icon: const Icon(AppIcons.retry, color: AppColors.primaryLight),
+              )
+            else
+              Switch(
+                value: sharesProgress ?? true,
+                onChanged: sharesProgress == null ? null : onChanged,
+              ),
           ],
         ),
       ),

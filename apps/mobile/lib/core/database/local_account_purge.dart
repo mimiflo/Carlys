@@ -138,6 +138,9 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // inconnu.
     communitySearchProvider,
     communityTabProvider,
+    // Ce que celui qui part accepte de montrer à ses amis : cache permanent
+    // depuis que la bascule se montre d'avance.
+    sharesProgressProvider,
     // Les compteurs de VIE ENTIÈRE (séances, semaines) que le serveur rend
     // pour les récompenses. Provider permanent, alimenté par Dio seul : rien
     // dans la purge ne le reconstruisait. Le compte suivant héritait des

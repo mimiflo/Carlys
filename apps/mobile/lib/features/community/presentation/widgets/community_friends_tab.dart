@@ -56,6 +56,9 @@ class CommunityFriendsTab extends ConsumerWidget {
             sharesProgress: sharesProgress.valueOrNull,
             onChanged: (value) =>
                 gestures.setSharesProgress(context, value: value),
+            onRetry: sharesProgress.hasError && !sharesProgress.hasValue
+                ? () => ref.invalidate(sharesProgressProvider)
+                : null,
           ),
         ]);
         if (nothingToShow && query.trim().isEmpty) {

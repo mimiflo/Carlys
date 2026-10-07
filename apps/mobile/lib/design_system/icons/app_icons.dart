@@ -264,6 +264,11 @@ abstract final class AppIcons {
   static const IconData equipmentBench = Icons.airline_seat_flat_rounded;
   static const IconData equipmentBand = Icons.gesture_rounded;
   static const IconData equipmentBodyweight = Icons.accessibility_new_rounded;
+  static const IconData equipmentPlate = Icons.album_rounded;
+  static const IconData equipmentBall = Icons.sports_volleyball_rounded;
+  static const IconData equipmentPullUpBar = Icons.horizontal_rule_rounded;
+  static const IconData equipmentRoller = Icons.trip_origin_rounded;
+  static const IconData equipmentMat = Icons.rectangle_rounded;
 
   // ── Communauté ────────────────────────────────────────────────────
   static const IconData block = Icons.block_rounded;

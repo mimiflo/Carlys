@@ -82,7 +82,8 @@ void main() {
     expect(find.text('TON NIVEAU'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('TON MATÉRIEL'), 300);
     expect(find.text('TON MATÉRIEL'), findsOneWidget);
-    expect(find.text('Haltères'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Poids libres'), 300);
+    expect(find.text('Rien de coché'), findsOneWidget);
     // Pas l'écran des programmes : ni rythme, ni génération.
     expect(find.textContaining('Générer'), findsNothing);
     expect(find.textContaining('par semaine'), findsNothing);

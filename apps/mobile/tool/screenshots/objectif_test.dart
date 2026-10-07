@@ -37,6 +37,26 @@ import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
 import 'capture_test.dart' show loadRealFonts;
 
+/// Le matériel du catalogue, tel que le serveur le sert (les quinze du
+/// seed) : la page se capture avec ses vraies familles.
+const _catalogue = [
+  EquipmentRef(id: 'e1', slug: 'poids-du-corps', name: 'Poids du corps'),
+  EquipmentRef(id: 'e2', slug: 'barre', name: 'Barre'),
+  EquipmentRef(id: 'e3', slug: 'halteres', name: 'Haltères'),
+  EquipmentRef(id: 'e4', slug: 'kettlebell', name: 'Kettlebell'),
+  EquipmentRef(id: 'e5', slug: 'machine', name: 'Machine guidée'),
+  EquipmentRef(id: 'e6', slug: 'poulie', name: 'Poulie'),
+  EquipmentRef(id: 'e7', slug: 'banc', name: 'Banc'),
+  EquipmentRef(id: 'e8', slug: 'elastique', name: 'Élastique'),
+  EquipmentRef(id: 'e9', slug: 'barre-de-traction', name: 'Barre de traction'),
+  EquipmentRef(id: 'e10', slug: 'barre-ez', name: 'Barre EZ'),
+  EquipmentRef(id: 'e11', slug: 'disque', name: 'Disque'),
+  EquipmentRef(id: 'e12', slug: 'medecine-ball', name: 'Médecine ball'),
+  EquipmentRef(id: 'e13', slug: 'ballon', name: 'Ballon de gym'),
+  EquipmentRef(id: 'e14', slug: 'rouleau', name: 'Rouleau abdominal'),
+  EquipmentRef(id: 'e15', slug: 'tapis', name: 'Tapis'),
+];
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -177,14 +197,7 @@ void main() {
       ),
     );
     final exercises = FakeExercisesRepository(const [])
-      ..equipmentRefs = const [
-        EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
-        EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
-        EquipmentRef(id: 'e3', slug: 'elastique', name: 'Élastiques'),
-        EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
-        EquipmentRef(id: 'e5', slug: 'kettlebell', name: 'Kettlebell'),
-        EquipmentRef(id: 'e6', slug: 'poids-du-corps', name: 'Poids du corps'),
-      ];
+      ..equipmentRefs = _catalogue;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -211,13 +224,21 @@ void main() {
     await tester.tap(find.text('Avancé'));
     await tester.pumpAndSettle();
 
-    // Le bas de l'écran : rythme, durée et matériel coché.
-    await tester.scrollUntilVisible(
-      find.text('Poids du corps'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    // Le bas de l'écran : le matériel par famille, les poids libres
+    // dépliés.
+    Future<void> versLeBas() async {
+      await tester.scrollUntilVisible(
+        find.text('Accessoires'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await versLeBas();
+    await tester.tap(find.text('Poids libres'));
     await tester.pumpAndSettle();
+    await versLeBas();
     await capture(tester, 'objectif-04-materiel');
   });
 
@@ -236,18 +257,7 @@ void main() {
             FakeTrainingProfileRepository(initial: profil),
           ),
           exercisesRepositoryProvider.overrideWithValue(
-            FakeExercisesRepository(const [])
-              ..equipmentRefs = const [
-                EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
-                EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
-                EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
-                EquipmentRef(id: 'e5', slug: 'kettlebell', name: 'Kettlebell'),
-                EquipmentRef(
-                  id: 'e6',
-                  slug: 'poids-du-corps',
-                  name: 'Poids du corps',
-                ),
-              ],
+            FakeExercisesRepository(const [])..equipmentRefs = _catalogue,
           ),
           currentTrainingGoalProvider.overrideWithValue(objectif),
         ],
@@ -291,11 +301,24 @@ void main() {
       TrainingGoal.hyrox,
     );
     await tester.scrollUntilVisible(
-      find.text('Poids du corps'),
+      find.text('Accessoires'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     await capture(tester, 'objectif-08-coach-pret');
+
+    // Les deux dernières familles, dépliées : chaque matériel a son glyphe.
+    await tester.tap(find.text('Accessoires'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Au poids du corps'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Tapis'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'objectif-09-coach-familles');
   });
 }

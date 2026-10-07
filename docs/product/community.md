@@ -292,7 +292,11 @@ simplement perdue (la barre est collective, pas comptable).
   et le dit en mots au lecteur d'écran). Rien n'a été retiré en chemin :
   Défis = défis du mois et défis entre amis ; Ligue = la carte « où j'en
   suis », le classement de la semaine et la bannière ; Amis = demandes,
-  encouragements, amis, confidentialité, personnes bloquées. L'en-tête
+  encouragements, amis, confidentialité, personnes bloquées (la bascule
+  « Partager ma progression » se voit sous le doigt, puis s'écrit ; un
+  refus la remet — elle attendait l'écriture PUIS la relecture ; cache de
+  compte, relu au tirer-pour-rafraîchir sauf bascule en vol, et une lecture
+  ratée le dit avec « Réessayer »). L'en-tête
   (`AppScreenHeader`, partagé avec le profil) porte la loupe et l'ajout d'un
   ami. L'onglet ouvert survit à un détour par un autre onglet de la barre du
   bas, et l'ADRESSE le suit (`/community?onglet=amis`,

@@ -74,9 +74,11 @@ void main() {
     // L'objectif du bandeau vient de la session, pas d'une copie.
     expect(find.text('Hyrox'), findsOneWidget);
     expect(find.text('Intermédiaire'), findsOneWidget);
-    await voir(tester, 'Haltères');
-    expect(find.text('Barre'), findsOneWidget);
-    expect(find.text('Haltères'), findsOneWidget);
+    // Le matériel se range par famille, repliée : elle dit ce qui y est
+    // coché, sans dérouler ses lignes.
+    await voir(tester, 'Poids libres');
+    expect(find.text('1 sur 2 · Barre'), findsOneWidget);
+    expect(find.text('Haltères'), findsNothing);
   });
 
   testWidgets('choisir une expérience écrit SON champ, et lui seul', (
@@ -127,6 +129,9 @@ void main() {
       await monter(tester, repo: repo);
 
       // Ajouter les haltères : la liste envoyée porte les DEUX slugs.
+      await voir(tester, 'Poids libres');
+      await tester.tap(find.text('Poids libres'));
+      await tester.pumpAndSettle();
       await voir(tester, 'Haltères');
       await tester.tap(find.text('Haltères'));
       await tester.pumpAndSettle();
@@ -138,6 +143,27 @@ void main() {
       expect(repo.equipmentWrites.last.toSet(), {'halteres'});
     },
   );
+
+  testWidgets('« Tout cocher » coche une famille entière en UNE écriture', (
+    tester,
+  ) async {
+    final repo = FakeTrainingProfileRepository();
+    await monter(tester, repo: repo);
+
+    await voir(tester, 'Poids libres');
+    await tester.tap(find.text('Poids libres'));
+    await tester.pumpAndSettle();
+    await voir(tester, 'Tout cocher');
+    await tester.tap(find.text('Tout cocher'));
+    await tester.pumpAndSettle();
+    expect(repo.equipmentWrites.single.toSet(), {'barre', 'halteres'});
+    expect(find.text('2 sur 2 · Barre, Haltères'), findsOneWidget);
+
+    // Tout coché : la même ligne décoche la famille.
+    await tester.tap(find.text('Tout décocher'));
+    await tester.pumpAndSettle();
+    expect(repo.equipmentWrites.last, isEmpty);
+  });
 
   testWidgets('l’objectif reste modifiable : sa carte ouvre sa feuille', (
     tester,

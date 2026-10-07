@@ -64,12 +64,13 @@ final leagueProvider = FutureProvider.autoDispose<League>((ref) {
 });
 
 /// Ma préférence de partage — pilotée par le serveur, comme le reste.
-final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
-  return keepForAccount(
-    ref,
-    () => ref.watch(communityRepositoryProvider).sharesProgress(),
-  );
-});
+/// Cache de compte, pour que la bascule se montre D'AVANCE
+/// (`CommunityActions.setSharesProgress`) : l'interrupteur attendait
+/// l'écriture PUIS la relecture avant de bouger.
+final sharesProgressProvider = accountBoundCache<bool>(
+  (ref) => ref.watch(communityRepositoryProvider).sharesProgress(),
+  none: true,
+);
 
 /// Mon code ami (forme canonique). Un code est attribué à VIE : pas
 /// d'auto-dispose, il ne changera pas sous les pieds de la feuille d'ajout.

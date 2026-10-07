@@ -57,8 +57,15 @@ elle n'inventera rien :
 Écriture : `PATCH /users/me` (le guichet unique du profil). Lecture :
 `GET /users/me/training` — l'état complet des entrées, objectif compris.
 Sur mobile : écran « Préparer mon programme » (profil → Entraînement,
-route `/programs/preparation`), chaque geste écrit SON champ puis relit —
-l'écran reflète toujours l'état serveur. Il ne porte aucun bouton
+route `/programs/preparation`), chaque geste se voit SOUS LE DOIGT puis
+écrit SON champ, sans relecture ; un refus remet l'écran à la valeur
+confirmée et relit (`AheadWrites`, partagé avec le partage de progression de
+la Communauté). Le matériel s'y range par FAMILLE (poids libres, machines et
+poulies, poids du corps, accessoires — `EquipmentCategory`, un slug inconnu
+tombe dans les accessoires) : chaque famille, repliée, dit ce qui y est
+coché, et se coche d'un geste (« Tout cocher ») ou ligne à ligne — quinze
+cases d'affilée se lisaient comme une corvée (demande du 7 octobre 2026).
+Il ne porte aucun bouton
 « Générer » (retiré le 4 octobre 2026, à la demande du propriétaire) : ces
 réponses sont les objectifs de l'appli entière, que le coach lit pour
 composer une séance ou proposer un programme.

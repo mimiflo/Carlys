@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/utilities/creation_identity.dart';
 import '../../../../core/utilities/formatting.dart';
+import '../../../authentication/presentation/providers/ahead_writes.dart';
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/friend_challenge.dart';
@@ -11,7 +12,8 @@ import 'friend_challenge_detail_providers.dart';
 
 export 'community_read_providers.dart';
 
-/// Actions de la communauté : chaque écriture invalide les lectures.
+/// Actions de la communauté : chaque écriture invalide les lectures — sauf
+/// le partage de progression, montré d'avance ([AheadWrites]).
 ///
 /// PAS d'autoDispose ici : l'objet est lu (`ref.read`) au build puis rappelé
 /// dans des callbacks bien plus tard. Un élément autoDispose jamais écouté
@@ -30,11 +32,13 @@ final friendChallengeCreationProvider =
     );
 
 class CommunityActions {
-  CommunityActions(this._ref);
+  CommunityActions(this._ref)
+    : _shares = AheadWrites(_ref, sharesProgressProvider);
 
   static const _logger = AppLogger('CommunityActions');
 
   final Ref _ref;
+  final AheadWrites<bool> _shares;
 
   /// Les amis dont l'encouragement est PARTI sans être encore acquitté.
   ///
@@ -183,10 +187,13 @@ class CommunityActions {
     _ref.invalidate(leagueProvider);
   }
 
-  Future<void> setSharesProgress({required bool value}) async {
-    await _ref
-        .read(communityRepositoryProvider)
-        .setSharesProgress(value: value);
-    _ref.invalidate(sharesProgressProvider);
-  }
+  /// Une bascule est en vol : la relire maintenant pourrait la démentir.
+  bool get sharesWriting => _shares.busy;
+
+  /// La bascule se voit sous le doigt ; un refus la remet ([AheadWrites]).
+  Future<void> setSharesProgress({required bool value}) => _shares.write(
+    (_) => value,
+    () =>
+        _ref.read(communityRepositoryProvider).setSharesProgress(value: value),
+  );
 }
