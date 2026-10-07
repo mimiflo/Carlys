@@ -217,6 +217,32 @@ Chrome DevTools : l'admin se teste avec Playwright, Chromium est préinstallé)
 et `interview-me` (le propriétaire n'est pas développeur : une seule question
 à la fois, et seulement pour une vraie décision produit).
 
+## Photos et illustrations : ChatGPT, sans demander
+
+**Une maquette demande une photo qui n'existe pas dans `assets/` ? On la
+génère avec ChatGPT** (préférence propriétaire actée le 7 octobre 2026) —
+jamais un dessin par code, jamais une photo de banque d'images, et le
+propriétaire n'a pas à fournir l'image. Le CLI `codex` est installé et
+connecté au compte ChatGPT ; son skill `imagegen` (outil `image_gen`) pose
+l'image dans `~/.codex/generated_images/` :
+
+```bash
+cd <dossier du scratchpad> && codex exec -m <modèle> --skip-git-repo-check \
+  --sandbox workspace-write "Utilise le skill imagegen (l'outil image_gen \
+  intégré), jamais un dessin par code. Génère une PHOTOGRAPHIE réaliste … \
+  Copie l'image ici sous le nom X.png, puis réponds seulement le chemin."
+```
+
+- **Le modèle compte** : seul celui qui expose l'outil `image_gen` produit
+  une photo. Le 7 octobre 2026, `gpt-6.1-sol` (celui des photos de la
+  nutrition) était REFUSÉ pour un compte ChatGPT, et `gpt-6-luna`,
+  `gpt-5.6-terra`, `gpt-5.5` n'avaient pas l'outil — l'un d'eux a « dessiné »
+  une image plate en code, inutilisable. Regarder l'image avant de s'en
+  servir ; si aucun modèle ne la génère, le dire au propriétaire et lui
+  demander de la produire dans ChatGPT.
+- La photo finale part en **WebP** dans `apps/mobile/assets/` (Pillow, dans un
+  venv du scratchpad), au plus petit poids qui reste net à la densité ×3.
+
 ## Règles générales (spécification produit — à respecter intégralement)
 
 **Interdits :**
