@@ -25,7 +25,9 @@ cd "$(dirname "$0")/../apps/mobile"
 
 # `lib/design_system/` est le SEUL endroit qui a le droit de nommer la banque
 # d'icônes — c'est la définition même de ce qu'est un design system ici.
-fautes=$(grep -rnoE '\bIcons\.[a-zA-Z0-9_]+' lib --include='*.dart' \
+# `IconData(` aussi : un glyphe de la police du matériel nommé par son point
+# de code hors du design system échapperait sinon à la garde.
+fautes=$(grep -rnoE '\bIcons\.[a-zA-Z0-9_]+|\bIconData\(' lib --include='*.dart' \
   --exclude-dir=design_system || true)
 
 if [ -n "$fautes" ]; then

@@ -51,6 +51,8 @@ void main() {
       'elastique': EquipmentCategory.accessories,
       'ballon': EquipmentCategory.accessories,
     };
+    // Quinze glyphes DISTINCTS : la barre EZ ne retombe plus sur la barre.
+    expect(attendu.keys.map(equipmentIcon).toSet(), hasLength(15));
     attendu.forEach((slug, famille) {
       expect(EquipmentCategory.of(slug), famille, reason: slug);
       expect(equipmentIcon(slug), isNot(AppIcons.exercises), reason: slug);

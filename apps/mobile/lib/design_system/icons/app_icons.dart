@@ -251,24 +251,72 @@ abstract final class AppIcons {
   static const IconData skipExercise = Icons.fast_forward_rounded;
 
   // ── Matériel d'entraînement ───────────────────────────────────────
-  // Un glyphe par famille du catalogue. Material n'a ni kettlebell ni
-  // élastique : on prend la forme la plus proche (la barre et ses disques,
-  // un poids, un ruban), et [exercises] pour un matériel que l'appli ne
-  // connaît pas encore.
-  static const IconData equipmentBarbell = Icons.linear_scale_rounded;
-  static const IconData equipmentDumbbell = Icons.fitness_center_rounded;
-  static const IconData equipmentKettlebell = Icons.monitor_weight_rounded;
-  static const IconData equipmentMachine =
-      Icons.precision_manufacturing_rounded;
-  static const IconData equipmentCable = Icons.cable_rounded;
-  static const IconData equipmentBench = Icons.airline_seat_flat_rounded;
-  static const IconData equipmentBand = Icons.gesture_rounded;
-  static const IconData equipmentBodyweight = Icons.accessibility_new_rounded;
-  static const IconData equipmentPlate = Icons.album_rounded;
-  static const IconData equipmentBall = Icons.sports_volleyball_rounded;
-  static const IconData equipmentPullUpBar = Icons.horizontal_rule_rounded;
-  static const IconData equipmentRoller = Icons.trip_origin_rounded;
-  static const IconData equipmentMat = Icons.rectangle_rounded;
+  // Material n'a ni kettlebell, ni poulie, ni banc : ses approximations
+  // (des points pour une barre, une balance pour un kettlebell) se lisaient
+  // mal. Ces glyphes viennent de la police CarlysEquipment, construite par
+  // `tools/equipment_icons/build_font.py` — mêmes points de code que sa
+  // liste. [exercises] reste le glyphe d'un matériel encore inconnu.
+  static const _equipmentFont = 'CarlysEquipment';
+  static const IconData equipmentBarbell = IconData(
+    0xe000,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentEzBar = IconData(
+    0xe001,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentDumbbell = IconData(
+    0xe002,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentKettlebell = IconData(
+    0xe003,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentPlate = IconData(
+    0xe004,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentMedicineBall = IconData(
+    0xe005,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentMachine = IconData(
+    0xe006,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentCable = IconData(
+    0xe007,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentBodyweight = IconData(
+    0xe008,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentPullUpBar = IconData(
+    0xe009,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentRoller = IconData(
+    0xe00a,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentMat = IconData(
+    0xe00b,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentBench = IconData(
+    0xe00c,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentBand = IconData(
+    0xe00d,
+    fontFamily: _equipmentFont,
+  );
+  static const IconData equipmentBall = IconData(
+    0xe00e,
+    fontFamily: _equipmentFont,
+  );
 
   // ── Communauté ────────────────────────────────────────────────────
   static const IconData block = Icons.block_rounded;

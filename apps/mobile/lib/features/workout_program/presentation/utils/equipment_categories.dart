@@ -29,11 +29,14 @@ enum EquipmentCategory {
 /// (`catalog-data.ts` côté API).
 const Map<String, (EquipmentCategory, IconData)> _known = {
   'barre': (EquipmentCategory.freeWeights, AppIcons.equipmentBarbell),
-  'barre-ez': (EquipmentCategory.freeWeights, AppIcons.equipmentBarbell),
+  'barre-ez': (EquipmentCategory.freeWeights, AppIcons.equipmentEzBar),
   'halteres': (EquipmentCategory.freeWeights, AppIcons.equipmentDumbbell),
   'kettlebell': (EquipmentCategory.freeWeights, AppIcons.equipmentKettlebell),
   'disque': (EquipmentCategory.freeWeights, AppIcons.equipmentPlate),
-  'medecine-ball': (EquipmentCategory.freeWeights, AppIcons.equipmentBall),
+  'medecine-ball': (
+    EquipmentCategory.freeWeights,
+    AppIcons.equipmentMedicineBall,
+  ),
   'machine': (EquipmentCategory.machines, AppIcons.equipmentMachine),
   'poulie': (EquipmentCategory.machines, AppIcons.equipmentCable),
   'poids-du-corps': (

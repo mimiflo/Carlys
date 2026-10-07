@@ -65,10 +65,16 @@ poulies, poids du corps, accessoires — `EquipmentCategory`, un slug inconnu
 tombe dans les accessoires) : chaque famille, repliée, dit ce qui y est
 coché, et se coche d'un geste (« Tout cocher ») ou ligne à ligne — quinze
 cases d'affilée se lisaient comme une corvée (demande du 7 octobre 2026).
-Il ne porte aucun bouton
+L’écran ne porte aucun bouton
 « Générer » (retiré le 4 octobre 2026, à la demande du propriétaire) : ces
 réponses sont les objectifs de l'appli entière, que le coach lit pour
 composer une séance ou proposer un programme.
+
+Chaque matériel a son glyphe : la police d'icônes `CarlysEquipment`
+(`assets/fonts/`, 3 Ko), construite par `apps/mobile/tools/equipment_icons/build_font.py`
+depuis `tools/equipment_icons/svg/*.svg` — cinq glyphes Tabler Icons (MIT), les
+dix autres dessinés dans leur style ; Material n'avait ni kettlebell, ni poulie,
+ni banc.
 
 ## La génération (tranche 3)
 

@@ -5,7 +5,7 @@ assets que `assets/**`, jamais `tools/**`.
 
 ## `fonts-source/` — les polices COMPLÈTES
 
-Les neuf TTF livrés dans `assets/fonts/` sont **sous-ensemblés** : Flutter ne
+Les neuf TTF de texte livrés dans `assets/fonts/` sont **sous-ensemblés** : Flutter ne
 le fait pas lui-même pour les polices de texte (seul `--tree-shake-icons`
 agit, et uniquement sur les polices d'icônes), et les versions complètes
 emportaient 2 993 988 octets dans l'APK et l'IPA — dont du cyrillique, du grec
@@ -38,3 +38,20 @@ Il lit la table `cmap` à la main et refuse qu'un sous-ensemble ait perdu un
 caractère que l'original portait et que le code emploie. C'est nécessaire
 parce qu'un glyphe manquant ne se voit pas : Flutter retombe sur la police
 système, et seule la forme des lettres change.
+
+## `equipment_icons/` — la police des glyphes du matériel
+
+`assets/fonts/CarlysEquipment.ttf` (3 Ko) porte un glyphe par matériel du
+catalogue : Material n'a ni kettlebell, ni poulie, ni banc. Cinq glyphes
+viennent de Tabler Icons (MIT, `assets/fonts/MIT-Tabler.txt`), les dix autres
+sont dessinés dans le même style (grille de 24, trait de 2, bouts arrondis),
+dans `equipment_icons/svg/`. `AppIcons.equipment*` les nomme par point de
+code — l'ordre de la liste `GLYPHS` du script, auquel on n'ajoute qu'en fin.
+
+```bash
+python3 -m venv /tmp/venv && /tmp/venv/bin/pip install picosvg==0.23.0 skia-pathops==0.9.2 fonttools==4.66.1
+/tmp/venv/bin/python tools/equipment_icons/build_font.py   # depuis apps/mobile
+```
+
+Police d'icônes, pas de texte : `scripts/check_mobile_fonts.py` l'écarte de
+sa garde de couverture.

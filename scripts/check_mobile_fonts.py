@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Les polices embarquées couvrent-elles ce que l'application affiche ?
 
-Les neuf TTF de `apps/mobile/assets/fonts/` sont SOUS-ENSEMBLÉES
+Les TTF de TEXTE de `apps/mobile/assets/fonts/` sont SOUS-ENSEMBLÉES
 (`apps/mobile/tools/subset_fonts.py`) : Flutter ne le fait pas lui-même pour
 les polices de texte, et les versions complètes emportaient 2,99 Mo dans
 l'APK, dont du cyrillique, du grec et du vietnamien pour une application
@@ -33,6 +33,7 @@ Usage : `python3 scripts/check_mobile_fonts.py` depuis la racine du dépôt.
 from __future__ import annotations
 
 import pathlib
+import re
 import struct
 import sys
 
@@ -54,6 +55,15 @@ SOCLE: list[tuple[int, int, str]] = [
 # (`AppTypography.labelMono`) : lui demander la couverture d'une police de
 # texte n'aurait pas de sens. Oswald ne sert qu'aux citations.
 MONOSPACE = "JetBrainsMono"
+
+# Les polices d'ICÔNES ne portent aucun texte : des glyphes en zone d'usage
+# privé, construits (pas sous-ensemblés) depuis leurs SVG — voir
+# `apps/mobile/tools/equipment_icons/`. Ni socle ni original à comparer :
+# on exige en revanche que chaque point de code que `AppIcons` nomme y soit.
+# Un glyphe retiré de la liste du script de construction disparaissait
+# sinon de l'écran sans un bruit.
+ICONES = {"CarlysEquipment.ttf": "_equipmentFont"}
+APP_ICONS = RACINE / "apps" / "mobile" / "lib" / "design_system" / "icons" / "app_icons.dart"
 
 
 def lire_cmap(chemin: pathlib.Path) -> set[int]:
@@ -151,6 +161,21 @@ def main() -> int:
 
     erreurs: list[str] = []
     for police in sorted(POLICES.glob("*.ttf")):
+        if police.name in ICONES:
+            nommes = {
+                int(code, 16)
+                for code in re.findall(
+                    rf"IconData\(\s*0x([0-9a-fA-F]+),\s*fontFamily: {ICONES[police.name]}",
+                    APP_ICONS.read_text(encoding="utf-8"),
+                )
+            }
+            absents = sorted(nommes - lire_cmap(police))
+            if not nommes or absents:
+                erreurs.append(
+                    f"  {police.name} : points de code de AppIcons absents "
+                    f"({', '.join(f'U+{cp:04X}' for cp in absents) or 'aucun trouvé'})"
+                )
+            continue
         couverts = lire_cmap(police)
         original = ORIGINALES / police.name
         if not original.is_file():

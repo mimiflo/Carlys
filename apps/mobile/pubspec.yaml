@@ -197,6 +197,13 @@ flutter:
           weight: 500
         - asset: assets/fonts/JetBrainsMono-Bold.ttf
           weight: 700
+    # Les glyphes du MATÉRIEL (barre, kettlebell, poulie, banc…) : Material
+    # n'en a presque aucun. Construite par tools/equipment_icons/build_font.py
+    # depuis tools/equipment_icons/svg/*.svg ; cinq glyphes Tabler (MIT,
+    # assets/fonts/MIT-Tabler.txt), les autres dessinés dans leur style.
+    - family: CarlysEquipment
+      fonts:
+        - asset: assets/fonts/CarlysEquipment.ttf
 
   # Les autres dossiers d'assets (animations, images…) seront déclarés ici
   # dès qu'ils contiendront de vrais fichiers.
