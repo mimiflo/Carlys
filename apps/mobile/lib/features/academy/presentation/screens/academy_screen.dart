@@ -22,8 +22,9 @@ import '../widgets/quiz_card.dart';
 ///
 /// Maquette d'octobre 2026, de haut en bas : la progression et ses
 /// médailles, le parcours guidé, les domaines à explorer, la question du
-/// jour (la même que sur l'accueil), puis les leçons de chaque domaine. Le contenu est éditorial et embarqué :
-/// l'Academy fonctionne hors ligne, comme le reste de l'application.
+/// jour (la même que sur l'accueil), puis les leçons de chaque domaine.
+/// Le contenu est éditorial et embarqué : l'Academy fonctionne hors ligne,
+/// comme le reste de l'application.
 class AcademyScreen extends ConsumerStatefulWidget {
   const AcademyScreen({super.key});
 

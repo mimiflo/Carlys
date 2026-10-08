@@ -13,6 +13,7 @@ class JourneyStepper extends StatelessWidget {
   final JourneyProgress progress;
 
   static const double dotSize = 20;
+  static const double _linkThickness = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +25,7 @@ class JourneyStepper extends StatelessWidget {
             if (index > 0)
               Expanded(
                 child: Container(
-                  height: 2,
+                  height: _linkThickness,
                   color: etapes[index - 1].termine
                       ? AppColors.primaryLight
                       : AppColors.darkBorder,
@@ -40,6 +41,10 @@ class JourneyStepper extends StatelessWidget {
 
 class _Dot extends StatelessWidget {
   const _Dot({required this.done, required this.current});
+
+  static const double _checkSize = 12;
+  static const double _currentDotSize = 6;
+  static const double _currentRing = 2;
 
   final bool done;
   final bool current;
@@ -57,20 +62,20 @@ class _Dot extends StatelessWidget {
             ? null
             : Border.all(
                 color: current ? AppColors.primaryLight : AppColors.darkBorder,
-                width: current ? 2 : 1,
+                width: current ? _currentRing : 1,
               ),
       ),
       child: done
           ? const Icon(
               AppIcons.check,
-              size: 12,
+              size: _checkSize,
               color: AppColors.darkTextPrimary,
             )
           : current
           ? Center(
               child: Container(
-                width: 6,
-                height: 6,
+                width: _currentDotSize,
+                height: _currentDotSize,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primaryLight,

@@ -15,7 +15,7 @@ class BodyWeightLatest extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.end,
-      spacing: AppSpacing.sm,
+      spacing: AppSpacing.lg,
       children: [
         Text(
           '${formatDecimal(entry.value)} kg',

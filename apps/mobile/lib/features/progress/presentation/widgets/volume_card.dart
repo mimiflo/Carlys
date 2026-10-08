@@ -47,13 +47,15 @@ class VolumeCard extends StatelessWidget {
               ],
             ),
           ),
-          if (from != null && to != null)
+          if (from != null && to != null) ...[
+            const SizedBox(height: AppSpacing.xs),
             Text(
               'Du ${formatDayRange(from.toLocal(), to.toLocal())}',
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextSecondary,
               ),
             ),
+          ],
           const SizedBox(height: AppSpacing.md),
           VolumeBars(points: overview.points, period: overview.period),
         ],

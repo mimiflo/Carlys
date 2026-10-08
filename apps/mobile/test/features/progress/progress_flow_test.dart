@@ -186,9 +186,17 @@ void main() {
     await tester.pumpAndSettle();
     await openProgressTab(tester);
 
-    // Seuls trois records tiennent dans la page.
-    await reveal(tester, find.text('TOUT VOIR'));
+    // Seuls trois records tiennent dans la page, du plus récent au plus
+    // ancien, chacun avec sa date.
+    await reveal(tester, find.text('Soulevé de terre'));
     expect(find.text('Rowing'), findsNothing);
+    final hauteurs = [
+      for (final nom in const ['Développé couché', 'Squat', 'Soulevé de terre'])
+        tester.getTopLeft(find.text(nom)).dy,
+    ];
+    expect(hauteurs, orderedEquals([...hauteurs]..sort()));
+    expect(find.text('Charge max · hier'), findsOneWidget);
+    await reveal(tester, find.text('TOUT VOIR'));
 
     await tester.tap(find.text('TOUT VOIR'));
     await tester.pumpAndSettle();

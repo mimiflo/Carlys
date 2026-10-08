@@ -91,7 +91,11 @@ class AcademyProgressCard extends StatelessWidget {
             spacing: AppSpacing.xs,
             children: [
               AppWholeWordsText(
-                '${progress.abordees} leçons sur ${progress.total}',
+                // « 0 leçon », « 1 leçon », « 2 leçons » : le pluriel français
+                // commence à deux.
+                '${progress.abordees} '
+                '${progress.abordees > 1 ? 'leçons' : 'leçon'} sur '
+                '${progress.total}',
                 style: AppTypography.title.copyWith(
                   color: AppColors.darkTextPrimary,
                 ),

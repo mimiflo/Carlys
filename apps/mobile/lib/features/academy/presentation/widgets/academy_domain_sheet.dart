@@ -26,16 +26,21 @@ Future<AcademyCategory?> pickAcademyDomain(
             AppSectionHeader(title: 'Les ${domaines.length} domaines'),
             const SizedBox(height: AppSpacing.sm),
             for (final domaine in domaines) ...[
-              AppListRow(
-                title: domaine.label,
-                subtitle: countOf(domaine) > 1
-                    ? '${countOf(domaine)} leçons'
-                    : '1 leçon',
-                leading: academyCategoryIcon(domaine),
-                trailing: domaine == selected
-                    ? const Icon(AppIcons.check, color: AppColors.accent)
-                    : null,
-                onTap: () => Navigator.of(sheetContext).pop(domaine),
+              // Le domaine affiché se dit au lecteur d'écran, pas seulement
+              // par la coche.
+              Semantics(
+                selected: domaine == selected,
+                child: AppListRow(
+                  title: domaine.label,
+                  subtitle:
+                      '${countOf(domaine)} '
+                      '${countOf(domaine) > 1 ? 'leçons' : 'leçon'}',
+                  leading: academyCategoryIcon(domaine),
+                  trailing: domaine == selected
+                      ? const Icon(AppIcons.check, color: AppColors.accent)
+                      : null,
+                  onTap: () => Navigator.of(sheetContext).pop(domaine),
+                ),
               ),
               if (domaine != domaines.last)
                 const SizedBox(height: AppSpacing.xs),

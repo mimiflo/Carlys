@@ -119,6 +119,33 @@ void main() {
     });
   });
 
+  group('axes des graphes', () {
+    test('formatWeekdayDay : le jour abrégé puis le quantième', () {
+      expect(formatWeekdayDay(DateTime(2026, 10, 5)), 'lun. 5');
+      expect(formatWeekdayDay(DateTime(2026, 10, 11)), 'dim. 11');
+    });
+
+    test('formatMonthShort : le mois abrégé, en minuscules', () {
+      expect(formatMonthShort(DateTime(2026, 9, 15)), 'sept.');
+      expect(formatMonthShort(DateTime(2026, 5, 1)), 'mai');
+    });
+
+    test('un instant UTC se lit dans le jour et le mois LOCAUX', () {
+      // Le 31 octobre à 23 h 30 UTC est déjà le 1er novembre à l'est de
+      // UTC : la barre se légende du jour qu'a vécu l'utilisateur.
+      final instantUtc = DateTime.utc(2026, 10, 31, 23, 30);
+      final local = instantUtc.toLocal();
+      expect(
+        formatWeekdayDay(instantUtc),
+        formatWeekdayDay(DateTime(local.year, local.month, local.day)),
+      );
+      expect(
+        formatMonthShort(instantUtc),
+        formatMonthShort(DateTime(local.year, local.month)),
+      );
+    });
+  });
+
   group('formatDayRange', () {
     test('même mois : le mois et l’année écrits une fois', () {
       expect(

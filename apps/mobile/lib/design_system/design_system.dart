@@ -35,6 +35,7 @@ export 'components/app_gauge.dart';
 export 'components/app_icon_badge.dart';
 export 'components/app_icon_choice_tile.dart';
 export 'components/app_initial_avatar.dart';
+export 'components/app_link_button.dart';
 export 'components/app_list_row.dart';
 export 'components/app_living_flame.dart';
 export 'components/app_loading_indicator.dart';

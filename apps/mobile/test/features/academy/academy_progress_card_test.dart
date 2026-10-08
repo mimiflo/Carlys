@@ -34,7 +34,7 @@ void main() {
   ) async {
     await monter(tester, progression(0));
 
-    expect(find.text('0 leçons sur 38'), findsOneWidget);
+    expect(find.text('0 leçon sur 38'), findsOneWidget);
     expect(find.text('0 % du pack', findRichText: true), findsOneWidget);
     expect(
       find.textContaining('Niveau'),

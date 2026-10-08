@@ -5,7 +5,12 @@ import 'package:carlys_mobile/features/progress/presentation/utils/progress_stat
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_tiles.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/records_card.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/volume_card.dart';
+import 'package:carlys_mobile/features/progression/domain/reward.dart';
+import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -191,4 +196,118 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Progression du développé'), findsOneWidget);
   });
+
+  for (final gagnee in const [false, true]) {
+    testWidgets('« Mon parcours » : médaille '
+        '${gagnee ? 'en bronze après une récompense' : 'sous cadenas avant'}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            showcaseRewardsProvider.overrideWithValue([
+              if (gagnee)
+                EarnedReward(
+                  reward: rewardCatalog.first.reward,
+                  earnedAt: DateTime.utc(2026, 10, 1),
+                ),
+            ]),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: const Scaffold(body: ProgressionEntryCard()),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<AppMedal>(find.byType(AppMedal)).metal,
+        gagnee ? AppMedalMetal.bronze : isNull,
+      );
+    });
+  }
+
+  group('volume soulevé', () {
+    ProgressOverviewEntity volume({DateTime? from, DateTime? to}) =>
+        ProgressOverviewEntity(
+          period: ProgressPeriod.month,
+          sessionsCount: 4,
+          setsCount: 48,
+          totalVolumeKg: 12400,
+          totalDurationSeconds: 14400,
+          points: points(4),
+          from: from,
+          to: to,
+        );
+
+    testWidgets('la fenêtre du serveur se lit « Du … au … »', (tester) async {
+      await tester.pumpWidget(
+        monte(
+          VolumeCard(
+            overview: volume(
+              from: DateTime(2026, 9, 9, 18),
+              to: DateTime(2026, 10, 8, 18),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Du 9 septembre au 8 octobre 2026'), findsOneWidget);
+    });
+
+    testWidgets('fenêtre incomplète dans la réponse : aucune date inventée', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        monte(VolumeCard(overview: volume(from: DateTime(2026, 9, 9)))),
+      );
+      expect(find.textContaining('Du '), findsNothing);
+    });
+  });
+
+  for (final (texte, empilees) in const [
+    (1.0, false),
+    (1.2, false),
+    (1.3, true),
+  ]) {
+    testWidgets('tuiles, texte ×$texte : '
+        '${empilees ? 'empilées sur toute la largeur' : 'côte à côte'}', (
+      tester,
+    ) async {
+      setPhone(tester, width: 390, textScale: texte);
+      await tester.pumpWidget(
+        monte(ProgressTiles(overview: overviewOf(ProgressPeriod.week))),
+      );
+      final seances = tester.getTopLeft(find.text('SÉANCES'));
+      final duree = tester.getTopLeft(find.text('DURÉE'));
+      if (empilees) {
+        expect(duree.dy, greaterThan(seances.dy));
+        expect(duree.dx, closeTo(seances.dx, 0.5));
+      } else {
+        expect(duree.dy, closeTo(seances.dy, 0.5));
+        expect(duree.dx, greaterThan(seances.dx));
+      }
+    });
+  }
+
+  for (final (largeur, texte, visible) in const [
+    (390, 1.0, true),
+    (320, 2.0, false),
+  ]) {
+    testWidgets('« Mon parcours », $largeur points, texte ×$texte : la '
+        'médaille ${visible ? 'précède le titre' : 'cède sa place au texte'}', (
+      tester,
+    ) async {
+      setPhone(tester, width: largeur.toDouble(), textScale: texte);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [showcaseRewardsProvider.overrideWithValue(const [])],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: const Scaffold(body: ProgressionEntryCard()),
+          ),
+        ),
+      );
+      expect(find.byType(AppMedal), visible ? findsOneWidget : findsNothing);
+      expect(midWordBreaks(find.byType(ProgressionEntryCard)), isEmpty);
+    });
+  }
 }

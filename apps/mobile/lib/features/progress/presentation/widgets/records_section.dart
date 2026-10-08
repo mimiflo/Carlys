@@ -42,7 +42,7 @@ class RecordsSection extends ConsumerWidget {
     );
   }
 
-  /// Du record le plus récent au plus ancien — le premier porte l'accent.
+  /// Du record le plus récent au plus ancien.
   static List<PersonalRecordEntry> sortedByRecency(
     List<PersonalRecordEntry> entries,
   ) => [...entries]..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
@@ -114,11 +114,7 @@ class _AllRecordsSheet extends StatelessWidget {
           children: [
             const AppSectionHeader(title: 'Tous mes records'),
             const SizedBox(height: AppSpacing.sm),
-            Flexible(
-              child: SingleChildScrollView(
-                child: RecordsCard(records: records),
-              ),
-            ),
+            Flexible(child: RecordsCard(records: records, scrollable: true)),
           ],
         ),
       ),

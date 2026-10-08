@@ -82,15 +82,9 @@ class JourneyEntryCard extends StatelessWidget {
                             size: AppButtonSize.small,
                             onPressed: onResume,
                           ),
-                        TextButton.icon(
+                        AppLinkButton(
+                          label: 'Voir le parcours',
                           onPressed: onOpen,
-                          iconAlignment: IconAlignment.end,
-                          icon: const Icon(AppIcons.chevronRight),
-                          label: const Text('Voir le parcours'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primaryLight,
-                            textStyle: AppTypography.subheading,
-                          ),
                         ),
                       ],
                     ),
@@ -116,7 +110,8 @@ class _Wording extends StatelessWidget {
     final stage = this.stage;
     return Semantics(
       label: stage == null
-          ? 'Parcours guidé terminé, six étapes sur six'
+          ? 'Parcours guidé terminé, ${academyJourney.length} étapes sur '
+                '${academyJourney.length}'
           : 'Parcours guidé, étape ${stage.rang} sur ${academyJourney.length}'
                 ', ${stage.nom}. ${stage.description}',
       excludeSemantics: true,

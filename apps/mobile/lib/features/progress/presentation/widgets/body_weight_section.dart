@@ -82,16 +82,9 @@ class _BodyWeightContent extends StatelessWidget {
           // dans sa feuille.
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+            child: AppLinkButton(
+              label: 'Voir mes mesures',
               onPressed: () => showBodyWeightHistory(context),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(AppIcons.chevronRight),
-              label: const Text('Voir mes mesures'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primaryLight,
-                padding: EdgeInsets.zero,
-                textStyle: AppTypography.subheading,
-              ),
             ),
           ),
         ],

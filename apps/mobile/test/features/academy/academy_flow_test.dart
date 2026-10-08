@@ -345,7 +345,7 @@ void main() {
     await tapTab(tester, 'Academy');
 
     expect(find.text('MA PROGRESSION'), findsOneWidget);
-    expect(find.textContaining('leçons sur'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'leçons? sur')), findsOneWidget);
     expect(find.text('Aucun domaine terminé pour l’instant.'), findsOneWidget);
     // Le pourcentage est arrivé par arbitrage produit (septembre 2026,
     // consigné dans docs/product/academy.md), à une condition que ce test

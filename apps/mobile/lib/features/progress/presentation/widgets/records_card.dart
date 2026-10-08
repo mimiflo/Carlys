@@ -7,49 +7,65 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 
 /// Les records en UNE carte, une ligne par record (maquette d'octobre
-/// 2026) : la coupe prend l'or, l'argent puis le bronze de la ligue, dans
-/// l'ordre de la liste — du plus récent au plus ancien.
+/// 2026), du plus récent au plus ancien.
+///
+/// La coupe est la même pour tous : l'or, l'argent puis le bronze de la
+/// maquette suivaient l'ordre de la liste, donc la RÉCENCE, et se lisaient
+/// comme un podium que rien ne fonde — une charge et un nombre de
+/// répétitions ne se classent pas entre eux.
 ///
 /// Une ligne ouvre la progression de son exercice quand le serveur en donne
 /// l'identifiant ; sans lui (exercice retiré du catalogue), elle reste
 /// muette plutôt que de mener à une erreur.
 class RecordsCard extends StatelessWidget {
-  const RecordsCard({required this.records, super.key});
+  const RecordsCard({
+    required this.records,
+    this.scrollable = false,
+    super.key,
+  });
 
   final List<PersonalRecordEntry> records;
 
-  static const List<Color> _cups = [
-    AppColors.leagueGold,
-    AppColors.leagueSilver,
-    AppColors.leagueBronze,
-  ];
+  /// Vrai dans la feuille « Tous mes records » : la liste défile et ne
+  /// construit que les lignes en vue. Faux dans la page, où elle n'en
+  /// montre que trois et suit le défilement de l'écran.
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
+    const divider = Divider(height: 1, color: AppColors.rowDivider);
     return AppCard(
       padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (index, record) in records.indexed) ...[
-            if (index > 0)
-              const Divider(height: 1, color: AppColors.rowDivider),
-            _RecordLine(
-              record: record,
-              cup: _cups[index < _cups.length ? index : _cups.length - 1],
+      child: scrollable
+          ? ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: records.length,
+              separatorBuilder: (_, __) => divider,
+              itemBuilder: (_, index) => _RecordLine(record: records[index]),
+            )
+          // Dans la page, une colonne et non une liste : un second
+          // défilement vertical imbriqué dans celui de l'écran ne ferait
+          // que capter les gestes.
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, record) in records.indexed) ...[
+                  if (index > 0) divider,
+                  _RecordLine(record: record),
+                ],
+              ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }
 
 class _RecordLine extends StatelessWidget {
-  const _RecordLine({required this.record, required this.cup});
+  const _RecordLine({required this.record});
 
   final PersonalRecordEntry record;
-  final Color cup;
+
+  static const double _cupSize = 28;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +74,7 @@ class _RecordLine extends StatelessWidget {
         ? '${formatThousands(record.value)} rép.'
         : '${formatDecimal(record.value)} kg';
     final exerciseId = record.exerciseId;
+    final when = formatRelativeDayMono(record.achievedAt).toLowerCase();
 
     final line = Padding(
       padding: const EdgeInsets.symmetric(
@@ -66,7 +83,11 @@ class _RecordLine extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(AppIcons.record, size: 28, color: cup),
+          const Icon(
+            AppIcons.record,
+            size: _cupSize,
+            color: AppColors.leagueGold,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -82,7 +103,7 @@ class _RecordLine extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  record.type.label,
+                  '${record.type.label} · $when',
                   style: AppTypography.label.copyWith(
                     color: AppColors.darkTextSecondary,
                   ),
@@ -90,7 +111,7 @@ class _RecordLine extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: AppSpacing.md),
           Text(
             value,
             style: AppTypography.subheading.copyWith(
@@ -106,8 +127,7 @@ class _RecordLine extends StatelessWidget {
     );
 
     final spoken =
-        '${record.exerciseName}, ${record.type.label} : $value, '
-        '${formatRelativeDayMono(record.achievedAt).toLowerCase()}';
+        '${record.exerciseName}, ${record.type.label} : $value, $when';
     if (exerciseId == null) {
       return Semantics(label: spoken, excludeSemantics: true, child: line);
     }

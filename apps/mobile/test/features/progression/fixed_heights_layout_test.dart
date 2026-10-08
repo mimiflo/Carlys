@@ -3,6 +3,7 @@ import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_pro
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/providers/today_metrics.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,12 @@ void main() {
     testWidgets('« Mon parcours », $largeur points, texte ×$texte : le texte '
         'se lit entier', (tester) async {
       setPhone(tester, width: largeur, textScale: texte);
-      await tester.pumpWidget(monte(const ProgressionEntryCard()));
+      await tester.pumpWidget(
+        monte(
+          const ProgressionEntryCard(),
+          overrides: [showcaseRewardsProvider.overrideWithValue(const [])],
+        ),
+      );
 
       final carte = find.byType(ProgressionEntryCard);
       expect(truncatedTexts(carte), isEmpty);

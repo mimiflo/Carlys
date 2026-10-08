@@ -292,9 +292,12 @@ records ; le poids corporel.
 - **« Mon parcours »** remplace le bloc compact du profil, la vitrine des
   récompenses et l'entrée de la frise : une seule porte vers le profil de
   progression, qui porte désormais l'entrée « Ton histoire ».
-- **Les records** tiennent dans une carte, une ligne par record ; la coupe
-  prend l'or, l'argent puis le bronze dans l'ordre de la liste (du plus
-  récent au plus ancien), ce n'est pas un classement.
+- **Les records** tiennent dans une carte, une ligne par record, du plus
+  récent au plus ancien, avec leur date (« Charge max · il y a 3 jours »).
+  Une seule coupe dorée : un podium or, argent, bronze rangé par récence
+  aurait classé ce qui ne se classe pas.
+- **La médaille de « Mon parcours »** passe au bronze à la première
+  récompense ; avant, elle reste sous cadenas.
 - **Le poids** : la dernière mesure, puis la courbe avec son échelle et ses
   dates ; la liste des pesées et leur correction vivent dans « Voir mes
   mesures ».

@@ -56,6 +56,11 @@ class _PlannedNumberCellState extends State<PlannedNumberCell> {
   @override
   void didUpdateWidget(PlannedNumberCell old) {
     super.didUpdateWidget(old);
+    _sync();
+  }
+
+  /// Hors saisie, la case reprend la valeur du brouillon.
+  void _sync() {
     if (!_focus.hasFocus && _controller.text != widget.text) {
       _controller.text = widget.text;
     }
@@ -68,8 +73,8 @@ class _PlannedNumberCellState extends State<PlannedNumberCell> {
         baseOffset: 0,
         extentOffset: _controller.text.length,
       );
-    } else if (_controller.text != widget.text) {
-      _controller.text = widget.text;
+    } else {
+      _sync();
     }
   }
 
