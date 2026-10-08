@@ -5,7 +5,6 @@
 /// mesure impossible à établir renvoie `null` plutôt qu'un chiffre factice.
 library;
 
-import '../../../../core/utilities/civil_days.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../domain/entities/progress.dart';
 
@@ -20,104 +19,76 @@ ProgressBucket bucketOf(ProgressPeriod period) => switch (period) {
   ProgressPeriod.year => ProgressBucket.month,
 };
 
-/// Libellé de la carte de volume, accordé à la période analysée.
-String volumeLabel(ProgressPeriod period) => switch (period) {
-  ProgressPeriod.week => 'Volume hebdo',
-  ProgressPeriod.month => 'Volume mensuel',
-  ProgressPeriod.year => 'Volume annuel',
-};
-
 /// Sous-ligne des tuiles : décrit la fenêtre analysée, sans chiffre supposé.
 String periodCaption(ProgressPeriod period) => switch (period) {
-  ProgressPeriod.week => 'sur la semaine',
-  ProgressPeriod.month => 'sur le mois',
-  ProgressPeriod.year => 'sur l’année',
+  ProgressPeriod.week => 'Sur la semaine',
+  ProgressPeriod.month => 'Sur le mois',
+  ProgressPeriod.year => 'Sur l’année',
 };
 
-/// Évolution du volume entre le dernier intervalle et le précédent, en %.
+/// Le pas de l'échelle du graphe : un nombre rond (1, 2, 2,5 ou 5 fois une puissance de dix)
+/// qui découpe le volume le plus haut en quatre graduations environ.
+double volumeScaleStep(double maxVolume) {
+  if (maxVolume <= 0) return 1000;
+  final raw = maxVolume / 4;
+  var magnitude = 1.0;
+  while (magnitude * 10 <= raw) {
+    magnitude *= 10;
+  }
+  for (final factor in const [1.0, 2.0, 2.5, 5.0, 10.0]) {
+    if (magnitude * factor >= raw) return magnitude * factor;
+  }
+  return magnitude * 10;
+}
+
+/// Le libellé d'une barre : « lun. 5 » par jour, « 1 sept. » (le début de
+/// la semaine) par semaine, « sept. » par mois. Pas de tiret « 1–7 » :
+/// l'appli n'affiche aucun tiret de ponctuation (`editorial_tone_test`).
+String bucketLabel(DateTime bucketStart, ProgressBucket bucket) {
+  final local = bucketStart.toLocal();
+  return switch (bucket) {
+    ProgressBucket.day => formatWeekdayDay(local),
+    ProgressBucket.week => formatDayMonth(local),
+    ProgressBucket.month => formatMonthShort(local),
+  };
+}
+
+/// Ce que le lecteur d'écran dit du graphe : chaque barre, son intervalle et
+/// son volume.
+String volumeBarsSemantics(List<ProgressPoint> points, ProgressBucket bucket) {
+  final unit = switch (bucket) {
+    ProgressBucket.day => 'jour',
+    ProgressBucket.week => 'semaine',
+    ProgressBucket.month => 'mois',
+  };
+  return [
+    'Volume soulevé par $unit',
+    for (final point in points)
+      '${bucketLabel(point.bucketStart, bucket)} : '
+          '${formatThousands(point.volumeKg)} kilos',
+  ].join('. ');
+}
+
+/// Les bornes et le pas de l'axe du poids : un pas rond (0,1 kg, 0,2, 0,5,
+/// 1…) d'environ trois graduations sur l'écart mesuré, et un cran AU-DESSUS
+/// de la plus haute mesure, pour que son point ne touche pas le bord.
 ///
-/// `null` quand l'historique est trop court (moins de deux intervalles) ou
-/// que l'intervalle de référence est vide : la pastille est alors masquée.
-double? volumeTrendPercent(List<ProgressPoint> points) {
-  if (points.length < 2) {
-    return null;
-  }
-  final previous = points[points.length - 2].volumeKg;
-  final last = points[points.length - 1].volumeKg;
-  if (previous <= 0) {
-    return null;
-  }
-  return (last - previous) / previous * 100;
-}
-
-/// Assiduité hebdomadaire : part des semaines couvertes qui comptent au
-/// moins une séance, et série de semaines consécutives la plus récente.
-class WeeklyAttendance {
-  const WeeklyAttendance({required this.percent, required this.streak});
-
-  /// 0..100, arrondi.
-  final int percent;
-
-  /// Nombre de semaines actives consécutives jusqu'à la plus récente.
-  final int streak;
-}
-
-/// `null` dès que le calcul n'est pas honnête : points mensuels (ils ne
-/// disent pas quelles semaines ont été actives) ou fenêtre d'une seule
-/// semaine (l'assiduité vaudrait mécaniquement 100 %).
-WeeklyAttendance? weeklyAttendance(
-  List<ProgressPoint> points,
-  ProgressPeriod period,
+/// La division se lit avec une marge : en flottants, 70,3 / 0,1 vaut
+/// 702,999…, et un `floor` nu tombait un cran trop bas — la marge du haut
+/// disparaissait pour 70,3, 84,6 ou 90,1 kg.
+({double minY, double maxY, double step}) weightAxis(
+  double minValue,
+  double maxValue,
 ) {
-  if (bucketOf(period) == ProgressBucket.month) {
-    return null;
-  }
-
-  final activeWeeks = <int>{};
-  for (final point in points) {
-    if (point.sessionsCount > 0) {
-      activeWeeks.add(civilWeekNumber(point.bucketStart));
+  var step = 20.0;
+  for (final candidate in const [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]) {
+    if ((maxValue - minValue) / candidate <= 4) {
+      step = candidate;
+      break;
     }
   }
-  if (activeWeeks.isEmpty) {
-    return null;
-  }
-
-  final first = activeWeeks.reduce((a, b) => a < b ? a : b);
-  final last = activeWeeks.reduce((a, b) => a > b ? a : b);
-  final coveredWeeks = last - first + 1;
-  if (coveredWeeks < 2) {
-    return null;
-  }
-
-  var streak = 0;
-  var cursor = last;
-  while (activeWeeks.contains(cursor)) {
-    streak++;
-    cursor--;
-  }
-
-  return WeeklyAttendance(
-    percent: (activeWeeks.length / coveredWeeks * 100).round(),
-    streak: streak,
-  );
-}
-
-/// Repères temporels du graphe : début, milieu et fin de la série réelle.
-List<String> volumeAxisLabels(
-  List<ProgressPoint> points,
-  ProgressPeriod period,
-) {
-  if (points.isEmpty) {
-    return const [];
-  }
-  final indexes = <int>{0, points.length ~/ 2, points.length - 1}.toList()
-    ..sort();
-  final asMonth = bucketOf(period) == ProgressBucket.month;
-  return [
-    for (final index in indexes)
-      asMonth
-          ? formatMonthYearMono(points[index].bucketStart.toLocal())
-          : formatShortDateMono(points[index].bucketStart.toLocal()),
-  ];
+  const epsilon = 1e-9;
+  final minY = (minValue / step + epsilon).floor() * step;
+  final maxY = (maxValue / step + epsilon).floor() * step + step;
+  return (minY: minY, maxY: maxY, step: step);
 }

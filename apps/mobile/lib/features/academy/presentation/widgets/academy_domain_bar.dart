@@ -16,6 +16,7 @@ import '../../domain/entities/academy.dart';
 /// Les pastilles servent à VISER, pas à remplacer la flânerie.
 class AcademyDomainBar extends StatelessWidget {
   const AcademyDomainBar({
+    required this.domaines,
     required this.selected,
     required this.onSelect,
     required this.countOf,
@@ -23,12 +24,15 @@ class AcademyDomainBar extends StatelessWidget {
     super.key,
   });
 
+  /// Les domaines servis, dans l'ordre : l'écran a déjà écarté les vides.
+  final List<AcademyCategory> domaines;
+
   /// Domaine choisi, `null` pour « Tous ».
   final AcademyCategory? selected;
 
   final ValueChanged<AcademyCategory?> onSelect;
 
-  /// Nombre de leçons du domaine — un domaine vide ne s'affiche pas.
+  /// Nombre de leçons du domaine.
   final int Function(AcademyCategory) countOf;
 
   /// Leçons déjà abordées dans le domaine, ou `null` tant que l'avancement
@@ -38,10 +42,6 @@ class AcademyDomainBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final domaines = AcademyCategory.values
-        .where((category) => countOf(category) > 0)
-        .toList();
-
     return SizedBox(
       height: AppSpacing.touchTarget,
       child: ListView.separated(

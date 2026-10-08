@@ -19,6 +19,8 @@ ProgressOverviewEntity progressOverviewFromJson(Map<String, dynamic> json) =>
       setsCount: (json['setsCount'] as num).toInt(),
       totalVolumeKg: (json['totalVolumeKg'] as num).toDouble(),
       totalDurationSeconds: (json['totalDurationSeconds'] as num).toInt(),
+      from: DateTime.tryParse(json['from'] as String? ?? ''),
+      to: DateTime.tryParse(json['to'] as String? ?? ''),
       points: (json['points'] as List<dynamic>)
           .whereType<Map<String, dynamic>>()
           .map(progressPointFromJson)

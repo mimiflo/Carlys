@@ -30,62 +30,20 @@ ProgressOverviewEntity overviewOf(
   setsCount: setsCount,
   totalVolumeKg: totalVolumeKg,
   totalDurationSeconds: totalDurationSeconds,
+  // La fenêtre glissante du serveur : les sept derniers jours.
+  from: _ilYA(6),
+  to: _ilYA(0),
   points:
       points ??
       [
-        // Avant-hier et hier, PAS deux jours d'août figés : la carte
-        // s'intitule « Volume hebdo » et se légende « sur la semaine », et
-        // elle datait son axe de sept semaines plus tôt. Elle se
-        // contredisait donc dans son propre cadre.
-        //
-        // Ces deux jours peuvent tomber de part et d'autre d'un lundi, donc
-        // sur DEUX semaines ISO — et l'assiduité devient alors calculable,
-        // ce qui remplace la tuile de durée. C'est le comportement JUSTE de
-        // l'application ; une épreuve qui vise l'une des deux tuiles pose
-        // donc ses propres points avec [pointsMemeSemaine].
+        // Avant-hier et hier, PAS deux jours d'août figés : la carte se
+        // légende « du … au … » de la semaine en cours, et elle datait son
+        // axe de sept semaines plus tôt. Elle se contredisait donc dans son
+        // propre cadre.
         ProgressPoint(bucketStart: _ilYA(2), sessionsCount: 1, volumeKg: 840),
         ProgressPoint(bucketStart: _ilYA(1), sessionsCount: 1, volumeKg: 700),
       ],
 );
-
-/// Deux points garantis dans la MÊME semaine ISO.
-///
-/// `weeklyAttendance` rend `null` sous deux semaines couvertes — « une
-/// assiduité sur une seule semaine vaudrait mécaniquement 100 % » — et c'est
-/// ce qui décide entre la tuile de durée et celle d'assiduité. Une épreuve
-/// qui vise l'une des deux doit donc fixer la semaine, pas la subir.
-///
-/// Le lundi à minuit LOCAL, comme le serveur le pose (double `AT TIME ZONE`
-/// dans `progress.repository.ts`), puis en UTC pour l'échange. Il était
-/// posé à minuit UTC : l'écran ramène `bucketStart` à l'heure locale, et à
-/// l'ouest de Greenwich (Montréal, Los Angeles, São Paulo) ce lundi 00:00Z
-/// devenait le dimanche d'avant. Deux semaines couvertes, l'assiduité
-/// remplaçait la durée, et `progress_flow_test` échouait sur tout poste des
-/// Amériques ; la CI, calée sur Paris, ne le voyait pas.
-List<ProgressPoint> pointsMemeSemaine({
-  double premier = 840,
-  double second = 700,
-}) {
-  final maintenant = DateTime.now();
-  final lundi = DateTime(
-    maintenant.year,
-    maintenant.month,
-    maintenant.day - (maintenant.weekday - 1),
-  );
-  final mardi = DateTime(lundi.year, lundi.month, lundi.day + 1);
-  return [
-    ProgressPoint(
-      bucketStart: lundi.toUtc(),
-      sessionsCount: 1,
-      volumeKg: premier,
-    ),
-    ProgressPoint(
-      bucketStart: mardi.toUtc(),
-      sessionsCount: 1,
-      volumeKg: second,
-    ),
-  ];
-}
 
 /// Un record, daté RELATIVEMENT à maintenant.
 ///

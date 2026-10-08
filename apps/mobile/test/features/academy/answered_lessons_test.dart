@@ -2,6 +2,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_choice.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,17 +75,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      Color borderOf(String label) {
-        final box = tester.widget<Container>(
-          find
-              .ancestor(of: find.text(label), matching: find.byType(Container))
-              .first,
+      // Le rond à cocher : PLEIN pour le choix fait, CERCLÉ pour le bon.
+      BoxDecoration radioOf(String label) {
+        final radio = tester.widget<AnimatedContainer>(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text(label),
+              matching: find.byType(QuizChoice),
+            ),
+            matching: find.byType(AnimatedContainer),
+          ),
         );
-        return ((box.decoration! as BoxDecoration).border! as Border).top.color;
+        return radio.decoration! as BoxDecoration;
       }
 
-      expect(borderOf('Le postérieur'), AppColors.danger);
-      expect(borderOf('Le latéral'), AppColors.success);
+      expect(radioOf('Le postérieur').color, AppColors.danger);
+      expect(
+        (radioOf('Le latéral').border! as Border).top.color,
+        AppColors.success,
+      );
     });
 
     testWidgets('sans réponse connue, la question reste posée', (tester) async {

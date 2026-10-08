@@ -1,23 +1,14 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../utils/progress_stats.dart';
-import 'progress_card_grammar.dart';
 
-/// Hauteur du graphe en barres et géométrie des barres (maquette).
-const double _chartHeight = 104;
-const double _barGap = 6;
-const double _barRadius = 5;
-const double _minBarHeight = 6;
-
-/// Largeur d'une barre quand la période en compte peu : sans plafond, deux
-/// intervalles produiraient deux pavés au lieu d'un graphe.
-const double _maxBarWidth = 26;
-
-/// Carte de volume : total de la période, tendance, graphe en barres et
-/// repères temporels — tout est dérivé des points réels de l'API.
+/// « Volume soulevé » (maquette d'octobre 2026) : le total de la période, la
+/// fenêtre analysée, puis une barre par intervalle avec son chiffre et une
+/// échelle — tout est dérivé des points réels de l'API.
 class VolumeCard extends StatelessWidget {
   const VolumeCard({required this.overview, super.key});
 
@@ -25,111 +16,82 @@ class VolumeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final volume = formatVolume(overview.totalVolumeKg);
-    final trend = volumeTrendPercent(overview.points);
-    final labels = volumeAxisLabels(overview.points, overview.period);
+    final from = overview.from;
+    final to = overview.to;
 
-    return Container(
-      padding: progressCardPadding,
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardMainAll,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSectionLabel(
-                      volumeLabel(overview.period),
-                      color: AppColors.darkTextTertiary,
-                    ),
-                    const SizedBox(height: progressCardLabelGap),
-                    Text.rich(
-                      TextSpan(
-                        text: volume.value,
-                        style:
-                            AppTypography.resized(
-                              AppTypography.metricL,
-                              progressCardValueFontSize,
-                            ).copyWith(
-                              letterSpacing: progressCardValueLetterSpacing,
-                              color: AppColors.darkTextPrimary,
-                            ),
-                        children: [
-                          TextSpan(
-                            text: ' ${volume.unit}',
-                            style: AppTypography.metricS.copyWith(
-                              fontSize: progressCardUnitFontSize,
-                              color: AppColors.darkTextTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (trend != null) _TrendPill(percent: trend),
+              Icon(AppIcons.volumeLifted, color: AppColors.primaryLight),
+              SizedBox(width: AppSpacing.xs),
+              AppSectionLabel('Volume soulevé'),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          _VolumeBars(points: overview.points),
-          if (labels.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: AppSpacing.xs),
+          Text.rich(
+            TextSpan(
+              text: formatThousands(overview.totalVolumeKg),
+              style: AppTypography.display.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
               children: [
-                for (final label in labels)
-                  Text(
-                    label,
-                    style: AppTypography.resized(
-                      AppTypography.labelMono,
-                      9,
-                    ).copyWith(color: AppColors.darkTextTertiary),
+                TextSpan(
+                  text: ' kg',
+                  style: AppTypography.title.copyWith(
+                    color: AppColors.darkTextPrimary,
                   ),
+                ),
               ],
             ),
-          ],
+          ),
+          if (from != null && to != null)
+            Text(
+              'Du ${formatDayRange(from.toLocal(), to.toLocal())}',
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          VolumeBars(points: overview.points, period: overview.period),
         ],
       ),
     );
   }
 }
 
-/// Tendance du dernier intervalle : accent à la hausse, neutre à la baisse
-/// (le design system n'expose pas d'icône de tendance descendante).
-class _TrendPill extends StatelessWidget {
-  const _TrendPill({required this.percent});
+/// Le dégradé violet de l'appli, du haut vers le bas de la barre.
+const LinearGradient _barGradient = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [AppColors.ctaStart, AppColors.ctaEnd],
+);
 
-  final double percent;
-
-  @override
-  Widget build(BuildContext context) {
-    final rising = percent >= 0;
-    final sign = rising ? '+' : '';
-
-    return AppPill(
-      label: '$sign${formatThousands(percent)}%',
-      mono: true,
-      tone: rising ? AppPillTone.accent : AppPillTone.neutral,
-      icon: rising ? AppIcons.trendingUp : null,
-    );
-  }
-}
-
-/// Barres du volume : violet de plus en plus opaque avec la récence, le
-/// dernier intervalle en accent.
-class _VolumeBars extends StatelessWidget {
-  const _VolumeBars({required this.points});
+/// Le graphe en barres : échelle à gauche, quadrillage en tirets, le chiffre
+/// au-dessus de chaque barre quand il y a la place de le lire.
+class VolumeBars extends StatelessWidget {
+  const VolumeBars({required this.points, required this.period, super.key});
 
   final List<ProgressPoint> points;
+  final ProgressPeriod period;
+
+  static const double height = 190;
+
+  /// Au-delà, les chiffres au-dessus des barres s'effacent, quelle que soit
+  /// la place : l'échelle suffit.
+  static const int labelledBarsMax = 7;
+
+  /// La place, en points de TEXTE, que demandent un chiffre au-dessus d'une
+  /// barre (« 3 400 ») et un libellé sous elle (« lun. 5 », « 30 sept. »).
+  /// En deçà, le chiffre s'efface et les libellés s'espacent : sur 320
+  /// points, sept barres et leurs jours se chevauchaient.
+  static const double _valueWidth = 36;
+  static const double _labelWidth = 52;
+
+  /// La largeur réservée à l'échelle de gauche, en points de texte.
+  static const double _axisWidth = 52;
 
   @override
   Widget build(BuildContext context) {
@@ -137,66 +99,130 @@ class _VolumeBars extends StatelessWidget {
       0,
       (max, point) => point.volumeKg > max ? point.volumeKg : max,
     );
+    final step = volumeScaleStep(maxVolume);
+    // Une marge au-dessus de la plus haute barre, pour son chiffre.
+    final maxY = step * ((maxVolume * 1.15) / step).ceil().clamp(1, 1000);
+    final bucket = bucketOf(period);
+    final axis = AppTypography.label.copyWith(
+      color: AppColors.darkTextSecondary,
+    );
+    final scaler = MediaQuery.textScalerOf(context);
+    final axisWidth = scaler.scale(_axisWidth);
 
     return Semantics(
-      label: 'Volume soulevé par intervalle',
-      child: SizedBox(
-        height: _chartHeight,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var index = 0; index < points.length; index++) ...[
-              if (index > 0) const SizedBox(width: _barGap),
-              Expanded(
-                child: _VolumeBar(
-                  fraction: maxVolume <= 0
-                      ? 0
-                      : points[index].volumeKg / maxVolume,
-                  recency: points.length < 2
-                      ? 1
-                      : index / (points.length - 1).toDouble(),
-                  isLatest: index == points.length - 1,
+      label: volumeBarsSemantics(points, bucket),
+      excludeSemantics: true,
+      child: RepaintBoundary(
+        child: SizedBox(
+          height: height,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final count = points.isEmpty ? 1 : points.length;
+              final slot = (constraints.maxWidth - axisWidth) / count;
+              final barWidth = slot * 0.6 < 30 ? slot * 0.6 : 30.0;
+              final showValues =
+                  points.length <= labelledBarsMax &&
+                  slot >= scaler.scale(_valueWidth);
+              // Un libellé toutes les `labelEvery` barres, compté depuis la
+              // DERNIÈRE : le jour le plus récent garde toujours le sien.
+              final labelEvery = (scaler.scale(_labelWidth) / slot)
+                  .ceil()
+                  .clamp(1, count);
+              return BarChart(
+                BarChartData(
+                  maxY: maxY,
+                  alignment: BarChartAlignment.spaceAround,
+                  borderData: FlBorderData(
+                    show: true,
+                    border: const Border(
+                      left: BorderSide(color: AppColors.darkBorder),
+                      bottom: BorderSide(color: AppColors.darkBorder),
+                    ),
+                  ),
+                  gridData: FlGridData(
+                    drawVerticalLine: false,
+                    horizontalInterval: step,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: AppColors.darkBorder,
+                      strokeWidth: 1,
+                      dashArray: [4, 4],
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: step,
+                        reservedSize: axisWidth,
+                        getTitlesWidget: (value, meta) => SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          child: Text(formatThousands(value), style: axis),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: scaler.scale(28),
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 ||
+                              index >= points.length ||
+                              (points.length - 1 - index) % labelEvery != 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return SideTitleWidget(
+                            axisSide: meta.axisSide,
+                            child: Text(
+                              bucketLabel(points[index].bucketStart, bucket),
+                              style: axis,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  // Le chiffre au-dessus de la barre passe par l'infobulle de
+                  // fl_chart, affichée en permanence et sans fond.
+                  barTouchData: BarTouchData(
+                    enabled: false,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (_) => AppColors.backdropClear,
+                      tooltipPadding: EdgeInsets.zero,
+                      tooltipMargin: AppSpacing.xxs,
+                      getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                        formatThousands(rod.toY),
+                        AppTypography.label.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  barGroups: [
+                    for (final (index, point) in points.indexed)
+                      BarChartGroupData(
+                        x: index,
+                        showingTooltipIndicators: showValues
+                            ? const [0]
+                            : const [],
+                        barRods: [
+                          BarChartRodData(
+                            toY: point.volumeKg,
+                            width: barWidth,
+                            gradient: _barGradient,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(AppRadius.xs),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VolumeBar extends StatelessWidget {
-  const _VolumeBar({
-    required this.fraction,
-    required this.recency,
-    required this.isLatest,
-  });
-
-  final double fraction;
-
-  /// 0 pour l'intervalle le plus ancien, 1 pour le plus récent.
-  final double recency;
-  final bool isLatest;
-
-  @override
-  Widget build(BuildContext context) {
-    final height =
-        _minBarHeight +
-        (_chartHeight - _minBarHeight) * fraction.clamp(0.0, 1.0);
-
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        height: height,
-        constraints: const BoxConstraints(maxWidth: _maxBarWidth),
-        decoration: BoxDecoration(
-          color: isLatest
-              ? AppColors.accent
-              : AppColors.primary.withValues(
-                  alpha: 0.35 + 0.55 * recency.clamp(0.0, 1.0),
-                ),
-          borderRadius: BorderRadius.circular(_barRadius),
+              );
+            },
+          ),
         ),
       ),
     );

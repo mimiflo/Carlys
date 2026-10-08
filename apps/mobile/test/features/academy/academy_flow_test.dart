@@ -93,6 +93,9 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
+    // La question du jour vient après la progression, le parcours et les
+    // domaines (maquette d'octobre 2026) : sous le pli.
+    await reveal(tester, find.text('QUESTION DU JOUR'));
     expect(find.text('QUESTION DU JOUR'), findsOneWidget);
     // La CARTE d'entrée vers l'écran Nutrition a quitté l'Academy en
     // septembre 2026 : la nutrition a son propre onglet, et deux portes pour
@@ -151,7 +154,8 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
-    // La question du jour est en tête d'écran, prête à répondre.
+    // La question du jour, sous la progression, le parcours et les domaines.
+    await reveal(tester, find.text('QUESTION DU JOUR'));
     final quiz = find.byType(QuizCard).first;
     final quizCard = tester.widget<QuizCard>(quiz);
     final question = quizCard.question;
@@ -200,6 +204,7 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
+    await reveal(tester, find.text('QUESTION DU JOUR'));
     final quiz = find.byType(QuizCard).first;
     final question = tester.widget<QuizCard>(quiz).question;
     final wrongIndex = question.answerIndex == 0 ? 1 : 0;
@@ -285,6 +290,11 @@ void main() {
     // FILTRE, pas le défilement horizontal de la barre. « Musculation » est
     // aussi un libellé unique à l'écran, contrairement à « Nutrition » que
     // porte également l'onglet du bas.
+    // La barre vit sous la progression et le parcours : la remonter en haut
+    // de la vue d'abord — bâtie mais sous le pli, le tap tombait sur la
+    // barre d'onglets.
+    await tester.ensureVisible(find.widgetWithText(AppPill, 'Musculation'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(AppPill, 'Musculation'));
     await tester.pumpAndSettle();
 
@@ -296,19 +306,23 @@ void main() {
     // haut de page, donc bâti. Son absence ici a du sens.
     expect(find.text('Les protéines, brique du muscle'), findsNothing);
     expect(find.text('NUTRITION'), findsNothing);
+    // L'en-tête de section RESTE en vue filtrée depuis qu'il porte
+    // l'avancement : il ne répète plus le nom que la pastille active dit
+    // déjà, il ajoute « 0 / 4 » et sa jauge. Révélé AVANT la leçon : le
+    // défilement vers elle le ferait passer au-dessus de la vue.
+    await reveal(tester, find.text('MUSCULATION'));
+    expect(find.text('MUSCULATION'), findsOneWidget);
+    expect(find.text('0 / 4 · 0 %'), findsOneWidget);
     // Et la première leçon visible appartient au domaine visé.
     await reveal(tester, find.text('La surcharge progressive'));
     expect(find.text('La surcharge progressive'), findsOneWidget);
-    // L'en-tête de section RESTE en vue filtrée depuis qu'il porte
-    // l'avancement : il ne répète plus le nom que la pastille active dit
-    // déjà, il ajoute « 0 / 4 » et sa jauge.
-    expect(find.text('MUSCULATION'), findsOneWidget);
-    expect(find.text('0 / 4 · 0 %'), findsOneWidget);
 
     // Retour à « Tous ». La barre de domaines vit DANS la liste : le
     // défilement précédent l'a sortie de l'arbre, il faut remonter avant de
     // pouvoir la viser.
     await tester.drag(_pageScrollable.last, const Offset(0, 2000));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(AppPill, 'Tous'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(AppPill, 'Tous'));
     await tester.pumpAndSettle();
@@ -330,15 +344,15 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
-    expect(find.text('OÙ TU EN ES'), findsOneWidget);
+    expect(find.text('MA PROGRESSION'), findsOneWidget);
     expect(find.textContaining('leçons sur'), findsOneWidget);
-    expect(find.text('Aucun domaine bouclé pour l’instant.'), findsOneWidget);
+    expect(find.text('Aucun domaine terminé pour l’instant.'), findsOneWidget);
     // Le pourcentage est arrivé par arbitrage produit (septembre 2026,
     // consigné dans docs/product/academy.md), à une condition que ce test
     // épingle : il NOMME sa base. « 0 % du pack » ne concurrence pas l'axe
     // « Maîtrise » du profil, compté sur une cible fixe, parce que chacun
     // dit sur quoi il porte. Un « % » orphelin resterait un défaut.
-    expect(find.text('0 % du pack'), findsOneWidget);
+    expect(find.text('0 % du pack', findRichText: true), findsOneWidget);
   });
 
   testWidgets('la fête d’un domaine bouclé se ferme et ne revient pas', (

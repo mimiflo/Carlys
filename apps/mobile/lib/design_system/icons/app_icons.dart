@@ -43,6 +43,9 @@ abstract final class AppIcons {
   /// l'haltère, les répétitions tournent, le volume s'empile.
   static const IconData recordReps = Icons.autorenew_rounded;
 
+  /// Le volume soulevé (carte de l'écran Progrès).
+  static const IconData volumeLifted = Icons.bar_chart_rounded;
+
   /// Le muscle principal d'un exercice (puce de la fiche) : la maquette lui
   /// donne l'haltère.
   static const IconData muscleGroup = equipmentDumbbell;
@@ -87,6 +90,9 @@ abstract final class AppIcons {
 
   /// La question du jour.
   static const IconData question = Icons.help_rounded;
+
+  /// L'ampoule de la carte « Question du jour » (maquette Academy).
+  static const IconData dailyQuestion = Icons.lightbulb_outline_rounded;
 
   /// La forme du jour, lue sur les séances de la semaine.
   static const IconData form = Icons.monitor_heart_rounded;
@@ -392,7 +398,6 @@ abstract final class AppIcons {
   static const IconData lessonCardio = Icons.directions_run_rounded;
   static const IconData lessonHealth = Icons.health_and_safety_outlined;
   static const IconData lessonHeart = Icons.monitor_heart_outlined;
-  static const IconData lessonExpand = Icons.keyboard_arrow_down_rounded;
 
   // ── Listes et replis ──────────────────────────────────────────────
   static const IconData expand = Icons.expand_more_rounded;

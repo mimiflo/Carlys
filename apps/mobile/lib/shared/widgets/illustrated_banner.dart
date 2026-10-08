@@ -24,6 +24,7 @@ class IllustratedBanner extends StatelessWidget {
     this.titleAccent,
     this.onTap,
     this.summitShift = 0,
+    this.leading,
     super.key,
   });
 
@@ -45,6 +46,13 @@ class IllustratedBanner extends StatelessWidget {
   /// aujourd'hui. ») tient alors sur deux lignes, et non quatre.
   final double summitShift;
 
+  /// Un emblème devant le texte (la médaille de « Mon parcours »), logé dans
+  /// un carré de [leadingSize] : le texte sait ainsi la largeur qu'il cède.
+  /// Il s'efface quand le texte agrandi n'aurait plus la place d'un mot.
+  final Widget? leading;
+
+  static const double leadingSize = 44;
+
   /// Marge entre la fin du texte et l'endroit où l'image devient pleine :
   /// le bord de la lune y commence, et un glyphe qui le toucherait perdrait
   /// son contraste. Huit points et pas seize : à seize, le titre passait à
@@ -53,6 +61,10 @@ class IllustratedBanner extends StatelessWidget {
 
   static const double _chevronSize = 24;
 
+  /// La largeur de texte, à la taille normale, sous laquelle l'emblème
+  /// s'efface (voir [leading]).
+  static const double _leadingTextMinWidth = 90;
+
   @override
   Widget build(BuildContext context) {
     final content = LayoutBuilder(
@@ -60,11 +72,21 @@ class IllustratedBanner extends StatelessWidget {
         // Le texte s'arrête AVANT la partie pleine de l'image, à toute taille
         // de texte : agrandi, il passe à la ligne au lieu de glisser sur la
         // lune. À la taille normale, il tient dans la borne.
-        final textMaxWidth =
+        final textRoom =
             SummitIllustration.opaqueFromFor(constraints.maxWidth) +
             summitShift -
             textClearance -
             AppSpacing.md;
+        // L'emblème cède sa place quand le texte, agrandi, n'aurait plus
+        // la largeur d'un mot : « récompenses » se coupait en son milieu
+        // sur 320 points au texte ×2.
+        final leading =
+            textRoom - leadingSize - AppSpacing.sm >=
+                MediaQuery.textScalerOf(context).scale(_leadingTextMinWidth)
+            ? this.leading
+            : null;
+        final textMaxWidth =
+            textRoom - (leading == null ? 0 : leadingSize + AppSpacing.sm);
 
         final row = ConstrainedBox(
           // Une hauteur MINIMALE, pas une hauteur : un texte système agrandi
@@ -81,6 +103,10 @@ class IllustratedBanner extends StatelessWidget {
             ),
             child: Row(
               children: [
+                if (leading case final leading?) ...[
+                  SizedBox.square(dimension: leadingSize, child: leading),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 Expanded(
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,

@@ -18,11 +18,7 @@ import 'upcoming_award_row.dart';
 /// qui n'afficherait que l'obtenu ne donnerait aucune direction ; une qui
 /// n'afficherait que le manquant serait un compte de ce qu'on n'a pas.
 class RewardShowcase extends ConsumerWidget {
-  const RewardShowcase({this.showUpcoming = true, super.key});
-
-  /// La section « Ce qui vient ». Repliée là où la vitrine n'est qu'un
-  /// aperçu — l'écran Progrès a déjà sa propre direction.
-  final bool showUpcoming;
+  const RewardShowcase({super.key});
 
   /// Vedette comprise. Au-delà, c'est le report qui prend le relais.
   static const int shown = 3;
@@ -53,7 +49,7 @@ class RewardShowcase extends ConsumerWidget {
           const SizedBox(height: AppSpacing.gapRow),
           AwardRow(entry: entry),
         ],
-        if (showUpcoming && next.isNotEmpty) ...[
+        if (next.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.gapSection),
           const AppSectionLabel('Ce qui vient'),
           const SizedBox(height: AppSpacing.gapRow),

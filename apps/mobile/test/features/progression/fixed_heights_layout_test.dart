@@ -3,11 +3,6 @@ import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_pro
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/providers/today_metrics.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
-import 'package:carlys_mobile/features/progression/domain/progression.dart';
-import 'package:carlys_mobile/features/progression/domain/reward.dart';
-import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/providers/progression_providers.dart';
-import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +14,8 @@ import '../../support/enlarged_text.dart';
 ///
 /// Trois blocs calculés pour le texte ×1 sur un téléphone moyen :
 /// - le bloc de progression de l'accueil (120 points) rognait sa ligne
-///   « Dernière : … » dès ×1,3 ;
+///   « Dernière : … » dès ×1,3 — devenu la bannière « Mon parcours », il
+///   garde la garde : son texte se lit entier ;
 /// - les cartes des profils Carlys (132 points) coupaient à l'ellipse les
 ///   noms et trois descriptions sur quatre à 320 points, alors qu'un
 ///   commentaire les disait « ENTIÈRES à la largeur d'un téléphone » ;
@@ -42,49 +38,20 @@ void main() {
         ),
       );
 
-  final profil = ProgressionProfile(
-    axes: [
-      for (final valeur in CarlysValue.values)
-        ProgressionAxis(
-          value: valeur,
-          ratio: 0.5,
-          points: 60,
-          reason: 'Fixture de test.',
-        ),
-    ],
-  );
-  final recompense = EarnedReward(
-    reward: rewardCatalog.last.reward,
-    earnedAt: DateTime.utc(2026, 9, 1),
-  );
-
   for (final (largeur, texte) in const [
     (390.0, 1.0),
     (375.0, 1.3),
     (360.0, 1.5),
     (320.0, 2.0),
   ]) {
-    testWidgets('bloc de progression, $largeur points, texte ×$texte : la '
-        'dernière récompense reste dans le bloc', (tester) async {
+    testWidgets('« Mon parcours », $largeur points, texte ×$texte : le texte '
+        'se lit entier', (tester) async {
       setPhone(tester, width: largeur, textScale: texte);
-      await tester.pumpWidget(
-        monte(
-          const ProgressionEntryCard(),
-          overrides: [
-            progressionProfileProvider.overrideWithValue(profil),
-            highestTitleProvider.overrideWithValue(profil.title),
-            showcaseRewardsProvider.overrideWithValue([recompense]),
-          ],
-        ),
-      );
+      await tester.pumpWidget(monte(const ProgressionEntryCard()));
 
-      final bloc = tester.getRect(find.byType(ProgressionEntryCard));
-      final derniere = tester.getRect(find.textContaining('Dernière : '));
-      expect(bloc.bottom, greaterThanOrEqualTo(derniere.bottom));
-      if (texte == 1.0) {
-        // À la taille d'origine, la hauteur de maquette.
-        expect(bloc.height, ProgressionEntryCard.height);
-      }
+      final carte = find.byType(ProgressionEntryCard);
+      expect(truncatedTexts(carte), isEmpty);
+      expect(midWordBreaks(carte), isEmpty);
     });
   }
 

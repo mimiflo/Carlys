@@ -7,7 +7,7 @@ import '../../domain/entities/academy.dart';
 import 'lesson_illustration.dart';
 import 'quiz_card.dart';
 
-/// Une leçon dépliable : titre + catégorie repliés ; ouverte, elle déroule
+/// Une leçon dépliable : vignette, titre et état repliés ; ouverte, elle déroule
 /// l'illustration, le corps, l'essentiel à retenir, la question — et, pour
 /// l'anatomie, le pont vers les exercices du muscle. La question vit DANS
 /// la leçon : on lit, puis on se teste, puis on pratique.
@@ -41,6 +41,8 @@ class LessonCard extends StatefulWidget {
 class _LessonCardState extends State<LessonCard> {
   bool _open = false;
 
+  static const double _thumbnailSize = 56;
+
   @override
   Widget build(BuildContext context) {
     final lesson = widget.lesson;
@@ -54,6 +56,15 @@ class _LessonCardState extends State<LessonCard> {
             borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Row(
               children: [
+                // La vignette se retire quand la leçon s'ouvre : son
+                // illustration entière prend le relais juste dessous.
+                if (!_open) ...[
+                  LessonIllustration(
+                    lesson: lesson,
+                    thumbnailSize: _thumbnailSize,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,14 +79,24 @@ class _LessonCardState extends State<LessonCard> {
                           color: AppColors.darkTextPrimary,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        widget.answeredChoice == null
+                            ? 'À lire, puis une question'
+                            : 'Lue · question répondue',
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
+                const SizedBox(width: AppSpacing.xs),
                 AnimatedRotation(
-                  turns: _open ? 0.5 : 0,
+                  turns: _open ? 0.25 : 0,
                   duration: AppMotion.fast,
                   child: const Icon(
-                    AppIcons.lessonExpand,
+                    AppIcons.chevronRight,
                     color: AppColors.darkTextTertiary,
                   ),
                 ),

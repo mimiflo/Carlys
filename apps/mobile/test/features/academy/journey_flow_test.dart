@@ -13,10 +13,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/enlarged_text.dart';
 import '../../support/fake_community_repository.dart';
 
 /// Le Parcours à l'écran : six étapes, une reprise, une validation.
 void main() {
+  setUpAll(loadAppFonts);
+
   setUp(() {
     SharedPreferences.setMockInitialValues(const {});
   });
@@ -166,6 +169,52 @@ void main() {
       await tester.tap(find.text('Reprendre'));
       expect(repris, isTrue);
     });
+
+    testWidgets('« Voir le parcours » ouvre la vue des six étapes', (
+      tester,
+    ) async {
+      var ouvert = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: JourneyEntryCard(
+              progress: avancement(courante: 1, faites: 1),
+              onOpen: () => ouvert = true,
+              onResume: () {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Voir le parcours'));
+      expect(ouvert, isTrue);
+    });
+
+    testWidgets(
+      'sur 320 points au texte ×2, le titre de l’étape reste entier',
+      (tester) async {
+        setPhone(tester, width: 320, textScale: 2);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: ListView(
+                children: [
+                  JourneyEntryCard(
+                    progress: avancement(courante: 1, faites: 1),
+                    onOpen: () {},
+                    onResume: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(midWordBreaks(find.byType(JourneyEntryCard)), isEmpty);
+      },
+    );
 
     testWidgets('avant la première leçon, elle dit « Commencer »', (
       tester,

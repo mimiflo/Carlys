@@ -1,5 +1,5 @@
-/// Les deux pièces de la carte « Où tu en es » : la ligne du niveau et un
-/// sceau de récompense. Extraites de la carte, qui touchait son plafond de
+/// Les deux pièces de la carte « Ma progression » : la ligne du niveau et
+/// une médaille de récompense. Extraites de la carte, qui touchait son plafond de
 /// widget une fois ses rangées rendues souples en texte agrandi.
 library;
 
@@ -7,8 +7,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../progression/domain/reward.dart';
-import '../../../progression/presentation/widgets/award_seal.dart';
-import '../../../progression/presentation/widgets/seal_size.dart';
 import '../../domain/academy_level.dart';
 
 /// Le niveau atteint, et ce qui ouvre le suivant.
@@ -83,39 +81,28 @@ class AcademyLevelLine extends StatelessWidget {
   }
 }
 
-/// Un sceau de récompense, gagné ou en attente.
+/// Une médaille de récompense, gagnée ou sous cadenas.
 class AcademyRewardSeal extends StatelessWidget {
-  const AcademyRewardSeal({required this.reward, super.key});
+  const AcademyRewardSeal({
+    required this.reward,
+    required this.metal,
+    super.key,
+  });
 
   /// `null` tant que la récompense n'est pas obtenue.
   final Reward? reward;
 
+  /// Le métal qu'elle prend une fois gagnée.
+  final AppMedalMetal metal;
+
+  static const double size = 36;
+
   @override
   Widget build(BuildContext context) {
     final gagne = reward;
-    if (gagne == null) {
-      return Semantics(
-        label: 'Récompense à venir',
-        child: Opacity(
-          opacity: 0.25,
-          child: SizedBox.square(
-            dimension: SealSize.small,
-            child: Icon(
-              AppIcons.record,
-              size: 22,
-              color: AppColors.darkTextTertiary,
-            ),
-          ),
-        ),
-      );
-    }
     return Semantics(
-      label: '${gagne.label}, obtenu',
-      child: AwardSeal(
-        kind: gagne.kind,
-        figure: gagne.figure,
-        size: SealSize.small,
-      ),
+      label: gagne == null ? 'Récompense à venir' : '${gagne.label}, obtenu',
+      child: AppMedal(metal: gagne == null ? null : metal, size: size),
     );
   }
 }

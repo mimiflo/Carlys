@@ -103,6 +103,21 @@ tenu égal à `assets/academy/pack.json` par un test de l'API) : ajouter une
 leçon au pack, c'est l'ajouter aussi au contrat. Détail :
 [`community.md`](./community.md).
 
+## L'écran (maquette d'octobre 2026)
+
+De haut en bas : « Academy / COMPRENDRE POUR PROGRESSER. » et le bouton-disque
+du parcours guidé ; « Ma progression » (compte, pourcentage du pack, jauge,
+domaines terminés, niveau, « Mes badges ») ; le parcours guidé (étape
+courante, six pastilles reliées, « Reprendre » et « Voir le parcours », sur le
+sommet au fanion) ; « Explorer les domaines » avec ses pastilles et « Voir les
+12 », une feuille qui liste tous les domaines servis ; la question du jour
+(ampoule, réponses en ronds à cocher séparés d'un filet) ; puis chaque
+domaine et ses leçons, repliées en une ligne : vignette, titre, état
+(« À lire, puis une question » ou « Lue · question répondue »).
+
+Une leçon sans illustration livrée garde sa vignette de repli (dégradé et
+icône du domaine) : aucune photo n'est inventée pour une leçon.
+
 ## Couverture
 
 - `test/features/academy/answered_lessons_test.dart` : idempotence de la
@@ -122,7 +137,7 @@ leçon au pack, c'est l'ajouter aussi au contrat. Détail :
   célébration qui ne se déclenche qu'au franchissement, et les six
   récompenses de l'Academy décidées sans lire le titre atteint ni
   l'historique des séances.
-- Écran (`academy_flow_test.dart`) : la carte « Où tu en es » affiche le
+- Écran (`academy_flow_test.dart`) : la carte « Ma progression » affiche le
   compte et un pourcentage qui NOMME sa base (« 0 % du pack »), l'en-tête de
   domaine porte son « 0 / 4 · 0 % » même en vue filtrée, et le bandeau de
   domaine bouclé se ferme.
@@ -168,7 +183,9 @@ toujours un défaut, et un test l'épingle.
 
 ### Les récompenses, décidées SANS le reste de l'application
 
-Six sceaux s'affichent dans l'Academy : les trois de maîtrise (cinq leçons,
+Six médailles s'affichent dans l'Academy (« Mes badges », maquette
+d'octobre 2026 : le métal des ligues une fois gagnées, un cadenas avant) :
+les trois de maîtrise (cinq leçons,
 la moitié du pack, le pack entier) et trois nouveaux qui récompensent
 d'avoir fait le TOUR d'un sujet (un domaine, la moitié, tous).
 
@@ -178,7 +195,7 @@ autant qu'« Academy terminée ». Le domaine précis, lui, se célèbre dans
 l'Academy au moment où il se boucle, par un bandeau qui reprend la grammaire
 du franchissement de titre.
 
-L'état des sceaux se calcule **depuis les seuls faits de l'Academy**, jamais
+L'état des médailles se calcule **depuis les seuls faits de l'Academy**, jamais
 depuis `earnedRewardsProvider` : ce provider lit l'historique des séances et
 le profil dérivé, et le brancher rendrait l'Academy dépendante de la base
 d'entraînement pour afficher SES badges, alors que tout son contenu est

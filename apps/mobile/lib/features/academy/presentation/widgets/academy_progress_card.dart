@@ -20,7 +20,7 @@ import 'academy_progress_parts.dart';
 /// ne crée AUCUNE récompense, le journal fête déjà ces franchissements
 /// (voir `academy_level.dart`).
 ///
-/// L'état des sceaux se calcule ICI, à partir des seuls faits de l'Academy,
+/// L'état des médailles se calcule ICI, à partir des seuls faits de l'Academy,
 /// et non depuis `earnedRewardsProvider`. Ce provider-là lit l'historique
 /// des séances et le profil dérivé : le brancher rendrait l'Academy
 /// dépendante de la base d'entraînement pour afficher SES badges, alors que
@@ -30,15 +30,20 @@ import 'academy_progress_parts.dart';
 class AcademyProgressCard extends StatelessWidget {
   const AcademyProgressCard({required this.progress, super.key});
 
-  /// Les récompenses de l'Academy, dans l'ordre où elles s'obtiennent.
-  static const List<String> rewardIds = [
-    'maitrise-5',
-    'maitrise-moitie',
-    'domaines-1',
-    'domaines-moitie',
-    'maitrise-pack',
-    'domaines-tous',
+  /// Les récompenses de l'Academy, dans l'ordre où elles s'obtiennent, et
+  /// le métal de leur médaille : plus la récompense est lointaine, plus il
+  /// est rare. Une seule liste : deux listes parallèles finissent par ne
+  /// plus avoir la même longueur.
+  static const List<(String, AppMedalMetal)> medals = [
+    ('maitrise-5', AppMedalMetal.bronze),
+    ('maitrise-moitie', AppMedalMetal.silver),
+    ('domaines-1', AppMedalMetal.silver),
+    ('domaines-moitie', AppMedalMetal.gold),
+    ('maitrise-pack', AppMedalMetal.gold),
+    ('domaines-tous', AppMedalMetal.platinum),
   ];
+
+  static Iterable<String> get rewardIds => medals.map((medal) => medal.$1);
 
   final AcademyProgress progress;
 
@@ -76,7 +81,7 @@ class AcademyProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AppSectionLabel('Où tu en es'),
+          const AppSectionLabel('Ma progression'),
           const SizedBox(height: AppSpacing.sm),
           // Le pourcentage à droite du compte quand il tient, dessous
           // sinon : non flexible, il écrasait le compte en texte agrandi.
@@ -91,32 +96,28 @@ class AcademyProgressCard extends StatelessWidget {
                   color: AppColors.darkTextPrimary,
                 ),
               ),
-              // La base du pourcentage se dit TOUJOURS : « du pack » est ce
-              // qui le distingue de l'axe « Maîtrise » du profil, compté sur
-              // une autre base.
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-                child: Text(
-                  '${progress.pourcent} % du pack',
-                  style: AppTypography.resized(AppTypography.labelMono, 11)
-                      .copyWith(
-                        color: progress.pourcent >= 100
-                            ? AppColors.accent
-                            : AppColors.darkTextTertiary,
+              // La base du pourcentage se dit TOUJOURS, même en petit :
+              // « du pack » est ce qui le distingue de l'axe « Maîtrise » du
+              // profil, compté sur une autre base.
+              Text.rich(
+                TextSpan(
+                  text: '${progress.pourcent} %',
+                  style: AppTypography.title.copyWith(
+                    color: progress.pourcent >= 100
+                        ? AppColors.accent
+                        : AppColors.primaryLight,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: ' du pack',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextTertiary,
                       ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            termines == 0
-                ? 'Aucun domaine bouclé pour l’instant.'
-                : '$termines domaine${termines > 1 ? 's' : ''} bouclé'
-                      '${termines > 1 ? 's' : ''} sur ${progress.domainesServis}.',
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextTertiary,
-            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           AppGauge(
@@ -125,6 +126,16 @@ class AcademyProgressCard extends StatelessWidget {
                 : progress.abordees / progress.total,
             color: AppColors.primaryLight,
           ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            termines == 0
+                ? 'Aucun domaine terminé pour l’instant.'
+                : '$termines domaine${termines > 1 ? 's' : ''} terminé'
+                      '${termines > 1 ? 's' : ''} sur ${progress.domainesServis}',
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
           // Le niveau ne paraît qu'à partir de la première leçon : avant,
           // un « niveau zéro » se lirait comme une note d'échec d'office.
           if (niveau != null) ...[
@@ -132,17 +143,17 @@ class AcademyProgressCard extends StatelessWidget {
             AcademyLevelLine(niveau: niveau, abordees: progress.abordees),
           ],
           const SizedBox(height: AppSpacing.md),
-          // Les sceaux déjà gagnés en pleine couleur, les autres éteints :
-          // ce qui reste à faire se voit, sans jamais ressembler à un échec.
-          // Six sceaux à l'écart de la maquette ; sur 320 points, où six
-          // fois 34 + 8 ne tiennent pas, ce sont les ÉCARTS qui se
-          // resserrent, jamais les sceaux.
+          const AppSectionLabel('Mes badges'),
+          const SizedBox(height: AppSpacing.sm),
+          // Les médailles gagnées en métal, les autres sous cadenas : ce qui
+          // reste à faire se voit, sans jamais ressembler à un échec. Sur
+          // 320 points, ce sont les ÉCARTS qui se resserrent, jamais elles.
           Row(
             children: [
-              for (final (index, id) in rewardIds.indexed) ...[
+              for (final (index, (id, metal)) in medals.indexed) ...[
                 if (index > 0)
-                  const Flexible(child: SizedBox(width: AppSpacing.xs)),
-                AcademyRewardSeal(reward: gagnees[id]),
+                  const Flexible(child: SizedBox(width: AppSpacing.sm)),
+                AcademyRewardSeal(reward: gagnees[id], metal: metal),
               ],
             ],
           ),

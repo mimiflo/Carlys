@@ -327,11 +327,8 @@ abstract final class AppColors {
     stops: [0, 0.46, 1],
   );
 
-  /// Réponse de quiz au repos : une surface à peine posée sur le fond, et
-  /// son filet. Assez pour se lire comme un bouton, assez peu pour que le
-  /// choix fait ressorte d'un coup.
-  static const Color quizChoiceFill = Color(0x08FFFFFF); // blanc .03
-  static const Color quizChoiceBorder = Color(0x14FFFFFF); // blanc .08
+  /// Rond à cocher d'une réponse de quiz au repos : assez pour se lire
+  /// comme un choix, assez peu pour que le choix fait ressorte d'un coup.
   static const Color quizLetterBorder = Color(0x2EFFFFFF); // blanc .18
 
   /// Cran déjà franchi d'une échelle graduée : l'accent, en retrait, pour
@@ -348,15 +345,6 @@ abstract final class AppColors {
 
   /// Creux du pointillé de la journée en cours.
   static const Color pendingBarSoft = Color(0x38C88BFF); // primaryLight .22
-
-  /// Fond du bloc compact de l'accueil : la lumière vient d'un coin, comme
-  /// sur une plaque tenue en main. Un aplat y serait une tuile de plus.
-  static const RadialGradient compactPlate = RadialGradient(
-    center: Alignment(0.76, -1),
-    radius: 1.3,
-    colors: [surfaceEngraved, darkSurface],
-    stops: [0, 0.62],
-  );
 
   /// Avatar d'un compte qui a commencé son histoire. Un compte neuf porte la
   /// surface nue : le dégradé se gagne, comme le reste de l'écran.

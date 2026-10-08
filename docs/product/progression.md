@@ -448,8 +448,8 @@ les rend immobiles, sans rien retirer de l'information.
 | Écran | Ce qu'il montre |
 | ----- | --------------- |
 | **Accueil** | Le bloc compact : titre, points, jauge, sceau de la dernière récompense |
-| **Progrès** | Le même bloc, puis la vitrine et les records |
-| **Profil de progression** | Le cap franchi, la carte de titre, la vitrine, les cinq axes, le manifeste |
+| **Progrès** | La porte « Mon parcours » (médaille et sommet), qui ouvre le profil de progression |
+| **Profil de progression** | Le cap franchi, la carte de titre, la vitrine, l'entrée de la frise (« Ton histoire »), les cinq axes, le manifeste |
 
 L'écran **Progrès** a lui aussi deux visages. Quand ses trois sources ont
 répondu sans rien (aucune séance sur la période, aucun record, aucune

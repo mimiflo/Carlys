@@ -5,7 +5,8 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
 
-/// En-tête de la progression : titre à gauche, pastille de période à droite.
+/// En-tête des progrès (maquette d'octobre 2026) : « Progrès / TES EFFORTS,
+/// TES RÉSULTATS. » et, à droite, la période analysée.
 ///
 /// La pastille est unique — elle ouvre une feuille listant les périodes
 /// réellement supportées par l'API.
@@ -16,19 +17,14 @@ class ProgressHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final period = ref.watch(progressPeriodProvider);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Progression',
-            style: AppTypography.pageTitle.copyWith(
-              color: AppColors.darkTextPrimary,
-            ),
-          ),
-        ),
-        AppPill(
+    return AppScreenHeader(
+      title: 'Progrès',
+      tagline: 'Tes efforts, tes résultats.',
+      showBack: false,
+      actions: [
+        AppSelectChip(
           label: period.label,
-          mono: true,
+          semanticsLabel: 'Période analysée : ${period.label}. Changer',
           onTap: () => _choosePeriod(context, ref, period),
         ),
       ],

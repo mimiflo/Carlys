@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../progress/presentation/widgets/timeline_entry_card.dart';
 import '../../domain/progression.dart';
 import '../providers/reward_providers.dart';
 import 'axes_card.dart';
@@ -15,8 +16,9 @@ import 'title_crossing_banner.dart';
 
 /// L'ATELIER D'UN COMPTE QUI A DÉJÀ TRAVAILLÉ.
 ///
-/// Cinq blocs, dans cet ordre : ce que tu portes, ce que tu as gagné, ce qui
-/// vient, ce que tu vaux sur les cinq axes, et pourquoi ces axes-là. L'écran
+/// Six blocs, dans cet ordre : ce que tu portes, ce que tu as gagné, ce qui
+/// vient, d'où tu viens (la frise), ce que tu vaux sur les cinq axes, et
+/// pourquoi ces axes-là. L'écran
 /// finit sur la question plutôt que sur un score : c'est le manifeste qui
 /// ferme, pas un total.
 class ProgressionBody extends ConsumerWidget {
@@ -50,6 +52,9 @@ class ProgressionBody extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.gapSection),
         const RewardShowcase(),
+        const SizedBox(height: AppSpacing.md),
+        // « D'où je viens » : la frise, voisine des récompenses qu'elle date.
+        const TimelineEntryCard(),
         const SizedBox(height: AppSpacing.gapSection),
         const AppSectionLabel('Les cinq axes'),
         const SizedBox(height: AppSpacing.gapRow),

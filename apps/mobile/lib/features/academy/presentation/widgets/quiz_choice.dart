@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 
-/// Une réponse de quiz : sa lettre, son texte, et l'état qu'elle a pris.
-///
-/// Le rond à lettre est ce qui la fait lire comme un BOUTON plutôt que comme
-/// une ligne de liste — sans lui, trois rectangles bordés ressemblaient à un
-/// tableau qu'on ne pense pas à toucher.
+/// Une réponse de quiz (maquette Academy d'octobre 2026) : un rond à cocher
+/// et son texte, sur une ligne que la carte sépare de la suivante d'un
+/// filet. La lettre ne se voit plus ; le lecteur d'écran la dit encore.
 class QuizChoice extends StatelessWidget {
   const QuizChoice({
     required this.letter,
@@ -32,88 +30,72 @@ class QuizChoice extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  static const double _chipSize = 24;
+  static const double _radioSize = 22;
 
   @override
   Widget build(BuildContext context) {
     // Deux choses se colorent une fois répondu : ce qui a été CHOISI, et ce
     // qui était JUSTE. Montrer la bonne réponse sans montrer celle qui a été
     // donnée laisserait croire à une réussite après une erreur ; ne montrer
-    // que l'erreur n'apprendrait rien. La coche, elle, ne va qu'au choix
-    // fait — c'est elle qui dit « c'est toi qui as répondu ça ».
+    // que l'erreur n'apprendrait rien. Le rond PLEIN, lui, ne va qu'au choix
+    // fait — c'est lui qui dit « c'est toi qui as répondu ça ».
     final tone = correct && answered
         ? AppColors.success
         : picked
         ? AppColors.danger
         : null;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Semantics(
-        button: onTap != null,
-        selected: picked,
-        label: '$letter. $label',
-        onTap: onTap,
-        child: ExcludeSemantics(
-          child: GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedContainer(
-              duration: AppMotion.tap,
-              curve: AppMotion.standard,
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.gapRow,
-                vertical: AppSpacing.sm + 1,
-              ),
-              decoration: BoxDecoration(
-                color: tone == null
-                    ? AppColors.quizChoiceFill
-                    : tone.withValues(alpha: 0.10),
-                borderRadius: AppRadius.lgAll,
-                border: Border.all(color: tone ?? AppColors.quizChoiceBorder),
-              ),
+    return Semantics(
+      button: onTap != null,
+      selected: picked,
+      label: '$letter. $label',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.touchTarget,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 children: [
-                  Container(
-                    width: _chipSize,
-                    height: _chipSize,
-                    alignment: Alignment.center,
+                  AnimatedContainer(
+                    duration: AppMotion.tap,
+                    curve: AppMotion.standard,
+                    width: _radioSize,
+                    height: _radioSize,
                     decoration: BoxDecoration(
-                      color: tone,
                       shape: BoxShape.circle,
-                      border: tone == null
-                          ? Border.all(color: AppColors.quizLetterBorder)
-                          : null,
+                      color: picked ? tone : null,
+                      border: picked
+                          ? null
+                          : Border.all(
+                              color: tone ?? AppColors.quizLetterBorder,
+                              width: tone == null ? 1.5 : 2,
+                            ),
                     ),
-                    child: Text(
-                      letter,
-                      style: AppTypography.labelMono.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                        color: tone == null
-                            ? AppColors.darkTextTertiary
-                            : AppColors.darkBackground,
-                      ),
-                    ),
+                    child: picked
+                        ? Icon(
+                            correct ? AppIcons.check : AppIcons.close,
+                            size: 14,
+                            color: AppColors.darkBackground,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       label,
                       style: AppTypography.body.copyWith(
-                        fontSize: 14,
                         fontWeight: picked ? FontWeight.w600 : FontWeight.w400,
-                        color: answered && !picked
+                        color: answered && !picked && !correct
                             ? AppColors.darkTextTertiary
                             : AppColors.darkTextPrimary,
                       ),
                     ),
                   ),
-                  if (picked) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    Icon(AppIcons.checkCircle, size: 18, color: tone),
-                  ],
                 ],
               ),
             ),

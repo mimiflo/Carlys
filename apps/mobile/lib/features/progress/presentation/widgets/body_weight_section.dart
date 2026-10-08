@@ -8,18 +8,11 @@ import 'add_weight_action.dart';
 import 'body_weight_chart.dart';
 import 'body_weight_history_sheet.dart';
 import 'body_weight_latest.dart';
-import 'body_weight_row.dart';
 
-/// Suivi du poids corporel : courbe, dernières mesures, ajout et suppression.
-///
-/// Même grammaire visuelle que les records : carte de tête, puis lignes.
+/// Suivi du poids corporel : la dernière mesure et sa courbe ; l'ajout dans
+/// l'en-tête, la correction et le retrait dans la feuille des mesures.
 class BodyWeightSection extends ConsumerWidget {
   const BodyWeightSection({super.key});
-
-  /// Mesures listées SOUS LA COURBE. Les autres ne sont pas perdues : la
-  /// feuille d'historique les ouvre toutes, et c'est elle qui rend chacune
-  /// corrigeable. Trois ici est un choix de mise en page, plus une limite.
-  static const int recentCount = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,37 +65,37 @@ class _BodyWeightContent extends StatelessWidget {
       );
     }
 
-    final recent = entries.reversed
-        .take(BodyWeightSection.recentCount)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Une courbe demande deux points : avant, la mesure est un fait qui
-        // se lit seul, pas un graphique vide.
-        if (entries.length < BodyWeightChart.minimumEntries)
-          BodyWeightFirstMeasure(entry: entries.last)
-        else
-          BodyWeightChart(entries: entries),
-        for (final (index, entry) in recent.indexed) ...[
+    // La même carte sous la courbe et sous la première mesure : l'arrivée
+    // de la courbe ne change pas le décor.
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Une courbe demande deux points : avant, la mesure est un fait
+          // qui se lit seul, pas un graphique vide.
+          if (entries.length < BodyWeightChart.minimumEntries)
+            BodyWeightFirstMeasure(entry: entries.last)
+          else
+            BodyWeightChart(entries: entries),
           const SizedBox(height: AppSpacing.sm),
-          WeightRow(entry: entry, isLatest: index == 0),
-        ],
-        if (entries.length > BodyWeightSection.recentCount) ...[
-          const SizedBox(height: AppSpacing.sm),
+          // L'historique — et la correction ou le retrait d'une mesure — vit
+          // dans sa feuille.
           Align(
             alignment: Alignment.centerLeft,
-            child: Builder(
-              builder: (context) => AppPill(
-                label: 'Voir mes ${entries.length} mesures',
-                icon: AppIcons.history,
-                onTap: () => showBodyWeightHistory(context),
+            child: TextButton.icon(
+              onPressed: () => showBodyWeightHistory(context),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(AppIcons.chevronRight),
+              label: const Text('Voir mes mesures'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryLight,
+                padding: EdgeInsets.zero,
+                textStyle: AppTypography.subheading,
               ),
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }

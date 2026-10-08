@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 
-/// L'entrée de la FRISE, depuis l'écran Progrès.
+/// L'entrée de la FRISE, depuis le profil de progression (« Mon parcours »).
 ///
-/// L'écran Progrès répond à « où j'en suis » ; la frise répond à « d'où je
-/// viens ». Deux questions voisines, et c'est pour ça que la porte est ici —
-/// mais deux écrans, parce qu'une période et une histoire ne se lisent pas
+/// Le profil répond à « ce que j'ai gagné » ; la frise répond à « d'où je
+/// viens ». Deux questions voisines, et c'est pour ça que la porte est là —
+/// mais deux écrans, parce qu'un palmarès et une histoire ne se lisent pas
 /// dans la même liste.
 class TimelineEntryCard extends StatelessWidget {
   const TimelineEntryCard({super.key});

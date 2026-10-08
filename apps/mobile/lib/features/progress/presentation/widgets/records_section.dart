@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
-import 'record_row.dart';
+import 'records_card.dart';
 
 /// Records personnels : une ligne par record, du plus récent au plus ancien.
 class RecordsSection extends ConsumerWidget {
@@ -76,10 +76,7 @@ class _RecordsList extends StatelessWidget {
             icon: AppIcons.record,
           )
         else
-          for (final (index, record) in preview.indexed) ...[
-            if (index > 0) const SizedBox(height: AppSpacing.sm),
-            RecordRow(record: record, isLatest: index == 0),
-          ],
+          RecordsCard(records: preview),
       ],
     );
   }
@@ -118,13 +115,8 @@ class _AllRecordsSheet extends StatelessWidget {
             const AppSectionHeader(title: 'Tous mes records'),
             const SizedBox(height: AppSpacing.sm),
             Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: records.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (_, index) =>
-                    RecordRow(record: records[index], isLatest: index == 0),
+              child: SingleChildScrollView(
+                child: RecordsCard(records: records),
               ),
             ),
           ],

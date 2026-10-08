@@ -82,9 +82,15 @@ class _QuizCardState extends State<QuizCard> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.title != null) ...[
-          AppSectionLabel(widget.title!),
-          const SizedBox(height: AppSpacing.xs),
+        if (widget.title case final title?) ...[
+          Row(
+            children: [
+              const Icon(AppIcons.dailyQuestion, color: AppColors.accent),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(child: AppSectionLabel(title)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
         ],
         Text(
           question.prompt,
@@ -93,8 +99,9 @@ class _QuizCardState extends State<QuizCard> {
             color: AppColors.darkTextPrimary,
           ),
         ),
-        const SizedBox(height: AppSpacing.gapRow),
-        for (var index = 0; index < question.choices.length; index++)
+        const SizedBox(height: AppSpacing.xs),
+        for (var index = 0; index < question.choices.length; index++) ...[
+          if (index > 0) const Divider(height: 1, color: AppColors.rowDivider),
           QuizChoice(
             letter: _letters[index],
             label: question.choices[index],
@@ -114,7 +121,8 @@ class _QuizCardState extends State<QuizCard> {
                     );
                   },
           ),
-        const SizedBox(height: AppSpacing.xxs),
+        ],
+        const SizedBox(height: AppSpacing.xs),
         _Hint(
           answered: answered,
           correct: answered && picked == question.answerIndex,

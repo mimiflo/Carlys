@@ -208,6 +208,9 @@ montrer.
 
 ## La frise — « Ton histoire » (22 septembre 2026)
 
+Son entrée vit dans le profil de progression (« Mon parcours »), sous la
+vitrine des récompenses, depuis la refonte d'octobre 2026.
+
 `GET /progress/timeline` réunit ce qui s'est passé, du plus récent au plus
 ancien : séances terminées, pesées, leçons et **franchissements**.
 
@@ -269,6 +272,32 @@ la clé vient d'une version plus récente.
 soixante séances mentirait sur deux ans de pratique. C'est une lecture
 serveur, et elle affiche son erreur hors ligne plutôt qu'un vide. Une page
 déjà lue RESTE quand la suivante échoue.
+
+## L'écran (maquette d'octobre 2026)
+
+De haut en bas : « Progrès / TES EFFORTS, TES RÉSULTATS. » et la pastille de
+période (`AppSelectChip`, partagée avec le jour du journal) ; « Volume
+soulevé » ; les tuiles Séances et Durée ; la porte « Mon parcours » ; les
+records ; le poids corporel.
+
+- **Le volume** : le total, la fenêtre que le serveur a réellement analysée
+  (`from` → `to` de `/progress/overview`, une fenêtre GLISSANTE de 7, 30 ou
+  365 jours, d'où « Du 2 au 8 octobre » et jamais « ce mois-ci »), puis une
+  barre par intervalle de l'API (jour, semaine ou mois) avec son chiffre et
+  une échelle au pas rond. Au-delà de sept barres, les chiffres s'effacent :
+  l'échelle suffit.
+- **Les tuiles** : séances de la période, durée cumulée et nombre de séries.
+  La tuile d'assiduité hebdomadaire a disparu avec la maquette, et avec elle
+  la bascule durée ↔ assiduité selon le nombre de semaines couvertes.
+- **« Mon parcours »** remplace le bloc compact du profil, la vitrine des
+  récompenses et l'entrée de la frise : une seule porte vers le profil de
+  progression, qui porte désormais l'entrée « Ton histoire ».
+- **Les records** tiennent dans une carte, une ligne par record ; la coupe
+  prend l'or, l'argent puis le bronze dans l'ordre de la liste (du plus
+  récent au plus ancien), ce n'est pas un classement.
+- **Le poids** : la dernière mesure, puis la courbe avec son échelle et ses
+  dates ; la liste des pesées et leur correction vivent dans « Voir mes
+  mesures ».
 
 ## Hors périmètre, et pourquoi
 

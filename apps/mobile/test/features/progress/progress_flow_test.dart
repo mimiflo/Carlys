@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
@@ -122,43 +123,40 @@ void main() {
           measuredAt: DateTime.utc(2026, 8, 6, 7),
         ),
       ],
-      // La tuile visée ici est la DURÉE, qui ne s'affiche que tant que
-      // l'assiduité n'est pas calculable : il faut donc que les deux points
-      // tombent dans la même semaine ISO, ce que « hier et avant-hier » ne
-      // garantit pas un lundi.
-      overviewFor: (period) => overviewOf(period, points: pointsMemeSemaine()),
     );
 
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
     await openProgressTab(tester);
 
-    // Carte de volume : 1 540 kg s'affiche en tonnes (« 1,5 t »).
-    expect(find.text('VOLUME HEBDO'), findsOneWidget);
-    expect(find.textContaining('1,5', findRichText: true), findsWidgets);
+    // Carte de volume : le total de la période, en kilos.
+    expect(find.text('VOLUME SOULEVÉ'), findsOneWidget);
+    expect(
+      find.textContaining(formatThousands(1540), findRichText: true),
+      findsOneWidget,
+    );
 
-    // Tuiles : séances, puis durée (l'assiduité hebdomadaire n'est pas
-    // calculable sur une fenêtre d'une seule semaine).
+    // Tuiles : séances, puis durée cumulée.
     expect(find.text('SÉANCES'), findsOneWidget);
-    expect(find.textContaining('1 H 30', findRichText: true), findsOneWidget);
+    expect(find.text('1 H 30'), findsOneWidget);
 
     // Changement de période : la pastille unique ouvre le sélecteur.
-    await tester.tap(find.text('SEMAINE'));
+    await tester.tap(find.text('Semaine'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mois'));
     await tester.pumpAndSettle();
     expect(progress.requestedPeriods, contains(ProgressPeriod.month));
-    expect(find.text('MOIS'), findsOneWidget);
+    expect(find.text('Mois'), findsOneWidget);
 
     // Records : une ligne par record, du plus récent au plus ancien.
     await reveal(tester, find.text('Squat'));
     expect(find.text('Développé couché'), findsNWidgets(2));
-    expect(find.textContaining('80kg', findRichText: true), findsOneWidget);
-    expect(find.textContaining('12rép.', findRichText: true), findsOneWidget);
+    expect(find.text('80 kg'), findsOneWidget);
+    expect(find.text('12 rép.'), findsOneWidget);
 
-    // Poids corporel : dernières mesures, plus récente en premier.
-    await reveal(tester, find.textContaining('84kg', findRichText: true));
-    expect(find.textContaining('82,5', findRichText: true), findsWidgets);
+    // Poids corporel : la dernière mesure en tête de sa courbe.
+    await reveal(tester, find.text('82,5 kg'));
+    expect(find.byType(BodyWeightChart), findsOneWidget);
   });
 
   testWidgets('ouvre la liste complète des records', (tester) async {
@@ -217,15 +215,19 @@ void main() {
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.textContaining('70,5kg', findRichText: true));
+    await reveal(tester, find.text('70,5 kg'));
     expect(find.text('Aucune mesure enregistrée'), findsNothing);
     // Une seule mesure : un fait et une promesse, pas un graphique vide.
     expect(find.text(BodyWeightFirstMeasure.note), findsOneWidget);
     expect(find.byType(BodyWeightChart), findsNothing);
 
+    // La correction et le retrait vivent dans la feuille des mesures.
+    await reveal(tester, find.text('Voir mes mesures'));
+    await tester.tap(find.text('Voir mes mesures'));
+    await tester.pumpAndSettle();
+
     // Supprimer DEMANDE confirmation : effacer la dernière pesée déplace le
     // métabolisme de base, la cible calorique et les macros.
-    await reveal(tester, find.byIcon(AppIcons.delete));
     await tester.tap(find.byIcon(AppIcons.delete));
     await tester.pumpAndSettle();
     expect(find.textContaining('Supprimer la mesure du'), findsOneWidget);
@@ -239,7 +241,7 @@ void main() {
     await tester.tap(find.text('Annuler'));
     await tester.pumpAndSettle();
     expect(progress.removedMetricIds, isEmpty);
-    await reveal(tester, find.textContaining('70,5kg', findRichText: true));
+    expect(find.textContaining('70,5kg', findRichText: true), findsOneWidget);
 
     // Suppression rejouable côté API ; ici la liste redevient vide.
     await tester.tap(find.byIcon(AppIcons.delete));
@@ -247,8 +249,8 @@ void main() {
     await tester.tap(find.widgetWithText(AppButton, 'Supprimer'));
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Aucune mesure enregistrée'));
-    expect(find.text('Aucune mesure enregistrée'), findsOneWidget);
+    // La feuille, restée ouverte, ET la page sous elle le disent.
+    expect(find.text('Aucune mesure enregistrée'), findsNWidgets(2));
     expect(progress.removedMetricIds, hasLength(1));
   });
 
@@ -276,7 +278,7 @@ void main() {
     await tester.pumpAndSettle();
     await openProgressTab(tester);
 
-    await reveal(tester, find.textContaining('84kg', findRichText: true));
+    await reveal(tester, find.text('82,5 kg'));
     expect(find.byType(BodyWeightChart), findsOneWidget);
     expect(find.text(BodyWeightFirstMeasure.note), findsNothing);
   });
@@ -370,10 +372,11 @@ void main() {
   testWidgets(
     'toute mesure est corrigeable, pas seulement les trois dernières',
     (tester) async {
-      // Le trou exact que cette tranche bouche : la page ne listait que les
-      // TROIS dernières mesures, donc une pesée d'il y a deux semaines était
-      // enregistrée, tracée dans la courbe, et impossible à corriger ou à
-      // supprimer, alors que l'API sait le faire depuis le début.
+      // Le trou exact que cette tranche bouchait : la page ne listait que
+      // les TROIS dernières mesures, donc une pesée d'il y a deux semaines
+      // était tracée dans la courbe et impossible à corriger ou à supprimer,
+      // alors que l'API sait le faire depuis le début. La page ne liste plus
+      // aucune mesure : la feuille les porte toutes.
       final progress = FakeProgressRepository(
         bodyMetrics: [
           for (var jour = 1; jour <= 6; jour++)
@@ -390,22 +393,14 @@ void main() {
       await tester.pumpAndSettle();
       await openProgressTab(tester);
 
-      // La page n'en montre que trois : la plus ancienne n'y est pas.
-      await reveal(tester, find.textContaining('86,5kg', findRichText: true));
-      expect(
-        find.textContaining('81,5kg', findRichText: true),
-        findsNothing,
-        reason: 'La page liste les trois dernières, pas toutes.',
-      );
-
-      await reveal(tester, find.text('Voir mes 6 mesures'));
-      await tester.tap(find.text('Voir mes 6 mesures'));
+      await reveal(tester, find.text('Voir mes mesures'));
+      await tester.tap(find.text('Voir mes mesures'));
       await tester.pumpAndSettle();
 
       expect(find.text('Mes 6 mesures'), findsOneWidget);
 
-      // La feuille se pose PAR-DESSUS la page, qui garde ses trois lignes :
-      // on cherche donc dans la liste de la feuille, la dernière empilée.
+      // La feuille se pose PAR-DESSUS la page : on cherche donc dans sa
+      // liste, la dernière empilée.
       final feuille = find.byType(ListView).last;
       for (var jour = 1; jour <= 6; jour++) {
         expect(

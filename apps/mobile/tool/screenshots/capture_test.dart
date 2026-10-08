@@ -339,12 +339,28 @@ final AuthUser profileUser = AuthUser(
 );
 
 FakeProgressRepository progressOf() => FakeProgressRepository(
-  // La galerie fixe sa semaine : « hier et avant-hier » peut tomber de part
-  // et d'autre d'un lundi, et la tuile bascule alors de la DURÉE à
-  // l'ASSIDUITÉ. C'est le comportement juste de l'application, mais une
-  // vitrine qui change de tuile selon le jour où on la photographie n'est
-  // pas une vitrine.
-  overviewFor: (period) => overviewOf(period, points: pointsMemeSemaine()),
+  // Quatre séances sur la semaine glissante : une barre par jour
+  // d'entraînement, chacune avec son chiffre.
+  overviewFor: (period) => overviewOf(
+    period,
+    sessionsCount: 4,
+    setsCount: 52,
+    totalVolumeKg: 12450,
+    totalDurationSeconds: 4 * 72 * 60,
+    points: [
+      for (final (jours, kg) in const [
+        (6, 2850.0),
+        (4, 3400.0),
+        (2, 3050.0),
+        (1, 3150.0),
+      ])
+        ProgressPoint(
+          bucketStart: DateTime.now().toUtc().subtract(Duration(days: jours)),
+          sessionsCount: 1,
+          volumeKg: kg,
+        ),
+    ],
+  ),
   records: [
     // Quatre reculs DISTINCTS : les records s'affichent en âge, et quatre
     // dates identiques se lisent comme une donnée fabriquée. Tous au-delà de
@@ -916,6 +932,13 @@ void main() {
     await pumpApp(
       tester,
       workouts: FakeWorkoutRepository()..history = trainedHistory(),
+    );
+    // Le sommet de « Mon parcours » : décodé avant capture.
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(SummitIllustration.asset),
+        tester.element(find.byType(AppBottomBar)),
+      ),
     );
     await goTab(tester, 'Progrès');
     await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
@@ -1642,8 +1665,43 @@ void main() {
 
   testWidgets('Academy — leçons et question du jour', (tester) async {
     await pumpApp(tester);
+    // Le sommet du parcours et les vignettes des leçons : décodés avant
+    // capture, sans quoi la carte et les lignes se photographient vides.
+    final context = tester.element(find.byType(AppBottomBar));
+    for (final asset in [
+      SummitIllustration.asset,
+      for (final nom in const [
+        'technique-progression',
+        'technique-amplitude',
+        'technique-echauffement',
+        'technique-repos',
+      ])
+        'assets/academy/$nom.webp',
+    ]) {
+      await tester.runAsync(() => precacheImage(AssetImage(asset), context));
+    }
     await goTab(tester, 'Academy');
+    await settle(tester);
     await capture(tester, '28-academy', shows: find.byType(AcademyScreen));
+
+    // La suite de la maquette : la question du jour, puis le premier
+    // domaine et ses leçons en vignettes.
+    await tester.tap(find.widgetWithText(AppPill, 'Musculation'));
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.text('La surcharge progressive'),
+      150,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '28b-academy-domaine',
+      shows: find.text('La surcharge progressive'),
+    );
   });
 
   testWidgets('Academy — fiche d’anatomie dépliée', (tester) async {

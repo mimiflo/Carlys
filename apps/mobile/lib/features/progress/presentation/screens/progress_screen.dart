@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../progression/presentation/widgets/progression_entry_card.dart';
-import '../../../progression/presentation/widgets/reward_showcase.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
 import '../widgets/body_weight_section.dart';
@@ -13,11 +12,10 @@ import '../widgets/progress_first_steps.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/progress_tiles.dart';
 import '../widgets/records_section.dart';
-import '../widgets/timeline_entry_card.dart';
 import '../widgets/volume_card.dart';
 
-/// Progression (maquette 2c) : volume de la période et sa tendance, tuiles
-/// de synthèse, records personnels puis suivi du poids corporel.
+/// Progrès (maquette d'octobre 2026) : volume de la période, tuiles de
+/// synthèse, porte du parcours, records personnels puis poids corporel.
 ///
 /// Il a DEUX visages, et c'est la seule décision qu'il prend : quand les
 /// trois sources ont répondu et n'ont rien (aucune séance sur la période,
@@ -54,8 +52,7 @@ class ProgressScreen extends ConsumerWidget {
             if (firstDay) ...[
               const ProgressFirstSteps(),
               const SizedBox(height: AppSpacing.md),
-              // Le profil de progression tient sur les faits LOCAUX : il
-              // a quelque chose à dire même le premier jour.
+              // Le parcours a quelque chose à dire même le premier jour.
               const ProgressionEntryCard(),
             ] else ...[
               overview.when(
@@ -70,20 +67,9 @@ class ProgressScreen extends ConsumerWidget {
                 data: (data) => _OverviewBlock(overview: data),
               ),
               const SizedBox(height: AppSpacing.md),
-              // Le profil de progression tient sur les faits LOCAUX : il
-              // s'affiche donc même quand les statistiques du serveur, juste
-              // au-dessus, sont en erreur ou hors ligne.
+              // La porte du parcours ne lit aucune donnée : elle s'affiche
+              // même quand les statistiques, juste au-dessus, sont en erreur.
               const ProgressionEntryCard(),
-              const SizedBox(height: AppSpacing.md),
-              // « Où j'en suis » juste au-dessus, « d'où je viens » ici :
-              // deux questions voisines, deux écrans, parce qu'une période
-              // et une histoire ne se lisent pas dans la même liste.
-              const TimelineEntryCard(),
-              const SizedBox(height: AppSpacing.gapSection),
-              // La vitrine, sans « ce qui vient » : l'écran Progrès raconte
-              // la période, le profil raconte l'histoire entière et la
-              // direction.
-              const RewardShowcase(showUpcoming: false),
               const SizedBox(height: AppSpacing.gapSection),
               const RecordsSection(),
               const SizedBox(height: AppSpacing.gapSection),

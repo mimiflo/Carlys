@@ -207,6 +207,16 @@ String formatDayMonth(DateTime date) {
   return '${local.day} ${_monthsShort[local.month - 1].toLowerCase()}';
 }
 
+/// « lun. 5 » — un jour sur l'axe d'un graphe. En heure LOCALE.
+String formatWeekdayDay(DateTime date) {
+  final local = date.toLocal();
+  return '${_weekdaysShort[local.weekday - 1].toLowerCase()} ${local.day}';
+}
+
+/// « sept. », « mai » — un mois sur l'axe d'un graphe. En heure LOCALE.
+String formatMonthShort(DateTime date) =>
+    _monthsShort[date.toLocal().month - 1].toLowerCase();
+
 /// « 7 au 13 septembre 2026 », « 28 septembre au 4 octobre 2026 » : deux
 /// jours CIVILS (lus tels quels, sans fuseau), le mois et l'année écrits une
 /// fois quand ils sont communs. « au » plutôt qu'un tiret : l'appli n'affiche

@@ -5,7 +5,7 @@ import 'package:carlys_mobile/features/academy/presentation/widgets/academy_prog
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// La carte « Où tu en es » : le compte d'abord, le pourcentage avec sa
+/// La carte « Ma progression » : le compte d'abord, le pourcentage avec sa
 /// base, le niveau comme jalon — jamais comme note.
 void main() {
   Future<void> monter(WidgetTester tester, AcademyProgress progress) async {
@@ -35,7 +35,7 @@ void main() {
     await monter(tester, progression(0));
 
     expect(find.text('0 leçons sur 38'), findsOneWidget);
-    expect(find.text('0 % du pack'), findsOneWidget);
+    expect(find.text('0 % du pack', findRichText: true), findsOneWidget);
     expect(
       find.textContaining('Niveau'),
       findsNothing,
@@ -49,7 +49,7 @@ void main() {
     await monter(tester, progression(12));
 
     expect(find.text('12 leçons sur 38'), findsOneWidget);
-    expect(find.text('31 % du pack'), findsOneWidget);
+    expect(find.text('31 % du pack', findRichText: true), findsOneWidget);
     expect(find.text('Niveau 3'), findsOneWidget);
     expect(find.text('Assiduité'), findsOneWidget);
     expect(find.text('encore 8 leçons avant Profondeur'), findsOneWidget);
@@ -58,7 +58,7 @@ void main() {
   testWidgets('au sommet du barème, aucun prochain pas promis', (tester) async {
     await monter(tester, progression(38));
 
-    expect(find.text('100 % du pack'), findsOneWidget);
+    expect(find.text('100 % du pack', findRichText: true), findsOneWidget);
     expect(find.text('Niveau 5'), findsOneWidget);
     expect(find.text('Érudition'), findsOneWidget);
     expect(find.textContaining('encore'), findsNothing);

@@ -5,11 +5,8 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../utils/progress_stats.dart';
 
-/// Grille de deux tuiles sous la carte de volume.
-///
-/// La seconde tuile montre l'assiduité hebdomadaire quand les points la
-/// rendent calculable ; sinon elle bascule sur la durée réellement
-/// enregistrée plutôt que d'afficher un pourcentage inventé.
+/// Les deux tuiles sous le volume (maquette d'octobre 2026) : le nombre de
+/// séances de la période, puis leur durée cumulée et le nombre de séries.
 class ProgressTiles extends StatelessWidget {
   const ProgressTiles({required this.overview, super.key});
 
@@ -17,114 +14,97 @@ class ProgressTiles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final attendance = weeklyAttendance(overview.points, overview.period);
-
-    // Les deux tuiles ont la même structure (label, valeur, sous-ligne sur
-    // une ligne) : leurs hauteurs se répondent sans contrainte explicite.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _ProgressTile(
-            label: 'Séances',
-            value: formatThousands(overview.sessionsCount),
-            caption: periodCaption(overview.period),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.gapTile),
-        Expanded(
-          child: attendance == null
-              ? _ProgressTile(
-                  label: 'Durée',
-                  value: formatDurationShort(overview.totalDurationSeconds),
-                  caption: '${formatThousands(overview.setsCount)} séries',
-                )
-              : _ProgressTile(
-                  label: 'Assiduité',
-                  value: formatThousands(attendance.percent),
-                  unit: '%',
-                  caption: 'série de ${formatThousands(attendance.streak)}',
-                ),
-        ),
-      ],
+    final seances = _ProgressTile(
+      icon: AppIcons.equipmentDumbbell,
+      label: 'Séances',
+      value: formatThousands(overview.sessionsCount),
+      caption: periodCaption(overview.period),
+    );
+    final duree = _ProgressTile(
+      icon: AppIcons.time,
+      label: 'Durée',
+      value: formatDurationShort(overview.totalDurationSeconds),
+      caption: '${formatThousands(overview.setsCount)} séries',
+    );
+    // En texte agrandi, les tuiles s'EMPILENT sur toute la largeur : côte à
+    // côte, chacune ne laissait au texte qu'une soixantaine de points, et
+    // « SÉANCES » se coupait en son milieu sur 320 points.
+    if (MediaQuery.textScalerOf(context).scale(1) > 1.2) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          seances,
+          const SizedBox(height: AppSpacing.gapTile),
+          duree,
+        ],
+      );
+    }
+    // Côte à côte, les deux tuiles ont la même structure : leurs hauteurs
+    // se répondent.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: seances),
+          const SizedBox(width: AppSpacing.gapTile),
+          Expanded(child: duree),
+        ],
+      ),
     );
   }
 }
 
-/// Tuile : label mono, valeur mono, sous-ligne descriptive en primaryLight.
 class _ProgressTile extends StatelessWidget {
   const _ProgressTile({
+    required this.icon,
     required this.label,
     required this.value,
     required this.caption,
-    this.unit,
   });
 
+  final IconData icon;
   final String label;
   final String value;
-  final String? unit;
   final String caption;
+
+  static const double _iconSize = 30;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: '$label : $value${unit ?? ''}, $caption',
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: const BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: AppRadius.listRowAll,
-          border: Border.fromBorderSide(
-            BorderSide(color: AppColors.darkBorder),
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionLabel(label),
+        const SizedBox(height: AppSpacing.xxs),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: AppTypography.pageTitle.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
         ),
-        child: Column(
+        Text(
+          caption,
+          style: AppTypography.label.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
+        ),
+      ],
+    );
+    return Semantics(
+      label: '$label : $value, $caption',
+      excludeSemantics: true,
+      child: AppCard(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.resized(
-                AppTypography.labelMono,
-                9,
-              ).copyWith(color: AppColors.darkTextTertiary),
-            ),
-            const SizedBox(height: 7),
-            Text.rich(
-              TextSpan(
-                text: value,
-                style: AppTypography.resized(AppTypography.metricM, 22)
-                    .copyWith(
-                      letterSpacing: -0.66,
-                      color: AppColors.darkTextPrimary,
-                    ),
-                children: [
-                  if (unit != null)
-                    TextSpan(
-                      text: unit,
-                      style: AppTypography.metricS.copyWith(
-                        fontSize: 13,
-                        color: AppColors.darkTextTertiary,
-                      ),
-                    ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 7),
-            Text(
-              caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.body.copyWith(
-                fontSize: 11,
-                height: 1,
-                color: AppColors.primaryLight,
-              ),
-            ),
+            Icon(icon, size: _iconSize, color: AppColors.primaryLight),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: text),
           ],
         ),
       ),

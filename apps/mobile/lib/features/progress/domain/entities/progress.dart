@@ -37,9 +37,16 @@ class ProgressOverviewEntity {
     required this.totalVolumeKg,
     required this.totalDurationSeconds,
     required this.points,
+    this.from,
+    this.to,
   });
 
   final ProgressPeriod period;
+
+  /// La fenêtre réellement analysée par le serveur (« Du 9 septembre au
+  /// 8 octobre ») ; `null` si la réponse ne la porte pas.
+  final DateTime? from;
+  final DateTime? to;
   final int sessionsCount;
   final int setsCount;
   final double totalVolumeKg;

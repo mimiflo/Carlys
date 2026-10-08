@@ -3,31 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
-import 'progress_card_grammar.dart';
 
-/// Carte de tête de la section poids : la même surface sous la courbe et
-/// sous la première mesure, pour que l'arrivée de la courbe ne change pas
-/// le décor.
-class BodyWeightCard extends StatelessWidget {
-  const BodyWeightCard({required this.child, super.key});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: progressCardPadding,
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardMainAll,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// « Dernière mesure » en grand : un fait, lisible seul.
+/// « 78,4 kg · Dernière mesure · 21 sept. » (maquette d'octobre 2026) : la
+/// valeur en grand, sa date à côté.
 class BodyWeightLatest extends StatelessWidget {
   const BodyWeightLatest({required this.entry, super.key});
 
@@ -35,34 +13,23 @@ class BodyWeightLatest extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.end,
+      spacing: AppSpacing.sm,
       children: [
-        const AppSectionLabel(
-          'Dernière mesure',
-          color: AppColors.darkTextTertiary,
+        Text(
+          '${formatDecimal(entry.value)} kg',
+          style: AppTypography.pageTitle.copyWith(
+            color: AppColors.darkTextPrimary,
+          ),
         ),
-        const SizedBox(height: progressCardLabelGap),
-        Text.rich(
-          TextSpan(
-            text: formatDecimal(entry.value),
-            style:
-                AppTypography.resized(
-                  AppTypography.metricL,
-                  progressCardValueFontSize,
-                ).copyWith(
-                  letterSpacing: progressCardValueLetterSpacing,
-                  color: AppColors.darkTextPrimary,
-                ),
-            children: [
-              TextSpan(
-                text: ' kg',
-                style: AppTypography.metricS.copyWith(
-                  fontSize: progressCardUnitFontSize,
-                  color: AppColors.darkTextTertiary,
-                ),
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+          child: Text(
+            'Dernière mesure · ${formatDayMonth(entry.measuredAt)}',
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ),
       ],
@@ -70,8 +37,6 @@ class BodyWeightLatest extends StatelessWidget {
   }
 }
 
-/// UNE mesure : la valeur comme un fait, et ce qu'il manque pour la courbe.
-///
 /// Avec un seul point, un graphique ne trace rien : la carte affichait un
 /// rectangle vide de 104 points sous un balayage qui n'animait aucun tracé,
 /// et une date orpheline. Après le geste que l'écran vient d'inviter, on
@@ -86,18 +51,16 @@ class BodyWeightFirstMeasure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BodyWeightCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BodyWeightLatest(entry: entry),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            note,
-            style: AppTypography.label.copyWith(color: AppColors.primaryLight),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BodyWeightLatest(entry: entry),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          note,
+          style: AppTypography.label.copyWith(color: AppColors.primaryLight),
+        ),
+      ],
     );
   }
 }
