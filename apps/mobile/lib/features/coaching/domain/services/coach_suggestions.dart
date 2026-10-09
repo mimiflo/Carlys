@@ -54,54 +54,98 @@ const int _freshRecordDays = 21;
 /// En deçà, la variation de poids est du bruit de balance, pas une tendance.
 const double _weightNoiseKg = 0.4;
 
+/// Ce que propose une amorce : l'écran en tire son icône (une horloge pour
+/// adapter une séance, une ampoule pour comprendre…), le domaine n'en sait
+/// rien de plus.
+enum CoachSuggestionKind { adapt, understand, progress, weight, start }
+
+/// Une amorce : sa phrase, et ce qu'elle propose.
+class CoachSuggestion {
+  const CoachSuggestion(this.text, this.kind);
+
+  final String text;
+  final CoachSuggestionKind kind;
+}
+
 /// Trois puces au plus : au-delà, la bande défile et la dernière ne se lit
 /// plus. Elles sortent dans l'ordre d'utilité, la plus actionnable d'abord.
 const int maxCoachSuggestions = 3;
 
-List<String> coachSuggestions(CoachContext context) {
-  final suggestions = <String>[];
+List<CoachSuggestion> coachSuggestions(CoachContext context) {
+  final suggestions = <CoachSuggestion>[];
 
   // La plus actionnable : elle finit sur une séance qu'on peut lancer.
   if (context.templateName != null) {
-    suggestions.add('Adapte « ${context.templateName} » à 30 minutes');
+    suggestions.add(
+      CoachSuggestion(
+        'Adapte « ${context.templateName} » à 30 minutes',
+        CoachSuggestionKind.adapt,
+      ),
+    );
   } else if (context.hasHistory) {
-    suggestions.add('Propose-moi une séance courte');
+    suggestions.add(
+      const CoachSuggestion(
+        'Propose-moi une séance courte',
+        CoachSuggestionKind.adapt,
+      ),
+    );
   }
 
   // L'identité choisie oriente l'angle : c'est la promesse des profils.
   final profile = context.carlysProfile;
   if (profile != null) {
-    suggestions.add(switch (profile) {
-      CarlysProfile.constructeur =>
-        'Explique-moi les bases d’une séance efficace',
-      CarlysProfile.challenger => 'Rends ma prochaine séance plus exigeante',
-      CarlysProfile.athlete => 'Aide-moi à tenir mon objectif cette semaine',
-      CarlysProfile.stratege => 'Explique-moi le pourquoi de mes séances',
-    });
+    suggestions.add(
+      CoachSuggestion(
+        switch (profile) {
+          CarlysProfile.constructeur =>
+            'Explique-moi les bases d’une séance efficace',
+          CarlysProfile.challenger =>
+            'Rends ma prochaine séance plus exigeante',
+          CarlysProfile.athlete =>
+            'Aide-moi à tenir mon objectif cette semaine',
+          CarlysProfile.stratege => 'Explique-moi le pourquoi de mes séances',
+        },
+        switch (profile) {
+          // Pousser, tenir : une progression ; apprendre : une explication.
+          CarlysProfile.challenger ||
+          CarlysProfile.athlete => CoachSuggestionKind.progress,
+          CarlysProfile.constructeur ||
+          CarlysProfile.stratege => CoachSuggestionKind.understand,
+        },
+      ),
+    );
   }
 
   final record = context.recordExerciseName;
   final age = context.recordAgeDays;
   if (record != null && age != null) {
     suggestions.add(
-      age <= _freshRecordDays
-          ? 'Comment continuer sur $record ?'
-          : 'Je stagne sur $record, que faire ?',
+      CoachSuggestion(
+        age <= _freshRecordDays
+            ? 'Comment continuer sur $record ?'
+            : 'Je stagne sur $record, que faire ?',
+        CoachSuggestionKind.progress,
+      ),
     );
   }
 
   final trend = context.weightTrendKg;
   if (trend != null && trend.abs() >= _weightNoiseKg) {
     suggestions.add(
-      trend > 0
-          ? 'Mon poids monte, dois-je changer quelque chose ?'
-          : 'Mon poids baisse, est-ce que je perds du muscle ?',
+      CoachSuggestion(
+        trend > 0
+            ? 'Mon poids monte, dois-je changer quelque chose ?'
+            : 'Mon poids baisse, est-ce que je perds du muscle ?',
+        CoachSuggestionKind.weight,
+      ),
     );
   }
 
   // Aucune donnée : une seule puce, qui n'invente rien sur l'utilisateur.
   if (suggestions.isEmpty) {
-    return const ['Par où je commence ?'];
+    return const [
+      CoachSuggestion('Par où je commence ?', CoachSuggestionKind.start),
+    ];
   }
 
   return suggestions.take(maxCoachSuggestions).toList();

@@ -93,7 +93,20 @@ final List<CoachMessage> _conversation = [
   ),
 ];
 
-const List<String> _suggestions = ['Ajuster ma séance', 'Où j’en suis ?'];
+const List<CoachSuggestion> _suggestions = [
+  CoachSuggestion(
+    'Adapte « Push force » à 30 minutes',
+    CoachSuggestionKind.adapt,
+  ),
+  CoachSuggestion(
+    'Explique-moi le pourquoi de mes séances',
+    CoachSuggestionKind.understand,
+  ),
+  CoachSuggestion(
+    'Comment continuer sur Développé couché ?',
+    CoachSuggestionKind.progress,
+  ),
+];
 
 void main() {
   setUpAll(loadRealFonts);
@@ -106,6 +119,7 @@ void main() {
     CoachGreeting? greeting,
     TrainingProfile? profile,
     TrainingGoal? goal,
+    String? profileLabel,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -159,6 +173,8 @@ void main() {
             isOffline: isOffline,
             live: live,
             greeting: greeting,
+            profileLabel: profileLabel,
+            onOpenProfile: () {},
           ),
         ),
       ),
@@ -198,6 +214,13 @@ void main() {
         after: after,
         at: DateTime.now(),
       );
+
+  testWidgets('coach — accueil, fil vide (maquette d’octobre 2026)', (
+    tester,
+  ) async {
+    await pumpCoach(tester, messages: const [], profileLabel: 'Stratège');
+    await capture(tester, 'coach-00-accueil');
+  });
 
   testWidgets('coach — première ouverture', (tester) async {
     await pumpCoach(

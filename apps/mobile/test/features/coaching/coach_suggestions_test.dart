@@ -8,9 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// en dur**. Sans donnée, il ne reste qu'une puce générique ; avec des
 /// données, chaque puce nomme quelque chose que l'utilisateur possède
 /// vraiment.
+/// Les phrases seules : ce que la plupart des épreuves comparent.
+List<String> _texts(CoachContext context) => [
+  for (final suggestion in coachSuggestions(context)) suggestion.text,
+];
+
 void main() {
   test('sans aucune donnée, une seule puce, et elle n’invente rien', () {
-    final suggestions = coachSuggestions(const CoachContext());
+    final suggestions = _texts(const CoachContext());
 
     expect(suggestions, hasLength(1));
     // Aucun nom d'exercice, aucun modèle, aucune tendance : rien qui
@@ -21,7 +26,7 @@ void main() {
   test(
     'un modèle disponible donne la puce la plus actionnable, en premier',
     () {
-      final suggestions = coachSuggestions(
+      final suggestions = _texts(
         const CoachContext(templateName: 'Push A', hasHistory: true),
       );
 
@@ -32,22 +37,20 @@ void main() {
   test(
     'sans modèle mais avec un historique, la séance courte prend le relais',
     () {
-      final suggestions = coachSuggestions(
-        const CoachContext(hasHistory: true),
-      );
+      final suggestions = _texts(const CoachContext(hasHistory: true));
 
       expect(suggestions.first, 'Propose-moi une séance courte');
     },
   );
 
   test('un record récent invite à continuer, un record ancien à débloquer', () {
-    final recent = coachSuggestions(
+    final recent = _texts(
       const CoachContext(
         recordExerciseName: 'Développé couché',
         recordAgeDays: 3,
       ),
     );
-    final old = coachSuggestions(
+    final old = _texts(
       const CoachContext(
         recordExerciseName: 'Développé couché',
         recordAgeDays: 90,
@@ -60,8 +63,8 @@ void main() {
 
   test('une variation de poids sous le bruit de balance ne dit rien', () {
     // 200 g d'écart, c'est l'heure de la pesée, pas une tendance.
-    final noise = coachSuggestions(const CoachContext(weightTrendKg: 0.2));
-    final real = coachSuggestions(const CoachContext(weightTrendKg: 1.4));
+    final noise = _texts(const CoachContext(weightTrendKg: 0.2));
+    final real = _texts(const CoachContext(weightTrendKg: 1.4));
 
     expect(noise, hasLength(1));
     expect(noise.single, isNot(contains('poids')));
@@ -69,8 +72,8 @@ void main() {
   });
 
   test('la hausse et la baisse ne posent pas la même question', () {
-    final up = coachSuggestions(const CoachContext(weightTrendKg: 1.2));
-    final down = coachSuggestions(const CoachContext(weightTrendKg: -1.2));
+    final up = _texts(const CoachContext(weightTrendKg: 1.2));
+    final down = _texts(const CoachContext(weightTrendKg: -1.2));
 
     expect(up.single, isNot(down.single));
   });
@@ -80,7 +83,7 @@ void main() {
     () {
       final byProfile = {
         for (final profile in CarlysProfile.values)
-          profile: coachSuggestions(CoachContext(carlysProfile: profile)),
+          profile: _texts(CoachContext(carlysProfile: profile)),
       };
 
       // Chaque profil a la sienne, et elles ne se ressemblent pas.
@@ -88,13 +91,13 @@ void main() {
       expect(chips, hasLength(CarlysProfile.values.length));
 
       // Sans profil : rien n'apparaît — null n'est jamais un défaut.
-      final none = coachSuggestions(const CoachContext());
+      final none = _texts(const CoachContext());
       expect(none.single, 'Par où je commence ?');
     },
   );
 
   test('l’amorce du profil vient après la plus actionnable', () {
-    final suggestions = coachSuggestions(
+    final suggestions = _texts(
       const CoachContext(
         carlysProfile: CarlysProfile.challenger,
         templateName: 'Push A',
@@ -106,7 +109,7 @@ void main() {
   });
 
   test('la bande ne dépasse jamais trois puces', () {
-    final suggestions = coachSuggestions(
+    final suggestions = _texts(
       const CoachContext(
         templateName: 'Push A',
         recordExerciseName: 'Squat',

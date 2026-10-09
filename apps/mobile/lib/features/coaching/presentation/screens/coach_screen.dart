@@ -4,9 +4,10 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/services/coach_greeting.dart';
+import '../../domain/services/coach_suggestions.dart';
 import '../widgets/coach_composer.dart';
-import '../widgets/coach_greeting_bubble.dart';
 import '../widgets/coach_header.dart';
+import '../widgets/coach_intro.dart';
 import '../widgets/coach_notices.dart';
 import '../widgets/coach_read_only_panel.dart';
 import '../widgets/coach_suggestions.dart';
@@ -37,11 +38,18 @@ class CoachScreen extends StatelessWidget {
     this.greeting,
     this.frame,
     this.replyFooter,
+    this.profileLabel,
+    this.onOpenProfile,
     super.key,
   });
 
   final List<CoachMessage> messages;
-  final List<String> suggestions;
+  final List<CoachSuggestion> suggestions;
+
+  /// Le profil Carlys, posé sous « Ton coach est là » ; et l'écran qui le
+  /// change.
+  final String? profileLabel;
+  final VoidCallback? onOpenProfile;
   final TextEditingController composerController;
   final ValueChanged<String> onSend;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
@@ -92,6 +100,7 @@ class CoachScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final empty = messages.isEmpty && live == null;
     return Scaffold(
       // La barre de saisie reste EN BAS, et passe au-dessus du clavier quand
       // il s'ouvre. Rien à calculer ici pour cela, et surtout aucune réserve
@@ -112,10 +121,18 @@ class CoachScreen extends StatelessWidget {
             const CoachHeader(),
             ?frame,
             Expanded(
-              child: messages.isEmpty && live == null
-                  ? _CoachIntro(
+              child: empty
+                  ? CoachIntro(
                       greeting: greeting,
+                      // Hors ligne ou en lecture seule, une amorce enverrait
+                      // une question qui ne partira pas, ou sera refusée.
+                      suggestions: isOffline || onUnlock != null
+                          ? const []
+                          : suggestions,
+                      onSelected: onSend,
                       bubbleWidthFactor: _bubbleWidthFactor,
+                      profileLabel: profileLabel,
+                      onOpenProfile: onOpenProfile,
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) => CoachThreadView(
@@ -145,7 +162,8 @@ class CoachScreen extends StatelessWidget {
                 child: CoachReadOnlyPanel(onUnlock: unlock),
               )
             else ...[
-              if (suggestions.isNotEmpty && !isOffline) ...[
+              // Fil vide, les amorces sont déjà des cartes dans l'accueil.
+              if (suggestions.isNotEmpty && !isOffline && !empty) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.gutter,
@@ -154,7 +172,7 @@ class CoachScreen extends StatelessWidget {
                     AppSpacing.sm,
                   ),
                   child: CoachSuggestions(
-                    suggestions: suggestions,
+                    suggestions: [for (final s in suggestions) s.text],
                     onSelected: onSend,
                   ),
                 ),
@@ -177,57 +195,6 @@ class CoachScreen extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Un fil vide : qui est le coach, au centre ; puis, au premier rang du fil
-/// à venir, son bonjour ([greeting]) quand la page en a écrit un.
-class _CoachIntro extends StatelessWidget {
-  const _CoachIntro({required this.greeting, required this.bubbleWidthFactor});
-
-  final CoachGreeting? greeting;
-  final double bubbleWidthFactor;
-
-  @override
-  Widget build(BuildContext context) {
-    final greeting = this.greeting;
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          // Taille naturelle, jamais rognée (clavier ouvert, texte
-          // agrandi) : l'encart se centre quand il y a de la place, et le
-          // tout défile quand il n'y en a plus.
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox.shrink(),
-              AppEmptyState(
-                icon: AppIcons.coach,
-                title: 'Ton coach est là',
-                message: greeting == null
-                    ? 'Pose-lui une question sur ta progression, ou '
-                          'demande-lui d’adapter ta séance à ton temps '
-                          'du jour.'
-                    : 'Il lit tes séances, tes records et tes mesures '
-                          'avant de te répondre.',
-              ),
-              if (greeting != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: CoachGreetingBubble(
-                    text: greeting.text,
-                    since: greeting.at,
-                    maxWidth: constraints.maxWidth * bubbleWidthFactor,
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );

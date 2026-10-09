@@ -35,11 +35,17 @@ class AcademyDomainHeader extends StatelessWidget {
   /// d'entrée — avant la fin, il poserait des questions jamais lues.
   final VoidCallback? onQuiz;
 
+  static const double _trophySize = 18;
+
   @override
   Widget build(BuildContext context) {
     final avancement = progress;
 
-    return Semantics(
+    // Le titre porte TOUT ce que l'en-tête dit (nom, compte, bouclé) ; le
+    // lien du quiz reste un nœud à part, sans quoi il serait exclu avec le
+    // reste et le lecteur d'écran ne pourrait plus l'actionner.
+    final title = Semantics(
+      header: true,
       label: avancement == null
           ? category.label
           : '${category.label}, ${avancement.abordees} leçons abordées '
@@ -47,92 +53,80 @@ class AcademyDomainHeader extends StatelessWidget {
                 'du domaine'
                 '${avancement.termine ? ', domaine bouclé' : ''}',
       excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Le compteur à droite du titre quand il tient, dessous sinon :
-          // après un `Spacer`, non flexible, il sortait de l'écran dès le
-          // texte ×1,5 sur 360 points.
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: AppSpacing.xs,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(child: AppSectionLabel(category.label)),
-                  if (avancement != null && avancement.termine) ...[
-                    const SizedBox(width: AppSpacing.xxs),
-                    const Icon(
-                      AppIcons.record,
-                      size: 14,
-                      color: AppColors.accent,
-                    ),
-                  ],
-                ],
+          Flexible(
+            child: AppWholeWordsText(
+              category.label,
+              style: AppTypography.heading.copyWith(
+                color: AppColors.darkTextPrimary,
               ),
-              if (avancement != null)
-                Text(
+            ),
+          ),
+          if (avancement != null && avancement.termine) ...[
+            const SizedBox(width: AppSpacing.xxs),
+            const Icon(
+              AppIcons.record,
+              size: _trophySize,
+              color: AppColors.accent,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Le titre à gauche ; à droite, le quiz d'un domaine bouclé, ou
+        // le compteur — dessous quand ils ne tiennent pas côte à côte.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.xs,
+          children: [
+            title,
+            if (avancement != null && avancement.termine && onQuiz != null)
+              Semantics(
+                button: true,
+                label:
+                    'Quiz ${category.label} : rejouer les questions du '
+                    'domaine',
+                onTap: onQuiz,
+                excludeSemantics: true,
+                child: AppLinkButton(
+                  label: 'Quiz du domaine',
+                  onPressed: onQuiz!,
+                ),
+              )
+            else if (avancement != null)
+              // Déjà dit par le titre : le compteur ne se relit pas.
+              ExcludeSemantics(
+                child: Text(
                   '${avancement.abordees} / ${avancement.total}'
                   ' · ${avancement.pourcent} %',
-                  style: AppTypography.resized(AppTypography.labelMono, 11)
-                      .copyWith(
-                        color: avancement.termine
-                            ? AppColors.accent
-                            : AppColors.darkTextTertiary,
-                      ),
+                  style: AppTypography.resized(
+                    AppTypography.labelMono,
+                    11,
+                  ).copyWith(color: AppColors.darkTextTertiary),
                 ),
-            ],
-          ),
-          if (avancement != null) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            AppGauge(
+              ),
+          ],
+        ),
+        if (avancement != null) ...[
+          const SizedBox(height: AppSpacing.xxs),
+          ExcludeSemantics(
+            child: AppGauge(
               progress: avancement.ratio,
               color: avancement.termine
                   ? AppColors.accent
                   : AppColors.primaryLight,
               height: 3,
             ),
-          ],
-          if (avancement != null && avancement.termine && onQuiz != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Semantics(
-              button: true,
-              label:
-                  'Quiz ${category.label} : rejouer les questions du '
-                  'domaine',
-              excludeSemantics: true,
-              child: InkWell(
-                onTap: onQuiz,
-                borderRadius: AppRadius.cardSecondaryAll,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      AppIcons.question,
-                      size: 14,
-                      color: AppColors.primaryLight,
-                    ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    Text(
-                      'Quiz du domaine',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.primaryLight,
-                      ),
-                    ),
-                    const Icon(
-                      AppIcons.chevronRight,
-                      size: 16,
-                      color: AppColors.primaryLight,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }

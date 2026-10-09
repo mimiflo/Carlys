@@ -159,7 +159,7 @@ class _Question extends StatelessWidget {
           key: ValueKey(lesson.id),
           question: lesson.question,
           title: lesson.title,
-          hint: 'Touche une réponse. Ici, rien n’est noté.',
+          hint: 'Choisis, puis valide. Ici, rien n’est noté.',
           onAnswered: (_, correct) => onAnswered(correct),
         ),
         if (repondu) ...[

@@ -125,6 +125,10 @@ class _JourneyStageScreenState extends ConsumerState<JourneyStageScreen> {
                     ],
                     for (final lesson in duParcours) ...[
                       LessonCard(
+                        // L'état d'une leçon (dépliée ou non) la suit, et non
+                        // son rang : le bandeau d'étape validée s'insère
+                        // au-dessus après une réponse.
+                        key: ValueKey(lesson.id),
                         lesson: lesson,
                         answeredChoice: answered[lesson.id],
                         onAnswered: (choice, correct) => _repondre(

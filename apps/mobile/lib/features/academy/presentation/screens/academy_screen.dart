@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import '../../domain/academy_journey.dart';
 import '../../domain/academy_progress.dart';
 import '../../domain/entities/academy.dart';
 import '../providers/academy_progress_providers.dart';
@@ -12,9 +11,8 @@ import '../providers/academy_providers.dart';
 import '../widgets/academy_domain_bar.dart';
 import '../widgets/academy_domain_header.dart';
 import '../widgets/academy_domain_sheet.dart';
-import '../widgets/academy_progress_card.dart';
+import '../widgets/academy_overview.dart';
 import '../widgets/domain_completed_banner.dart';
-import '../widgets/journey_entry_card.dart';
 import '../widgets/lesson_card.dart';
 import '../widgets/quiz_card.dart';
 
@@ -43,6 +41,24 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
   /// Domaine tout juste bouclé, à fêter une fois. Local, comme le filtre :
   /// c'est un événement d'écran, pas une donnée partagée.
   AcademyCategory? _aFeter;
+
+  final ScrollController _scroll = ScrollController();
+
+  /// Changer de domaine change toute la page (la vue d'ensemble s'efface
+  /// ou revient) : elle repart du haut, sans quoi l'ancien défilement
+  /// laissait voir le vide sous des cartes disparues.
+  void _choisir(AcademyCategory? domaine) {
+    setState(() => _domaine = domaine);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -112,6 +128,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
               .where((category) => countOf(category) > 0)
               .toList();
           return ListView(
+            controller: _scroll,
             padding: EdgeInsets.fromLTRB(
               AppSpacing.gutter,
               MediaQuery.paddingOf(context).top + AppSpacing.gapSection,
@@ -139,27 +156,11 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                 ),
                 const SizedBox(height: AppSpacing.gapRow),
               ],
-              if (progress != null) ...[
-                AcademyProgressCard(progress: progress),
-                const SizedBox(height: AppSpacing.gapRow),
-              ],
-              if (journey != null) ...[
-                JourneyEntryCard(
-                  progress: journey,
-                  onOpen: () => context.push(AppRoutes.academyJourney),
-                  onResume: () {
-                    final courante = journey.etapeCourante;
-                    if (courante != null) {
-                      context.push(
-                        AppRoutes.academyJourneyStage(
-                          academyJourney[courante].rang,
-                        ),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.gapRow),
-              ],
+              // Un domaine choisi, l'écran se consacre à ses leçons
+              // (maquette d'octobre 2026) : la vue d'ensemble — progression,
+              // parcours, question du jour — revient avec « Tous ».
+              if (_domaine == null)
+                AcademyOverview(progress: progress, journey: journey),
               AppSectionHeader(
                 title: 'Explorer les domaines',
                 trailing: 'Voir les ${domaines.length}',
@@ -172,7 +173,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                     countOf: countOf,
                   );
                   if (choisi != null && mounted) {
-                    setState(() => _domaine = choisi);
+                    _choisir(choisi);
                   }
                 },
               ),
@@ -180,12 +181,12 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
               AcademyDomainBar(
                 domaines: domaines,
                 selected: _domaine,
-                onSelect: (domaine) => setState(() => _domaine = domaine),
+                onSelect: _choisir,
                 countOf: countOf,
                 readOf: (category) => progress?.parDomaine[category]?.abordees,
               ),
               const SizedBox(height: AppSpacing.gapRow),
-              if (daily != null) ...[
+              if (daily != null && _domaine == null) ...[
                 QuizCard(
                   question: daily.question,
                   title: 'Question du jour',
@@ -202,9 +203,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                 const SizedBox(height: AppSpacing.gapRow),
               ],
               // « Tous » déroule les douze sections ; un domaine choisi n'en
-              // montre qu'une, et l'en-tête disparaît alors : la pastille
-              // active le dit déjà, le répéter ne fait que pousser la première
-              // leçon vers le bas.
+              // montre qu'une.
               for (final category in AcademyCategory.values.where(
                 (category) => _domaine == null || category == _domaine,
               )) ...[
@@ -222,6 +221,9 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                   (lesson) => lesson.category == category,
                 )) ...[
                   LessonCard(
+                    // L'état d'une leçon la suit, pas son rang : changer de
+                    // domaine décale toute la liste.
+                    key: ValueKey(lesson.id),
                     lesson: lesson,
                     showCategory: false,
                     answeredChoice: answered[lesson.id],

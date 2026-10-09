@@ -77,6 +77,8 @@ void main() {
     await monter(tester);
 
     await tester.tap(find.text('Alpha'));
+    await tester.pump();
+    await tester.tap(find.text('Valider ma réponse'));
     await tester.pumpAndSettle();
     expect(find.text('Explication hyrox-1.'), findsOneWidget);
 
@@ -96,10 +98,14 @@ void main() {
 
     // Une bonne réponse, puis une mauvaise.
     await tester.tap(find.text('Alpha'));
+    await tester.pump();
+    await tester.tap(find.text('Valider ma réponse'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Question suivante'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gamma'));
+    await tester.pump();
+    await tester.tap(find.text('Valider ma réponse'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Voir le résultat'));
     await tester.pumpAndSettle();

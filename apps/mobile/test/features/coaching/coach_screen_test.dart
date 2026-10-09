@@ -1,10 +1,12 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_state.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_live_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_suggestions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,12 +47,16 @@ void main() {
   Future<void> pumpCoach(
     WidgetTester tester, {
     List<CoachMessage> messages = conversation,
-    List<String> suggestions = const ['Ajuster ma séance'],
+    List<CoachSuggestion> suggestions = const [
+      CoachSuggestion('Ajuster ma séance', CoachSuggestionKind.adapt),
+    ],
     bool isOffline = false,
     CoachLiveTurn? live,
     ValueChanged<String>? onSend,
     ValueChanged<CoachSessionProposal>? onOpenProposal,
     ValueChanged<CoachCreatedWorkout>? onOpenCreated,
+    String? profileLabel,
+    VoidCallback? onOpenProfile,
   }) async {
     final controller = TextEditingController();
     addTearDown(controller.dispose);
@@ -69,6 +75,8 @@ void main() {
           onRetry: () {},
           isOffline: isOffline,
           live: live,
+          profileLabel: profileLabel,
+          onOpenProfile: onOpenProfile,
         ),
       ),
     );
@@ -367,5 +375,56 @@ void main() {
     await pumpCoach(tester, live: const CoachLiveTurn(question: 'Et demain ?'));
 
     expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  group('accueil d’un fil vide', () {
+    testWidgets('les amorces sont des cartes qui envoient leur phrase ; la '
+        'bande de puces s’efface', (tester) async {
+      final envoyes = <String>[];
+      await pumpCoach(
+        tester,
+        messages: const [],
+        onSend: envoyes.add,
+        suggestions: const [
+          CoachSuggestion(
+            'Adapte « Push » à 30 minutes',
+            CoachSuggestionKind.adapt,
+          ),
+        ],
+      );
+
+      expect(find.text('POUR COMMENCER'), findsOneWidget);
+      expect(find.byType(CoachSuggestions), findsNothing);
+      await tester.tap(find.text('Adapte « Push » à 30 minutes'));
+      expect(envoyes, ['Adapte « Push » à 30 minutes']);
+    });
+
+    testWidgets('« Ton profil » paraît avec un profil, et ouvre son choix', (
+      tester,
+    ) async {
+      var ouvert = false;
+      await pumpCoach(
+        tester,
+        messages: const [],
+        profileLabel: 'Stratège',
+        onOpenProfile: () => ouvert = true,
+      );
+      expect(find.text('Stratège'), findsOneWidget);
+      await tester.tap(find.text('Stratège'));
+      expect(ouvert, isTrue);
+    });
+
+    testWidgets('sans profil choisi, aucune pastille vide', (tester) async {
+      await pumpCoach(tester, messages: const []);
+      expect(find.textContaining('Ton profil'), findsNothing);
+    });
+
+    testWidgets('fil commencé : la bande de puces, plus de cartes', (
+      tester,
+    ) async {
+      await pumpCoach(tester);
+      expect(find.byType(CoachSuggestions), findsOneWidget);
+      expect(find.text('POUR COMMENCER'), findsNothing);
+    });
   });
 }

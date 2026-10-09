@@ -1,12 +1,17 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/academy_journey.dart';
+import 'package:carlys_mobile/features/academy/domain/academy_progress.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/academy_domain_header.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/academy_domain_sheet.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/journey_stepper.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_illustration.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_key_points.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_choice.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// La refonte de l'Academy (maquette d'octobre 2026), pièce par pièce : les
@@ -343,5 +348,97 @@ void main() {
       await tester.pumpAndSettle();
       expect(illustrations(), [isNotNull]);
     });
+  });
+
+  group('quiz en deux temps', () {
+    const question = QuizQuestion(
+      prompt: 'Quelle fourchette retenir ?',
+      choices: ['0,8 g/kg', '1,6 à 2,2 g/kg', '4 g/kg'],
+      answerIndex: 1,
+      explanation: 'Au-delà, le gain devient négligeable.',
+    );
+
+    testWidgets('cocher ne répond pas : seule la validation consomme la '
+        'tentative', (tester) async {
+      final reponses = <(int, bool)>[];
+      await tester.pumpWidget(
+        monte(
+          QuizCard(
+            question: question,
+            onAnswered: (choix, juste) => reponses.add((choix, juste)),
+          ),
+        ),
+      );
+      AppButton valider() => tester.widget<AppButton>(
+        find.widgetWithText(AppButton, 'Valider ma réponse'),
+      );
+
+      // Rien de coché : la validation est éteinte.
+      expect(valider().onPressed, isNull);
+
+      // Un premier choix, puis on se ravise : rien n'est encore parti.
+      await tester.tap(find.text('0,8 g/kg'));
+      await tester.pump();
+      await tester.tap(find.text('1,6 à 2,2 g/kg'));
+      await tester.pump();
+      expect(reponses, isEmpty);
+      expect(find.text(question.explanation), findsNothing);
+
+      await tester.tap(find.text('Valider ma réponse'));
+      await tester.pump();
+      expect(reponses, [(1, true)]);
+      expect(find.text(question.explanation), findsOneWidget);
+      // Répondu : plus rien à valider.
+      expect(find.text('Valider ma réponse'), findsNothing);
+    });
+
+    testWidgets('dans une leçon : « À toi de jouer », réponses encadrées', (
+      tester,
+    ) async {
+      const lecon = Lesson(
+        id: 'nutrition-proteines',
+        category: AcademyCategory.nutrition,
+        title: 'Combien de protéines ?',
+        body: 'Entre 1,6 et 2,2 g par kilo de poids de corps.',
+        points: ['Viser la fourchette, pas un chiffre.'],
+        question: question,
+      );
+      await tester.pumpWidget(monte(const LessonCard(lesson: lecon)));
+      await tester.tap(find.text('Combien de protéines ?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comprendre le principe'), findsOneWidget);
+      expect(find.byType(LessonKeyPoints), findsOneWidget);
+      expect(find.text('À TOI DE JOUER'), findsOneWidget);
+      final choix = tester.widgetList<QuizChoice>(find.byType(QuizChoice));
+      expect(choix.every((c) => c.boxed), isTrue);
+    });
+  });
+
+  testWidgets('un domaine bouclé : « Quiz du domaine » s’actionne au lecteur '
+      'd’écran, le titre dit le compte', (tester) async {
+    final semantics = tester.ensureSemantics();
+    var ouvert = false;
+    await tester.pumpWidget(
+      monte(
+        AcademyDomainHeader(
+          category: AcademyCategory.cardio,
+          progress: const DomainProgress(abordees: 4, total: 4),
+          onQuiz: () => ouvert = true,
+        ),
+      ),
+    );
+
+    final quiz = tester
+        .getSemantics(find.bySemanticsLabel(RegExp('Quiz .* rejouer')))
+        .getSemanticsData();
+    expect(quiz.hasAction(SemanticsAction.tap), isTrue);
+    expect(
+      find.bySemanticsLabel(RegExp('Cardio, 4 leçons abordées sur 4')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Quiz du domaine'));
+    expect(ouvert, isTrue);
+    semantics.dispose();
   });
 }

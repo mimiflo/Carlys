@@ -100,6 +100,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(choix);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Valider ma réponse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Valider ma réponse'));
+    await tester.pumpAndSettle();
 
     final bandeau = find.textContaining('Étape validée');
     await tester.scrollUntilVisible(bandeau, -200);
@@ -129,6 +133,10 @@ void main() {
     await tester.scrollUntilVisible(choix, 200);
     await tester.pumpAndSettle();
     await tester.tap(choix);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Valider ma réponse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Valider ma réponse'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Étape validée'), findsNothing);

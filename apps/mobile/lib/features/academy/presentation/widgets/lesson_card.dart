@@ -5,6 +5,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/academy.dart';
 import 'lesson_illustration.dart';
+import 'lesson_key_points.dart';
 import 'quiz_card.dart';
 
 /// Une leçon dépliable : vignette, titre et état repliés ; ouverte, elle déroule
@@ -42,6 +43,7 @@ class _LessonCardState extends State<LessonCard> {
   bool _open = false;
 
   static const double _thumbnailSize = 56;
+  static const double _openIconSize = 28;
 
   @override
   Widget build(BuildContext context) {
@@ -51,56 +53,65 @@ class _LessonCardState extends State<LessonCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: () => setState(() => _open = !_open),
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Row(
-              children: [
-                // La vignette se retire quand la leçon s'ouvre : son
-                // illustration entière prend le relais juste dessous.
-                if (!_open) ...[
-                  LessonIllustration(
-                    lesson: lesson,
-                    thumbnailSize: _thumbnailSize,
-                  ),
+          Semantics(
+            button: true,
+            expanded: _open,
+            child: InkWell(
+              onTap: () => setState(() => _open = !_open),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: Row(
+                children: [
+                  // La vignette cède au livre quand la leçon s'ouvre : son
+                  // illustration entière prend le relais juste dessous.
+                  if (_open)
+                    const Icon(
+                      AppIcons.lessonOpen,
+                      size: _openIconSize,
+                      color: AppColors.primaryLight,
+                    )
+                  else
+                    LessonIllustration(
+                      lesson: lesson,
+                      thumbnailSize: _thumbnailSize,
+                    ),
                   const SizedBox(width: AppSpacing.sm),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.showCategory) ...[
-                        AppSectionLabel(lesson.category.label),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.showCategory) ...[
+                          AppSectionLabel(lesson.category.label),
+                          const SizedBox(height: AppSpacing.xxs),
+                        ],
+                        Text(
+                          lesson.title,
+                          style: AppTypography.subheading.copyWith(
+                            color: AppColors.darkTextPrimary,
+                          ),
+                        ),
                         const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          widget.answeredChoice == null
+                              ? 'À lire, puis une question'
+                              : 'Lue · question répondue',
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.darkTextSecondary,
+                          ),
+                        ),
                       ],
-                      Text(
-                        lesson.title,
-                        style: AppTypography.subheading.copyWith(
-                          color: AppColors.darkTextPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        widget.answeredChoice == null
-                            ? 'À lire, puis une question'
-                            : 'Lue · question répondue',
-                        style: AppTypography.label.copyWith(
-                          color: AppColors.darkTextSecondary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                AnimatedRotation(
-                  turns: _open ? 0.25 : 0,
-                  duration: AppMotion.fast,
-                  child: const Icon(
-                    AppIcons.chevronRight,
-                    color: AppColors.darkTextTertiary,
+                  const SizedBox(width: AppSpacing.xs),
+                  AnimatedRotation(
+                    turns: _open ? 0.5 : 0,
+                    duration: AppMotion.fast,
+                    child: const Icon(
+                      AppIcons.expand,
+                      color: AppColors.darkTextTertiary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Le contenu est RETIRÉ de l'arbre quand la leçon est repliée —
@@ -109,47 +120,37 @@ class _LessonCardState extends State<LessonCard> {
           if (_open) ...[
             const SizedBox(height: AppSpacing.sm),
             LessonIllustration(lesson: lesson),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
+            Semantics(
+              header: true,
+              child: Text(
+                'Comprendre le principe',
+                style: AppTypography.heading.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               lesson.body,
-              style: AppTypography.body.copyWith(
+              style: AppTypography.bodyLarge.copyWith(
                 color: AppColors.darkTextSecondary,
               ),
             ),
             if (lesson.points.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              const AppSectionLabel('À retenir'),
-              const SizedBox(height: AppSpacing.xxs),
-              for (final point in lesson.points)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: Icon(
-                          AppIcons.arrowForward,
-                          size: 14,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          point,
-                          style: AppTypography.label.copyWith(
-                            color: AppColors.darkTextSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: AppSpacing.md),
+              LessonKeyPoints(points: lesson.points),
             ],
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(height: 1, color: AppColors.rowDivider),
+            const SizedBox(height: AppSpacing.md),
             QuizCard(
               question: lesson.question,
+              title: 'À toi de jouer',
+              embedded: true,
+              // Une leçon ne se rejoue pas le lendemain : la tentative est
+              // unique, pas quotidienne.
+              hint: 'Choisis, puis valide : une seule tentative.',
               answeredChoice: widget.answeredChoice,
               onAnswered: widget.onAnswered,
             ),

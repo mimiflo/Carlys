@@ -202,7 +202,10 @@ abstract final class AppIcons {
 
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
-  static const IconData send = Icons.arrow_upward_rounded;
+
+  /// L'emblème de l'accueil du coach : une bulle de dialogue étoilée.
+  static const IconData coachEmblem = Icons.assistant_rounded;
+  static const IconData send = Icons.send_rounded;
 
   /// La réflexion du coach : ce qu'il a fait avant de répondre.
   static const IconData coachReflection = Icons.psychology_rounded;
@@ -394,6 +397,8 @@ abstract final class AppIcons {
   static const IconData goalMaintenance = Icons.balance_rounded;
 
   // ── Academy : les illustrations de leçon ──────────────────────────
+  /// Une leçon ouverte, en cours de lecture.
+  static const IconData lessonOpen = Icons.menu_book_rounded;
   static const IconData lessonPosture = Icons.accessibility_new_rounded;
   static const IconData lessonCardio = Icons.directions_run_rounded;
   static const IconData lessonHealth = Icons.health_and_safety_outlined;

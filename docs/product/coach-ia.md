@@ -1153,6 +1153,20 @@ thème de Carlys.** C'est ce que peint `coach_message_bubble.dart`
 (`AppColors.primary` pour tes messages, `darkSurface` pour ceux du coach) ;
 le dégradé de signature reste réservé à la marque (CLAUDE.md, point 9).
 
+### L'accueil d'un fil vide (maquette d'octobre 2026)
+
+En-tête « Coach IA / TON ENTRAÎNEMENT, À TON ÉCOUTE » ; l'emblème, « Ton
+coach est là » et sa phrase ; la pastille « Ton profil : Stratège » (le
+profil Carlys du compte, qui oriente une des amorces ; la toucher ouvre le
+choix des profils) ; « Pour commencer » : les amorces en cartes, chacune avec
+l'icône de ce qu'elle propose (`CoachSuggestionKind` : adapter une séance,
+comprendre, progresser, le poids, démarrer). Fil vide, la bande de puces au
+pied de l'écran s'efface : les cartes la remplacent. La mention des données
+se pose au-dessus du composeur — avec la phrase VRAIE (« restent sur les
+serveurs de Carlys ») et non celle de la maquette, qui parlait d'un
+prestataire externe : le coach tourne sur notre serveur depuis l'ADR 0011.
+Capture `coach-00-accueil`.
+
 ## Tests
 
 **API — unitaires.** Le validateur rejette un `exerciseId` inconnu, des

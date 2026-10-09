@@ -19,6 +19,7 @@ class QuizCard extends StatefulWidget {
     this.answeredChoice,
     this.onAnswered,
     this.hint,
+    this.embedded = false,
     super.key,
   });
 
@@ -44,12 +45,29 @@ class QuizCard extends StatefulWidget {
   /// rejoue à volonté, passe la sienne.
   final String? hint;
 
+  /// Posée DANS une leçon (maquette d'octobre 2026) : pas de carte autour,
+  /// la leçon en est déjà une, et des réponses encadrées. Seule, la carte
+  /// sépare ses réponses d'un filet.
+  final bool embedded;
+
   @override
   State<QuizCard> createState() => _QuizCardState();
 }
 
 class _QuizCardState extends State<QuizCard> {
   int? _picked;
+
+  /// Le choix coché, pas encore validé. Une seule tentative : un appui
+  /// malheureux ne doit pas la consommer, d'où « Valider ma réponse ».
+  int? _pending;
+
+  void _validate() {
+    final choice = _pending;
+    // Deux appuis dans la même image : la tentative ne se compte qu'une fois.
+    if (choice == null || _picked != null) return;
+    setState(() => _picked = choice);
+    widget.onAnswered?.call(choice, choice == widget.question.answerIndex);
+  }
 
   @override
   void initState() {
@@ -63,6 +81,7 @@ class _QuizCardState extends State<QuizCard> {
     if (!identical(oldWidget.question, widget.question)) {
       // Question changée : on repart de ce qu'on sait d'ELLE.
       _picked = widget.answeredChoice;
+      _pending = null;
       return;
     }
     // Réponse arrivée d'ailleurs (l'autre écran, ou la lecture du stockage
@@ -101,25 +120,30 @@ class _QuizCardState extends State<QuizCard> {
         ),
         const SizedBox(height: AppSpacing.xs),
         for (var index = 0; index < question.choices.length; index++) ...[
-          if (index > 0) const Divider(height: 1, color: AppColors.rowDivider),
+          if (index > 0)
+            widget.embedded
+                ? const SizedBox(height: AppSpacing.xs)
+                : const Divider(height: 1, color: AppColors.rowDivider),
           QuizChoice(
             letter: _letters[index],
             label: question.choices[index],
             picked: picked == index,
+            pending: !answered && _pending == index,
             correct: index == question.answerIndex,
             answered: answered,
+            boxed: widget.embedded,
             // Une seule tentative : la réponse part au stockage local et
             // nourrit les défis de la communauté. La reprendre voudrait dire
             // la retirer de partout, ce qui n'aurait plus rien d'un quiz.
-            onTap: answered
-                ? null
-                : () {
-                    setState(() => _picked = index);
-                    widget.onAnswered?.call(
-                      index,
-                      index == question.answerIndex,
-                    );
-                  },
+            onTap: answered ? null : () => setState(() => _pending = index),
+          ),
+        ],
+        if (!answered) ...[
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            label: 'Valider ma réponse',
+            isExpanded: true,
+            onPressed: _pending == null ? null : _validate,
           ),
         ],
         const SizedBox(height: AppSpacing.xs),
@@ -142,7 +166,7 @@ class _QuizCardState extends State<QuizCard> {
       ],
     );
 
-    return AppCard(child: content);
+    return widget.embedded ? content : AppCard(child: content);
   }
 
   /// Trois choix au plus dans le pack : la table suffit.
@@ -165,7 +189,7 @@ class _Hint extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch ((answered, correct)) {
       (false, _) => (
-        invite ?? 'Touche une réponse : une seule tentative par jour.',
+        invite ?? 'Choisis, puis valide : une seule tentative par jour.',
         AppColors.darkTextTertiary,
       ),
       (true, true) => ('Bonne réponse.', AppColors.success),

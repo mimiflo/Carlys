@@ -21,7 +21,9 @@ import '../../domain/services/coach_suggestions.dart';
 /// records et poids en cache Riverpod) : la bande de puces n'ajoute aucun
 /// appel réseau. Une source en échec ne fait pas échouer les autres — sans
 /// donnée, il reste la puce générique.
-final coachSuggestionsProvider = Provider.autoDispose<List<String>>((ref) {
+final coachSuggestionsProvider = Provider.autoDispose<List<CoachSuggestion>>((
+  ref,
+) {
   final templates = ref.watch(workoutTemplatesProvider).valueOrNull;
   final records = ref.watch(personalRecordsProvider).valueOrNull;
   final weights = ref.watch(bodyWeightMetricsProvider).valueOrNull;

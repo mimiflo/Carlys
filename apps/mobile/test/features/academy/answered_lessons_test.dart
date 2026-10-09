@@ -123,6 +123,8 @@ void main() {
         ),
       );
       await tester.tap(find.text('Le latéral'));
+      await tester.pump();
+      await tester.tap(find.text('Valider ma réponse'));
       await tester.pumpAndSettle();
 
       expect(choice, 1);

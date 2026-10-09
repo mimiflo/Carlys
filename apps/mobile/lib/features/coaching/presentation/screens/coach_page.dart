@@ -8,6 +8,8 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../carlys_profile/presentation/providers/carlys_profile_providers.dart';
+import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../mentor/presentation/widgets/mentor_speak_button.dart';
 import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/entities/coach.dart';
@@ -181,6 +183,12 @@ class _CoachPageState extends ConsumerState<CoachPage> {
           compact: true,
         ),
         greeting: _openingGreeting(state),
+        profileLabel: switch (ref.watch(currentCarlysProfileProvider)) {
+          final profile? => carlysProfileContentOf(profile).shortTitle,
+          null => null,
+        },
+        onOpenProfile: () =>
+            GoRouter.of(context).push(AppRoutes.carlysProfiles),
         messages: state.conversation.messages,
         suggestions: coachVisibleSuggestions(ref, state),
         composerController: _composer,

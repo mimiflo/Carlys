@@ -4,7 +4,10 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/academy_domain_header.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/academy_progress_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/domain_completed_banner.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/journey_entry_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -68,6 +71,14 @@ Finder get _pageScrollable => find.byWidgetPredicate(
           widget.axisDirection == AxisDirection.up),
 );
 
+/// Le titre d'une section de domaine — et non la pastille homonyme de la
+/// barre : depuis la maquette d'octobre 2026, l'un et l'autre s'écrivent
+/// « Musculation ».
+Finder _entete(String domaine) => find.descendant(
+  of: find.byType(AcademyDomainHeader),
+  matching: find.text(domaine),
+);
+
 Future<void> reveal(WidgetTester tester, Finder item) async {
   await tester.scrollUntilVisible(item, 240, scrollable: _pageScrollable.last);
   await tester.pumpAndSettle();
@@ -110,7 +121,7 @@ void main() {
     // la liste est PARESSEUSE : le viseur doit tolérer zéro correspondance
     // tant qu'on n'a pas défilé jusqu'à la section (`.first` planterait).
     for (final category in AcademyCategory.values) {
-      await reveal(tester, find.text(category.label.toUpperCase()));
+      await reveal(tester, _entete(category.label));
     }
   });
 
@@ -174,6 +185,9 @@ void main() {
     await reveal(tester, mauvais);
     await tester.tap(mauvais);
     await tester.pumpAndSettle();
+    await reveal(tester, find.text('Valider ma réponse'));
+    await tester.tap(find.text('Valider ma réponse'));
+    await tester.pumpAndSettle();
 
     expect(
       find.descendant(of: quiz, matching: find.text(question.explanation)),
@@ -215,6 +229,9 @@ void main() {
     // Même précaution que le test précédent : révéler avant de toucher.
     await reveal(tester, mauvais);
     await tester.tap(mauvais);
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Valider ma réponse'));
+    await tester.tap(find.text('Valider ma réponse'));
     await tester.pumpAndSettle();
 
     // La réponse (fausse) est rapportée, avec le jour local.
@@ -305,13 +322,22 @@ void main() {
     // débranché. Nutrition est le PREMIER domaine : sans filtre il est en
     // haut de page, donc bâti. Son absence ici a du sens.
     expect(find.text('Les protéines, brique du muscle'), findsNothing);
-    expect(find.text('NUTRITION'), findsNothing);
+    expect(_entete('Nutrition'), findsNothing);
+    // Un domaine choisi, l'écran s'y consacre : ni la progression, ni le
+    // parcours, ni la question du jour ; et il repart du haut.
+    expect(find.byType(AcademyProgressCard, skipOffstage: false), findsNothing);
+    expect(find.byType(JourneyEntryCard, skipOffstage: false), findsNothing);
+    expect(find.text('QUESTION DU JOUR', skipOffstage: false), findsNothing);
+    expect(
+      tester.state<ScrollableState>(_pageScrollable.last).position.pixels,
+      0,
+    );
     // L'en-tête de section RESTE en vue filtrée depuis qu'il porte
     // l'avancement : il ne répète plus le nom que la pastille active dit
     // déjà, il ajoute « 0 / 4 » et sa jauge. Révélé AVANT la leçon : le
     // défilement vers elle le ferait passer au-dessus de la vue.
-    await reveal(tester, find.text('MUSCULATION'));
-    expect(find.text('MUSCULATION'), findsOneWidget);
+    await reveal(tester, _entete('Musculation'));
+    expect(_entete('Musculation'), findsOneWidget);
     expect(find.text('0 / 4 · 0 %'), findsOneWidget);
     // Et la première leçon visible appartient au domaine visé.
     await reveal(tester, find.text('La surcharge progressive'));
@@ -328,11 +354,13 @@ void main() {
     await tester.pumpAndSettle();
     // La carte d'avancement et la question du jour occupent le haut : le
     // premier domaine est juste sous le pli, donc pas encore construit.
-    await reveal(tester, find.text('NUTRITION'));
-    expect(find.text('NUTRITION'), findsOneWidget);
+    // « Tous » rend la vue d'ensemble.
+    expect(find.byType(AcademyProgressCard), findsOneWidget);
+    await reveal(tester, _entete('Nutrition'));
+    expect(_entete('Nutrition'), findsOneWidget);
     expect(find.text('Les protéines, brique du muscle'), findsOneWidget);
     // Et le dernier domaine reste atteignable en défilant.
-    await reveal(tester, find.text('CALISTHENICS'));
+    await reveal(tester, _entete('Calisthenics'));
   });
 
   testWidgets('l’Academy dit enfin où on en est, et dans quelle unité', (

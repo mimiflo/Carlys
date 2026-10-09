@@ -12,6 +12,8 @@ class QuizChoice extends StatelessWidget {
     required this.picked,
     required this.correct,
     required this.answered,
+    this.pending = false,
+    this.boxed = false,
     this.onTap,
     super.key,
   });
@@ -28,9 +30,17 @@ class QuizChoice extends StatelessWidget {
   /// Une réponse a été donnée, quelle qu'elle soit.
   final bool answered;
 
+  /// Coché, pas encore validé : le rond prend le violet de la marque.
+  final bool pending;
+
+  /// Une réponse encadrée (dans une leçon) plutôt qu'une ligne nue.
+  final bool boxed;
+
   final VoidCallback? onTap;
 
   static const double _radioSize = 22;
+  static const double _pendingDot = 10;
+  static const double _ringWidth = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -47,56 +57,93 @@ class QuizChoice extends StatelessWidget {
 
     return Semantics(
       button: onTap != null,
-      selected: picked,
+      selected: picked || pending,
       label: '$letter. $label',
       onTap: onTap,
       child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: AppSpacing.touchTarget,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: AppMotion.tap,
-                    curve: AppMotion.standard,
-                    width: _radioSize,
-                    height: _radioSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: picked ? tone : null,
-                      border: picked
-                          ? null
-                          : Border.all(
-                              color: tone ?? AppColors.quizLetterBorder,
-                              width: tone == null ? 1.5 : 2,
-                            ),
-                    ),
-                    child: picked
-                        ? Icon(
-                            correct ? AppIcons.check : AppIcons.close,
-                            size: 14,
-                            color: AppColors.darkBackground,
-                          )
-                        : null,
+        child: Material(
+          type: boxed ? MaterialType.canvas : MaterialType.transparency,
+          color: boxed ? AppColors.darkSurfaceAlt : null,
+          shape: boxed
+              ? RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdAll,
+                  side: BorderSide(
+                    color: pending
+                        ? AppColors.primaryLightBorder
+                        : AppColors.darkBorder,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: AppTypography.body.copyWith(
-                        fontWeight: picked ? FontWeight.w600 : FontWeight.w400,
-                        color: answered && !picked && !correct
-                            ? AppColors.darkTextTertiary
-                            : AppColors.darkTextPrimary,
+                )
+              : null,
+          clipBehavior: boxed ? Clip.antiAlias : Clip.none,
+          child: InkWell(
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.touchTarget,
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: boxed ? AppSpacing.md : 0,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: AppMotion.tap,
+                      curve: AppMotion.standard,
+                      width: _radioSize,
+                      height: _radioSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: picked ? tone : null,
+                        border: picked
+                            ? null
+                            : Border.all(
+                                color:
+                                    tone ??
+                                    (pending
+                                        ? AppColors.primaryLight
+                                        : AppColors.quizLetterBorder),
+                                width: tone == null && !pending
+                                    ? 1.5
+                                    : _ringWidth,
+                              ),
+                      ),
+                      child: picked
+                          ? Icon(
+                              correct ? AppIcons.check : AppIcons.close,
+                              size: 14,
+                              color: AppColors.darkBackground,
+                            )
+                          : pending
+                          ? Center(
+                              child: Container(
+                                width: _pendingDot,
+                                height: _pendingDot,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primaryLight,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: AppTypography.body.copyWith(
+                          fontWeight: picked
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: answered && !picked && !correct
+                              ? AppColors.darkTextTertiary
+                              : AppColors.darkTextPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

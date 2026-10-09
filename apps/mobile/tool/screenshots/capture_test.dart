@@ -20,6 +20,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/core/utilities/debouncer.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_choice.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/delete_account_screen.dart';
@@ -30,6 +31,7 @@ import 'package:carlys_mobile/features/carlys_profile/presentation/screens/carly
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
@@ -782,8 +784,18 @@ void main() {
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
           coachSuggestionsProvider.overrideWithValue(const [
-            'Adapte « Push A » à 30 minutes',
-            'Comment continuer sur Développé couché ?',
+            CoachSuggestion(
+              'Adapte « Push A » à 30 minutes',
+              CoachSuggestionKind.adapt,
+            ),
+            CoachSuggestion(
+              'Explique-moi le pourquoi de mes séances',
+              CoachSuggestionKind.understand,
+            ),
+            CoachSuggestion(
+              'Comment continuer sur Développé couché ?',
+              CoachSuggestionKind.progress,
+            ),
           ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
@@ -1684,23 +1696,55 @@ void main() {
     await settle(tester);
     await capture(tester, '28-academy', shows: find.byType(AcademyScreen));
 
-    // La suite de la maquette : la question du jour, puis le premier
-    // domaine et ses leçons en vignettes.
+    // Un domaine choisi (maquette d'octobre 2026) : l'écran se consacre à
+    // ses leçons, repliées en vignette.
     await tester.tap(find.widgetWithText(AppPill, 'Musculation'));
     await settle(tester);
-    await tester.scrollUntilVisible(
-      find.text('La surcharge progressive'),
-      150,
-      scrollable: find.byWidgetPredicate(
-        (widget) =>
-            widget is Scrollable && widget.axisDirection == AxisDirection.down,
-      ),
+    // Les vignettes se décodent à LEUR taille (`cacheWidth`) : une autre
+    // clé que celle préchargée, d'où une vraie attente.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 500)),
     );
     await settle(tester);
     await capture(
       tester,
       '28b-academy-domaine',
       shows: find.text('La surcharge progressive'),
+    );
+
+    // La leçon dépliée : le principe, « À retenir », puis « À toi de
+    // jouer » avec une réponse cochée, pas encore validée.
+    await tester.tap(find.text('La surcharge progressive'));
+    await settle(tester);
+    await tester.runAsync(
+      () => Scrollable.ensureVisible(
+        tester.element(find.text('La surcharge progressive')),
+        alignment: 0.08,
+      ),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '28c-academy-lecon',
+      shows: find.text('Comprendre le principe'),
+    );
+
+    await tester.ensureVisible(find.byType(QuizChoice).first);
+    await settle(tester);
+    await tester.tap(find.byType(QuizChoice).first);
+    await settle(tester);
+    // La validation au bas de l'écran, au-dessus de la barre d'onglets.
+    await tester.runAsync(
+      () => Scrollable.ensureVisible(
+        tester.element(find.text('Valider ma réponse')),
+        alignment: 0.85,
+      ),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '28d-academy-lecon-quiz',
+      shows: find.text('Valider ma réponse'),
     );
   });
 

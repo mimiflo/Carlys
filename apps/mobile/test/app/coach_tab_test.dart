@@ -8,6 +8,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
@@ -86,7 +87,7 @@ void main() {
             FakeSubscriptionRepository(isPremium: true),
           ),
           coachSuggestionsProvider.overrideWithValue(const [
-            'Par où je commence ?',
+            CoachSuggestion('Par où je commence ?', CoachSuggestionKind.start),
           ]),
           waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

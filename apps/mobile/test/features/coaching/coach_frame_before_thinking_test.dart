@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/providers/carlys_profile_providers.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
@@ -66,6 +67,7 @@ void main() {
             FakeSubscriptionRepository(coaching: true),
           ),
           coachSuggestionsProvider.overrideWithValue(const []),
+          currentCarlysProfileProvider.overrideWithValue(null),
           coachVoiceProvider.overrideWithValue((
             displayName: 'Léa',
             style: null,

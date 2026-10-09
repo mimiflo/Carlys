@@ -22,6 +22,10 @@ class CarlysProfileContent {
   /// « Le Constructeur » — rendu en capitales par la carte.
   final String title;
 
+  /// « Constructeur », « Athlète » : le titre sans son article, là où il
+  /// suit déjà « Ton profil : ».
+  String get shortTitle => title.replaceFirst(RegExp('^(Le |La |L’)'), '');
+
   /// La devise, à la première personne.
   final String quote;
 

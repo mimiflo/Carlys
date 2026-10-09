@@ -39,7 +39,10 @@ const _logger = AppLogger('CoachOpening');
 
 /// Les amorces lancent la conversation du JOUR : dès la première question
 /// partie (ou déjà posée aujourd'hui), elles s'effacent jusqu'au lendemain.
-List<String> coachVisibleSuggestions(WidgetRef ref, CoachThreadState state) {
+List<CoachSuggestion> coachVisibleSuggestions(
+  WidgetRef ref,
+  CoachThreadState state,
+) {
   final suggestions = ref.watch(coachSuggestionsProvider);
   final started =
       state.live != null ||

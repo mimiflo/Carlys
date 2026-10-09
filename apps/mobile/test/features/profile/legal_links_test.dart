@@ -7,6 +7,7 @@ import 'package:carlys_mobile/features/authentication/presentation/widgets/legal
 import 'package:carlys_mobile/features/authentication/presentation/widgets/social_auth_buttons.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_notices.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_legal_section.dart';
 import 'package:flutter/gestures.dart';
@@ -249,13 +250,18 @@ void main() {
       expect(find.byType(CoachDataNotice), findsOneWidget);
     });
 
-    testWidgets('fil vide : l’invitation reste seule, sans mention', (
-      tester,
-    ) async {
+    testWidgets('fil vide : la mention se pose une fois, au-dessus du '
+        'composeur', (tester) async {
+      // Maquette d'octobre 2026 : où partent les données se dit là où l'on
+      // s'apprête à écrire la première question, pas seulement après.
       await tester.pumpWidget(coach(const []));
       await tester.pumpAndSettle();
 
-      expect(find.byType(CoachDataNotice), findsNothing);
+      expect(find.byType(CoachDataNotice), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(CoachDataNotice)).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(CoachComposer)).top),
+      );
     });
   });
 }

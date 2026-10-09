@@ -1,7 +1,9 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/providers/carlys_profile_providers.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/providers/coach_frame_providers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
@@ -35,7 +37,9 @@ void main() {
   Future<void> pumpPage(
     WidgetTester tester,
     FakeCoachRepository repository, {
-    List<String> suggestions = const ['Par où je commence ?'],
+    List<CoachSuggestion> suggestions = const [
+      CoachSuggestion('Par où je commence ?', CoachSuggestionKind.start),
+    ],
     bool abonne = true,
   }) async {
     await tester.pumpWidget(
@@ -48,6 +52,8 @@ void main() {
           // Les puces se calculent depuis les modèles, les records et le
           // poids : trois dépôts qui n'ont rien à faire dans ce test.
           coachSuggestionsProvider.overrideWithValue(suggestions),
+          // Le profil Carlys vit sur le compte : aucun compte ici.
+          currentCarlysProfileProvider.overrideWithValue(null),
           coachVoiceProvider.overrideWithValue((
             displayName: 'Florian Mottet',
             style: null,
@@ -152,6 +158,8 @@ void main() {
     );
 
     expect(find.textContaining('Florian'), findsNothing);
+    // Ni d'amorce qui enverrait une question que le serveur refusera.
+    expect(find.text('Par où je commence ?'), findsNothing);
   });
 
   testWidgets('hors ligne, l’écran le dit et propose de réessayer', (

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 
-/// En-tête du coach : la porte de sortie à gauche, la marque au centre.
+/// En-tête du coach (maquette d'octobre 2026) : la porte de sortie à gauche,
+/// « Coach IA / TON ENTRAÎNEMENT, À TON ÉCOUTE » au centre.
 ///
 /// Partagé par la conversation ET par ses états d'attente ou d'erreur. Un
 /// coach qui n'a pas pu s'ouvrir est précisément le moment où l'on veut
@@ -16,44 +17,21 @@ import '../../../../design_system/design_system.dart';
 class CoachHeader extends StatelessWidget {
   const CoachHeader({super.key});
 
-  /// Le bouton de retour et son symétrique à droite : sans le second, le titre
-  /// n'est pas centré sur la page mais sur ce qui reste.
-  static const double _sideWidth = AppSpacing.touchTarget;
-  static const double _markSize = 18;
-
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return const Padding(
+      // La marge serrée de l'ancien en-tête, et non la gouttière : la ligne
+      // mono tient sur une ligne dès 393 points, et passe à la ligne, sans
+      // déborder, sur plus étroit.
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.xs,
         AppSpacing.xs,
         AppSpacing.xs,
         AppSpacing.sm,
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: _sideWidth, child: AppBackButton()),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  AppIcons.coach,
-                  size: _markSize,
-                  color: AppColors.primaryLight,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'Coach IA',
-                  style: AppTypography.heading.copyWith(
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: _sideWidth),
-        ],
+      child: AppScreenHeader.centered(
+        title: 'Coach IA',
+        tagline: 'Ton entraînement, à ton écoute',
       ),
     );
   }

@@ -118,6 +118,20 @@ domaine et ses leçons, repliées en une ligne : vignette, titre, état
 Une leçon sans illustration livrée garde sa vignette de repli (dégradé et
 icône du domaine) : aucune photo n'est inventée pour une leçon.
 
+**Un domaine choisi** (seconde maquette d'octobre 2026), l'écran se consacre
+à lui : la progression, le parcours et la question du jour s'effacent, la
+page repart du haut, et « Tous » rend la vue d'ensemble. L'en-tête du domaine
+porte son nom en titre et, à droite, « Quiz du domaine › » — toujours
+réservé à un domaine bouclé, ou sinon son compteur « 0 / 4 · 0 % ».
+
+**Une leçon dépliée** : le livre ouvert et un chevron vers le haut,
+l'illustration, « Comprendre le principe » et le corps, l'encart « À
+retenir » (cible, puces violettes), puis « À toi de jouer » : les réponses
+encadrées se COCHENT, et seule « Valider ma réponse » consomme la tentative.
+La validation vaut pour tous les quiz (question du jour, leçon, domaine) :
+là où la tentative est unique, un appui malheureux ne doit pas la brûler ;
+le quiz de domaine, qui se rejoue à volonté, garde le même geste.
+
 ## Couverture
 
 - `test/features/academy/answered_lessons_test.dart` : idempotence de la
