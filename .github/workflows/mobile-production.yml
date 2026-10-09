@@ -159,7 +159,7 @@ jobs:
       # DEPLOYED, deploy.sh et promote.sh côté serveur, donc celle qu'un
       # opérateur a sous la main). On rapatrie tout l'historique, puis on
       # résout nous-mêmes.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -596,7 +596,7 @@ jobs:
       # `ref` sur le sha40 résolu par le job 1 : on construit CE commit, pas la
       # tête de la branche. Un artefact publié sous le nom d'un commit et bâti
       # sur un autre serait pire que pas d'artefact du tout.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.controles.outputs.sha40 }}
 
