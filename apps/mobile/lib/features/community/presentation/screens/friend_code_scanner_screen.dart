@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -9,6 +11,12 @@ import '../../domain/friend_code.dart';
 /// Seul écran de la fonctionnalité à toucher du natif (caméra) : tout le
 /// reste — saisie, e-mail, QR affiché — vit sans lui, si bien qu'une caméra
 /// refusée n'enlève que le scan.
+///
+/// L'autorisation est demandée par `mobile_scanner` au premier démarrage de
+/// la caméra, à l'ouverture de l'écran. Depuis la 7, l'écran qui fournit son
+/// contrôleur gère aussi le CYCLE DE VIE : caméra coupée quand l'appli passe
+/// en arrière-plan, relancée au retour — c'est ce qui la fait repartir quand
+/// on revient des réglages après y avoir autorisé la caméra.
 class FriendCodeScannerScreen extends StatefulWidget {
   const FriendCodeScannerScreen({super.key});
 
@@ -17,15 +25,49 @@ class FriendCodeScannerScreen extends StatefulWidget {
       _FriendCodeScannerScreenState();
 }
 
-class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
+class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen>
+    with WidgetsBindingObserver {
   final MobileScannerController _controller = MobileScannerController(
     formats: const [BarcodeFormat.qrCode],
   );
   bool _done = false;
 
+  /// L'appli a vraiment quitté l'écran (réglages, autre appli). La boîte
+  /// d'autorisation, elle, ne la rend qu'« inactive » : relancer à chaque
+  /// retour redemanderait l'autorisation en boucle après un refus.
+  bool _away = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        _away = true;
+        unawaited(_controller.stop());
+      case AppLifecycleState.resumed:
+        // Encore en démarrage (« Réessayer » puis « Autoriser » : la réponse
+        // arrive avant le retour) : un second `start` lèverait une erreur.
+        if (_controller.value.isStarting) return;
+        if (_away || _controller.value.hasCameraPermission) {
+          _away = false;
+          unawaited(_controller.start());
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
+    }
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_controller.dispose());
     super.dispose();
   }
 
@@ -71,11 +113,22 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
               onDetect: _onDetect,
               // Caméra refusée ou indisponible : un état d'erreur du design
               // system, pas un écran noir muet.
-              errorBuilder: (context, error, child) => AppErrorState(
-                title: 'Caméra indisponible',
+              // Pendant l'ouverture, une phrase plutôt qu'un écran noir : si
+              // la caméra ne vient jamais, on sait au moins où l'on en est.
+              placeholderBuilder: (context) =>
+                  const AppLoadingIndicator(label: 'Ouverture de la caméra…'),
+              errorBuilder: (context, error) => AppErrorState(
+                icon: AppIcons.qrScan,
+                title:
+                    error.errorCode == MobileScannerErrorCode.permissionDenied
+                    ? 'Caméra non autorisée'
+                    : 'Caméra indisponible',
                 message:
-                    'Autorise-la dans les réglages du téléphone, '
-                    'ou tape le code à la main.',
+                    error.errorCode == MobileScannerErrorCode.permissionDenied
+                    ? 'Autorise l’appareil photo pour Carlys dans les '
+                          'réglages du téléphone, ou tape le code à la main.'
+                    : 'Elle est peut-être utilisée par une autre appli. '
+                          'Réessaie, ou tape le code à la main.',
                 onRetry: () => _controller.start(),
               ),
             ),

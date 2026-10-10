@@ -382,7 +382,16 @@ simplement perdue (la barre est collective, pas comptable).
   d'un code. Le scan (`mobile_scanner`) vit dans son propre écran — seul
   endroit de la fonctionnalité à toucher du natif : une caméra refusée
   n'enlève que le scan, et l'écran le dit avec un état d'erreur du design
-  system. Un e-mail est confirmé opaque ; un code, par le prénom — ou
+  system (« Caméra non autorisée », ou « indisponible » si une autre appli
+  la tient). L'autorisation se demande à l'ouverture du scan, pas au
+  lancement de l'appli : on la comprend quand on vient de toucher
+  « Scanner son QR ». Depuis `mobile_scanner` 7 (10 octobre 2026), l'écran
+  gère son cycle de vie : caméra coupée en arrière-plan, relancée au retour
+  — elle repart donc quand on revient des réglages après l'avoir autorisée,
+  sans redemander en boucle après un refus. La 7 apporte aussi l'aperçu par
+  `SurfaceProducer` et la règle ProGuard de ML Kit, sans laquelle la
+  construction release (R8) pouvait retirer le lecteur de QR. Un e-mail est
+  confirmé opaque ; un code, par le prénom — ou
   « Ce code ne mène à personne ».
 - **Se protéger.** Chaque carte d'ami porte un menu « plus d'options »
   (cible tactile pleine, infobulle « Options pour X » pour les lecteurs

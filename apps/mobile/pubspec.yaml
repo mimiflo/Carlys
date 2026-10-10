@@ -54,7 +54,7 @@ dependencies:
   qr_flutter: ^4.1.0
   # …et lecture du QR d'un ami par la caméra (le natif est ici, isolé
   # dans l'écran de scan — tout le reste de la fonctionnalité vit sans lui).
-  mobile_scanner: ^6.0.10
+  mobile_scanner: ^7.4.2
 
   # Notifications push (projet Firebase carlys — options injectées au
   # lancement via --dart-define-from-file, jamais commitées ; sans elles,
