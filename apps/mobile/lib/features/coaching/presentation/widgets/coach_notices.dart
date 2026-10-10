@@ -175,7 +175,7 @@ class CoachNoticeHeading extends StatelessWidget {
               const SizedBox(height: AppSpacing.xxs),
               Text(
                 message,
-                style: AppTypography.label.copyWith(
+                style: AppTypography.body.copyWith(
                   color: AppColors.darkTextSecondary,
                 ),
               ),

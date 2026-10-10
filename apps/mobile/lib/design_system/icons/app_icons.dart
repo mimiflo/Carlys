@@ -182,17 +182,29 @@ abstract final class AppIcons {
   /// Le mot que le Mentor adresse, cité tel quel.
   static const IconData quote = Icons.format_quote_rounded;
 
-  /// La visite guidée : le fanion du guide qui fait faire le tour.
-  static const IconData tour = Icons.tour_rounded;
+  /// La visite guidée : la carte des espaces de Carlys (maquette
+  /// d'octobre 2026).
+  static const IconData tour = Icons.map_outlined;
+
+  /// Les étincelles qui entourent la boussole du Mentor : décor de son
+  /// bandeau, pas l'icône du coach.
+  static const IconData mentorSparkle = Icons.auto_awesome_rounded;
+
+  /// Ses interventions : le mot qu'il pose dans « Pour toi ».
+  static const IconData mentorInterventions = Icons.chat_bubble_outline_rounded;
+
+  /// Un choix possible, pas encore pris (le rond vide d'une liste à choix).
+  static const IconData choiceEmpty = Icons.radio_button_unchecked_rounded;
 
   /// La communauté — le même dessin que son onglet.
   static const IconData community = Icons.group_rounded;
 
-  // Les quatre voix du Mentor, une image par ton.
-  static const IconData voiceBienveillant = Icons.volunteer_activism_rounded;
-  static const IconData voiceExigeant = Icons.track_changes_rounded;
-  static const IconData voiceAthlete = Icons.fitness_center_rounded;
-  static const IconData voicePhilosophe = Icons.self_improvement_rounded;
+  // Les quatre voix du Mentor, une image par ton (maquette d'octobre
+  // 2026) : le cœur, la flamme, l'haltère de salle, la boussole.
+  static const IconData voiceBienveillant = Icons.favorite_rounded;
+  static const IconData voiceExigeant = Icons.local_fire_department_rounded;
+  static const IconData voiceAthlete = equipmentDumbbell;
+  static const IconData voicePhilosophe = Icons.explore_outlined;
 
   /// Écouter le Mentor : sa voix, dite à voix haute.
   static const IconData listen = Icons.volume_up_rounded;

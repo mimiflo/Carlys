@@ -48,8 +48,8 @@ ligne, gratuite, et le texte ne quitte pas l'appareil.
   seule phrase à la fois (`MentorSpeechController`).
 - **De lui-même** : ouvrir sa feuille, c'est venir l'écouter — il dit son
   mot ; choisir une voix, il dit son exemple de la nouvelle voix. Fermer la
-  feuille le fait taire. Le réglage local **« À voix haute »** (profil,
-  groupe « Mentor Carlys », actif par défaut) coupe ces lectures
+  feuille le fait taire. Le réglage local **« À voix haute »** (page
+  « Mentor Carlys », actif par défaut) coupe ces lectures
   spontanées ; les boutons, eux, restent. Avec un lecteur d'écran actif, il
   ne parle jamais de lui-même : deux voix se couvriraient.
 - **Sans voix française** sur le téléphone, le bouton le dit (« installe-la
@@ -73,11 +73,33 @@ ligne, gratuite, et le texte ne quitte pas l'appareil.
 `MentorStyle.fromWire`, qui rend `null` pour toute valeur inconnue : un
 serveur plus récent n'a pas le droit de faire planter un ancien client.
 
-Le choix se fait dans les réglages (rouage du profil, groupe « Mentor
-Carlys » → « Sa voix »),
-par une feuille à quatre options. Chaque carte porte l'image de sa voix et
-un mot d'exemple tiré de son catalogue (`mentorWordCatalog`) : on ENTEND la
-voix avant de la choisir. Écrit au serveur PUIS relu depuis
+Le choix se fait depuis la feuille du Mentor ou sa page de réglages
+(Réglages → « Personnaliser le Mentor », route `/mentor`), par la feuille
+« La voix du Mentor » à quatre options. Chaque carte (`MentorVoiceCard`)
+porte l'image de sa voix, ce qu'elle change, un mot d'exemple tiré de son
+catalogue (`mentorWordCatalog`) et, à droite, le rond du choix — coché
+« Voix actuelle » pour celle qui parle : on ENTEND la voix avant de la
+choisir.
+
+## Les écrans (maquettes d'octobre 2026)
+
+- **La feuille « Mentor Carlys »** (`showMentorSheet`, depuis « Pour toi ») :
+  le titre et « UN MOT POUR AVANCER », le bandeau violet (`cta`) avec la
+  boussole, la cadence (« Le mot de la semaine », « du jour », ou « Il fête
+  un cap avec toi »), le mot, la pastille de la voix et « Écouter » ; puis
+  la visite guidée et sa voix (`MentorLinkRow`), et la note « Sa voix teinte
+  aussi les réponses du Coach IA ».
+- **La page « Mentor Carlys »** (`MentorSettingsScreen`) : l'emblème,
+  « Personnalise ton accompagnement », sa voix et la visite ; ses
+  interventions et « À voix haute » ; la fréquence (Quotidienne,
+  Hebdomadaire) et son mot du moment. Interventions coupées, la fréquence
+  et le mot laissent place à la carte « Interventions désactivées ».
+- **Écarts voulus** : « À voix haute » reste sur la page (la maquette
+  l'oublie, la voix parlée existe) ; « Écouter » reste sur chaque voix et
+  sur le mot ; la page garde un seul en-tête, interventions actives ou non
+  (la maquette en dessine deux) ; elle s'ouvre plein écran comme les
+  Réglages, sans barre d'onglets ; pas de montagnes dessinées dans le
+  bandeau ; les citations gardent les guillemets français. Écrit au serveur PUIS relu depuis
 `AuthUser` : une seule source de vérité, un échec s'affiche sans état faux.
 
 ## Le mot du Mentor (accueil)
@@ -161,5 +183,9 @@ célébration, à sa voix. Trois gardes, toutes héritées de règles écrites :
 - `mentor_voice_widgets_test.dart` : « Écouter »/« Arrêter », le message
   sans voix française, la feuille qui dit son mot puis se tait, « À voix
   haute » coupé, lecteur d'écran, réglage écrit sur l'appareil.
+- `mentor_settings_screen_test.dart` : la page interventions actives
+  (fréquence choisie et écrite, mot cité) et coupées (carte
+  « désactivées »), les bascules annoncées au lecteur d'écran, l'entrée des
+  Réglages qui ouvre la page, « Voix actuelle » sur la seule voix choisie.
 - `coach_reply_footer_test.dart` : « Écouter » sous la réponse du coach,
   jamais sous la question.

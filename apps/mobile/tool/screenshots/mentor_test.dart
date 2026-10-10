@@ -25,7 +25,7 @@ import 'package:carlys_mobile/features/mentor/domain/mentor_tour.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_voice.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
 import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
-import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_settings_section.dart';
+import 'package:carlys_mobile/features/mentor/presentation/screens/mentor_settings_screen.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
@@ -233,23 +233,25 @@ void main() {
   testWidgets('la feuille du Mentor : mot, visite, voix', (tester) async {
     SharedPreferences.setMockInitialValues(const {
       MentorPrefsStore.visiteVuesKey: ['accueil', 'entrainement'],
+      // Muet à l'ouverture : la capture montre « Écouter », pas « Arrêter ».
+      MentorPrefsStore.voixParleeKey: false,
     });
     await monter(
       tester,
-      style: MentorStyle.exigeant,
+      style: MentorStyle.bienveillant,
       ouvrir: showMentorSheet,
-      fond: fondAccueil(MentorStyle.exigeant),
+      fond: fondAccueil(MentorStyle.bienveillant),
     );
-    expect(find.text('Le Mentor Carlys'), findsOneWidget);
+    expect(find.text('Mentor Carlys'), findsOneWidget);
     await capture(tester, 'mentor-03-feuille');
   });
 
-  testWidgets('le choix de la voix — Exigeant sélectionné', (tester) async {
+  testWidgets('le choix de la voix — Bienveillant sélectionné', (tester) async {
     await monter(
       tester,
-      style: MentorStyle.exigeant,
+      style: MentorStyle.bienveillant,
       ouvrir: showMentorStyleSheet,
-      fond: fondAccueil(MentorStyle.exigeant),
+      fond: fondAccueil(MentorStyle.bienveillant),
     );
     expect(find.text('La voix du Mentor'), findsOneWidget);
     await capture(tester, 'mentor-04-voix');
@@ -270,16 +272,44 @@ void main() {
     await capture(tester, 'mentor-06-visite-terminee');
   });
 
-  testWidgets('les réglages « Mentor Carlys » du profil', (tester) async {
-    SharedPreferences.setMockInitialValues(const {
-      MentorPrefsStore.visiteVuesKey: ['accueil', 'entrainement'],
-    });
-    await monter(
-      tester,
-      style: MentorStyle.philosophe,
-      corps: const SingleChildScrollView(child: MentorSettingsSection()),
+  // La page « Mentor Carlys » des réglages, plein écran comme dans l'appli.
+  Future<void> page(WidgetTester tester) async {
+    telephone(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentMentorStyleProvider.overrideWithValue(
+            MentorStyle.bienveillant,
+          ),
+          earnedRewardsProvider.overrideWith((ref) async => const []),
+          mentorSpeakerProvider.overrideWithValue(_VoixMuette()),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const MentorSettingsScreen(),
+        ),
+      ),
     );
-    expect(find.text('Sa voix'), findsOneWidget);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('la page « Mentor Carlys » — interventions actives', (
+    tester,
+  ) async {
+    await page(tester);
+    expect(find.text('Personnalise ton accompagnement'), findsOneWidget);
     await capture(tester, 'mentor-07-reglages');
+  });
+
+  testWidgets('la page « Mentor Carlys » — interventions coupées', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(const {
+      MentorPrefsStore.interventionsKey: false,
+    });
+    await page(tester);
+    expect(find.text('Interventions désactivées'), findsOneWidget);
+    await capture(tester, 'mentor-08-reglages-coupes');
   });
 }

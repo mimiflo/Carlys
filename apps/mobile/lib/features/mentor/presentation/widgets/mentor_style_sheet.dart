@@ -7,21 +7,15 @@ import '../../domain/entities/mentor_style.dart';
 import '../../domain/mentor_word.dart';
 import '../controllers/mentor_speech_controller.dart';
 import '../providers/mentor_providers.dart';
-import 'mentor_speak_button.dart';
-
-/// L'image de chaque voix — présentation pure, le domaine n'en sait rien.
-IconData mentorVoiceIcon(MentorStyle style) => switch (style) {
-  MentorStyle.bienveillant => AppIcons.voiceBienveillant,
-  MentorStyle.exigeant => AppIcons.voiceExigeant,
-  MentorStyle.athlete => AppIcons.voiceAthlete,
-  MentorStyle.philosophe => AppIcons.voicePhilosophe,
-};
+import 'mentor_sheet_header.dart';
+import 'mentor_voice_card.dart';
 
 /// Feuille « La voix du Mentor » : quatre styles, un choix, modifiable à
 /// tout moment. La sélection affichée vient de `AuthUser.mentorStyle` (une
 /// seule source de vérité) ; choisir écrit au serveur puis rafraîchit
 /// l'utilisateur, et un échec s'affiche sans rien changer. Chaque carte
-/// fait ENTENDRE sa voix : le premier mot de son catalogue, cité tel quel.
+/// fait ENTENDRE sa voix : le premier mot de son catalogue, cité tel quel
+/// (maquette d'octobre 2026 : `MentorVoiceCard`).
 Future<void> showMentorStyleSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorStyleSheet());
 }
@@ -41,49 +35,33 @@ class _MentorStyleSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'La voix du Mentor',
-            style: Theme.of(context).textTheme.titleLarge,
+          const MentorSheetHeader(
+            title: 'La voix du Mentor',
+            tagline: 'Le ton qui te correspond',
           ),
-          const SizedBox(height: AppSpacing.xxs),
+          const SizedBox(height: AppSpacing.sm),
           Text(
-            'Comment il te parle : le fond ne change pas, le ton oui. '
-            'Essaie, change quand tu veux.',
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextTertiary,
-            ),
+            'Le fond ne change pas, le ton oui.\nChange quand tu veux.',
+            textAlign: TextAlign.center,
+            style: AppTypography.body.copyWith(color: AppColors.primaryLight),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           for (final style in MentorStyle.values) ...[
-            // La carte est celle du design system ; la feuille n'apporte
-            // que le contenu de la voix — et son mot d'exemple en pied.
-            // « Écouter » est posé SUR la carte, pas dedans : la carte fond
-            // son contenu en un seul nœud pour le lecteur d'écran, et un
-            // bouton à l'intérieur y serait introuvable.
-            Stack(
-              children: [
-                AppChoiceCard(
-                  icon: mentorVoiceIcon(style),
-                  title: style.label,
-                  description: style.description,
-                  selected: style == current,
-                  selectedSemantics: 'Voix actuelle.',
-                  onTap: () => _choisir(context, ref, style),
-                  footer: _ExempleDeVoix(style: style),
-                ),
-                Positioned(
-                  right: AppSpacing.xs,
-                  bottom: AppSpacing.xs,
-                  child: MentorSpeakButton(
-                    speechKey: 'mentor.voix.${style.wire}',
-                    text: mentorWordCatalog[style]!.first,
-                    style: style,
-                  ),
-                ),
-              ],
+            MentorVoiceCard(
+              style: style,
+              selected: style == current,
+              onTap: () => _choisir(context, ref, style),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.sm),
           ],
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Touche un style pour le choisir.',
+            textAlign: TextAlign.center,
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -128,34 +106,5 @@ class _MentorStyleSheet extends ConsumerWidget {
     } on AppException catch (exception) {
       notices.show(exception.message, tone: AppNoticeTone.error);
     }
-  }
-}
-
-/// Le mot d'exemple d'une voix, cité tel quel — et dit à voix haute, de
-/// CETTE voix, par « Écouter » : on l'entend avant de la choisir.
-class _ExempleDeVoix extends StatelessWidget {
-  const _ExempleDeVoix({required this.style});
-
-  final MentorStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Icon(AppIcons.quote, size: 14, color: AppColors.primaryLight),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: Text(
-            '« ${mentorWordCatalog[style]!.first} »',
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextTertiary,
-            ),
-          ),
-        ),
-        // La place du bouton « Écouter », posé par-dessus la carte.
-        const SizedBox(width: AppSpacing.xl),
-      ],
-    );
   }
 }

@@ -3,8 +3,8 @@
 /// Deux crans seulement : le Mentor est un repère, pas un flux. « Jamais »
 /// n'est pas une fréquence — c'est la bascule d'activation qui le dit.
 enum MentorFrequency {
-  hebdomadaire('semaine', 'Chaque semaine'),
-  quotidienne('jour', 'Chaque jour');
+  hebdomadaire('semaine', 'Hebdomadaire'),
+  quotidienne('jour', 'Quotidienne');
 
   const MentorFrequency(this.wire, this.label);
 

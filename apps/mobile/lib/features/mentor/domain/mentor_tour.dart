@@ -103,6 +103,9 @@ class MentorTourProgress {
   int get total => mentorTour.length;
 
   bool get terminee => prochaine == null;
+
+  /// Où elle en est, en un mot : « 3 / 7 » ou « Terminée ».
+  String get resume => terminee ? 'Terminée' : '$vues / $total';
 }
 
 /// FONCTION PURE : manifeste + identifiants vus → où en est la visite.

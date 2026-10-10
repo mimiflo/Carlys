@@ -72,6 +72,9 @@ abstract final class AppRoutes {
   static const String settings = '/settings';
   static const String carlysProfiles = '/profil-carlys';
 
+  /// « Mentor Carlys » : sa voix, ses interventions, leur fréquence.
+  static const String mentor = '/mentor';
+
   /// Le profil de progression : cinq axes, des points, un titre.
   static const String progression = '/progression';
 

@@ -1,77 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import '../../domain/entities/mentor_prefs.dart';
 import '../providers/mentor_providers.dart';
-import 'mentor_style_sheet.dart';
-import 'mentor_tour_sheet.dart';
+import 'mentor_voice_card.dart';
 
-/// Groupe « MENTOR CARLYS » du profil : sa voix, s'il la dit à voix haute,
-/// ses interventions, leur fréquence.
-///
-/// La voix vit sur le profil SERVEUR (elle teinte le coach partout) ; les
-/// interventions et leur fréquence sont locales à l'appareil, comme le
-/// thème : elles règlent quand le Mentor parle sur CET écran d'accueil.
+/// Groupe « MENTOR CARLYS » des réglages : une entrée vers sa page, qui
+/// règle sa voix, ses interventions et leur fréquence. La valeur affichée
+/// est la voix — ce qu'on y vient changer le plus souvent.
 class MentorSettingsSection extends ConsumerWidget {
   const MentorSettingsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = ref.watch(currentMentorStyleProvider);
-    final prefs =
-        ref.watch(mentorPrefsProvider).valueOrNull ?? MentorPrefs.defauts;
-    final visite = ref.watch(mentorTourProgressProvider);
-
     return AppSettingsGroup(
       label: 'Mentor Carlys',
       rows: [
         AppSettingsRow(
-          icon: style == null ? AppIcons.forYou : mentorVoiceIcon(style),
-          label: 'Sa voix',
-          value: style?.label ?? 'À choisir',
-          onTap: () => showMentorStyleSheet(context),
+          icon: style == null ? AppIcons.mentor : mentorVoiceIcon(style),
+          label: 'Personnaliser le Mentor',
+          value: style?.label ?? 'Voix à choisir',
+          onTap: () => context.push(AppRoutes.mentor),
         ),
-        AppSettingsRow(
-          icon: AppIcons.listen,
-          label: 'À voix haute',
-          toggleValue: prefs.voixParlee,
-          onToggle: (value) =>
-              ref.read(mentorActionsProvider).setVoixParlee(active: value),
-        ),
-        AppSettingsRow(
-          icon: AppIcons.tour,
-          label: 'La visite guidée',
-          value: visite == null
-              ? '—'
-              : (visite.terminee
-                    ? 'Terminée'
-                    : '${visite.vues} / ${visite.total}'),
-          onTap: () => showMentorTourSheet(context),
-        ),
-        AppSettingsRow(
-          icon: AppIcons.spark,
-          label: 'Ses interventions',
-          toggleValue: prefs.interventionsActives,
-          onToggle: (value) => ref
-              .read(mentorActionsProvider)
-              .setInterventionsActives(actives: value),
-        ),
-        if (prefs.interventionsActives)
-          AppSettingsRow(
-            icon: AppIcons.calendar,
-            label: 'Fréquence',
-            value: prefs.frequence.label,
-            // Deux crans : le geste bascule de l'un à l'autre, pas besoin
-            // d'un écran pour un choix binaire.
-            onTap: () => ref
-                .read(mentorActionsProvider)
-                .setFrequence(
-                  prefs.frequence == MentorFrequency.hebdomadaire
-                      ? MentorFrequency.quotidienne
-                      : MentorFrequency.hebdomadaire,
-                ),
-          ),
       ],
     );
   }

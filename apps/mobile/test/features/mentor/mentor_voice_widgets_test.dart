@@ -4,7 +4,7 @@ import 'package:carlys_mobile/features/mentor/data/mentor_prefs_store.dart';
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_style.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
 import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
-import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_settings_section.dart';
+import 'package:carlys_mobile/features/mentor/presentation/screens/mentor_settings_screen.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_speak_button.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
@@ -95,7 +95,7 @@ void main() {
 
     expect(bouche.dits.single.$1, mot.message);
 
-    Navigator.of(tester.element(find.text(mot.message))).pop();
+    Navigator.of(tester.element(find.textContaining(mot.message))).pop();
     await tester.pumpAndSettle();
     expect(bouche.arrets, greaterThanOrEqualTo(1));
   });
@@ -155,6 +155,8 @@ void main() {
       expect(noeud.tooltip, 'Écouter');
       expect(noeud.flagsCollection.isButton, isTrue);
     }
+    await tester.ensureVisible(find.byTooltip('Écouter').at(2));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Écouter').at(2));
     await tester.pump();
     expect(
@@ -167,14 +169,13 @@ void main() {
   testWidgets('le réglage « À voix haute » s’écrit sur l’appareil', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      app(const SingleChildScrollView(child: MentorSettingsSection())),
-    );
+    await tester.pumpWidget(app(const MentorSettingsScreen()));
     await tester.pumpAndSettle();
 
-    // Première bascule du groupe : « À voix haute » (puis « Ses interventions »).
+    // Seconde bascule de la page : « À voix haute » (après « Ses
+    // interventions »).
     expect(find.text('À voix haute'), findsOneWidget);
-    await tester.tap(find.byType(Switch).first);
+    await tester.tap(find.byType(Switch).at(1));
     await tester.pumpAndSettle();
 
     final prefs = await SharedPreferences.getInstance();

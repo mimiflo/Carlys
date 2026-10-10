@@ -22,6 +22,7 @@ import '../../features/community/presentation/screens/friend_challenge_screen.da
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
+import '../../features/mentor/presentation/screens/mentor_settings_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_scan_screen.dart';
 import '../../features/nutrition/presentation/screens/metabolism_screen.dart';
@@ -513,6 +514,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'manifesto',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ManifestoScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.mentor,
+        name: 'mentor',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MentorSettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.carlysProfiles,

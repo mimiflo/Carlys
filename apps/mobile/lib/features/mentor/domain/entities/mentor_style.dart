@@ -9,26 +9,22 @@ enum MentorStyle {
   bienveillant(
     'BIENVEILLANT',
     'Bienveillant',
-    'Commence par ce qui va, transforme chaque critique en prochain pas. '
-        'La chaleur d’abord, sans rien cacher.',
+    'Encourage et transforme chaque difficulté en prochain pas.',
   ),
   exigeant(
     'EXIGEANT',
     'Exigeant',
-    'Va droit au fait, nomme ce qui ne va pas, ne félicite que le mérité. '
-        'Chaque exigence vient avec le geste pour y répondre.',
+    'Direct, précis, avec une action concrète pour avancer.',
   ),
   athlete(
     'ATHLETE',
     'Athlète',
-    'Parle comme un partenaire d’entraînement : phrases courtes, vocabulaire '
-        'du terrain, tout ramené à la séance.',
+    'Un partenaire d’entraînement, tourné vers la séance.',
   ),
   philosophe(
     'PHILOSOPHE',
     'Philosophe',
-    'Prend de la hauteur : relie l’effort du jour à ce qu’il construit sur '
-        'des mois, une idée forte à la fois.',
+    'Relie l’effort du jour à ce qu’il construit sur la durée.',
   );
 
   const MentorStyle(this.wire, this.label, this.description);

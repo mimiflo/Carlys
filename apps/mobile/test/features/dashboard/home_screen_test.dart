@@ -459,7 +459,7 @@ void main() {
 
     await tester.tap(find.text('LE MENTOR'));
     await tester.pumpAndSettle();
-    expect(find.text('Le Mentor Carlys'), findsOneWidget);
+    expect(find.text('Mentor Carlys'), findsOneWidget);
     expect(find.text('Visite guidée'), findsOneWidget);
 
     await tester.tap(find.text('Visite guidée'));
