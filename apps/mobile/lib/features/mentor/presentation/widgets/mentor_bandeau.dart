@@ -9,6 +9,11 @@ import 'mentor_speak_button.dart';
 /// l'ouverture de la feuille : une seule clé, un seul bouton « Arrêter ».
 const String mentorWordSpeechKey = 'mentor.mot';
 
+/// Les montagnes violettes derrière le mot : WebP 1280 × 533, qualité 92,
+/// 11 Ko — plus bas, le dégradé lisse du fond se marquait en bandes.
+const String mentorMountainsAsset =
+    'assets/illustrations/mentor_montagnes.webp';
+
 /// La cadence d'un mot : fête d'un cap, mot du jour ou de la semaine.
 String mentorWordCadence(MentorWord mot, MentorFrequency? frequence) {
   if (mot.estCelebration) return 'Il fête un cap avec toi';
@@ -54,7 +59,17 @@ class MentorBandeau extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.padCard),
       decoration: const BoxDecoration(
+        // Le dégradé reste DESSOUS : il tient la carte tant que l'image se
+        // décode, et c'est contre lui que les contrastes sont mesurés.
         gradient: AppColors.mentorWord,
+        // Les montagnes de la maquette, une illustration produite dans
+        // ChatGPT par le propriétaire (10 octobre 2026) : calée à droite,
+        // elle garde le côté gauche, celui du texte, lisse et sombre.
+        image: DecorationImage(
+          image: AssetImage(mentorMountainsAsset),
+          fit: BoxFit.cover,
+          alignment: Alignment.centerRight,
+        ),
         borderRadius: AppRadius.cardSecondaryAll,
         border: Border.fromBorderSide(
           BorderSide(color: AppColors.majestyBorder),

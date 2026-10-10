@@ -26,6 +26,7 @@ import 'package:carlys_mobile/features/mentor/domain/mentor_voice.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
 import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
 import 'package:carlys_mobile/features/mentor/presentation/screens/mentor_settings_screen.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_bandeau.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
@@ -243,6 +244,14 @@ void main() {
       fond: fondAccueil(MentorStyle.bienveillant),
     );
     expect(find.text('Mentor Carlys'), findsOneWidget);
+    // Les montagnes ne se décodent qu'en vrai asynchrone.
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(mentorMountainsAsset),
+        tester.element(find.byType(MentorBandeau)),
+      ),
+    );
+    await tester.pumpAndSettle();
     await capture(tester, 'mentor-03-feuille');
   });
 

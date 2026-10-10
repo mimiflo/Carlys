@@ -84,7 +84,9 @@ choisir.
 ## Les écrans (maquettes d'octobre 2026)
 
 - **La feuille « Mentor Carlys »** (`showMentorSheet`, depuis « Pour toi ») :
-  le titre et « UN MOT POUR AVANCER », le bandeau violet profond (`mentorWord`) avec la
+  le titre et « UN MOT POUR AVANCER », le bandeau violet profond (`mentorWord`), ses montagnes (illustration
+  produite dans ChatGPT par le propriétaire,
+  `assets/illustrations/mentor_montagnes.webp`), la
   boussole, la cadence (« Le mot de la semaine », « du jour », ou « Il fête
   un cap avec toi »), le mot, la pastille de la voix et « Écouter » ; puis
   la visite guidée et sa voix (`MentorLinkRow`), et la note « Sa voix teinte
@@ -98,9 +100,7 @@ choisir.
   l'oublie, la voix parlée existe) ; « Écouter » reste sur chaque voix et
   sur le mot ; la page garde un seul en-tête, interventions actives ou non
   (la maquette en dessine deux) ; elle s'ouvre plein écran comme les
-  Réglages, sans barre d'onglets ; les montagnes du bandeau attendent
-  leur illustration (aucun modèle ChatGPT de ce compte ne génère d'image
-  le 10 octobre 2026, et un décor peint par code est interdit) ; les citations gardent les guillemets français. Écrit au serveur PUIS relu depuis
+  Réglages, sans barre d'onglets  les citations gardent les guillemets français. Écrit au serveur PUIS relu depuis
 `AuthUser` : une seule source de vérité, un échec s'affiche sans état faux.
 
 ## Le mot du Mentor (accueil)
