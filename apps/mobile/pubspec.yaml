@@ -123,8 +123,10 @@ dependencies:
   # ne sait demander SANS ouvrir la caméra (Android, et iOS par Swift Package
   # Manager, qui lit le motif d'Info.plist). Greffon Baseflow (MIT), la
   # passerelle standard ; derrière `FirstLaunchPermissions`, aucun test ne
-  # l'appelle.
-  permission_handler: ^13.0.2
+  # l'appelle. En 12, pas 13 : permission_handler_android 14 impose de
+  # compiler contre l'API 37, au-delà de ce qu'AGP 9.0.1 prend en charge
+  # (36) — la recette a refusé le build le 10 octobre 2026.
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
