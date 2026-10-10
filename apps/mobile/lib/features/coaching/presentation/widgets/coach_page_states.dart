@@ -4,21 +4,57 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import 'coach_header.dart';
+import 'coach_notices.dart';
+import 'coach_state_view.dart';
 
 /// Le coach fait partie de l'abonnement : sans le droit, on explique et on
 /// mène à l'écran d'abonnement — on ne laisse pas une porte fermée sans clé.
 class CoachPremiumState extends StatelessWidget {
   const CoachPremiumState({super.key});
 
+  static const _benefits = [
+    (
+      AppIcons.trendingUp,
+      'Comprends ta progression',
+      'Tes séances, records et mesures réunis.',
+    ),
+    (
+      AppIcons.equipmentDumbbell,
+      'Adapte ton entraînement',
+      'Selon ton temps et ton matériel.',
+    ),
+    (AppIcons.play, 'Passe à l’action', 'Une séance proposée, prête à lancer.'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return AppEmptyState(
-      icon: AppIcons.premium,
+    return CoachStateView(
+      badge: AppIcons.lock,
+      pill: const AppPill(
+        label: 'PREMIUM',
+        icon: AppIcons.premium,
+        tone: AppPillTone.primary,
+      ),
       title: 'Le coach est réservé à Premium',
-      message:
-          'Il lit tes séances, tes records et tes mesures pour adapter '
-          'ton entraînement, et te propose une séance prête à lancer.',
+      message: 'Un accompagnement adapté à ton entraînement, à ton rythme.',
+      body: AppCard(
+        child: Column(
+          children: [
+            for (final (index, (icon, title, detail)) in _benefits.indexed) ...[
+              if (index > 0) const SizedBox(height: AppSpacing.gapRow),
+              MergeSemantics(
+                child: CoachNoticeHeading(
+                  icon: icon,
+                  title: title,
+                  message: detail,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
       actionLabel: 'Voir Premium',
+      actionIcon: AppIcons.premium,
       onAction: () => GoRouter.of(context).go(AppRoutes.subscription),
     );
   }

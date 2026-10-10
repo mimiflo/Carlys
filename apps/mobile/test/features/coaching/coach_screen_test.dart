@@ -57,6 +57,7 @@ void main() {
     ValueChanged<CoachCreatedWorkout>? onOpenCreated,
     String? profileLabel,
     VoidCallback? onOpenProfile,
+    CoachRefusal? notice,
   }) async {
     final controller = TextEditingController();
     addTearDown(controller.dispose);
@@ -77,6 +78,7 @@ void main() {
           live: live,
           profileLabel: profileLabel,
           onOpenProfile: onOpenProfile,
+          notice: notice,
         ),
       ),
     );
@@ -180,11 +182,52 @@ void main() {
     // La saisie disparaît — un envoi hors ligne ne recevrait sa réponse que
     // des heures plus tard, ce qui n'est plus une conversation.
     expect(find.byType(TextField), findsNothing);
-    expect(find.byIcon(AppIcons.offline), findsOneWidget);
+    expect(find.text('Connexion perdue'), findsOneWidget);
+    expect(find.byIcon(AppIcons.connectionLost), findsOneWidget);
     // Mais l'historique reste lisible.
     expect(find.text('Voici une adaptation.'), findsOneWidget);
     // Et on ne propose plus d'amorces qu'on ne saurait pas honorer.
     expect(find.text('Ajuster ma séance'), findsNothing);
+  });
+
+  testWidgets('un envoi refusé : sa nature, la phrase du serveur, et la '
+      'question gardée', (tester) async {
+    await pumpCoach(
+      tester,
+      notice: const CoachRefusal(
+        CoachRefusalKind.limit,
+        'Tu as atteint ta limite de messages pour aujourd’hui.',
+      ),
+    );
+
+    expect(find.text('Limite atteinte'), findsOneWidget);
+    expect(
+      find.text('Tu as atteint ta limite de messages pour aujourd’hui.'),
+      findsOneWidget,
+    );
+    // Champ vide (reprise refusée au retour) : rien n'est conservé, la
+    // carte ne le prétend pas.
+    expect(find.text('Ta question est conservée.'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Et demain ?');
+    await tester.pump();
+    expect(find.text('Ta question est conservée.'), findsOneWidget);
+  });
+
+  testWidgets('un 503 sans affluence : « Coach en pause », pas « sollicité »', (
+    tester,
+  ) async {
+    await pumpCoach(
+      tester,
+      notice: const CoachRefusal(
+        CoachRefusalKind.paused,
+        'Le coach est momentanément indisponible.',
+      ),
+    );
+
+    expect(find.text('Coach en pause'), findsOneWidget);
+    expect(find.text('Coach très sollicité'), findsNothing);
   });
 
   testWidgets('pendant la rédaction, on ne peut pas doubler la question', (

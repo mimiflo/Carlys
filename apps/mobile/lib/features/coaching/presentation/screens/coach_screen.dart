@@ -75,9 +75,10 @@ class CoachScreen extends StatelessWidget {
   /// Le tour en cours d'écriture, s'il y en a un.
   final CoachLiveTurn? live;
 
-  /// Refus explicite du serveur (plafond du jour, coach coupé). Jamais un
-  /// message d'ambiance : s'il est là, c'est qu'un envoi a été refusé.
-  final String? notice;
+  /// Refus explicite du serveur (plafond du jour, coach coupé), avec sa
+  /// nature. Jamais un message d'ambiance : s'il est là, c'est qu'un envoi a
+  /// été refusé.
+  final CoachRefusal? notice;
 
   /// Présent quand le fil se RELIT sans plus s'écrire (coach réservé aux
   /// abonnés) : le composeur cède la place à l'invitation qui y mène.
@@ -150,7 +151,16 @@ class CoachScreen extends StatelessWidget {
                       ),
                     ),
             ),
-            if (notice case final text?) CoachNotice(text: text),
+            if (notice case final refusal?)
+              // « Ta question est conservée » se lit dans le CHAMP : une
+              // reprise refusée au retour, ou un champ vidé, ne l'a plus.
+              ValueListenableBuilder(
+                valueListenable: composerController,
+                builder: (context, value, _) => CoachNotice(
+                  refusal: refusal,
+                  questionKept: value.text.trim().isNotEmpty,
+                ),
+              ),
             if (onUnlock case final unlock?)
               Padding(
                 padding: const EdgeInsets.fromLTRB(

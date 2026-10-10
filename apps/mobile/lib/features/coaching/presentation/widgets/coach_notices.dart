@@ -1,11 +1,11 @@
-/// Les deux lignes discrètes de l'écran du coach : d'où vient la réponse
-/// (en tête de fil) et pourquoi un envoi vient d'être refusé (au-dessus du
-/// composeur). Même famille, même sobriété, même fichier.
+/// Les deux avis de l'écran du coach : d'où vient la réponse (en tête de
+/// fil) et pourquoi un envoi vient d'être refusé (au-dessus du composeur).
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../domain/entities/coach_thread_state.dart';
 
 /// En tête de conversation : d'où vient la réponse du coach.
 ///
@@ -56,13 +56,31 @@ class CoachDataNotice extends StatelessWidget {
 
 /// Refus du serveur, posé juste au-dessus du composeur — là où l'on vient
 /// d'appuyer, et non en haut d'un écran qu'on ne regarde plus.
+///
+/// Le titre et l'icône disent la NATURE du refus ; la phrase reste celle du
+/// serveur, écrite pour la personne. « Ta question est conservée » ne se
+/// dit que si elle l'est : un envoi refusé remet son texte dans le champ
+/// (`CoachPage._send`), une reprise refusée au retour, non.
 class CoachNotice extends StatelessWidget {
-  const CoachNotice({required this.text, super.key});
+  const CoachNotice({
+    required this.refusal,
+    required this.questionKept,
+    super.key,
+  });
 
-  final String text;
+  final CoachRefusal refusal;
+  final bool questionKept;
 
   @override
   Widget build(BuildContext context) {
+    final (icon, title) = switch (refusal.kind) {
+      // Plafond du jour ou rafale de la minute : le serveur dit lequel.
+      CoachRefusalKind.limit => (AppIcons.time, 'Limite atteinte'),
+      CoachRefusalKind.pending => (AppIcons.coach, 'Réponse en cours'),
+      CoachRefusalKind.busy => (AppIcons.time, 'Coach très sollicité'),
+      CoachRefusalKind.paused => (AppIcons.coachPaused, 'Coach en pause'),
+      CoachRefusalKind.failed => (AppIcons.info, 'Réponse impossible'),
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.gutter,
@@ -70,25 +88,101 @@ class CoachNotice extends StatelessWidget {
         AppSpacing.gutter,
         AppSpacing.sm,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            AppIcons.info,
-            size: 16,
-            color: AppColors.darkTextTertiary,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextSecondary,
+      child: Semantics(
+        liveRegion: true,
+        container: true,
+        child: AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CoachNoticeHeading(
+                icon: icon,
+                title: title,
+                message: refusal.message,
+                warning: refusal.kind == CoachRefusalKind.limit,
               ),
-            ),
+              if (questionKept) ...[
+                const SizedBox(height: AppSpacing.sm),
+                const Divider(height: 1, color: AppColors.rowDivider),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    const Icon(
+                      AppIcons.coachStepDone,
+                      size: 16,
+                      color: AppColors.primaryLight,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'Ta question est conservée.',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+}
+
+/// La ligne pastille, titre et phrase des cartes du coach : refus, hors
+/// ligne, avantages de Premium.
+class CoachNoticeHeading extends StatelessWidget {
+  const CoachNoticeHeading({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.warning = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  /// Orange : un état à surveiller (plafond, connexion), pas une erreur.
+  final bool warning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppIconBadge(
+          icon: icon,
+          size: 40,
+          color: warning ? AppColors.accent : AppColors.primaryLight,
+          background: warning
+              ? AppColors.accentBadgeBg
+              : AppColors.primaryBadgeBg,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTypography.subheading.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                message,
+                style: AppTypography.label.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

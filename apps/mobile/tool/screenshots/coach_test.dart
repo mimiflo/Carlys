@@ -10,6 +10,8 @@ import 'package:carlys_mobile/features/coaching/domain/entities/coach_thread_sta
 import 'package:carlys_mobile/features/coaching/domain/services/coach_greeting.dart';
 import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_page_states.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_state_view.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_training_frame.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
@@ -120,12 +122,14 @@ void main() {
     TrainingProfile? profile,
     TrainingGoal? goal,
     String? profileLabel,
+    CoachRefusal? notice,
+    String composerText = '',
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
 
-    final controller = TextEditingController();
+    final controller = TextEditingController(text: composerText);
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
@@ -175,6 +179,7 @@ void main() {
             greeting: greeting,
             profileLabel: profileLabel,
             onOpenProfile: () {},
+            notice: notice,
           ),
         ),
       ),
@@ -384,6 +389,69 @@ void main() {
   testWidgets('coach — hors ligne', (tester) async {
     await pumpCoach(tester, messages: _conversation, isOffline: true);
     await capture(tester, 'coach-04-hors-ligne');
+  });
+
+  testWidgets('coach — limite du jour, la question gardée', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      notice: const CoachRefusal(
+        CoachRefusalKind.limit,
+        'Tu as atteint le nombre de messages du jour. Le coach revient '
+        'demain.',
+      ),
+      composerText: 'Et pour demain, je fais quoi ?',
+    );
+    await capture(tester, 'coach-16-limite');
+  });
+
+  // Les états hors conversation, dans le cadre de la page.
+  Future<void> pumpState(WidgetTester tester, Widget state) async {
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark(),
+        home: CoachShell(child: state),
+      ),
+    );
+    await tester.pump();
+  }
+
+  testWidgets('coach — réservé à Premium', (tester) async {
+    await pumpState(tester, const CoachPremiumState());
+    await capture(tester, 'coach-17-premium');
+  });
+
+  testWidgets('coach — en pause', (tester) async {
+    await pumpState(
+      tester,
+      CoachStateView(
+        badge: AppIcons.coachPaused,
+        title: 'Le coach est en pause',
+        message: 'Il est momentanément indisponible. Réessaie plus tard.',
+        actionLabel: 'Réessayer',
+        actionIcon: AppIcons.retry,
+        onAction: () {},
+      ),
+    );
+    await capture(tester, 'coach-18-pause');
+  });
+
+  testWidgets('coach — ouverture', (tester) async {
+    await pumpState(
+      tester,
+      const CoachStateView(
+        title: 'Ouverture du coach',
+        message: 'Un instant…',
+        isLoading: true,
+      ),
+    );
+    // L'anneau indéterminé part d'un point : on le laisse tourner un peu.
+    await tester.pump(const Duration(milliseconds: 600));
+    await capture(tester, 'coach-19-chargement');
   });
 
   // Un programme proposé : le coach choisit les réglages, Carlys construit.

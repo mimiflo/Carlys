@@ -1,6 +1,33 @@
 import '../../../../core/errors/app_exception.dart';
 import 'coach.dart';
 
+/// La nature d'un refus du serveur : l'écran en tire son titre et son icône
+/// (« Limite atteinte » et une horloge), le texte reste celui du refus.
+enum CoachRefusalKind {
+  /// Plafond du jour, ou trop de messages dans la minute (429).
+  limit,
+
+  /// Une réponse à la même question s'écrit encore côté serveur (409).
+  pending,
+
+  /// Coach saturé : la file est pleine (503 `SERVICE_BUSY`).
+  busy,
+
+  /// Coach coupé, ou réponse échouée de son côté (tout autre 503).
+  paused,
+
+  /// Tout autre échec.
+  failed,
+}
+
+/// Un refus réel du serveur, posé au-dessus du composeur.
+class CoachRefusal {
+  const CoachRefusal(this.kind, this.message);
+
+  final CoachRefusalKind kind;
+  final String message;
+}
+
 /// État du fil affiché : la conversation, plus ce que l'écran doit savoir
 /// pour ne pas mentir à l'utilisateur.
 ///
@@ -37,9 +64,10 @@ class CoachThreadState {
   /// cède la place à une invitation vers l'abonnement.
   final bool isReadOnly;
 
-  /// Message court affiché au-dessus du composeur (plafond atteint, coach
-  /// momentanément coupé…). Toujours issu d'un refus RÉEL du serveur.
-  final String? notice;
+  /// Le refus affiché au-dessus du composeur (plafond atteint, coach
+  /// momentanément coupé…), sa nature et sa phrase. Toujours issu d'un refus
+  /// RÉEL du serveur.
+  final CoachRefusal? notice;
 
   /// La réponse arrivée : la question et la réplique rejoignent le fil, le
   /// tour en cours et l'avis éventuel s'effacent. Une question déjà dans le
@@ -62,12 +90,13 @@ class CoachThreadState {
   /// L'envoi a échoué : le tour s'efface et le fil dit pourquoi. Hors
   /// ligne, le composeur le dit ; 403, le droit au coach est parti et le fil
   /// reste à relire, sans avis.
-  CoachThreadState failed(AppException exception, {String? notice}) => copyWith(
-    clearLive: true,
-    isOffline: exception is NetworkException,
-    isReadOnly: exception is ForbiddenException,
-    notice: exception is ForbiddenException ? null : notice,
-  );
+  CoachThreadState failed(AppException exception, {CoachRefusal? notice}) =>
+      copyWith(
+        clearLive: true,
+        isOffline: exception is NetworkException,
+        isReadOnly: exception is ForbiddenException,
+        notice: exception is ForbiddenException ? null : notice,
+      );
 
   CoachThreadState copyWith({
     CoachConversation? conversation,
@@ -79,7 +108,7 @@ class CoachThreadState {
     // `notice` se remet à zéro à chaque envoi : un drapeau explicite évite
     // qu'un `null` passé volontairement soit confondu avec « inchangé ».
     bool clearNotice = false,
-    String? notice,
+    CoachRefusal? notice,
   }) {
     return CoachThreadState(
       conversation: conversation ?? this.conversation,

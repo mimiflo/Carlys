@@ -264,7 +264,7 @@ void main() {
 
     await thread.send('Une question de trop');
     expect(
-      container.read(coachThreadProvider).valueOrNull?.notice,
+      container.read(coachThreadProvider).valueOrNull?.notice?.message,
       contains('nombre de messages du jour'),
     );
 
@@ -273,7 +273,10 @@ void main() {
 
     // Le message d'avant se recollait sous la réponse fraîche : l'état
     // repris pour construire le succès était celui d'AVANT l'envoi.
-    expect(container.read(coachThreadProvider).valueOrNull?.notice, isNull);
+    expect(
+      container.read(coachThreadProvider).valueOrNull?.notice?.message,
+      isNull,
+    );
   });
 
   test(
@@ -320,7 +323,7 @@ void main() {
 
     final etat = container.read(coachThreadProvider).valueOrNull;
     expect(etat?.live, isNull);
-    expect(etat?.notice, 'Le coach est momentanément indisponible.');
+    expect(etat?.notice?.message, 'Le coach est momentanément indisponible.');
   });
 
   test(
@@ -379,7 +382,7 @@ void main() {
         isFalse,
       );
       expect(
-        container.read(coachThreadProvider).valueOrNull?.notice,
+        container.read(coachThreadProvider).valueOrNull?.notice?.message,
         'Le coach n’a pas pu répondre.',
       );
       expect(repository.sentIds, hasLength(1));
@@ -480,7 +483,7 @@ void main() {
           isFalse,
         );
         expect(
-          container.read(coachThreadProvider).valueOrNull?.notice,
+          container.read(coachThreadProvider).valueOrNull?.notice?.message,
           'Le coach est très sollicité en ce moment. Réessaie dans un instant.',
         );
       },
@@ -502,7 +505,7 @@ void main() {
 
         await container.read(coachThreadProvider.notifier).send('Demain ?');
         expect(
-          container.read(coachThreadProvider).valueOrNull?.notice,
+          container.read(coachThreadProvider).valueOrNull?.notice?.message,
           'Tu envoies trop de messages d’un coup. Attends une minute.',
         );
       },

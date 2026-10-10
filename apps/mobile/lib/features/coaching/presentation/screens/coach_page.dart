@@ -19,6 +19,7 @@ import '../providers/coach_frame_providers.dart';
 import '../providers/coach_program_actions.dart';
 import '../providers/coach_saved_workouts.dart';
 import '../widgets/coach_page_states.dart';
+import '../widgets/coach_state_view.dart';
 import '../widgets/coach_training_frame.dart';
 import 'coach_screen.dart';
 
@@ -170,7 +171,11 @@ class _CoachPageState extends ConsumerState<CoachPage> {
 
     return thread.when(
       loading: () => const CoachShell(
-        child: AppLoadingIndicator(label: 'Ouverture du coach'),
+        child: CoachStateView(
+          title: 'Ouverture du coach',
+          message: 'Un instant…',
+          isLoading: true,
+        ),
       ),
       error: (error, _) => CoachShell(child: _errorState(error)),
       data: (state) => CoachScreen(
@@ -215,30 +220,27 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     // vérité sur l'accès au coach, jamais un calcul fait ici.
     if (error is ForbiddenException) return const CoachPremiumState();
 
-    if (error is NetworkException) {
-      return AppErrorState(
-        icon: AppIcons.offline,
-        title: 'Le coach a besoin d’une connexion',
-        message:
-            'Reviens quand le réseau est là : la conversation reprendra '
-            'où tu l’as laissée.',
-        onRetry: () => ref.invalidate(coachThreadProvider),
-      );
-    }
-
-    if (error is ServerException && error.statusCode == 503) {
-      return AppErrorState(
-        icon: AppIcons.coach,
-        title: 'Le coach est en pause',
-        message: 'Il est momentanément indisponible. Réessaie plus tard.',
-        onRetry: () => ref.invalidate(coachThreadProvider),
-      );
-    }
-
-    return AppErrorState(
-      title: 'Coach indisponible',
-      message: 'Réessaie dans un instant.',
-      onRetry: () => ref.invalidate(coachThreadProvider),
+    final (badge, title, message) = switch (error) {
+      NetworkException() => (
+        AppIcons.connectionLost,
+        'Le coach a besoin d’une connexion',
+        'Reviens quand le réseau est là : la conversation reprendra où tu '
+            'l’as laissée.',
+      ),
+      ServerException(statusCode: 503) => (
+        AppIcons.coachPaused,
+        'Le coach est en pause',
+        'Il est momentanément indisponible. Réessaie plus tard.',
+      ),
+      _ => (AppIcons.info, 'Coach indisponible', 'Réessaie dans un instant.'),
+    };
+    return CoachStateView(
+      badge: badge,
+      title: title,
+      message: message,
+      actionLabel: 'Réessayer',
+      actionIcon: AppIcons.retry,
+      onAction: () => ref.invalidate(coachThreadProvider),
     );
   }
 }

@@ -989,14 +989,14 @@ Deux écrans, deux rôles :
   décide de tout : chargement, refus du serveur, envoi, lancement de la séance
   proposée ;
 - `CoachScreen` reste **présentationnel** — il reçoit des messages et rend des
-  bulles. C'est lui que capture `tool/screenshots/coach_test.dart` (quatre
-  états) et que couvre `coach_screen_test.dart` ; le jeu d'exemple vit dans le
-  harnais, jamais dans `lib/`.
+  bulles. C'est lui que capture `tool/screenshots/coach_test.dart`, avec les
+  états de la page, et que couvre `coach_screen_test.dart` ; le jeu d'exemple
+  vit dans le harnais, jamais dans `lib/`.
 
 Widgets : `CoachHeader`, `CoachMessageBubble`, `CoachSuggestions`,
-`CoachProposalCard`, `CoachComposer`, `CoachDataNotice` et `CoachNotice`
-(`widgets/coach_notices.dart`) — chacun sous 250 lignes, l'écran compris : les
-deux lignes discrètes du coach ont quitté `coach_screen.dart` le jour où
+`CoachProposalCard`, `CoachComposer`, `CoachStateView`, `CoachDataNotice` et
+`CoachNotice` (`widgets/coach_notices.dart`) — chacun sous 250 lignes, l'écran compris : les
+deux avis du coach ont quitté `coach_screen.dart` le jour où
 l'ajout de la mention de traitement l'a poussé au-delà de la limite.
 
 **Le coach dit bonjour, une fois par jour au plus** (1er octobre 2026). Un court
@@ -1030,7 +1030,7 @@ s'écrit (depuis le 30 septembre 2026).
 **L'en-tête et la barre de saisie tiennent les deux bords de l'écran.**
 L'en-tête porte `AppBackButton`, la flèche commune du design system : elle
 dépile la branche Training et s'efface seule s'il n'y a rien derrière. Les
-états d'attente et d'erreur la portent aussi (`_CoachShell`), et ce n'est pas
+états d'attente et d'erreur la portent aussi (`CoachShell`), et ce n'est pas
 un détail : un coach qui n'a pas pu s'ouvrir est précisément le moment où
 l'on veut repartir.
 
@@ -1065,10 +1065,26 @@ trois écrans :
 - droit inconnu (hors ligne) : l'écriture reste permise, l'envoi rapportera
   le vrai refus.
 
-Un `429` devient une phrase au-dessus du composeur — et la question reste
-dans le champ, prête à repartir demain. Un `503` à l'ouverture d'un premier
-fil devient « le coach est en pause ». Aucun ne ressemble à une panne, parce
-qu'aucun n'en est une.
+Un envoi refusé devient une **carte au-dessus du composeur** (`CoachNotice`,
+maquette d'octobre 2026) : une pastille et un titre selon la nature du refus
+(`CoachRefusalKind`, rendu par `coachNoticeFor`) — « Limite atteinte »
+(`429`, pastille orange), « Réponse en cours » (`409`), « Coach très
+sollicité » (`503` `SERVICE_BUSY`), « Coach en pause » (autre `503`),
+« Réponse impossible » —, la phrase du serveur, puis « Ta question est
+conservée. », tant que le champ la contient : un envoi refusé y remet son
+texte, une reprise refusée au retour non, et la ligne s'efface alors. Le titre du `429` reste générique : le même
+statut porte le plafond du jour ET la limite par minute, et la phrase du
+serveur dit lequel. Hors ligne, la carte « Connexion perdue » (liseré orange,
+bouton « Réessayer ») remplace le composeur.
+
+Les états hors conversation partagent un gabarit (`CoachStateView`) :
+l'emblème du coach et son badge, un titre, une phrase violette, l'action,
+puis « Retour au Training ». Réservé à Premium (cadenas, pastille PREMIUM,
+trois avantages, « Voir Premium »), en pause (`503` à l'ouverture), sans
+connexion, indisponible, et l'ouverture (« Ouverture du coach », un
+indicateur à la place de l'action). Aucun ne ressemble à une panne, parce
+qu'aucun n'en est une. Captures `coach-04-hors-ligne`, `coach-16-limite`,
+`coach-17-premium`, `coach-18-pause`, `coach-19-chargement`.
 
 **Accepter une proposition lance une vraie séance.** `CoachSessionLauncher`
 écrit la séance ET son plan dans **une seule** transaction locale, en

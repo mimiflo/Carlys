@@ -80,6 +80,11 @@ void main() {
 
     expect(find.text('Le coach est réservé à Premium'), findsOneWidget);
     expect(find.text('Voir Premium'), findsOneWidget);
+    expect(find.text('PREMIUM'), findsOneWidget);
+    expect(find.text('Comprends ta progression'), findsOneWidget);
+    expect(find.text('Adapte ton entraînement'), findsOneWidget);
+    expect(find.text('Passe à l’action'), findsOneWidget);
+    expect(find.text('Retour au Training'), findsOneWidget);
     // Surtout pas le vocabulaire de la panne : ce n'est pas cassé.
     expect(find.text('Coach indisponible'), findsNothing);
   });
@@ -187,6 +192,8 @@ void main() {
     );
 
     expect(find.text('Le coach est en pause'), findsOneWidget);
+    expect(find.byIcon(AppIcons.coachPaused), findsOneWidget);
+    expect(find.text('Réessayer'), findsOneWidget);
   });
 
   testWidgets('un fil vide n’est PAS créé tant qu’on n’a rien écrit', (

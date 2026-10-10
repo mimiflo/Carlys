@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
+import 'coach_notices.dart';
 
 /// Barre de saisie du coach.
 ///
@@ -166,7 +167,7 @@ class _RoundButton extends StatelessWidget {
 
 /// L'état hors ligne du coach, AVEC sa porte de sortie.
 ///
-/// Sans ce bouton, la barre remplaçait le champ de saisie et les
+/// Sans ce bouton, la carte remplaçait le champ de saisie et les
 /// suggestions sans rien offrir : le seul chemin qui relève le drapeau
 /// passe par un envoi, devenu impossible. Le réseau revenu, l'écran
 /// continuait d'affirmer le contraire.
@@ -178,55 +179,36 @@ class _OfflineNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      // Même traitement que le champ de saisie qu'il remplace : la barre garde
-      // sa place et sa forme, seul son contenu change.
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.all(AppSpacing.padCard),
+      // Liseré orange : un état à surveiller, pas une erreur.
+      decoration: BoxDecoration(
         color: AppColors.darkSurface,
-        borderRadius: AppRadius.fullAll,
+        borderRadius: AppRadius.cardSecondaryAll,
+        border: Border.all(color: AppColors.accentBadgeBorder),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(
-            AppIcons.offline,
-            size: 18,
-            color: AppColors.darkTextTertiary,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              'Le coach a besoin d’une connexion. Ton historique reste lisible.',
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
           Semantics(
-            button: true,
-            label: 'Réessayer, revenir à la saisie',
-            // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
-            onTap: onRetry,
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: onRetry,
-              borderRadius: AppRadius.fullAll,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.xxs,
-                ),
-                child: Text(
-                  'Réessayer',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.primaryLight,
-                  ),
-                ),
-              ),
+            liveRegion: true,
+            container: true,
+            child: CoachNoticeHeading(
+              icon: AppIcons.connectionLost,
+              title: 'Connexion perdue',
+              message:
+                  'Le coach a besoin d’une connexion. Ton historique reste '
+                  'lisible.',
+              warning: true,
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: 'Réessayer',
+            icon: AppIcons.retry,
+            semanticLabel: 'Réessayer, revenir à la saisie',
+            variant: AppButtonVariant.secondary,
+            onPressed: onRetry,
+            isExpanded: true,
           ),
         ],
       ),

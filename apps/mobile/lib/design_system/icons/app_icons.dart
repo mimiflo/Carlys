@@ -216,6 +216,12 @@ abstract final class AppIcons {
   /// Une séance que le coach a enregistrée dans tes modèles.
   static const IconData coachSavedWorkout = Icons.bookmark_added_rounded;
 
+  /// Le coach coupé un moment (503) : il reviendra, ce n'est pas une panne.
+  static const IconData coachPaused = Icons.pause_rounded;
+
+  /// La connexion perdue au milieu d'une conversation.
+  static const IconData connectionLost = Icons.wifi_off_rounded;
+
   /// Précision neutre — jamais une erreur, jamais une alerte.
   static const IconData info = Icons.info_outline_rounded;
 
