@@ -75,7 +75,9 @@ class MentorFrequencyPicker extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxs),
         Text(
           'À quelle fréquence souhaites-tu recevoir un mot ?',
-          style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -164,7 +166,7 @@ class MentorInterventionsOffCard extends StatelessWidget {
                   'Le mot du Mentor est masqué sur l’accueil. Tu peux le '
                   'réactiver quand tu veux.',
                   style: AppTypography.body.copyWith(
-                    color: AppColors.primaryLight,
+                    color: AppColors.darkTextSecondary,
                   ),
                 ),
               ],

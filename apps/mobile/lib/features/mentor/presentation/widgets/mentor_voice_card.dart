@@ -86,14 +86,14 @@ class MentorVoiceCard extends StatelessWidget {
                         Text(
                           style.description,
                           style: AppTypography.body.copyWith(
-                            color: AppColors.primaryLight,
+                            color: AppColors.darkTextSecondary,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           '« $exemple »',
                           style: AppTypography.body.copyWith(
-                            color: AppColors.darkTextSecondary,
+                            color: AppColors.darkTextTertiary,
                           ),
                         ),
                       ],

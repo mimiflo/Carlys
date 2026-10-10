@@ -65,7 +65,7 @@ class MentorLinkRow extends StatelessWidget {
                     Text(
                       description,
                       style: AppTypography.body.copyWith(
-                        color: AppColors.primaryLight,
+                        color: AppColors.darkTextSecondary,
                       ),
                     ),
                   ],
