@@ -21,7 +21,7 @@ String mentorWordCadence(MentorWord mot, MentorFrequency? frequence) {
 /// Le bandeau du Mentor (maquette d'octobre 2026) : sa boussole, la
 /// cadence de son mot, le mot lui-même et la voix qui le dit.
 ///
-/// Le dégradé VIOLET de l'application (`cta`), texte `neutral0` : le
+/// Le dégradé VIOLET profond du mot (`mentorWord`), texte `neutral0` : le
 /// Mentor parle depuis le thème de Carlys, pas depuis une carte grise —
 /// et pas depuis le dégradé de marque multicolore, réservé aux
 /// célébrations de franchissement (préférence actée le 18/09/2026).
@@ -54,8 +54,11 @@ class MentorBandeau extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.padCard),
       decoration: const BoxDecoration(
-        gradient: AppColors.cta,
+        gradient: AppColors.mentorWord,
         borderRadius: AppRadius.cardSecondaryAll,
+        border: Border.fromBorderSide(
+          BorderSide(color: AppColors.majestyBorder),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,17 +145,14 @@ class _Boussole extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.neutral0.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.neutral0.withValues(alpha: 0.5),
-                  width: 3,
-                ),
+                color: AppColors.primaryBadgeBg,
+                border: Border.all(color: AppColors.primaryLight, width: 3),
               ),
               alignment: Alignment.center,
               child: const Icon(
                 AppIcons.mentor,
                 size: _size * 0.56,
-                color: AppColors.neutral0,
+                color: AppColors.primaryLight,
               ),
             ),
             const Positioned(
@@ -161,7 +161,7 @@ class _Boussole extends StatelessWidget {
               child: Icon(
                 AppIcons.mentorSparkle,
                 size: 20,
-                color: AppColors.neutral0,
+                color: AppColors.primaryLight,
               ),
             ),
             const Positioned(
@@ -170,7 +170,7 @@ class _Boussole extends StatelessWidget {
               child: Icon(
                 AppIcons.mentorSparkle,
                 size: 12,
-                color: AppColors.neutral0,
+                color: AppColors.primaryLight,
               ),
             ),
           ],

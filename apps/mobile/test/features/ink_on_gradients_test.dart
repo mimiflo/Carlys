@@ -114,6 +114,7 @@ void main() {
                 body: MentorBandeau(
                   mot: mot,
                   frequence: MentorFrequency.hebdomadaire,
+                  voix: 'Bienveillant',
                 ),
               ),
             ),
@@ -121,7 +122,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final bandeau = surfacePainting(AppColors.cta);
+        final bandeau = surfacePainting(AppColors.mentorWord);
         expect(bandeau, findsOneWidget);
         expect(inkFailuresOn(tester, bandeau), isEmpty);
       });

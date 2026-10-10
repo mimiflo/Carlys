@@ -395,6 +395,16 @@ abstract final class AppColors {
     stops: [0.35, 1],
   );
 
+  /// Fond du mot du Mentor (maquette d'octobre 2026) : la surface qui
+  /// s'enfonce dans le violet profond, plus calme que le dégradé d'action
+  /// [cta] — c'est une parole, pas un bouton. Violet par règle (CLAUDE.md,
+  /// règle 9), et ses seuls textes sont mesurés par `ink_on_gradients_test`.
+  static const LinearGradient mentorWord = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkSurfaceAlt, primaryDeep],
+  );
+
   /// Halo d'une popup : le violet qui descend du médaillon et s'éteint avant
   /// le texte. Violet par règle (CLAUDE.md, règle 9) : une popup n'est pas
   /// une surface de marque. Son pic ([primaryBadgeBg] sur [darkSurface]) est
