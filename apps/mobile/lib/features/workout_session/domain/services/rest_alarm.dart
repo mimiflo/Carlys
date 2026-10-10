@@ -10,4 +10,7 @@ abstract class RestAlarm {
 
   /// Retire le signal programmé (repos passé, séance close).
   Future<void> cancel();
+
+  /// Prépare le signal et demande l'autorisation de notifier, une fois.
+  Future<void> prepare();
 }

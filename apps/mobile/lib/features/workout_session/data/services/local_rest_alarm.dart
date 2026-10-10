@@ -46,9 +46,12 @@ class LocalRestAlarm implements RestAlarm {
 
   Future<void>? _ready;
 
-  /// Initialisation et permission, UNE fois, au premier repos : c'est là que
-  /// la demande a un sens pour la personne. Ratée, elle sera retentée au
-  /// repos suivant plutôt que de condamner tous les autres.
+  /// Initialisation et permission, UNE fois : au premier lancement
+  /// (`FirstLaunchPermissions`), sinon au premier repos. Ratée, elle sera
+  /// retentée au repos suivant plutôt que de condamner tous les autres.
+  @override
+  Future<void> prepare() => _guard('préparée', _prepare);
+
   Future<void> _prepare() async {
     final ready = _ready ??= _initialize();
     try {

@@ -11,4 +11,7 @@ class FakeRestAlarm implements RestAlarm {
 
   @override
   Future<void> cancel() async => calls.add('annuler');
+
+  @override
+  Future<void> prepare() async => calls.add('préparer');
 }

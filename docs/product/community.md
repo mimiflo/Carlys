@@ -383,9 +383,9 @@ simplement perdue (la barre est collective, pas comptable).
   endroit de la fonctionnalité à toucher du natif : une caméra refusée
   n'enlève que le scan, et l'écran le dit avec un état d'erreur du design
   system (« Caméra non autorisée », ou « indisponible » si une autre appli
-  la tient). L'autorisation se demande à l'ouverture du scan, pas au
-  lancement de l'appli : on la comprend quand on vient de toucher
-  « Scanner son QR ». Depuis `mobile_scanner` 7 (10 octobre 2026), l'écran
+  la tient). L'autorisation se demande au PREMIER lancement de l'appli
+  (décision du propriétaire, 10 octobre 2026 ; `FirstLaunchPermissions`,
+  sur Android), puis de nouveau à l'ouverture du scan si elle manque. Depuis `mobile_scanner` 7 (10 octobre 2026), l'écran
   gère son cycle de vie : caméra coupée en arrière-plan, relancée au retour
   — elle repart donc quand on revient des réglages après l'avoir autorisée,
   sans redemander en boucle après un refus. La 7 apporte aussi l'aperçu par

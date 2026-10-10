@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/permissions/first_launch_permissions.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_auth_repository.dart';
+import '../support/fake_rest_alarm.dart';
 import '../support/fake_water_store.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
@@ -37,9 +39,20 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  Widget buildApp(FakeAuthRepository repository) {
+  Widget buildApp(
+    FakeAuthRepository repository, {
+    FakeRestAlarm? alarm,
+    void Function()? onCamera,
+  }) {
     return ProviderScope(
       overrides: [
+        firstLaunchPermissionsProvider.overrideWithValue(
+          FirstLaunchPermissions(
+            alarm ?? FakeRestAlarm(),
+            askCamera: true,
+            requestCamera: () async => onCamera?.call(),
+          ),
+        ),
         appEnvironmentProvider.overrideWithValue(
           const AppEnvironment(
             flavor: AppFlavor.development,
@@ -58,6 +71,20 @@ void main() {
       child: const CarlysApp(),
     );
   }
+
+  testWidgets('premier lancement : les autorisations sont demandées', (
+    tester,
+  ) async {
+    final alarm = FakeRestAlarm();
+    var camera = 0;
+    await tester.pumpWidget(
+      buildApp(FakeAuthRepository(), alarm: alarm, onCamera: () => camera++),
+    );
+    await tester.pumpAndSettle();
+
+    expect(alarm.calls, ['préparer']);
+    expect(camera, 1);
+  });
 
   testWidgets('sans session locale : splash puis écran de connexion', (
     tester,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,14 +7,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design_system/design_system.dart';
 import '../features/settings/domain/app_theme_setting.dart';
 import '../features/settings/presentation/controllers/theme_setting_controller.dart';
+import 'permissions/first_launch_permissions.dart';
 import 'router/app_router.dart';
 
 /// Racine de l'application : thèmes, localisation et navigation.
-class CarlysApp extends ConsumerWidget {
+class CarlysApp extends ConsumerStatefulWidget {
   const CarlysApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CarlysApp> createState() => _CarlysAppState();
+}
+
+class _CarlysAppState extends ConsumerState<CarlysApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Après la première image : la boîte du système se pose sur l'appli,
+    // pas sur un écran encore vide. Une fois par installation.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(ref.read(firstLaunchPermissionsProvider).requestOnce()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final themeSetting = ref.watch(themeSettingProvider);
 

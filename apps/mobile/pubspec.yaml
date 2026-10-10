@@ -118,6 +118,13 @@ dependencies:
   flutter_tts: ^4.2.5
   flutter_local_notifications: ^22.3.1
   timezone: ^0.11.1
+  # Les autorisations demandées au PREMIER lancement (décision du
+  # propriétaire, 10 octobre 2026) : l'appareil photo, qu'aucun autre greffon
+  # ne sait demander SANS ouvrir la caméra (Android, et iOS par Swift Package
+  # Manager, qui lit le motif d'Info.plist). Greffon Baseflow (MIT), la
+  # passerelle standard ; derrière `FirstLaunchPermissions`, aucun test ne
+  # l'appelle.
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,7 @@ import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_rep
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/services/local_rest_alarm.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_template/domain/entities/workout_template.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
+import '../../support/fake_rest_alarm.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
@@ -83,6 +85,8 @@ void main() {
             FakeNutritionRepository(),
           ),
           workoutRepositoryProvider.overrideWithValue(workouts),
+          // Repos et demande du premier lancement : sans greffon.
+          restAlarmProvider.overrideWithValue(FakeRestAlarm()),
           workoutTemplateRepositoryProvider.overrideWithValue(
             templates ??
                 InMemoryWorkoutTemplateRepository(workouts, seed: seed),

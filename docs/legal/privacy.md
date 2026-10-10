@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 4 octobre 2026.
+Dernière mise à jour : 10 octobre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -126,9 +126,11 @@ appareils. Rien ne t’y oblige : un repas s’enregistre très bien sans photo.
   date). Elle ne part qu’au moment où tu enregistres le repas ; si tu
   renonces avant, rien n’est envoyé. Rien d’autre de ta photothèque n’est
   lu ni envoyé.
-- **Les autorisations** : l’accès à l’appareil photo n’est demandé que
-  lorsque tu touches « Prendre une photo » (il sert aussi à scanner le code
-  ami d’un profil). « Choisir dans la galerie » ouvre le sélecteur de ton
+- **Les autorisations** : au premier lancement, Carlys te demande
+  l’accès à l’appareil photo. Il sert à photographier un repas et à scanner
+  le code ami d’un profil, et ne s’allume que lorsque tu touches « Prendre
+  une photo » ou « Scanner son QR ». Le refuser ne bloque rien d’autre ; il
+  pourra t’être redemandé à ce moment-là. « Choisir dans la galerie » ouvre le sélecteur de ton
   téléphone : Carlys ne reçoit que la photo que tu y touches, sans accès au
   reste de ta photothèque. Tu peux retirer l’accès à l’appareil photo à tout
   moment dans les réglages de ton téléphone.
@@ -253,7 +255,10 @@ signalée.
 Le jeton d’appareil fourni par Firebase Cloud Messaging quand tu acceptes
 les notifications, la session depuis laquelle il a été enregistré, et tes
 préférences par famille de notification (demandes d’ami, encouragements,
-invitations à un défi).
+invitations à un défi). L’autorisation d’afficher des notifications t’est
+demandée au premier lancement, quand ton téléphone la demande : elle sert
+aussi à t’annoncer la fin d’un repos, écran éteint, sans que rien ne quitte
+ton téléphone.
 
 ### Tes conversations avec le coach
 
