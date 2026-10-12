@@ -102,15 +102,16 @@ point 2.
 
 ```nginx
 proxy_set_header Host              $host;         # conserver le Host original
-proxy_set_header X-Forwarded-For   $remote_addr;  # ÉCRASER, jamais ajouter
+proxy_set_header X-Forwarded-For   $remote_addr;  # ou $proxy_add_x_forwarded_for ; jamais $http_x_forwarded_for
 proxy_set_header X-Forwarded-Proto https;
 ```
 
-Si rtr1 **ajoute** au lieu d'**écraser**, n'importe quel client se fait passer
-pour n'importe quelle adresse : limitation de débit contournée et journal
-d'audit empoisonné. Le raisonnement complet, les
-mesures et le pourquoi (un compteur de sauts numérique ne retire des entrées
-que par la droite ; ce qu'un client préfixe survit) sont dans
+rtr1 peut écraser l'en-tête ou y ajouter : dans les deux cas il y met en
+dernier l'adresse qu'il voit, et c'est elle que les deux sauts retiennent.
+S'il relayait l'en-tête du client tel quel, n'importe quel client se ferait
+passer pour n'importe quelle adresse : limitation de débit contournée et
+journal d'audit empoisonné. Le raisonnement complet et les mesures (dont
+celle de la chaîne réelle, le 12 octobre 2026 : rtr1 ajoute, et c'est sûr) sont dans
 `snippets/carlys-proxy.conf` et dans `docs/security/reverse-proxy.md`.
 
 ## Ce que ces fichiers garantissent
@@ -126,8 +127,8 @@ que par la droite ; ce qu'un client préfixe survit) sont dans
   écrit. Il y a deux proxys dans la chaîne, donc l'API doit tourner avec
   **`TRUST_PROXY_HOPS=2`** (c'était 1 quand ce Nginx était seul en façade ; à 1,
   `req.ip` vaudrait l'adresse de rtr1 pour tout le trafic). Les deux réglages ne
-  valent que l'un par l'autre, et seulement si rtr1 écrase l'en-tête — voir
-  ci-dessus.
+  valent que l'un par l'autre, et seulement si rtr1 y met l'adresse qu'il voit
+  — voir ci-dessus.
 - **Limites de taille alignées sur le code**, jamais devinées : `1m` pour les
   corps JSON (`MAX_JSON_BODY_SIZE`), `64m` sur `/api/v1/admin/media`
   (`MEDIA_TRANSPORT_HARD_CAP_BYTES`). Nginx s'aligne sur le plafond de
@@ -213,15 +214,17 @@ main sur chaque requête :
 | `GET /robots.txt` sur `app-staging.` | `User-agent: * / Disallow: /` |
 | `Host: inconnu.example`, et une requête sur l'IP sans `Host` servi | connexion fermée sans réponse (curl : « Empty reply from server ») |
 
-Enfin la chaîne des deux proxys, montée avec une doublure de rtr1 en tête, pour
-mesurer ce que l'API reçoit réellement quand le client **forge** son propre
-`X-Forwarded-For: 1.2.3.4` :
+Enfin la chaîne des deux proxys : ce que l'API reçoit quand le client
+**forge** son propre `X-Forwarded-For: 1.2.3.4` (mesuré sur la chaîne réelle
+le 12 octobre 2026, puis rejoué dans Express avec deux sauts) :
 
 | rtr1 pose | l'amont voit | verdict |
 | --------- | ------------ | ------- |
 | `X-Forwarded-For $remote_addr` (écrase) | `<client>, <rtr1>` — le `1.2.3.4` a disparu | ✅ sûr |
-| `X-Forwarded-For $proxy_add_x_forwarded_for` (ajoute) | `1.2.3.4, <client>, <rtr1>` — le forgé est là, et c'est lui que `TRUST_PROXY_HOPS=2` retiendrait | ❌ |
+| `X-Forwarded-For $proxy_add_x_forwarded_for` (ajoute) | `1.2.3.4, <client>, <rtr1>` — le forgé reste en tête, mais `TRUST_PROXY_HOPS=2` retient `<client>` | ✅ sûr, à 2 sauts exactement (à 3, le forgé) |
+| `X-Forwarded-For $http_x_forwarded_for` (relaie) | `1.2.3.4, <rtr1>` — c'est le forgé que `TRUST_PROXY_HOPS=2` retiendrait | ❌ |
 
-Même résultat avec un `X-Forwarded-For: 9.9.9.9, 8.8.8.8` forgé : écrasé de la
-même façon. C'est la mesure qui fait du point 2 des prérequis une **exigence**
-et non une recommandation.
+Ce tableau classait l'ajout parmi les échecs : c'était faux, la chaîne réelle
+l'a démenti le 12 octobre 2026 (`docs/security/reverse-proxy.md`, section 3).
+C'est ce qui fait du point 2 des prérequis une **exigence** et non une
+recommandation : rtr1 doit poser l'adresse qu'il voit.

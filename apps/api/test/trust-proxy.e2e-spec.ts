@@ -62,13 +62,16 @@ describe('Trust proxy (e2e)', () => {
    * Inscrit un appareil en annonçant une adresse forgée, puis lit l'adresse
    * que l'API a réellement retenue pour la session ouverte.
    */
-  async function observedIp(app: INestApplication<App>): Promise<string | null> {
+  async function observedIp(
+    app: INestApplication<App>,
+    forwardedFor = FORWARDED_IP,
+  ): Promise<string | null> {
     const email = `e2e-proxy-${randomUUID()}@carlys.test`;
     emails.push(email);
 
     const registered = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
-      .set('X-Forwarded-For', FORWARDED_IP)
+      .set('X-Forwarded-For', forwardedFor)
       .send({ email, password: 'MotDePasseSolide42', displayName: 'Proxy' })
       .expect(201);
     const { accessToken } = data<AuthResult>(registered.body).tokens;
@@ -104,6 +107,20 @@ describe('Trust proxy (e2e)', () => {
     const app = await buildApp(1);
     try {
       expect(await observedIp(app)).toBe(FORWARDED_IP);
+    } finally {
+      await app.close();
+    }
+  });
+
+  // L'en-tête relevé le 12 octobre 2026 sur la recette, rtr1 AJOUTANT
+  // ($proxy_add_x_forwarded_for) : un 1.2.3.4 forgé en tête, l'adresse vue
+  // par rtr1, puis celle de rtr1 posée par le Nginx Carlys. Deux sauts
+  // comptés par la droite tombent sur l'adresse vue par rtr1 : le préfixe
+  // forgé reste dans l'en-tête mais n'est jamais retenu.
+  it('avec deux sauts, un préfixe forgé est ignoré même quand rtr1 ajoute', async () => {
+    const app = await buildApp(2);
+    try {
+      expect(await observedIp(app, `1.2.3.4, ${FORWARDED_IP}, 172.16.0.124`)).toBe(FORWARDED_IP);
     } finally {
       await app.close();
     }

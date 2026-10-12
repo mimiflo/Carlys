@@ -217,9 +217,9 @@ requête HTTP
      sauts de confiance — 0 par défaut, 2 sur le serveur déployé : le proxy
      réseau qui termine le TLS, puis le Nginx de l'hôte) : req.ip vaut
      l'adresse réelle du client ; c'est elle que lisent le throttler, les
-     sessions et l'audit. Le compteur ne protège pas à lui seul — il ne
-     retire des entrées que par la droite —, c'est le proxy de tête qui doit
-     ÉCRASER X-Forwarded-For (docs/security/reverse-proxy.md)
+     sessions et l'audit. Le compteur ne protège pas à lui seul — il lit
+     l'en-tête par la droite —, c'est le proxy de tête qui doit y poser
+     l'adresse qu'il voit (docs/security/reverse-proxy.md)
   2. requestId, POSÉ EN PREMIER par configureApp (common/utilities/
      request-id.ts) — reprend l'en-tête x-request-id entrant s'il est
      valide ([\w-]{1,64}), sinon génère un UUID ; l'en-tête est renvoyé sur

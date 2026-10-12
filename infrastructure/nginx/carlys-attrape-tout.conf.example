@@ -31,8 +31,8 @@
 #
 #   1. un `Host` inconnu relayé par rtr1 (sous-domaine oublié, `www`, IP) ;
 #   2. une requête arrivant EN DIRECT sur 172.16.0.158:80, sans passer par
-#      rtr1 — donc sans avoir traversé l'écrasement de X-Forwarded-For que
-#      rtr1 doit faire (voir snippets/carlys-proxy.conf), tout en se voyant
+#      rtr1 — donc sans l'entrée de X-Forwarded-For que rtr1 y écrit
+#      (voir snippets/carlys-proxy.conf), tout en se voyant
 #      quand même poser `X-Forwarded-Proto: https` par nos vhosts.
 #
 # À DIRE FRANCHEMENT : ce fichier ne rattrape le cas 2 que si la requête ne

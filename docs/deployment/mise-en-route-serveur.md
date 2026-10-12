@@ -466,18 +466,19 @@ client honnête, rtr1 posant l'en-tête :
 | --- | --- |
 | `1` | l'adresse de **rtr1** — tout Internet partage un seul seau de limitation de débit |
 | `2` | l'adresse du **client** ✓ |
-| `3` | identique à `2` : la liste est saturée, il n'y a rien de plus à sauter |
+| `3` | identique à `2` si rtr1 écrase ; **l'adresse forgée** par le client si rtr1 ajoute — jamais plus de sauts qu'il n'y a de proxys |
 
 La valeur `1` était juste tant qu'un seul Nginx se tenait devant l'API. Avec
 `1` aujourd'hui, la limitation de débit, le verrouillage de compte et l'audit
 ne voient plus qu'une adresse, celle de rtr1 — et la panne est silencieuse :
 tout continue de fonctionner, seules les protections deviennent aveugles.
 
-> **Ce compteur ne protège pas contre un client qui forge son adresse ; c'est
-> rtr1 qui le fait.** Un compteur de sauts numérique ne retire des entrées que
-> **par la droite** : tout ce qu'un client *préfixe* survit, quel que soit le
-> nombre de sauts. La garde est l'écrasement de `X-Forwarded-For` par rtr1,
-> exigé et démontré au §6. Monter `TRUST_PROXY_HOPS` ne la remplacerait pas.
+> **Ce compteur ne protège d'un client qui forge son adresse que si rtr1 y
+> met la sienne.** Il lit l'en-tête **par la droite** et s'arrête sur
+> l'entrée écrite par rtr1 : ce qu'un client a *préfixé* reste dans l'en-tête
+> sans jamais être retenu. Il faut donc que rtr1 y pose l'adresse qu'il voit,
+> en écrasant (`$remote_addr`) ou en ajoutant (`$proxy_add_x_forwarded_for`),
+> exigé et démontré au §6.
 
 **Vérification, une fois les deux fichiers remplis** — aucune valeur d'exemple
 ne doit subsister :
@@ -713,7 +714,7 @@ rempli** : la suite de cette section les éprouve pour de bon.
 ```nginx
 proxy_pass         http://172.16.0.158:80;
 proxy_set_header   Host              $host;          # conserver le Host original
-proxy_set_header   X-Forwarded-For   $remote_addr;   # ÉCRASER, jamais ajouter
+proxy_set_header   X-Forwarded-For   $remote_addr;   # ou $proxy_add_x_forwarded_for ; jamais $http_x_forwarded_for
 proxy_set_header   X-Forwarded-Proto https;
 ```
 
@@ -724,29 +725,35 @@ aucun des six, tombe sur l'attrape-tout, et rend une connexion fermée sur
 **tous** les noms à la fois. Le nom public sert par ailleurs à fabriquer les
 liens des e-mails.
 
-**`X-Forwarded-For` ÉCRASÉ** — c'est le point qui décide de la sécurité de
-toute la chaîne, et il ne se déduit pas, il se mesure. Chaîne montée pour de
-vrai en trois conteneurs (client → nginx « rtr1 » → nginx « carlys » →
-Express 5.2.1 avec `app.set('trust proxy', n)`, soit exactement ce que fait
-`apps/api/src/app/configure-app.ts`), avec un client qui **forge** lui-même
+**`X-Forwarded-For` terminé par l'adresse que rtr1 voit** — c'est le point qui décide de la sécurité de
+toute la chaîne, et il ne se déduit pas, il se mesure : sur la chaîne réelle
+(12 octobre 2026) et en rejouant les en-têtes relevés dans Express 5.2.1 avec
+`app.set('trust proxy', 2)`, soit exactement ce que fait
+`apps/api/src/app/configure-app.ts`, avec un client qui **forge** lui-même
 `X-Forwarded-For: 1.2.3.4` :
 
 | Ce que rtr1 pose | Ce que l'API voit | Ce qu'elle retient |
 | --- | --- | --- |
-| `$proxy_add_x_forwarded_for` | `1.2.3.4, <client>, <rtr1>` | `1.2.3.4` — **FORGÉ** |
-| `$http_x_forwarded_for` | `1.2.3.4, <rtr1>` | `1.2.3.4` — **FORGÉ** |
-| `$remote_addr` | `<client>, <rtr1>` | `<client>` — **SÛR** |
+| `$remote_addr` (il écrase) | `<client>, <rtr1>` | `<client>` — **SÛR** |
+| `$proxy_add_x_forwarded_for` (il ajoute) | `1.2.3.4, <client>, <rtr1>` | `<client>` — **SÛR** |
+| `$http_x_forwarded_for` (il relaie) | `1.2.3.4, <rtr1>` | `1.2.3.4` — **FORGÉ** |
 
-(Revérifié avec un client envoyant `9.9.9.9, 8.8.8.8` : ignoré de la même
-façon.) **La raison** : un compteur de sauts numérique ne retire des entrées
-que **par la droite**. Tout ce qu'un client *préfixe* survit, quel que soit le
-nombre de sauts — augmenter `TRUST_PROXY_HOPS` ne fait qu'en sauter davantage
-par la droite, jamais nettoyer la gauche. **La protection ne vient donc pas du
-nombre de sauts, elle vient de rtr1 qui écrase l'en-tête.**
+**La raison** : deux sauts comptés par la droite tombent sur l'entrée écrite
+par rtr1. Ce que le client a préfixé reste dans l'en-tête mais n'est jamais
+retenu, tant que le compteur vaut exactement `2` : à `3`, l'ajout rendrait
+`1.2.3.4`, alors que l'écrasement y résiste. D'où `$remote_addr`, **conseillé**.
+Les autres cas qui laissent passer l'adresse forgée (rtr1 qui relaie l'en-tête
+tel quel, un chemin vers le port 80 qui contourne son vhost Carlys, un
+`CARLYS_PROXY_CIDR` trop large) sont détaillés dans
+`docs/security/reverse-proxy.md`, section 3. **Mesuré sur la chaîne réelle le
+12 octobre 2026** : rtr1 ajoute, l'API reçoit `1.2.3.4, <client>, 172.16.0.124`
+et retient `<client>` (cas épinglé par `apps/api/test/trust-proxy.e2e-spec.ts`).
+Ce guide affirmait auparavant, d'après un montage à trois conteneurs, que
+l'ajout était dangereux avec deux sauts : c'était faux.
 
-Si rtr1 ajoute au lieu d'écraser, n'importe quel client se fait passer pour
-n'importe quelle adresse : limitation de débit contournée et journal
-d'audit empoisonné. Le risque est concret et daté du
+Si rtr1 relayait l'en-tête du client tel quel, n'importe quel client se ferait
+passer pour n'importe quelle adresse : limitation de débit contournée et
+journal d'audit empoisonné. Le risque est concret et daté du
 code d'aujourd'hui — `request.ip` est lu à **deux endroits** de `apps/api/src`
 (`admin-actor.ts`, par où passent tous les gestes du back-office, et
 `authenticated-request.ts` : tous deux des écritures d'audit), plus le `ThrottlerGuard` posé en `APP_GUARD` global
@@ -764,7 +771,7 @@ se fabriquera jamais en `http://`.
 > option** : `172.16.0.158:80` ne doit être joignable **que depuis rtr1**
 > (`CARLYS_PROXY_CIDR`, étape 2). Sinon n'importe qui obtient de l'API ce
 > `req.secure = true` mensonger, et surtout s'adresse à elle sans être passé
-> par l'écrasement de `X-Forwarded-For` ci-dessus.
+> par rtr1, qui écrit l'entrée de `X-Forwarded-For` retenue ci-dessus.
 >
 > Pour situer le risque à sa juste place : aujourd'hui, **aucun fichier de
 > `apps/api/src` ne lit `req.protocol` ni `req.secure`** (vérifié par
@@ -857,16 +864,16 @@ compte, se lit ainsi :
 
 | Ce que rend le second appel | Verdict |
 | --- | --- |
-| `XFF=<votre adresse>` | rtr1 **écrase** (`$remote_addr`) ✓ — c'est le seul état acceptable |
+| `XFF=<votre adresse>` | rtr1 **écrase** (`$remote_addr`) ✓ |
+| `XFF=1.2.3.4, <votre adresse>` | rtr1 **ajoute** (`$proxy_add_x_forwarded_for`) ✓ — l'état mesuré le 12 octobre 2026 |
 | `XFF=1.2.3.4` | rtr1 relaie l'en-tête du client (`$http_x_forwarded_for`) ✗ |
-| `XFF=1.2.3.4, <votre adresse>` | rtr1 **ajoute** (`$proxy_add_x_forwarded_for`) ✗ |
 | `XFF=` (vide, aux deux appels) | rtr1 ne pose pas l'en-tête du tout : l'API ne verra jamais que l'adresse de rtr1, quelle que soit la valeur de `TRUST_PROXY_HOPS` |
 
-Les trois dernières lignes sont la panne décrite plus haut ; les deux du milieu
-sont la plus grave, celle qui laisse un inconnu choisir l'adresse qu'on lui
+Les deux dernières lignes sont la panne décrite plus haut ; l'avant-dernière
+est la plus grave, celle qui laisse un inconnu choisir l'adresse qu'on lui
 attribuera. À ce stade elle ne coûte rien à corriger, plus tard elle se paiera
-en audit empoisonné. **Ne passez pas à la suite tant que le second appel ne rend
-pas votre propre adresse.** Ce que le miroir affiche est ce que rtr1 a écrit ;
+en audit empoisonné. **Ne passez pas à la suite tant que le second appel ne se
+termine pas par votre propre adresse.** Ce que le miroir affiche est ce que rtr1 a écrit ;
 le Nginx d'ici y ajoutera ensuite l'adresse de rtr1, et c'est ce second saut que
 compte `TRUST_PROXY_HOPS=2` (§5).
 
@@ -884,7 +891,7 @@ c'est-à-dire l'**API de production**.
 Deux requêtes doivent tomber sur l'attrape-tout plutôt que là : un `Host`
 inconnu relayé par rtr1 (domaine nu, `www`, sous-domaine oublié), et une
 requête arrivant **en direct** sur `172.16.0.158:80` sans être passée par rtr1
-— donc sans l'écrasement de `X-Forwarded-For`, tout en se voyant quand même
+— donc sans l'adresse que rtr1 écrit dans `X-Forwarded-For`, tout en se voyant quand même
 poser `X-Forwarded-Proto: https` par nos vhosts.
 
 ```bash
@@ -1061,8 +1068,8 @@ tranche, et le test 2 du §6 est exactement le même geste.
 d'audit (une connexion au back-office de recette, par exemple) et lisez
 l'adresse enregistrée : elle doit être la vôtre, pas celle de rtr1. Si c'est
 celle de rtr1, `TRUST_PROXY_HOPS` ne vaut pas `2` (§5) ; si c'est une adresse
-qui n'a aucune raison d'exister, rtr1 ajoute `X-Forwarded-For` au lieu de
-l'écraser (§6, test 4).
+qui n'a aucune raison d'exister, rtr1 relaie `X-Forwarded-For` sans y mettre
+l'adresse qu'il voit (§6, test 4).
 
 ### Le premier administrateur
 
@@ -1734,7 +1741,7 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | L'app mobile plante au lancement | `CARLYS_PUBLIC_WEB_BASE_URL` oubliée au build (étape 8) |
 | `promote.sh` dit que le tag `-prod` manque | les marqueurs légaux subsistent (étape 9.1) |
 | L'IP du client est toujours la même dans l'audit, et c'est celle de rtr1 | `TRUST_PROXY_HOPS` ≠ 2 (§5), ou rtr1 ne pose pas `X-Forwarded-For` du tout |
-| Des adresses aberrantes dans l'audit, ou une limitation de débit qui ne freine personne | rtr1 **ajoute** `X-Forwarded-For` au lieu de l'écraser : n'importe qui choisit l'adresse qu'on lui attribue. `proxy_set_header X-Forwarded-For $remote_addr;` sur rtr1 (§6, test 4) |
+| Des adresses aberrantes dans l'audit, ou une limitation de débit qui ne freine personne | rtr1 relaie `X-Forwarded-For` sans y mettre l'adresse qu'il voit : n'importe qui choisit l'adresse qu'on lui attribue. `proxy_set_header X-Forwarded-For $remote_addr;` (ou `$proxy_add_x_forwarded_for`) sur rtr1 (§6, test 4) |
 | Un service, un volume ou une variable manque après un déploiement pourtant réussi | le clone `/srv/carlys/repo` n'a pas été mis à jour : `deploy.sh` a tiré les bonnes images et les a démarrées sous un `compose.yml` périmé (étape 10) |
 | Un hôte inconnu (domaine nu, `www`, `Host` forgé en direct) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) — et, pour l'accès direct, le port 80 n'est pas restreint à rtr1 (étape 2) |
 | Certificat expiré sur les six noms | rien à faire ici, ce serveur n'en détient aucun : c'est rtr1 qui émet et renouvelle (étape 10, « Certificats ») |

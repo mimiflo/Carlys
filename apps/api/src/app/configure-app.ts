@@ -55,11 +55,11 @@ export function configureApp(app: NestExpressApplication): void {
   // dépend pas — il s'indexe sur l'identité, `lockout.reserveAttempt(email)`.
   //
   // On fait confiance à exactement TRUST_PROXY_HOPS sauts — jamais `true`,
-  // qui accepterait un X-Forwarded-For entièrement forgé. Attention toutefois
-  // à ce qu'un compteur numérique NE fait PAS : il ne retire des entrées que
-  // par la DROITE, donc tout ce qu'un client PRÉFIXE à l'en-tête survit. La
-  // protection vient du proxy de tête, qui doit ÉCRASER X-Forwarded-For
-  // (`$remote_addr`) et non y ajouter. Mesuré : docs/security/reverse-proxy.md.
+  // qui accepterait un X-Forwarded-For entièrement forgé. Le compteur lit
+  // l'en-tête par la DROITE : ce qu'un client y préfixe n'est jamais retenu,
+  // À CONDITION que le proxy de tête y pose l'adresse qu'il voit (en écrasant
+  // ou en ajoutant), et non qu'il relaie l'en-tête du client tel quel.
+  // Mesuré : docs/security/reverse-proxy.md.
   app.set('trust proxy', config.trustProxyHops);
 
   app.use(helmet());

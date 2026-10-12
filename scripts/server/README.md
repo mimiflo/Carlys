@@ -137,17 +137,17 @@ posés :
 
 ```nginx
 proxy_set_header Host              $host;          # nom public conservé
-proxy_set_header X-Forwarded-For   $remote_addr;   # ÉCRASER, jamais ajouter
+proxy_set_header X-Forwarded-For   $remote_addr;   # ou $proxy_add_x_forwarded_for
 proxy_set_header X-Forwarded-Proto https;
 ```
 
-`$remote_addr` et non `$proxy_add_x_forwarded_for` : mesuré sur la chaîne
-montée pour de vrai (client → proxy réseau → nginx d'ici → Express), un client
-qui envoie lui-même `X-Forwarded-For: 1.2.3.4` fait retenir `1.2.3.4` à l'API
-dès que le proxy **ajoute** au lieu d'écraser — limitation de débit
-contournée, audit empoisonné. Un compteur de
-sauts ne retire des entrées que par la droite : ce que le client préfixe
-survit. Le nginx d'ici, lui, garde `$proxy_add_x_forwarded_for` et ajoute
+Le proxy réseau doit mettre en dernier l'adresse qu'il voit, en écrasant
+(`$remote_addr`) ou en ajoutant (`$proxy_add_x_forwarded_for`) : l'API lit
+l'en-tête par la droite et retient cette entrée, jamais ce qu'un client a
+préfixé (mesuré sur la chaîne réelle le 12 octobre 2026, rtr1 ajoutant). Un
+proxy qui relaierait l'en-tête du client tel quel (`$http_x_forwarded_for`)
+ferait retenir un `X-Forwarded-For: 1.2.3.4` forgé — limitation de débit
+contournée, audit empoisonné. Le nginx d'ici, lui, garde `$proxy_add_x_forwarded_for` et ajoute
 l'adresse du proxy réseau : c'est le second saut, d'où `TRUST_PROXY_HOPS=2`
 dans les deux `.env` (avec `1`, l'API voit l'adresse du proxy et toute la
 plateforme partage un seul seau de limitation).

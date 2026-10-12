@@ -580,21 +580,20 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
    relaie en HTTP clair vers cette machine :
      proxy_pass         http://$SERVER_IP:80;
      proxy_set_header   Host              \$host;          # nom public CONSERVÉ
-     proxy_set_header   X-Forwarded-For   \$remote_addr;   # ÉCRASER, jamais ajouter
+     proxy_set_header   X-Forwarded-For   \$remote_addr;   # ou \$proxy_add_x_forwarded_for
      proxy_set_header   X-Forwarded-Proto https;
    Ces trois en-têtes sont une EXIGENCE, pas une supposition : les vérifier
    sur rtr1 avant de déclarer la mise en route terminée.
    - Host : les vhosts d'ici choisissent le service par server_name, et les
      liens des e-mails portent le nom public. Un Host réécrit, et on tombe
      sur l'attrape-tout.
-   - X-Forwarded-For à \$remote_addr et NON \$proxy_add_x_forwarded_for.
-     Mesuré sur la chaîne montée pour de vrai (client → rtr1 → nginx d'ici →
-     Express) : avec \$proxy_add_x_forwarded_for ou \$http_x_forwarded_for,
-     un client qui envoie lui-même « X-Forwarded-For: 1.2.3.4 » fait retenir
-     1.2.3.4 à l'API. Un compteur de sauts ne retire des entrées QUE PAR LA
-     DROITE : tout ce que le client PRÉFIXE survit. Conséquences : limitation
-     de débit contournée, audit empoisonné.
-     Seul \$remote_addr, qui écrase, protège.
+   - X-Forwarded-For : rtr1 doit y mettre EN DERNIER l'adresse qu'il voit,
+     \$remote_addr (il écrase) ou \$proxy_add_x_forwarded_for (il ajoute).
+     L'API lit l'en-tête par la droite et retient l'entrée de rtr1 ; ce
+     qu'un client préfixe n'est jamais retenu (mesuré sur la chaîne réelle
+     le 12 octobre 2026, rtr1 ajoutant). JAMAIS \$http_x_forwarded_for seul :
+     un « X-Forwarded-For: 1.2.3.4 » envoyé par le client serait retenu —
+     limitation de débit contournée, audit empoisonné.
    - X-Forwarded-Proto https en dur, pour que les URL publiques restent en
      https:// alors que la liaison interne est en clair.
    Le nginx d'ici garde \$proxy_add_x_forwarded_for : il AJOUTE l'adresse de

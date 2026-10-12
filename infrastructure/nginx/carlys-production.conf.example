@@ -27,7 +27,7 @@
 # Le corollaire est un PRÉREQUIS de pare-feu, pas une option : 172.16.0.158:80
 # ne doit être joignable QUE depuis rtr1. Sinon n'importe qui obtient ce
 # req.secure = true mensonger, et surtout s'adresse à l'API sans être passé par
-# l'écrasement de X-Forwarded-For que rtr1 doit faire — voir le snippet, qui
+# rtr1, qui écrit l'entrée de X-Forwarded-For que l'API retient — voir le snippet, qui
 # détaille l'exigence et ce qu'elle coûte si elle est violée.
 #
 # ── Installation ─────────────────────────────────────────────────────────────

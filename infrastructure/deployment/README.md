@@ -48,15 +48,17 @@ seulement terminé un cran plus haut. Conséquences complètes et mesurées :
   décrit par `infrastructure/nginx/` : `TRUST_PROXY_HOPS` doit donc valoir `2`
   (mesuré sur la chaîne réelle : à `1`, `req.ip` vaut l'adresse de rtr1 pour
   tout le trafic, et limitation de débit comme audit deviennent aveugles).
-  Le compteur ne suffit pas : rtr1 doit **écraser** `X-Forwarded-For`
-  (`proxy_set_header X-Forwarded-For $remote_addr`), faute de quoi n'importe
-  quel client se fait passer pour n'importe quelle adresse — l'exigence, les
-  trois cas mesurés et le pourquoi sont dans
+  Le compteur ne suffit pas : rtr1 doit poser dans `X-Forwarded-For`
+  l'adresse qu'il voit, en écrasant (`$remote_addr`) ou en ajoutant
+  (`$proxy_add_x_forwarded_for`, l'état mesuré le 12 octobre 2026), jamais en
+  relayant l'en-tête du client tel quel, faute de quoi n'importe quel client
+  se fait passer pour n'importe quelle adresse — l'exigence, les trois cas
+  mesurés et le pourquoi sont dans
   `docs/security/reverse-proxy.md` ;
 - **le port 80 du serveur ne doit être joignable que depuis rtr1** (prérequis
   de pare-feu) : le Nginx de l'hôte pose `X-Forwarded-Proto: https` en dur,
   donc un accès direct obtiendrait de l'API un `req.secure = true` mensonger,
-  sans être passé par l'écrasement ci-dessus ;
+  sans être passé par rtr1 ;
 - Redis et stockage objet par environnement — sur le serveur dédié, un Redis
   et un MinIO par projet Compose ; un service managé (S3, Cloudflare R2)
   s'y substitue sans changer autre chose que les variables `S3_*` ;

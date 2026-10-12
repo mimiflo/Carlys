@@ -12,8 +12,8 @@
 
 > **12 octobre 2026 : le proxy réseau est désormais `rtr1.briancon.luuc.fr`**,
 > qui remplace `gra6.luuc.fr` (les six noms Carlys pointent dessus en CNAME).
-> Les mesures de la chaîne citées ici ont été faites sur gra6 : leurs
-> exigences valent telles quelles pour rtr1, mais restent à revérifier sur lui.
+> L'adresse du client a été revérifiée sur rtr1 le même jour (section 3) ;
+> les autres mesures citées ici datent de gra6.
 
 Ce document est la référence sur le sujet : ce que l'API croit savoir de son
 client, d'où elle le tient, et à quelles conditions c'est vrai.
@@ -108,7 +108,7 @@ et retient la précédente.
 | ------------------ | ---------------------- | ------------------------------------ |
 | `1`                | l'adresse de **rtr1**  | ✗ tout le monde partage une adresse  |
 | `2`                | l'adresse du **client** | ✓                                   |
-| `3`                | identique à `2`        | la liste est saturée                 |
+| `3`                | identique à `2` si rtr1 écrase ; **l'adresse forgée** si rtr1 ajoute | ✗ jamais plus de sauts qu'il n'y a de proxys |
 
 D'où **`2`** dans les deux fichiers d'environnement. La valeur `1` était juste
 tant que le Nginx Carlys était seul en façade ; elle ferait maintenant compter
@@ -121,55 +121,77 @@ elle accepterait un `X-Forwarded-For` entièrement forgé. Mais, comme le montre
 la section suivante, **un nombre de sauts n'est pas non plus une protection** :
 ne déclarer que les sauts qui existent est nécessaire, ce n'est pas suffisant.
 
-Le test e2e `trust-proxy.e2e-spec.ts` exerce le mécanisme sur un seul saut :
+Le test e2e `trust-proxy.e2e-spec.ts` exerce le mécanisme sur un saut, puis
+sur l'en-tête relevé sur la chaîne réelle avec deux sauts (section 3) :
 sans saut de confiance, un `X-Forwarded-For: 203.0.113.9` est ignoré et
 l'adresse retenue est celle de la socket ; avec un saut, c'est la dernière
 entrée de l'en-tête qui fait foi. C'est bien la même règle de comptage par la
 droite qui donne `2` sur la chaîne réelle.
 
-## 3. Le prérequis sur rtr1 : ÉCRASER `X-Forwarded-For`, jamais l'ajouter
+## 3. Le prérequis sur rtr1 : poser EN DERNIER l'adresse qu'il voit
 
 Ce n'est pas une hypothèse de travail dont on suppose qu'elle est remplie :
-c'est une **exigence à vérifier dans la configuration de rtr1**, et c'est elle,
-pas `TRUST_PROXY_HOPS`, qui porte la sécurité de l'adresse du client.
+c'est une **exigence à vérifier dans la configuration de rtr1**. Le compteur de
+`TRUST_PROXY_HOPS` lit l'en-tête **par la droite** et s'arrête sur la deuxième
+entrée : il faut donc que cette entrée-là soit écrite par rtr1, avec l'adresse
+qu'il a réellement vue (`$remote_addr`). Ce que le client a pu écrire avant
+reste dans l'en-tête, mais n'est jamais retenu.
 
-Mesuré sur la même chaîne à trois conteneurs, avec un client qui **forge**
-lui-même `X-Forwarded-For: 1.2.3.4` :
+Avec un client qui **forge** lui-même `X-Forwarded-For: 1.2.3.4` :
 
 | Ce que rtr1 pose                              | L'API voit                      | Elle retient  | Verdict     |
 | --------------------------------------------- | ------------------------------- | ------------- | ----------- |
-| `X-Forwarded-For $proxy_add_x_forwarded_for`  | `1.2.3.4, <client>, <rtr1>`     | `1.2.3.4`     | ✗ **forgé** |
-| `X-Forwarded-For $http_x_forwarded_for`       | `1.2.3.4, <rtr1>`               | `1.2.3.4`     | ✗ **forgé** |
-| `X-Forwarded-For $remote_addr`                | `<client>, <rtr1>`              | `<client>`    | ✓ **sûr**   |
+| `X-Forwarded-For $remote_addr` (il écrase)    | `<client>, <rtr1>`              | `<client>`    | ✓ **sûr**   |
+| `X-Forwarded-For $proxy_add_x_forwarded_for` (il ajoute) | `1.2.3.4, <client>, <rtr1>` | `<client>` | ✓ **sûr** |
+| `X-Forwarded-For $http_x_forwarded_for` (il relaie tel quel), ou rien | `1.2.3.4, <rtr1>` | `1.2.3.4` | ✗ **forgé** |
 
-Vérifié aussi avec un `X-Forwarded-For: 9.9.9.9, 8.8.8.8` forgé : écrasé de la
-même façon.
+**Mesuré sur la chaîne réelle le 12 octobre 2026** : rtr1 **ajoute**. Une
+requête forgée envoyée de l'extérieur arrive à l'API avec
+`1.2.3.4, <client>, 172.16.0.124` (172.16.0.124 : rtr1 vu du serveur), et la
+session ouverte par une inscription forgée de la même façon a retenu l'adresse
+réelle du client, pas `1.2.3.4`. Le cas est épinglé par
+`apps/api/test/trust-proxy.e2e-spec.ts`.
 
-**La raison, et elle vaut d'être retenue :** un compteur de sauts numérique ne
-retire des entrées **que par la droite**. Tout ce qu'un client **préfixe**
-survit, quel que soit le nombre de sauts — augmenter `TRUST_PROXY_HOPS` n'y
-change rien, cela ne fait que sauter des entrées supplémentaires par la droite,
-donc revenir plus près encore de ce que le client a écrit. La protection ne
-vient donc pas de l'API : elle vient de rtr1.
+Cette page affirmait jusque-là que l'ajout laissait passer l'adresse forgée.
+C'était faux : par la droite, deux sauts tombent sur l'entrée de rtr1, pas sur
+le préfixe du client. Mais l'ajout n'est sûr qu'avec un compteur EXACT : à
+`TRUST_PROXY_HOPS=3`, `1.2.3.4, <client>, <rtr1>` rend `1.2.3.4`. L'écrasement,
+lui, résiste à un compteur trop haut (la liste est saturée).
+
+L'adresse redevient forgeable dans quatre cas :
+
+- rtr1 relaie l'en-tête du client sans y mettre ce qu'il voit ;
+- `TRUST_PROXY_HOPS` dépasse le nombre réel de proxys alors que rtr1 ajoute ;
+- une requête atteint `172.16.0.158:80` depuis l'adresse de rtr1 sans passer
+  par son vhost Carlys (autre vhost, relais TCP, NAT) : ufw filtre l'adresse
+  source, pas le chemin ;
+- `CARLYS_PROXY_CIDR` ouvre un réseau au lieu de la seule adresse de rtr1
+  (`172.16.0.124`) : tout voisin du réseau interne peut alors forger.
 
 Ce que le vhost de rtr1 qui sert les six noms Carlys doit poser :
 
 ```nginx
 proxy_set_header Host              $host;         # conserver le Host original
-proxy_set_header X-Forwarded-For   $remote_addr;  # ÉCRASER, jamais ajouter
+proxy_set_header X-Forwarded-For   $remote_addr;  # ou $proxy_add_x_forwarded_for ; jamais $http_x_forwarded_for
 proxy_set_header X-Forwarded-Proto https;
 ```
 
-Si rtr1 **ajoute** au lieu d'**écraser**, n'importe quel client se fait passer
-pour n'importe quelle adresse : limitation de débit contournée et journal
-d'audit empoisonné — et un journal
-d'audit empoisonné est pire qu'un journal absent, parce qu'on le croit.
+`$remote_addr` reste le réglage **conseillé** : il ne laisse aucun texte du
+client et résiste à un compteur mal réglé. L'ajout, en place aujourd'hui, est
+sûr tant que `TRUST_PROXY_HOPS` vaut exactement `2`.
+
+Si rtr1 relayait l'en-tête du client sans rien y ajouter, n'importe quel
+client se ferait passer pour n'importe quelle adresse : limitation de débit
+contournée et journal d'audit empoisonné — et un journal d'audit empoisonné
+est pire qu'un journal absent, parce qu'on le croit. Un troisième proxy
+intercalé sans passer `TRUST_PROXY_HOPS` à 3 ne permettrait pas d'usurper,
+mais rendrait la plateforme aveugle : l'API retiendrait l'adresse de ce proxy
+pour tout le monde, comme avec un compteur à `1`.
 
 Le Nginx Carlys, lui, garde volontairement `$proxy_add_x_forwarded_for`
 (`snippets/carlys-proxy.conf`) : il **ajoute** l'adresse de rtr1 à la suite de
 ce que rtr1 a écrit, et c'est cet ajout qui constitue le second saut compté par
-`TRUST_PROXY_HOPS=2`. Les deux réglages ne valent que l'un par l'autre, et
-seulement si rtr1 écrase.
+`TRUST_PROXY_HOPS=2`.
 
 ## 4. `X-Forwarded-Proto: https` en dur — et le pare-feu qui en est le corollaire
 
@@ -186,8 +208,8 @@ restent en `https://` » de la section 1.
 **Corollaire de sécurité, à traiter comme un prérequis de pare-feu et non comme
 une option : le port 80 du serveur Carlys ne doit être joignable QUE depuis
 rtr1.** Sinon n'importe qui obtient de l'API un `req.secure = true` mensonger
-— et surtout s'adresse à elle sans être passé par l'écrasement de
-`X-Forwarded-For` de la section 3, ce qui rend cette protection nulle. Le vhost
+— et surtout s'adresse à elle sans être passé par rtr1, qui écrit l'entrée
+de `X-Forwarded-For` retenue (section 3) : cette protection deviendrait nulle. Le vhost
 attrape-tout (`return 444` sur tout `Host` inconnu) est une **seconde couche**,
 pas la garde principale : un client qui tape l'IP en direct en écrivant
 `Host: api.carlys.app` atteint le vhost de l'API, pas l'attrape-tout.
@@ -275,8 +297,8 @@ sudo nginx -t && sudo systemctl reload nginx
 grep -n '^TRUST_PROXY_HOPS=' /srv/carlys/repo/infrastructure/server/config/*.conf \
   /srv/carlys/staging/.env /srv/carlys/production/.env
 
-# Sur rtr1 : l'en-tête doit être ÉCRASÉ (section 3). Un $proxy_add_… ou un
-# $http_… ici est une faille, pas un détail de style.
+# Sur rtr1 : $remote_addr (conseillé) ou $proxy_add_… avec exactement 2 sauts
+# (section 3). Un $http_… seul, ou aucune directive, est une faille.
 grep -rn 'X-Forwarded-For' /etc/nginx/sites-enabled/
 ```
 
@@ -288,5 +310,7 @@ curl -sS https://api.carlys.app/api/v1/… -H 'X-Forwarded-For: 1.2.3.4'
 ```
 
 Si `1.2.3.4` apparaît dans la session ouverte ou dans le journal d'audit, rtr1
-**ajoute** au lieu d'écraser : la section 3 n'est pas satisfaite, et la
-limitation de débit comme l'audit sont contournables.
+relaie l'en-tête du client sans y poser ce qu'il voit : la section 3 n'est pas
+satisfaite, et la limitation de débit comme l'audit sont contournables. Le voir
+dans l'en-tête brut du journal de l'API, en tête de liste, est normal quand
+rtr1 ajoute (12 octobre 2026).

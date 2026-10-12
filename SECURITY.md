@@ -124,8 +124,9 @@ aucune version antérieure ne reçoit de correctif.
   verraient que l'adresse du reverse proxy. Le verrouillage de compte, lui,
   n'est PAS concerné : il s'indexe sur l'identité (`lockout.reserveAttempt(email)`),
   jamais sur l'adresse. Jamais « tout faire confiance » — et un compteur de
-  sauts ne protège d'un `X-Forwarded-For` forgé QUE si le proxy de tête écrase
-  l'en-tête au lieu d'y ajouter : voir `docs/security/reverse-proxy.md`.
+  sauts ne protège d'un `X-Forwarded-For` forgé QUE si le proxy de tête y met
+  l'adresse qu'il voit (en écrasant ou en ajoutant, jamais en relayant
+  l'en-tête du client tel quel) : voir `docs/security/reverse-proxy.md`.
 - **Taille des corps de requêtes limitée à 1 Mo** (`MAX_JSON_BODY_SIZE`)
   pour JSON, urlencoded et le corps brut des webhooks, posée dans
   `apps/api/src/app/configure-app.ts` — donc la même en production et dans
