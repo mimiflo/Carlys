@@ -323,10 +323,14 @@ dc "$ENV_NAME" "$ENV_FILE" up -d $DATA_SERVICES || die \
 
 # Attendre que PostgreSQL ACCEPTE une connexion. Un conteneur démarré n'est pas
 # une base prête : la migration échouerait sur un refus de connexion et on
-# accuserait la migration.
+# accuserait la migration. `-U` est obligatoire : sans lui, pg_isready se
+# présente sous le nom de l'utilisateur du conteneur (root), et chaque
+# déploiement laissait « FATAL: role "root" does not exist » dans le journal
+# de PostgreSQL — un faux signal d'intrusion.
+pg_user="$(env_value POSTGRES_USER "$ENV_FILE" carlys)"
 pg_ready=0
 for _ in $(seq 1 30); do
-  if dc "$ENV_NAME" "$ENV_FILE" exec -T postgres pg_isready -q >/dev/null 2>&1; then
+  if dc "$ENV_NAME" "$ENV_FILE" exec -T postgres pg_isready -q -U "$pg_user" >/dev/null 2>&1; then
     pg_ready=1; break
   fi
   sleep 2
