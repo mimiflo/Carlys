@@ -110,7 +110,7 @@ aucun des deux.
 
 ## Le TLS n'est pas sur cette machine
 
-Un reverse proxy réseau — `gra6.luuc.fr` — termine le TLS des six noms
+Un reverse proxy réseau — `rtr1.briancon.luuc.fr` — termine le TLS des six noms
 publics et relaie **en HTTP clair** vers le port 80 de ce serveur. Les six
 domaines pointent en DNS sur lui, par des CNAME ; rien de public ne frappe
 directement cette machine. Conséquences pour ces scripts :
@@ -444,7 +444,7 @@ qui touche ces fichiers ; un essai sauté faute d'outil y est un échec.
 
 ## Ce qu'ils n'automatisent pas
 
-DNS (six CNAME vers `gra6.luuc.fr`), achat du domaine, **configuration du
+DNS (six CNAME vers `rtr1.briancon.luuc.fr`), achat du domaine, **configuration du
 reverse proxy réseau** — il n'est pas sur cette machine : certificats des six
 noms, terminaison TLS, routage vers le port 80 d'ici et les trois
 `proxy_set_header` ci-dessus —, ouverture du 80 quand `CARLYS_PROXY_CIDR` n'a

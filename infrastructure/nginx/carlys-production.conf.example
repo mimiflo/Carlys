@@ -2,11 +2,11 @@
 #
 # ── Ce serveur ne termine PLUS le TLS ────────────────────────────────────────
 #
-#   Internet ──HTTPS 443──> gra6.luuc.fr ──HTTP──> 172.16.0.158:80 ──> ici
+#   Internet ──HTTPS 443──> rtr1.briancon.luuc.fr ──HTTP──> 172.16.0.158:80 ──> ici
 #                            ^ termine le TLS, détient les certificats
 #
 # Les six noms publics (api./app./media. et leurs jumeaux de recette) pointent
-# en DNS vers gra6, jamais vers cette machine. Ce fichier n'a donc plus :
+# en DNS vers rtr1, jamais vers cette machine. Ce fichier n'a donc plus :
 # ni `listen 443`, ni `ssl_certificate`, ni redirection HTTP → HTTPS, ni
 # `/.well-known/acme-challenge/`. Il n'y a rien à obtenir, rien à renouveler,
 # aucun certbot à installer sur ce serveur — les certificats publics
@@ -25,9 +25,9 @@
 # l'API voit alors req.secure = true alors que tout le trajet interne est en
 # clair). C'est ce qui empêche une URL publique de se fabriquer en http://.
 # Le corollaire est un PRÉREQUIS de pare-feu, pas une option : 172.16.0.158:80
-# ne doit être joignable QUE depuis gra6. Sinon n'importe qui obtient ce
+# ne doit être joignable QUE depuis rtr1. Sinon n'importe qui obtient ce
 # req.secure = true mensonger, et surtout s'adresse à l'API sans être passé par
-# l'écrasement de X-Forwarded-For que gra6 doit faire — voir le snippet, qui
+# l'écrasement de X-Forwarded-For que rtr1 doit faire — voir le snippet, qui
 # détaille l'exigence et ce qu'elle coûte si elle est violée.
 #
 # ── Installation ─────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ upstream carlys_minio_production {
 # ── HTTP/2 : plus rien à régler ici ──────────────────────────────────────────
 #
 # HTTP/2 se négocie dans la poignée de main TLS (ALPN) : il se termine donc sur
-# gra6, avec le TLS. Entre gra6 et cette machine, c'est du HTTP/1.1 en clair —
+# rtr1, avec le TLS. Entre rtr1 et cette machine, c'est du HTTP/1.1 en clair —
 # ce que fixe `proxy_http_version 1.1;` dans le snippet. Il n'y a plus ni
 # paramètre `http2` de `listen`, ni directive `http2 on;` dans ce fichier, et
 # l'arbitrage de compatibilité qu'ils imposaient (`http2 on;` n'existe que
@@ -107,9 +107,9 @@ server {
     access_log /var/log/nginx/access.log carlys_sans_jeton;
 
     # HSTS conservé, bien que ce bloc n'écoute qu'en clair : c'est un en-tête
-    # de RÉPONSE. Il remonte à travers gra6 jusqu'au navigateur, qui l'applique
+    # de RÉPONSE. Il remonte à travers rtr1 jusqu'au navigateur, qui l'applique
     # à l'origine qu'il a réellement contactée — https://api.carlys.example.
-    # Le garder ici protège si gra6 oublie de le poser, et ne coûte rien s'il
+    # Le garder ici protège si rtr1 oublie de le poser, et ne coûte rien s'il
     # le pose aussi. Deuxième raison de le garder ICI et non de compter sur
     # l'API : helmet ne le pose que sur les réponses produites par l'API, et
     # plusieurs réponses de ce fichier ne l'atteignent jamais (les 404 et 413

@@ -945,7 +945,7 @@ sudo cp infrastructure/nginx/snippets/*.conf /etc/nginx/snippets/
 
 # 4. setup.sh : il pose les amonts de départ et la minuterie. Il NE TOUCHE PAS
 #    aux .env déjà remplis — c'est sa propriété la plus importante.
-sudo CARLYS_PROXY_CIDR=<adresse de gra6> ./scripts/server/setup.sh
+sudo CARLYS_PROXY_CIDR=<adresse de rtr1> ./scripts/server/setup.sh
 
 # 5. Nginx doit accepter la configuration MAINTENANT.
 sudo nginx -t

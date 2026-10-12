@@ -21,7 +21,7 @@ bout à l'autre de ce guide :
 Internet / mobile / navigateur
       │ HTTPS 443
       ▼
-gra6.luuc.fr          ← reverse proxy réseau : détient les certificats,
+rtr1.briancon.luuc.fr          ← reverse proxy réseau : détient les certificats,
       │ HTTP interne     termine le TLS, ne fait pas partie de ce dépôt
       ▼
 172.16.0.158:80       ← ce serveur, Nginx en HTTP SEUL
@@ -29,13 +29,13 @@ gra6.luuc.fr          ← reverse proxy réseau : détient les certificats,
 services Docker sur 127.0.0.1
 ```
 
-Les six noms publics restent en `https://` **pour le client** — c'est gra6 qui
+Les six noms publics restent en `https://` **pour le client** — c'est rtr1 qui
 le lui sert. Aucun certificat, aucun certbot, aucun `listen 443` sur cette
-machine. En contrepartie, deux exigences pèsent sur gra6 et sur le pare-feu :
+machine. En contrepartie, deux exigences pèsent sur rtr1 et sur le pare-feu :
 l'étape 6 les énonce, et elles ne se supposent pas remplies.
 
 > **Ce que ce guide n'automatise pas, et n'automatisera pas.** L'achat du
-> domaine, les enregistrements DNS, **la configuration de gra6** — elle n'est
+> domaine, les enregistrements DNS, **la configuration de rtr1** — elle n'est
 > dans aucun dépôt et se pose à la main, là-bas —, les comptes Apple / Google
 > Play / Samsung, la rédaction des textes légaux, et les vraies valeurs des
 > secrets (Stripe, Firebase, Sentry, SMTP). La bascule en production reste un
@@ -50,7 +50,7 @@ l'étape 6 les énonce, et elles ne se supposent pas remplies.
   Il n'a **pas besoin d'adresse publique** : rien venant d'Internet ne le
   frappe directement.
 - Un nom de domaine dont vous contrôlez la zone DNS.
-- **Le reverse proxy réseau `gra6.luuc.fr`**, déjà en service, et un accès à sa
+- **Le reverse proxy réseau `rtr1.briancon.luuc.fr`**, déjà en service, et un accès à sa
   configuration — ou quelqu'un qui l'a. C'est lui qui détient les certificats
   des six noms publics, termine le TLS et relaie ici en clair. Trois en-têtes
   qu'il doit poser conditionnent l'adresse du client vue par l'API : §6.
@@ -67,41 +67,41 @@ l'étape 6 les énonce, et elles ne se supposent pas remplies.
 
 ---
 
-## 1. DNS — six enregistrements vers gra6, à poser en premier
+## 1. DNS — six enregistrements vers rtr1, à poser en premier
 
-Rien d'autre ne peut avancer tant que les noms ne résolvent pas : c'est gra6
+Rien d'autre ne peut avancer tant que les noms ne résolvent pas : c'est rtr1
 qui reçoit les connexions publiques, et il ne peut rien recevoir pour un nom
 qu'aucune zone ne lui envoie.
 
 | Type | Nom | Valeur |
 | ---- | --- | ------ |
-| CNAME | `api` | `gra6.luuc.fr.` |
-| CNAME | `app` | `gra6.luuc.fr.` |
-| CNAME | `media` | `gra6.luuc.fr.` |
-| CNAME | `api-staging` | `gra6.luuc.fr.` |
-| CNAME | `app-staging` | `gra6.luuc.fr.` |
-| CNAME | `media-staging` | `gra6.luuc.fr.` |
+| CNAME | `api` | `rtr1.briancon.luuc.fr.` |
+| CNAME | `app` | `rtr1.briancon.luuc.fr.` |
+| CNAME | `media` | `rtr1.briancon.luuc.fr.` |
+| CNAME | `api-staging` | `rtr1.briancon.luuc.fr.` |
+| CNAME | `app-staging` | `rtr1.briancon.luuc.fr.` |
+| CNAME | `media-staging` | `rtr1.briancon.luuc.fr.` |
 
 Trois par environnement, et **aucun ne pointe sur `172.16.0.158`** : ce serveur
 n'est pas joignable depuis Internet, et n'a pas à l'être.
 
 **`CNAME`, et pas `A`.** Un `A` figerait dans votre zone l'adresse d'une
-machine qui ne vous appartient pas : le jour où gra6 change d'adresse, les six
+machine qui ne vous appartient pas : le jour où rtr1 change d'adresse, les six
 enregistrements deviendraient faux, tous en même temps, et la panne se
 présenterait comme une indisponibilité totale sans rien pour la relier à un
-changement d'ailleurs. Le `CNAME` délègue cette adresse à la zone de gra6, qui
+changement d'ailleurs. Le `CNAME` délègue cette adresse à la zone de rtr1, qui
 est celle qui sait. Ces six noms sont des sous-domaines, donc le `CNAME` y est
 licite — ce qui ne serait pas le cas sur le domaine nu. Rien à ajouter côté
-`AAAA` : ce que gra6 publie en IPv6, le `CNAME` le suit tout seul.
+`AAAA` : ce que rtr1 publie en IPv6, le `CNAME` le suit tout seul.
 
 Le domaine nu (`carlys.example`) et `www` ne sont **pas** servis par ces
 vhosts : aucun des six `server_name` ne les couvre. Ce qu'ils reçoivent est
 décidé par le vhost **attrape-tout** posé à l'étape 6 — une connexion fermée
 sans réponse (`444`). Sans lui, Nginx désignerait d'office comme défaut le
 premier bloc rencontré, c'est-à-dire l'**API de production** : un `Host`
-inconnu relayé par gra6, ou une requête arrivant en direct sur le port 80,
+inconnu relayé par rtr1, ou une requête arrivant en direct sur le port 80,
 atteindrait la production. Si vous voulez mettre un site vitrine sur le domaine
-nu, c'est un vhost de plus — sur gra6, hors de ce guide.
+nu, c'est un vhost de plus — sur rtr1, hors de ce guide.
 
 **Vérification** — depuis n'importe quelle machine, une fois la propagation
 faite (de quelques minutes à quelques heures) :
@@ -110,11 +110,11 @@ faite (de quelques minutes à quelques heures) :
 for h in api app media api-staging app-staging media-staging; do
   printf '%-22s %s\n' "$h" "$(dig +short "$h.carlys.example" | paste -sd' ' -)"
 done
-dig +short gra6.luuc.fr        # l'adresse que les six lignes doivent finir par montrer
+dig +short rtr1.briancon.luuc.fr        # l'adresse que les six lignes doivent finir par montrer
 ```
 
 `dig +short` sur un `CNAME` affiche **d'abord la cible, puis l'adresse
-résolue** : chacune des six lignes doit donc commencer par `gra6.luuc.fr.` et
+résolue** : chacune des six lignes doit donc commencer par `rtr1.briancon.luuc.fr.` et
 se terminer par l'adresse rendue par la dernière commande. Une ligne vide =
 enregistrement absent ou pas encore propagé : **attendez**, ne passez pas à la
 suite. Une ligne qui montre `172.16.0.158` = un `A` a été posé au lieu du
@@ -133,12 +133,12 @@ apt-get update && apt-get install -y git
 git clone https://github.com/mimiflo/Carlys.git /srv/carlys/repo
 cd /srv/carlys/repo
 
-# L'adresse depuis laquelle le port 80 sera ouvert — celle de gra6, et elle
+# L'adresse depuis laquelle le port 80 sera ouvert — celle de rtr1, et elle
 # seule. Trouvez-la avant de lancer le script. `getent` plutôt que `dig` :
 # il est là sur un Debian nu, `dig` demande le paquet dnsutils.
-getent hosts gra6.luuc.fr        # → l'adresse, puis le nom
+getent hosts rtr1.briancon.luuc.fr        # → l'adresse, puis le nom
 
-sudo CARLYS_PROXY_CIDR=<adresse de gra6> ./scripts/server/setup.sh
+sudo CARLYS_PROXY_CIDR=<adresse de rtr1> ./scripts/server/setup.sh
 ```
 
 **Si le dépôt est privé**, ce `git clone` anonyme échoue sur
@@ -204,7 +204,7 @@ Deux choses qu'il pose et dont on ne se rend compte qu'en leur absence :
 **Il n'installe PAS certbot, et il retire la règle 443 si elle traîne d'une
 installation antérieure** (`scripts/server/setup.sh`, étapes 1/9 et 4/9). C'est
 la conséquence directe de l'architecture : les certificats des six noms vivent
-sur gra6. Un certbot posé ici armerait une minuterie de renouvellement pour des
+sur rtr1. Un certbot posé ici armerait une minuterie de renouvellement pour des
 certificats qui n'existent pas, et laisserait croire au prochain exploitant que
 le TLS se règle sur ce serveur.
 
@@ -215,7 +215,7 @@ le TLS se règle sur ce serveur.
 > `X-Forwarded-Proto: https` **en dur**, ce qui n'est honnête que si le seul
 > émetteur possible est un proxy ayant réellement terminé du TLS. Une machine
 > injoignable vaut mieux qu'une machine qui ment. Pour rattraper sans rejouer
-> le script : `ufw allow from <adresse de gra6> to any port 80 proto tcp`.
+> le script : `ufw allow from <adresse de rtr1> to any port 80 proto tcp`.
 
 **Vérification :**
 
@@ -224,13 +224,13 @@ echo $?                                      # 0 : aucun service en défaut
 docker --version && docker compose version   # les deux répondent
 docker info > /dev/null && echo 'démon ok'   # le CLI peut répondre sans lui
 systemctl is-active docker nginx cron        # trois fois « active »
-ufw status | head -8                         # 22, et 80 DEPUIS gra6 ; pas de 443
+ufw status | head -8                         # 22, et 80 DEPUIS rtr1 ; pas de 443
 ls -la /srv/carlys/                          # staging/ production/ backups/
 ```
 
 La ligne du 80 doit nommer une source. `80/tcp ALLOW Anywhere` n'est **pas**
 l'état attendu : c'est la règle large d'une installation antérieure, à effacer
-(`ufw delete allow 80/tcp`) avant de reposer celle de gra6.
+(`ufw delete allow 80/tcp`) avant de reposer celle de rtr1.
 
 **Le code de sortie compte autant que l'affichage.** Si un service refuse de
 démarrer, `setup.sh` va quand même au bout des sept étapes, affiche tout son
@@ -449,34 +449,34 @@ que vous puissiez le vérifier — pas ce qu'il faut recopier.
 des liens envoyés par e-mail et des retours Stripe.
 
 **Les URL publiques restent en `https://`, et ce n'est pas une inattention.**
-Le saut gra6 → ce serveur est en clair, mais il est *interne* : ce que
+Le saut rtr1 → ce serveur est en clair, mais il est *interne* : ce que
 décrivent ces quatre variables, c'est ce que voit le client, et le client a
-bien parlé HTTPS à gra6. Un `http://` glissé ici serait à la fois faux et
+bien parlé HTTPS à rtr1. Un `http://` glissé ici serait à la fois faux et
 refusé au démarrage (règle 3 ci-dessus).
 
 **`TRUST_PROXY_HOPS=2`, parce qu'il y a DEUX proxys.** La chaîne est
-`client → gra6 → ce Nginx → Express` : gra6 écrit dans `X-Forwarded-For`
-l'adresse du client, le Nginx d'ici y ajoute celle de gra6 — la liste compte
+`client → rtr1 → ce Nginx → Express` : rtr1 écrit dans `X-Forwarded-For`
+l'adresse du client, le Nginx d'ici y ajoute celle de rtr1 — la liste compte
 donc deux entrées. Express (`app.set('trust proxy', n)`,
 `apps/api/src/app/configure-app.ts`) remonte cette liste par la droite et saute
 `n` entrées. Mesuré sur la chaîne montée pour de vrai — trois conteneurs, un
-client honnête, gra6 posant l'en-tête :
+client honnête, rtr1 posant l'en-tête :
 
 | `TRUST_PROXY_HOPS` | `req.ip` vaut |
 | --- | --- |
-| `1` | l'adresse de **gra6** — tout Internet partage un seul seau de limitation de débit |
+| `1` | l'adresse de **rtr1** — tout Internet partage un seul seau de limitation de débit |
 | `2` | l'adresse du **client** ✓ |
 | `3` | identique à `2` : la liste est saturée, il n'y a rien de plus à sauter |
 
 La valeur `1` était juste tant qu'un seul Nginx se tenait devant l'API. Avec
 `1` aujourd'hui, la limitation de débit, le verrouillage de compte et l'audit
-ne voient plus qu'une adresse, celle de gra6 — et la panne est silencieuse :
+ne voient plus qu'une adresse, celle de rtr1 — et la panne est silencieuse :
 tout continue de fonctionner, seules les protections deviennent aveugles.
 
 > **Ce compteur ne protège pas contre un client qui forge son adresse ; c'est
-> gra6 qui le fait.** Un compteur de sauts numérique ne retire des entrées que
+> rtr1 qui le fait.** Un compteur de sauts numérique ne retire des entrées que
 > **par la droite** : tout ce qu'un client *préfixe* survit, quel que soit le
-> nombre de sauts. La garde est l'écrasement de `X-Forwarded-For` par gra6,
+> nombre de sauts. La garde est l'écrasement de `X-Forwarded-For` par rtr1,
 > exigé et démontré au §6. Monter `TRUST_PROXY_HOPS` ne la remplacerait pas.
 
 **Vérification, une fois les deux fichiers remplis** — aucune valeur d'exemple
@@ -658,7 +658,7 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    docker compose -p carlys_staging logs --since 30m api | grep 'Tour de coach'
    ```
 
-   Le délai du proxy de devant (Zoraxy, sur gra6) doit valoir **au moins
+   Le délai du proxy de devant (Zoraxy, sur rtr1) doit valoir **au moins
    60 secondes** pour l'hôte de l'API : une réponse s'écrit en flux pendant
    plusieurs minutes, mais jamais plus de 15 secondes sans qu'un octet parte.
    Un petit modèle suit moins bien les consignes : c'est ce test qui le dit.
@@ -678,12 +678,12 @@ jour avec le déploiement.
 ### La chaîne : qui termine quoi
 
 ```
-client ──HTTPS 443──> gra6.luuc.fr ──HTTP──> 172.16.0.158:80 ──> 127.0.0.1:31xx
+client ──HTTPS 443──> rtr1.briancon.luuc.fr ──HTTP──> 172.16.0.158:80 ──> 127.0.0.1:31xx
                        ▲ certificats          ▲ Nginx d'ici       ▲ conteneurs
                          + terminaison TLS      HTTP SEUL
 ```
 
-Sur gra6, qui n'est **pas** cette machine et ne fait pas partie de ce dépôt :
+Sur rtr1, qui n'est **pas** cette machine et ne fait pas partie de ce dépôt :
 les certificats des six noms publics, leur renouvellement, la terminaison TLS,
 HTTP/2 (qui se négocie dans la poignée de main TLS, donc là-bas), et le routage
 vers `172.16.0.158:80` en HTTP interne.
@@ -704,9 +704,9 @@ de la racine du bucket, limites de taille de corps) ; et les URL publiques, qui
 restent en `https://`. HTTPS existe toujours pour le client — il est seulement
 terminé un cran plus haut.
 
-### Ce qu'on EXIGE de gra6 : trois en-têtes, à vérifier, pas à supposer
+### Ce qu'on EXIGE de rtr1 : trois en-têtes, à vérifier, pas à supposer
 
-Ces trois lignes sont à poser dans le vhost de gra6 qui sert les six noms
+Ces trois lignes sont à poser dans le vhost de rtr1 qui sert les six noms
 Carlys. **Traitez-les comme un prérequis dont vous ne supposez pas qu'il est
 rempli** : la suite de cette section les éprouve pour de bon.
 
@@ -726,25 +726,25 @@ liens des e-mails.
 
 **`X-Forwarded-For` ÉCRASÉ** — c'est le point qui décide de la sécurité de
 toute la chaîne, et il ne se déduit pas, il se mesure. Chaîne montée pour de
-vrai en trois conteneurs (client → nginx « gra6 » → nginx « carlys » →
+vrai en trois conteneurs (client → nginx « rtr1 » → nginx « carlys » →
 Express 5.2.1 avec `app.set('trust proxy', n)`, soit exactement ce que fait
 `apps/api/src/app/configure-app.ts`), avec un client qui **forge** lui-même
 `X-Forwarded-For: 1.2.3.4` :
 
-| Ce que gra6 pose | Ce que l'API voit | Ce qu'elle retient |
+| Ce que rtr1 pose | Ce que l'API voit | Ce qu'elle retient |
 | --- | --- | --- |
-| `$proxy_add_x_forwarded_for` | `1.2.3.4, <client>, <gra6>` | `1.2.3.4` — **FORGÉ** |
-| `$http_x_forwarded_for` | `1.2.3.4, <gra6>` | `1.2.3.4` — **FORGÉ** |
-| `$remote_addr` | `<client>, <gra6>` | `<client>` — **SÛR** |
+| `$proxy_add_x_forwarded_for` | `1.2.3.4, <client>, <rtr1>` | `1.2.3.4` — **FORGÉ** |
+| `$http_x_forwarded_for` | `1.2.3.4, <rtr1>` | `1.2.3.4` — **FORGÉ** |
+| `$remote_addr` | `<client>, <rtr1>` | `<client>` — **SÛR** |
 
 (Revérifié avec un client envoyant `9.9.9.9, 8.8.8.8` : ignoré de la même
 façon.) **La raison** : un compteur de sauts numérique ne retire des entrées
 que **par la droite**. Tout ce qu'un client *préfixe* survit, quel que soit le
 nombre de sauts — augmenter `TRUST_PROXY_HOPS` ne fait qu'en sauter davantage
 par la droite, jamais nettoyer la gauche. **La protection ne vient donc pas du
-nombre de sauts, elle vient de gra6 qui écrase l'en-tête.**
+nombre de sauts, elle vient de rtr1 qui écrase l'en-tête.**
 
-Si gra6 ajoute au lieu d'écraser, n'importe quel client se fait passer pour
+Si rtr1 ajoute au lieu d'écraser, n'importe quel client se fait passer pour
 n'importe quelle adresse : limitation de débit contournée et journal
 d'audit empoisonné. Le risque est concret et daté du
 code d'aujourd'hui — `request.ip` est lu à **deux endroits** de `apps/api/src`
@@ -754,14 +754,14 @@ dans `app.module.ts`.
 
 **`X-Forwarded-Proto: https`** pour que le client soit décrit tel qu'il est.
 Le Nginx d'ici le repose de toute façon **en dur** (`snippets/carlys-proxy.conf`) :
-ni `$scheme`, qui vaudrait `http` puisque gra6 nous parle en clair, ni
+ni `$scheme`, qui vaudrait `http` puisque rtr1 nous parle en clair, ni
 `$http_x_forwarded_proto`, dont on ne suppose rien. Mesuré sur la même chaîne :
 l'API voit alors `req.protocol = 'https'` et `req.secure = true` alors que tout
 le trajet interne est en clair — c'est ce qui garantit qu'une URL publique ne
 se fabriquera jamais en `http://`.
 
 > **Corollaire de pare-feu, à traiter comme une exigence et pas comme une
-> option** : `172.16.0.158:80` ne doit être joignable **que depuis gra6**
+> option** : `172.16.0.158:80` ne doit être joignable **que depuis rtr1**
 > (`CARLYS_PROXY_CIDR`, étape 2). Sinon n'importe qui obtient de l'API ce
 > `req.secure = true` mensonger, et surtout s'adresse à elle sans être passé
 > par l'écrasement de `X-Forwarded-For` ci-dessus.
@@ -775,7 +775,7 @@ se fabriquera jamais en `http://`.
 
 Rien de ce qui précède ne se vérifie en le lisant. On pose donc un **miroir
 temporaire** — un vhost qui répond n'importe quel `Host` et récite ce qu'il a
-reçu — et on l'interroge depuis l'extérieur, à travers gra6. C'est le seul
+reçu — et on l'interroge depuis l'extérieur, à travers rtr1. C'est le seul
 moment du guide où l'on voit la chaîne complète sans qu'un conteneur puisse
 brouiller le diagnostic.
 
@@ -797,11 +797,11 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Test 1 — les six noms résolvent vers gra6.** C'est la vérification du §1 ;
+**Test 1 — les six noms résolvent vers rtr1.** C'est la vérification du §1 ;
 rejouez-la si vous avez sauté des étapes. Tant qu'un nom ne résout pas, les
-tests suivants échoueront pour une raison qui n'a rien à voir avec gra6.
+tests suivants échoueront pour une raison qui n'a rien à voir avec rtr1.
 
-**Test 2 — gra6 joint bien `172.16.0.158:80`.** Depuis votre poste, sur chacun
+**Test 2 — rtr1 joint bien `172.16.0.158:80`.** Depuis votre poste, sur chacun
 des six noms :
 
 ```bash
@@ -811,8 +811,8 @@ for h in api app media api-staging app-staging media-staging; do
 done
 ```
 
-Six fois `200`. Un `502` ici est celui de **gra6**, pas le nôtre, et il ne veut
-dire qu'une chose : gra6 n'a pas pu joindre le port 80. Le discriminateur, sur
+Six fois `200`. Un `502` ici est celui de **rtr1**, pas le nôtre, et il ne veut
+dire qu'une chose : rtr1 n'a pas pu joindre le port 80. Le discriminateur, sur
 le serveur Carlys :
 
 ```bash
@@ -821,7 +821,7 @@ sudo tail -n 20 /var/log/nginx/access.log
 
 Si la requête n'y figure pas, elle n'est jamais arrivée : pare-feu
 (`CARLYS_PROXY_CIDR` absent ou faux — étape 2), Nginx arrêté, ou mauvaise
-adresse dans le `proxy_pass` de gra6. Si elle y figure, le problème est en aval
+adresse dans le `proxy_pass` de rtr1. Si elle y figure, le problème est en aval
 et ce n'est plus un problème de chaîne.
 
 **Test 3 — le `Host` arrive intact.** Le corps de la réponse le dit :
@@ -834,13 +834,13 @@ curl -s https://api-staging.carlys.example/miroir
 Host=api-staging.carlys.example      ← le nom PUBLIC, pas 172.16.0.158
 XFF=<votre adresse publique>
 Proto=https
-vu-d-ici=<adresse de gra6>
+vu-d-ici=<adresse de rtr1>
 ```
 
-`Host=172.16.0.158` ou `Host=<autre chose>` : gra6 réécrit le `Host`. Aucun des
+`Host=172.16.0.158` ou `Host=<autre chose>` : rtr1 réécrit le `Host`. Aucun des
 six vhosts ne le reconnaîtra, tout tombera sur l'attrape-tout, et le symptôme
 sera « les six noms sont morts » alors que le routage d'ici est bon. Notez au
-passage `vu-d-ici` : c'est l'adresse de gra6, celle qui doit figurer dans la
+passage `vu-d-ici` : c'est l'adresse de rtr1, celle qui doit figurer dans la
 règle `ufw` de l'étape 2.
 
 **Test 4 — `X-Forwarded-For` porte l'adresse du client, et résiste à une
@@ -857,17 +857,17 @@ compte, se lit ainsi :
 
 | Ce que rend le second appel | Verdict |
 | --- | --- |
-| `XFF=<votre adresse>` | gra6 **écrase** (`$remote_addr`) ✓ — c'est le seul état acceptable |
-| `XFF=1.2.3.4` | gra6 relaie l'en-tête du client (`$http_x_forwarded_for`) ✗ |
-| `XFF=1.2.3.4, <votre adresse>` | gra6 **ajoute** (`$proxy_add_x_forwarded_for`) ✗ |
-| `XFF=` (vide, aux deux appels) | gra6 ne pose pas l'en-tête du tout : l'API ne verra jamais que l'adresse de gra6, quelle que soit la valeur de `TRUST_PROXY_HOPS` |
+| `XFF=<votre adresse>` | rtr1 **écrase** (`$remote_addr`) ✓ — c'est le seul état acceptable |
+| `XFF=1.2.3.4` | rtr1 relaie l'en-tête du client (`$http_x_forwarded_for`) ✗ |
+| `XFF=1.2.3.4, <votre adresse>` | rtr1 **ajoute** (`$proxy_add_x_forwarded_for`) ✗ |
+| `XFF=` (vide, aux deux appels) | rtr1 ne pose pas l'en-tête du tout : l'API ne verra jamais que l'adresse de rtr1, quelle que soit la valeur de `TRUST_PROXY_HOPS` |
 
 Les trois dernières lignes sont la panne décrite plus haut ; les deux du milieu
 sont la plus grave, celle qui laisse un inconnu choisir l'adresse qu'on lui
 attribuera. À ce stade elle ne coûte rien à corriger, plus tard elle se paiera
 en audit empoisonné. **Ne passez pas à la suite tant que le second appel ne rend
-pas votre propre adresse.** Ce que le miroir affiche est ce que gra6 a écrit ;
-le Nginx d'ici y ajoutera ensuite l'adresse de gra6, et c'est ce second saut que
+pas votre propre adresse.** Ce que le miroir affiche est ce que rtr1 a écrit ;
+le Nginx d'ici y ajoutera ensuite l'adresse de rtr1, et c'est ce second saut que
 compte `TRUST_PROXY_HOPS=2` (§5).
 
 Le miroir a fini son travail — il sera retiré juste en dessous, en même temps
@@ -882,8 +882,8 @@ ordre alphabétique, ce serait le premier bloc de `carlys-production.conf`,
 c'est-à-dire l'**API de production**.
 
 Deux requêtes doivent tomber sur l'attrape-tout plutôt que là : un `Host`
-inconnu relayé par gra6 (domaine nu, `www`, sous-domaine oublié), et une
-requête arrivant **en direct** sur `172.16.0.158:80` sans être passée par gra6
+inconnu relayé par rtr1 (domaine nu, `www`, sous-domaine oublié), et une
+requête arrivant **en direct** sur `172.16.0.158:80` sans être passée par rtr1
 — donc sans l'écrasement de `X-Forwarded-For`, tout en se voyant quand même
 poser `X-Forwarded-Proto: https` par nos vhosts.
 
@@ -957,7 +957,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Vérification** — `nginx -t` doit dire `test is successful`. À ce stade les
-six noms répondent, toujours en `https://` puisque c'est gra6 qui sert le
+six noms répondent, toujours en `https://` puisque c'est rtr1 qui sert le
 client, mais rien ne tourne encore derrière. **Attention, ils ne répondent pas
 tous la même chose**, et c'est voulu :
 
@@ -972,8 +972,8 @@ Ouvrir `https://media.carlys.example/` pour « contrôler ses six noms » rend
 donc 404, et ce 404 est le bon signe. Contrôlez avec les chemins ci-dessous.
 
 ```bash
-# Depuis votre poste, à travers gra6 : ce 502 est le NÔTRE (le vhost a bien
-# routé, l'amont manque). Le test 2 ci-dessus a déjà écarté celui de gra6.
+# Depuis votre poste, à travers rtr1 : ce 502 est le NÔTRE (le vhost a bien
+# routé, l'amont manque). Le test 2 ci-dessus a déjà écarté celui de rtr1.
 curl -sI https://api-staging.carlys.example/health/live | head -1   # 502 attendu
 
 # Le miroir a disparu avec le rechargement — c'est la preuve qu'on sert bien
@@ -983,7 +983,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 ```
 
 L'attrape-tout se contrôle **sur le serveur**, en boucle locale : le domaine nu
-n'est délibérément pas dans le DNS du §1, et le pare-feu n'autorise que gra6 à
+n'est délibérément pas dans le DNS du §1, et le pare-feu n'autorise que rtr1 à
 frapper le port 80 depuis l'extérieur. `--resolve` évite la résolution DNS —
 sans lui, curl sortirait en 6 (« Could not resolve host »), un code qui ne dit
 rien de l'attrape-tout et qu'on prendrait à tort pour sa panne. C'est
@@ -1028,7 +1028,7 @@ de succès. Si la santé ne répond pas, il revient au SHA précédent.
 
 **Vérifications** — les trois doivent passer. Elles s'écrivent en `https://`
 comme avant la bascule du TLS, **et c'est bien la bonne adresse** : elles
-visent les noms publics, servis par gra6, qui relaie ensuite en clair jusqu'ici.
+visent les noms publics, servis par rtr1, qui relaie ensuite en clair jusqu'ici.
 Rien à changer ici, donc — et surtout pas à passer en `http://` sous prétexte
 que le dernier saut est en clair : on éprouve la chaîne telle qu'un client la
 parcourt, pas un maillon isolé.
@@ -1053,15 +1053,15 @@ Un `502` persistant sur l'API : `docker compose logs api` dans le projet
 
 Il y a maintenant **deux 502 possibles**, et ils ne se soignent pas au même
 endroit. Le nôtre — le vhost a routé, le conteneur ne répond pas — laisse une
-ligne dans `/var/log/nginx/access.log` de ce serveur. Celui de gra6 — gra6 n'a
+ligne dans `/var/log/nginx/access.log` de ce serveur. Celui de rtr1 — rtr1 n'a
 pas pu joindre `172.16.0.158:80` — n'en laisse aucune. C'est ce `tail` qui
 tranche, et le test 2 du §6 est exactement le même geste.
 
 **L'adresse du client, à contrôler une fois pour toutes.** Provoquez une entrée
 d'audit (une connexion au back-office de recette, par exemple) et lisez
-l'adresse enregistrée : elle doit être la vôtre, pas celle de gra6. Si c'est
-celle de gra6, `TRUST_PROXY_HOPS` ne vaut pas `2` (§5) ; si c'est une adresse
-qui n'a aucune raison d'exister, gra6 ajoute `X-Forwarded-For` au lieu de
+l'adresse enregistrée : elle doit être la vôtre, pas celle de rtr1. Si c'est
+celle de rtr1, `TRUST_PROXY_HOPS` ne vaut pas `2` (§5) ; si c'est une adresse
+qui n'a aucune raison d'exister, rtr1 ajoute `X-Forwarded-For` au lieu de
 l'écraser (§6, test 4).
 
 ### Le premier administrateur
@@ -1310,7 +1310,7 @@ ssh -L 8025:127.0.0.1:8025 utilisateur@172.16.0.158
 # puis http://localhost:8025 dans le navigateur local
 ```
 
-L'adresse est celle par laquelle vous administrez déjà ce serveur — gra6 n'y
+L'adresse est celle par laquelle vous administrez déjà ce serveur — rtr1 n'y
 est pour rien : il ne relaie que le port 80, et Mailpit n'est proxifié par
 aucun vhost.
 
@@ -1656,7 +1656,7 @@ se copient séparément : `carlys-proxy.conf` porte les en-têtes dont dépend
 l'adresse du client, `carlys-compression-api.conf` la compression du JSON,
 `carlys-journal.conf` le journal d'accès sans jeton.
 
-**Et la configuration de gra6 n'est dans aucun de ces dépôts.** Un changement
+**Et la configuration de rtr1 n'est dans aucun de ces dépôts.** Un changement
 qui touche les en-têtes attendus de lui — les trois du §6 — doit être porté
 là-bas à la main, par qui en a l'accès. Le §6 dit comment vérifier qu'il a bien
 été porté, et ces tests se rejouent à tout moment.
@@ -1699,11 +1699,11 @@ restauration sur la base de recette de temps en temps.
 
 ### Certificats
 
-Rien à faire ici : les certificats des six noms vivent sur **gra6**, qui les
+Rien à faire ici : les certificats des six noms vivent sur **rtr1**, qui les
 émet, les renouvelle et recharge sa propre configuration. Ce serveur n'en
 détient aucun et n'a aucune minuterie à surveiller. Un certificat expiré se
 constate sur les six noms à la fois, depuis n'importe quel navigateur, et se
-répare sur gra6.
+répare sur rtr1.
 
 ### Journaux
 
@@ -1725,19 +1725,19 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | `nginx -t` échoue sur un `ssl_certificate` ou `/etc/letsencrypt/…` | un vhost d'une installation antérieure traîne dans `sites-enabled/` : plus aucun fichier du dépôt ne nomme de certificat. Listez `/etc/nginx/sites-enabled/` et retirez l'intrus |
 | `nginx -t` échoue sur un `include` introuvable | un des `snippets/*.conf` n'a pas été copié (étape 6) : `carlys-proxy.conf`, inclus partout, ou `carlys-compression-api.conf`, inclus par les vhosts `api`. Recopiez-les tous — et il vaut mieux ce refus qu'un Nginx qui servirait sans l'adresse du client |
 | `nginx -t` échoue sur `unknown log format "carlys_sans_jeton"` | `conf.d/carlys-journal.conf` manque dans `/etc/nginx/conf.d/` : rejouez `setup.sh`, ou copiez-le (étape 6). C'est lui qui retire du journal d'accès les jetons des liens de vérification et de réinitialisation |
-| 502 **sans ligne dans `/var/log/nginx/access.log`** d'ici | c'est le 502 de gra6 : il ne joint pas `172.16.0.158:80`. Pare-feu (`CARLYS_PROXY_CIDR`, étape 2), Nginx arrêté, ou mauvaise adresse dans son `proxy_pass` |
+| 502 **sans ligne dans `/var/log/nginx/access.log`** d'ici | c'est le 502 de rtr1 : il ne joint pas `172.16.0.158:80`. Pare-feu (`CARLYS_PROXY_CIDR`, étape 2), Nginx arrêté, ou mauvaise adresse dans son `proxy_pass` |
 | 502 sur tous les hôtes, **avec** une ligne dans l'`access.log` | aucun conteneur ne tourne : le déploiement a échoué ou n'a pas eu lieu |
 | 502 sur l'API seule | refus de démarrage sur une variable — `docker compose logs api` la nomme |
-| Les six noms rendent une connexion fermée, alors que les conteneurs tournent | gra6 ne conserve pas le `Host` : aucun `server_name` ne correspond, tout tombe sur l'attrape-tout. `proxy_set_header Host $host;` sur gra6 (§6, test 3) |
+| Les six noms rendent une connexion fermée, alors que les conteneurs tournent | rtr1 ne conserve pas le `Host` : aucun `server_name` ne correspond, tout tombe sur l'attrape-tout. `proxy_set_header Host $host;` sur rtr1 (§6, test 3) |
 | Le back-office s'affiche mais reste vide | l'image admin vise la mauvaise API. Trois causes, dans cet ordre : `CARLYS_DOMAIN` **mal formée** (avec `https://`, une barre finale ou un port — le workflow refuse les cas nets, pas tous) ; la variable posée APRÈS la construction de cette image, qui garde donc `localhost:3000` ; ou `CORS_ORIGINS` côté API qui ne couvre pas l'origine de l'admin, auquel cas la console du navigateur montre des erreurs CORS. Vérifiez la console avant tout : elle distingue les trois en une seconde |
 | Les liens des e-mails pointent en local | `PUBLIC_APP_URL` mal renseignée |
 | L'app mobile plante au lancement | `CARLYS_PUBLIC_WEB_BASE_URL` oubliée au build (étape 8) |
 | `promote.sh` dit que le tag `-prod` manque | les marqueurs légaux subsistent (étape 9.1) |
-| L'IP du client est toujours la même dans l'audit, et c'est celle de gra6 | `TRUST_PROXY_HOPS` ≠ 2 (§5), ou gra6 ne pose pas `X-Forwarded-For` du tout |
-| Des adresses aberrantes dans l'audit, ou une limitation de débit qui ne freine personne | gra6 **ajoute** `X-Forwarded-For` au lieu de l'écraser : n'importe qui choisit l'adresse qu'on lui attribue. `proxy_set_header X-Forwarded-For $remote_addr;` sur gra6 (§6, test 4) |
+| L'IP du client est toujours la même dans l'audit, et c'est celle de rtr1 | `TRUST_PROXY_HOPS` ≠ 2 (§5), ou rtr1 ne pose pas `X-Forwarded-For` du tout |
+| Des adresses aberrantes dans l'audit, ou une limitation de débit qui ne freine personne | rtr1 **ajoute** `X-Forwarded-For` au lieu de l'écraser : n'importe qui choisit l'adresse qu'on lui attribue. `proxy_set_header X-Forwarded-For $remote_addr;` sur rtr1 (§6, test 4) |
 | Un service, un volume ou une variable manque après un déploiement pourtant réussi | le clone `/srv/carlys/repo` n'a pas été mis à jour : `deploy.sh` a tiré les bonnes images et les a démarrées sous un `compose.yml` périmé (étape 10) |
-| Un hôte inconnu (domaine nu, `www`, `Host` forgé en direct) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) — et, pour l'accès direct, le port 80 n'est pas restreint à gra6 (étape 2) |
-| Certificat expiré sur les six noms | rien à faire ici, ce serveur n'en détient aucun : c'est gra6 qui émet et renouvelle (étape 10, « Certificats ») |
+| Un hôte inconnu (domaine nu, `www`, `Host` forgé en direct) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) — et, pour l'accès direct, le port 80 n'est pas restreint à rtr1 (étape 2) |
+| Certificat expiré sur les six noms | rien à faire ici, ce serveur n'en détient aucun : c'est rtr1 qui émet et renouvelle (étape 10, « Certificats ») |
 | `nginx -t` échoue sur `host not found in upstream "carlys_api_…"` | l'amont engendré manque dans `/etc/nginx/conf.d/` : rejouez `setup.sh`, ou `carlysctl heal <env>` si la pile tourne déjà ([orchestration.md](orchestration.md#8-lamont-nginx-est-engendré)) |
 | 502 alors que `docker compose ps` montre l'API en bonne santé | Nginx sert d'anciens ports : `carlysctl status` affiche la ligne `⚠ ÉCART nginx ↔ réalité`, `carlysctl heal <env>` la corrige |
 | `carlysctl status` dit `aucun exemplaire ne rend /metrics` | en production, `METRICS_TOKEN` manque dans le `.env` — la supervision voit encore la santé, mais plus la charge |

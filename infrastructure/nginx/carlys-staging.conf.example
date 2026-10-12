@@ -5,7 +5,7 @@
 # environnement doit rester HORS DES MOTEURS DE RECHERCHE.
 #
 # Comme son jumeau, ce fichier n'écoute qu'en HTTP sur le port 80 : le TLS des
-# trois noms de recette est terminé par le reverse proxy réseau gra6.luuc.fr,
+# trois noms de recette est terminé par le reverse proxy réseau rtr1.briancon.luuc.fr,
 # qui détient les certificats et relaie ici en clair. Aucun `listen 443`, aucun
 # certificat, aucun défi ACME, aucun certbot sur ce serveur. Les URL publiques,
 # elles, restent en `https://` : PUBLIC_APP_URL, CORS_ORIGINS,
@@ -49,7 +49,7 @@ upstream carlys_minio_staging {
 # ── API de recette — api-staging.carlys.example → 127.0.0.1:3100-3119 ────────
 #
 # Ni `ssl`, ni `http2` sur le `listen` : HTTP/2 se négocie dans la poignée de
-# main TLS, donc sur gra6. Ici, c'est du HTTP/1.1 en clair de bout en bout
+# main TLS, donc sur rtr1. Ici, c'est du HTTP/1.1 en clair de bout en bout
 # (`proxy_http_version 1.1;` dans le snippet).
 server {
     listen 80;
@@ -60,9 +60,9 @@ server {
     access_log /var/log/nginx/access.log carlys_sans_jeton;
 
     # HSTS conservé bien que ce bloc n'écoute qu'en clair : c'est un en-tête de
-    # RÉPONSE, il traverse gra6 jusqu'au navigateur, qui l'applique à l'origine
+    # RÉPONSE, il traverse rtr1 jusqu'au navigateur, qui l'applique à l'origine
     # https://api-staging.carlys.example qu'il a réellement contactée. Le garder
-    # protège si gra6 oublie de le poser.
+    # protège si rtr1 oublie de le poser.
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     # Une API ne s'indexe pas, mais l'en-tête ne coûte rien et vaut pour les
     # réponses JSON qu'un moteur croiserait par un lien.
@@ -135,7 +135,7 @@ server {
 # --dart-define=CARLYS_PUBLIC_WEB_BASE_URL (sans quoi `assertUsable()` refuse
 # de démarrer l'application : apps/mobile/lib/app/environment/). Ces valeurs
 # restent en https:// : elles décrivent ce que voit le client, pas le saut
-# interne entre gra6 et cette machine.
+# interne entre rtr1 et cette machine.
 server {
     listen 80;
     listen [::]:80;
@@ -230,8 +230,8 @@ server {
     # évaluée après les préfixes et l'emporte sur eux : une seule suffit —
     # plus celle des deux pages à jeton, plus haut, qui porte déjà le sien.
     #
-    # Le mot de passe voyage en clair entre gra6 et cette machine — comme tout
-    # le reste depuis que le TLS se termine sur gra6. C'est acceptable parce
+    # Le mot de passe voyage en clair entre rtr1 et cette machine — comme tout
+    # le reste depuis que le TLS se termine sur rtr1. C'est acceptable parce
     # que ce segment est un réseau interne fermé au pare-feu ; ce ne le serait
     # pas si le port 80 était joignable d'ailleurs.
     #

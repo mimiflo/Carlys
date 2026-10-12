@@ -19,7 +19,7 @@
 # vérification du certificat chez le client, plutôt que de lui présenter celui
 # d'`api.` sous un nom qui n'était pas le sien.
 #
-# Il n'y a plus de TLS ici — il se termine sur gra6.luuc.fr, qui relaie en HTTP
+# Il n'y a plus de TLS ici — il se termine sur rtr1.briancon.luuc.fr, qui relaie en HTTP
 # clair vers 172.16.0.158:80. Donc plus de `listen 443`, plus de certificat à
 # présenter, ni vrai ni auto-signé, et plus rien à générer avant d'activer ce
 # fichier. Ce vhost ne protège plus d'un mauvais certificat.
@@ -29,17 +29,17 @@
 # de main : le `Host` est du texte, rien de plus. Deux requêtes doivent tomber
 # ici plutôt que sur l'API de production :
 #
-#   1. un `Host` inconnu relayé par gra6 (sous-domaine oublié, `www`, IP) ;
+#   1. un `Host` inconnu relayé par rtr1 (sous-domaine oublié, `www`, IP) ;
 #   2. une requête arrivant EN DIRECT sur 172.16.0.158:80, sans passer par
-#      gra6 — donc sans avoir traversé l'écrasement de X-Forwarded-For que
-#      gra6 doit faire (voir snippets/carlys-proxy.conf), tout en se voyant
+#      rtr1 — donc sans avoir traversé l'écrasement de X-Forwarded-For que
+#      rtr1 doit faire (voir snippets/carlys-proxy.conf), tout en se voyant
 #      quand même poser `X-Forwarded-Proto: https` par nos vhosts.
 #
 # À DIRE FRANCHEMENT : ce fichier ne rattrape le cas 2 que si la requête ne
 # devine pas l'un des six noms. Un client qui écrit `Host: api.carlys.example`
 # en tapant l'IP en direct passe par le vhost de l'API, pas par ici. La garde
 # principale du cas 2 est donc le PARE-FEU — le port 80 ne doit être joignable
-# que depuis gra6 —, et cet attrape-tout n'en est que la seconde couche, celle
+# que depuis rtr1 —, et cet attrape-tout n'en est que la seconde couche, celle
 # qui reste debout quand la première est mal posée.
 #
 # ── Installation ─────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ server {
     # n'y a plus la moindre exception à ménager. La version précédente en avait
     # une, `/.well-known/acme-challenge/`, pour qu'un nom pas encore servi
     # puisse quand même faire valider son défi ACME ; les certificats sont
-    # maintenant émis et renouvelés par gra6, cette machine n'en demande aucun.
+    # maintenant émis et renouvelés par rtr1, cette machine n'en demande aucun.
     #
     # 444 : Nginx ferme la connexion sans rien renvoyer. Pas de page d'erreur,
     # pas de numéro de version, aucune indication qu'il y a quelque chose à

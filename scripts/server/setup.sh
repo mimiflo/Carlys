@@ -37,7 +37,7 @@
 #   - les vhosts nginx : ils vivent dans infrastructure/nginx/, versionnés ;
 #     ce script installe nginx et dit où les prendre, il ne les invente pas ;
 #   - les certificats TLS : CE SERVEUR N'EN A PLUS. Le TLS est terminé par le
-#     reverse proxy réseau (gra6.luuc.fr), qui relaie en HTTP clair vers le
+#     reverse proxy réseau (rtr1.briancon.luuc.fr), qui relaie en HTTP clair vers le
 #     port 80 d'ici ; les six noms publics restent en https:// pour le client.
 #     Rien à installer, rien à renouveler, rien à surveiller ici — d'où
 #     l'absence de certbot dans les paquets et du 443 dans le pare-feu ;
@@ -335,7 +335,7 @@ else
       ;;
   esac
   # LA FORME EST VALIDÉE AVANT D'ÊTRE PASSÉE À ufw, qui ne résout AUCUN nom
-  # d'hôte : `CARLYS_PROXY_CIDR=gra6.luuc.fr` lui fait rendre « ERROR: Bad
+  # d'hôte : `CARLYS_PROXY_CIDR=rtr1.briancon.luuc.fr` lui fait rendre « ERROR: Bad
   # source address » et sortir en 1. Sous `set -e`, cela tuerait ce script ici
   # même, à l'étape 4 sur 9 — exactement le mode d'échec que l'en-tête de ce
   # fichier revendique d'avoir supprimé, réintroduit un cran plus loin. Et la
@@ -346,7 +346,7 @@ else
       die "CARLYS_PROXY_CIDR=« $PROXY_CIDR » n'est pas une adresse." \
         "ufw ne résout aucun nom d'hôte : il lui faut une adresse IPv4 ou IPv6," \
         "avec un préfixe facultatif. Résoudre le nom d'abord :" \
-        "  dig +short gra6.luuc.fr" \
+        "  dig +short rtr1.briancon.luuc.fr" \
         "puis rejouer, par exemple :" \
         "  CARLYS_PROXY_CIDR=172.16.0.1 sudo $0"
       ;;
@@ -562,7 +562,7 @@ cat <<FIN
 
 $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ──$_c_off
 
-1. DNS — 6 enregistrements CNAME vers gra6.luuc.fr, le reverse proxy réseau
+1. DNS — 6 enregistrements CNAME vers rtr1.briancon.luuc.fr, le reverse proxy réseau
    qui termine le TLS. Ils ne pointent PAS sur ce serveur : rien de public ne
    frappe directement cette machine.
      api.$DOMAIN_HINT            app.$DOMAIN_HINT            media.$DOMAIN_HINT
@@ -572,10 +572,10 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
 2. Vhosts nginx — les prendre dans le dépôt, ils y sont versionnés :
      $CARLYS_REPO_DIR/infrastructure/nginx/
    Ils n'écoutent QU'EN HTTP sur le port 80 : ni 443, ni certificat, ni
-   redirection vers https, ni défi ACME — tout cela vit sur gra6.
+   redirection vers https, ni défi ACME — tout cela vit sur rtr1.
    puis : nginx -t && systemctl reload nginx
 
-3. REVERSE PROXY RÉSEAU (gra6.luuc.fr) — À CONFIGURER LÀ-BAS, PAS ICI.
+3. REVERSE PROXY RÉSEAU (rtr1.briancon.luuc.fr) — À CONFIGURER LÀ-BAS, PAS ICI.
    C'est lui qui détient les certificats des six noms, termine le TLS et
    relaie en HTTP clair vers cette machine :
      proxy_pass         http://$SERVER_IP:80;
@@ -583,12 +583,12 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
      proxy_set_header   X-Forwarded-For   \$remote_addr;   # ÉCRASER, jamais ajouter
      proxy_set_header   X-Forwarded-Proto https;
    Ces trois en-têtes sont une EXIGENCE, pas une supposition : les vérifier
-   sur gra6 avant de déclarer la mise en route terminée.
+   sur rtr1 avant de déclarer la mise en route terminée.
    - Host : les vhosts d'ici choisissent le service par server_name, et les
      liens des e-mails portent le nom public. Un Host réécrit, et on tombe
      sur l'attrape-tout.
    - X-Forwarded-For à \$remote_addr et NON \$proxy_add_x_forwarded_for.
-     Mesuré sur la chaîne montée pour de vrai (client → gra6 → nginx d'ici →
+     Mesuré sur la chaîne montée pour de vrai (client → rtr1 → nginx d'ici →
      Express) : avec \$proxy_add_x_forwarded_for ou \$http_x_forwarded_for,
      un client qui envoie lui-même « X-Forwarded-For: 1.2.3.4 » fait retenir
      1.2.3.4 à l'API. Un compteur de sauts ne retire des entrées QUE PAR LA
@@ -598,9 +598,9 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
    - X-Forwarded-Proto https en dur, pour que les URL publiques restent en
      https:// alors que la liaison interne est en clair.
    Le nginx d'ici garde \$proxy_add_x_forwarded_for : il AJOUTE l'adresse de
-   gra6 derrière ce que gra6 a écrit — c'est le second saut, et c'est pourquoi
+   rtr1 derrière ce que rtr1 a écrit — c'est le second saut, et c'est pourquoi
    les deux .env portent TRUST_PROXY_HOPS=2. Mesuré : avec 1, l'API voit
-   l'adresse de gra6 et tout le monde partage un seul seau de limitation ;
+   l'adresse de rtr1 et tout le monde partage un seul seau de limitation ;
    avec 2, elle voit celle du client.
 
 $FIREWALL_NOTE

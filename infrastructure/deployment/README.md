@@ -20,7 +20,7 @@ qui se suit d'un serveur nu jusqu'à l'application publiée.
 
 Ce Nginx d'hôte **n'est pas en façade d'Internet et ne termine pas le TLS** :
 les six noms publics pointent en DNS vers le reverse proxy réseau
-`gra6.luuc.fr`, qui détient les certificats et relaie en HTTP interne vers le
+`rtr1.briancon.luuc.fr`, qui détient les certificats et relaie en HTTP interne vers le
 serveur Carlys, lequel écoute en HTTP sur le port 80 uniquement. Le serveur ne
 génère aucun certificat, n'installe pas Certbot et ne sert aucun défi ACME.
 Les URL publiques restent en `https://` — HTTPS existe toujours, il est
@@ -44,16 +44,16 @@ seulement terminé un cran plus haut. Conséquences complètes et mesurées :
   valeurs de développement de `S3_*`, `SMTP_HOST`, `EMAIL_FROM`,
   `PUBLIC_APP_URL` et `CORS_ORIGINS` sont refusées elles aussi
   (`docs/security/reverse-proxy.md`, section 5) ;
-- l'API tourne derrière **deux** reverse proxys — gra6 puis le Nginx de l'hôte
+- l'API tourne derrière **deux** reverse proxys — rtr1 puis le Nginx de l'hôte
   décrit par `infrastructure/nginx/` : `TRUST_PROXY_HOPS` doit donc valoir `2`
-  (mesuré sur la chaîne réelle : à `1`, `req.ip` vaut l'adresse de gra6 pour
+  (mesuré sur la chaîne réelle : à `1`, `req.ip` vaut l'adresse de rtr1 pour
   tout le trafic, et limitation de débit comme audit deviennent aveugles).
-  Le compteur ne suffit pas : gra6 doit **écraser** `X-Forwarded-For`
+  Le compteur ne suffit pas : rtr1 doit **écraser** `X-Forwarded-For`
   (`proxy_set_header X-Forwarded-For $remote_addr`), faute de quoi n'importe
   quel client se fait passer pour n'importe quelle adresse — l'exigence, les
   trois cas mesurés et le pourquoi sont dans
   `docs/security/reverse-proxy.md` ;
-- **le port 80 du serveur ne doit être joignable que depuis gra6** (prérequis
+- **le port 80 du serveur ne doit être joignable que depuis rtr1** (prérequis
   de pare-feu) : le Nginx de l'hôte pose `X-Forwarded-Proto: https` en dur,
   donc un accès direct obtiendrait de l'API un `req.secure = true` mensonger,
   sans être passé par l'écrasement ci-dessus ;

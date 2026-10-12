@@ -10,7 +10,7 @@
 #   - le journal d'ERREURS non plus, quand l'amont est tombé (502) : c'est là
 #     que nginx recopie la ligne de requête brute ;
 #   - le JSON de l'API part compressé, y compris relayé en HTTP/1.0 par un
-#     proxy (gra6), mais pas les petites réponses ni celles
+#     proxy (rtr1), mais pas les petites réponses ni celles
 #     d'authentification ;
 #   - le flux SSE du coach passe évènement par évènement, sans être retenu.
 #
@@ -157,7 +157,7 @@ echo
 echo "compression du JSON de l'API"
 entetes() { curl -s -D - -o /dev/null "$@" | tr -d '\r'; }
 for hote in api.carlys.example api-staging.carlys.example; do
-  e="$(entetes --http1.0 -H "Host: $hote" -H 'Accept-Encoding: gzip' -H 'Via: 1.1 gra6' "http://127.0.0.1:$PORT/api/v1/exercises?limit=50")"
+  e="$(entetes --http1.0 -H "Host: $hote" -H 'Accept-Encoding: gzip' -H 'Via: 1.1 rtr1' "http://127.0.0.1:$PORT/api/v1/exercises?limit=50")"
   verifier "$hote : JSON relayé en HTTP/1.0 par un proxy → gzip" oui \
     "$(grep -qi '^content-encoding: gzip' <<< "$e" && echo oui || echo non)"
   verifier "$hote : Vary: Accept-Encoding" oui "$(grep -qi '^vary: accept-encoding' <<< "$e" && echo oui || echo non)"
@@ -188,7 +188,7 @@ for hote in api.carlys.example api-staging.carlys.example; do
   verifier "$hote : le premier évènement arrive avant la fin du flux" oui \
     "$(grep -q '^event: delta' <<< "$debut" && echo oui || echo non)"
   e="$(curl -s -D - -o /dev/null -X POST -H "Host: $hote" "http://127.0.0.1:$PORT/api/v1/coach/conversations/c/messages/stream" | tr -d '\r')"
-  verifier "$hote : X-Accel-Buffering transmis à gra6" oui \
+  verifier "$hote : X-Accel-Buffering transmis à rtr1" oui \
     "$(grep -qi '^x-accel-buffering: no' <<< "$e" && echo oui || echo non)"
 done
 
