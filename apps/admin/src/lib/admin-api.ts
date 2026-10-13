@@ -1,5 +1,7 @@
 import {
   adminAuditLogSchema,
+  adminMediaAssetSchema,
+  type AdminMediaAsset,
   adminExerciseSummarySchema,
   adminLoginChallengeSchema,
   adminLoginResultSchema,
@@ -247,9 +249,9 @@ export const adminApi = {
     });
   },
 
-  async listMedia(kind?: MediaKind): Promise<MediaAsset[]> {
+  async listMedia(kind?: MediaKind): Promise<AdminMediaAsset[]> {
     const body = await call(`/admin/media${query({ kind })}`);
-    return parseData(body, z.array(mediaAssetSchema));
+    return parseData(body, z.array(adminMediaAssetSchema));
   },
 
   /**

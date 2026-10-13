@@ -153,7 +153,7 @@ export function AdminShell({
           >
             <MenuIcon />
           </button>
-          <CarlysMark className="h-6 w-6" />
+          <CarlysMark className="h-6" />
           <span className="text-sm font-semibold">{title}</span>
         </header>
 

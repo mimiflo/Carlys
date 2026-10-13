@@ -169,25 +169,22 @@ export const CheckCircleIcon = (p: P) => (
   </Icon>
 );
 
-/** Le monogramme Carlys de la barre latérale : un C ouvert, plein de violet. */
-export function CarlysMark({ className }: { className?: string }) {
+/**
+ * Le VRAI logo Carlys : le C facetté de l'application
+ * (`apps/mobile/assets/brand/carlys-mark.webp`), recadré et réduit à 120 px
+ * de haut dans `public/brand/` (net jusqu'à 40 px en densité ×3, 6 Ko).
+ * Décoratif : le nom « Carlys » est toujours écrit à côté.
+ */
+export function CarlysMark({ className = 'h-7' }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      width={28}
-      height={28}
+    // eslint-disable-next-line @next/next/no-img-element -- fichier statique de 6 Ko, rien à optimiser
+    <img
+      src="/brand/carlys-mark.webp"
+      alt=""
       aria-hidden
-      focusable="false"
-      className={className}
-    >
-      <rect width="32" height="32" rx="9" fill="var(--primary)" />
-      <path
-        d="M21.5 11.2A7 7 0 1 0 21.5 20.8"
-        fill="none"
-        stroke="#fff"
-        strokeWidth={3}
-        strokeLinecap="round"
-      />
-    </svg>
+      width={150}
+      height={120}
+      className={`w-auto shrink-0 ${className}`}
+    />
   );
 }

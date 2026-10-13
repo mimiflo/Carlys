@@ -31,6 +31,14 @@ const REPORT: AdminCommunityReport = {
   encouragementMessage: 'Réponds-moi.',
   friendChallengeTitle: null,
   friendChallengeMessage: null,
+  friendChallengeMessageRemoved: false,
+  resolvedBy: null,
+  resolutionNote: null,
+  contentRemoved: false,
+  userSuspended: false,
+  reportedUserStatus: 'ACTIVE',
+  reportedUserReportsCount: 1,
+  reportedUserOpenReportsCount: 1,
 };
 
 const REPORT_ABOUT_PERSON: AdminCommunityReport = {
@@ -116,7 +124,7 @@ describe('Page Signalements', () => {
     const rows = await screen.findAllByRole('row');
     // Une ligne d'en-tête, puis une par signalement.
     expect(rows).toHaveLength(3);
-    expect(list).toHaveBeenCalledWith('OPEN', undefined);
+    expect(list).toHaveBeenCalledWith('OPEN', undefined, {});
 
     const first = within(rows[1] as HTMLElement);
     expect(first.getByText('Harcèlement')).toBeInTheDocument();
@@ -162,7 +170,7 @@ describe('Page Signalements', () => {
     expect(await screen.findByText('Défi « Qui court le plus »')).toBeInTheDocument();
     const quoted = screen.getByText('Tu vas encore perdre, comme d’habitude.');
     expect(quoted.tagName).toBe('Q');
-    expect(screen.getByText('Contenu inapproprié')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Contenu inapproprié')).toBeInTheDocument();
     // Un défi n'est ni « la personne en général » ni un encouragement.
     expect(screen.queryByText('La personne en général')).not.toBeInTheDocument();
     expect(screen.queryByText('(sans message)')).not.toBeInTheDocument();
@@ -218,18 +226,19 @@ describe('Page Signalements', () => {
     expect(screen.getByRole('link', { name: REPORTED.email })).toBeInTheDocument();
   });
 
-  it('résout un signalement, puis recharge la liste', async () => {
+  it('classe sans suite depuis la fiche, puis recharge la liste', async () => {
     adminToken.set('jeton-admin');
     const list = vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));
-    const setStatus = vi
-      .spyOn(adminApi, 'setCommunityReportStatus')
+    const decide = vi
+      .spyOn(adminApi, 'decideCommunityReport')
       .mockResolvedValue({ ...REPORT, status: 'RESOLVED', resolvedAt: '2026-09-02T08:00:00.000Z' });
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Résoudre' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Classer sans suite' }));
 
     await waitFor(() => {
-      expect(setStatus).toHaveBeenCalledWith(REPORT.id, 'RESOLVED');
+      expect(decide).toHaveBeenCalledWith(REPORT.id, { removeContent: false, suspendUser: false });
     });
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(2);
@@ -249,7 +258,9 @@ describe('Page Signalements', () => {
     renderPage();
     fireEvent.click(screen.getByRole('radio', { name: 'Résolus' }));
 
-    expect(await screen.findByText(/résolu le/i)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Voir la décision' }));
+    expect(screen.getByText(/résolu le/i)).toBeInTheDocument();
+    expect(screen.getByText('Classé sans suite')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Rouvrir' }));
 
     await waitFor(() => {
@@ -266,11 +277,11 @@ describe('Page Signalements', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: 'Résolus' }));
     expect(await screen.findByText('Aucun signalement résolu.')).toBeInTheDocument();
-    expect(list).toHaveBeenLastCalledWith('RESOLVED', undefined);
+    expect(list).toHaveBeenLastCalledWith('RESOLVED', undefined, {});
 
     fireEvent.click(screen.getByRole('radio', { name: 'Tous' }));
     expect(await screen.findByText('Aucun signalement.')).toBeInTheDocument();
-    expect(list).toHaveBeenLastCalledWith(undefined, undefined);
+    expect(list).toHaveBeenLastCalledWith(undefined, undefined, {});
   });
 
   it('charge la suite avec le curseur rendu par la page précédente', async () => {
@@ -284,10 +295,11 @@ describe('Page Signalements', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Charger la suite' }));
 
     await waitFor(() => {
-      expect(list).toHaveBeenLastCalledWith('OPEN', REPORT.id);
+      expect(list).toHaveBeenLastCalledWith('OPEN', REPORT.id, {});
     });
-    expect(await screen.findByText('Spam')).toBeInTheDocument();
-    expect(screen.getByText('Harcèlement')).toBeInTheDocument();
+    const table = within(await screen.findByRole('table'));
+    expect(await table.findByText('Spam')).toBeInTheDocument();
+    expect(table.getByText('Harcèlement')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Charger la suite' })).not.toBeInTheDocument();
   });
 
@@ -317,47 +329,32 @@ describe('Page Signalements', () => {
     expect(alert).not.toHaveTextContent(/reconnect/);
   });
 
-  it('montre un refus de résolution (403) sur la ligne, sans casser la liste', async () => {
+  it('montre un refus de décision (403) dans la fiche, sans casser la liste', async () => {
     adminToken.set('jeton-admin');
     vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));
-    vi.spyOn(adminApi, 'setCommunityReportStatus').mockRejectedValue(
+    vi.spyOn(adminApi, 'decideCommunityReport').mockRejectedValue(
       new ApiError('Permission community:moderate requise.', 403),
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Résoudre' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Classer sans suite' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Permission manquante pour cette action.',
-    );
-    expect(screen.getByText('Harcèlement')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Permission manquante');
+    expect(within(screen.getByRole('table')).getByText('Harcèlement')).toBeInTheDocument();
   });
 
-  // Le support traite les signalements sans pouvoir suspendre : la page
-  // l'envoyait sur la fiche « pour suspendre », vers un bouton toujours refusé.
-  it('dit au support que la suspension passe par un super-administrateur', async () => {
-    adminToken.set('jeton-admin');
-    adminPermissions.set(['user:read', 'audit:read', 'community:moderate']);
-    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([]));
-
-    renderPage();
-
-    expect(
-      await screen.findByText(/transmets le lien de sa fiche à un super-administrateur/),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/Pour agir sur un compte/)).not.toBeInTheDocument();
-  });
-
-  it('renvoie vers la fiche qui peut suspendre (user:update)', async () => {
+  // Le support traite les signalements sans pouvoir suspendre : la fiche le
+  // dit au lieu de proposer un geste toujours refusé.
+  it('avec user:update, la suspension est proposée depuis la fiche', async () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(['user:read', 'user:update', 'community:moderate']);
-    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([]));
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));
 
     renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
 
-    expect(
-      await screen.findByText(/Pour agir sur un compte \(suspension\), ouvre sa fiche/),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Suspendre le compte/ })).toBeEnabled();
   });
 
   // Comme sur les autres pages, la requête part quand même : le vrai garde
@@ -370,5 +367,67 @@ describe('Page Signalements', () => {
     expect(routerReplace).toHaveBeenCalledWith('/login');
     expect(screen.queryByRole('heading', { name: /signalements/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  describe('décision', () => {
+    function ouvrir(report: AdminCommunityReport, permissions: string[]) {
+      adminToken.set('jeton-admin');
+      adminPermissions.set(permissions);
+      vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([report]));
+      renderPage();
+    }
+
+    it('retirer le contenu et suspendre, avec la note exigée pour la suspension', async () => {
+      ouvrir(REPORT, ['community:moderate', 'user:update']);
+      const decide = vi
+        .spyOn(adminApi, 'decideCommunityReport')
+        .mockResolvedValue({ ...REPORT, status: 'RESOLVED' });
+      fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+
+      fireEvent.click(screen.getByRole('checkbox', { name: /Retirer l’encouragement/ }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Suspendre le compte/ }));
+      const appliquer = screen.getByRole('button', { name: 'Appliquer la décision' });
+      expect(appliquer).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/Note de décision/), {
+        target: { value: 'Récidive de harcèlement.' },
+      });
+      fireEvent.click(appliquer);
+      await waitFor(() => {
+        expect(decide).toHaveBeenCalledWith(REPORT.id, {
+          removeContent: true,
+          suspendUser: true,
+          note: 'Récidive de harcèlement.',
+        });
+      });
+    });
+
+    it('sans user:update, la suspension est expliquée et indisponible', async () => {
+      ouvrir(REPORT, ['community:moderate']);
+      fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+      expect(screen.getByRole('checkbox', { name: /Suspendre le compte/ })).toBeDisabled();
+      expect(screen.getByText(/Demande la permission user:update/)).toBeInTheDocument();
+    });
+
+    it('rien à retirer quand le signalement vise la personne en général', async () => {
+      ouvrir(REPORT_ABOUT_PERSON, ['community:moderate']);
+      fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+      expect(screen.getByRole('checkbox', { name: /Retirer/ })).toBeDisabled();
+    });
+
+    it('l’historique d’une récidive filtre la liste sur la personne visée', async () => {
+      const recidive = { ...REPORT, reportedUserReportsCount: 4, reportedUserOpenReportsCount: 2 };
+      ouvrir(recidive, ['community:moderate']);
+      const list = vi.mocked(adminApi.listCommunityReports);
+      fireEvent.click(await screen.findByRole('button', { name: 'Examiner' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Voir ses 4 signalements' }));
+
+      await waitFor(() => {
+        expect(list).toHaveBeenLastCalledWith(undefined, undefined, {
+          reportedUserId: REPORTED.id,
+        });
+      });
+      expect(screen.getByText(/Signalements visant/)).toBeInTheDocument();
+    });
   });
 });

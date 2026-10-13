@@ -110,7 +110,7 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
       <div className="animate-enter w-full max-w-sm rounded-xl border border-border bg-surface p-8 shadow-sm">
-        <CarlysMark />
+        <CarlysMark className="h-10" />
         <h1 className="mt-6 text-xl font-semibold tracking-tight">Connexion administrateur</h1>
         <LoginSteps step={challenge === null ? 1 : 2} />
         {expired && (

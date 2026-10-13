@@ -1,21 +1,12 @@
 'use client';
 
-import {
-  type AdminCommunityReport,
-  type AdminCommunityReportParty,
-  type CommunityReportReason,
-} from '@carlys/api-contracts';
+import { type AdminCommunityReport, type AdminCommunityReportParty } from '@carlys/api-contracts';
 import Link from 'next/link';
-import { CommunityReportStatusCell } from './community-report-status-cell';
+import { COMMUNITY_REPORT_REASON_LABELS } from '@/lib/report-labels';
+import { reportStatus, userStatus } from '@/lib/status-labels';
+import { Badge } from './ui/badge';
+import { button } from './ui/button';
 import { td, tr } from './ui/table';
-
-/** Motifs tels que le membre les a choisis, dans les mots de l'écran mobile. */
-const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, string> = {
-  HARCELEMENT: 'Harcèlement',
-  SPAM: 'Spam',
-  CONTENU_INAPPROPRIE: 'Contenu inapproprié',
-  AUTRE: 'Autre',
-};
 
 /**
  * Lien vers la fiche : c'est là qu'on suspend, on ne duplique pas ce geste
@@ -29,7 +20,7 @@ const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, string> = {
  * l'infobulle le donne pour départager deux homonymes, la fiche le donne en
  * clair — mais sur une intention, pas par défaut.
  */
-function PartyLink({ party }: { party: AdminCommunityReportParty }) {
+export function PartyLink({ party }: { party: AdminCommunityReportParty }) {
   return (
     <Link
       href={`/users/${party.id}`}
@@ -47,12 +38,22 @@ function PartyLink({ party }: { party: AdminCommunityReportParty }) {
  * avait pas écrit, car c'est alors le titre seul qui est signalé. Les deux
  * sont des clichés figés par le serveur, comme le texte d'un encouragement.
  */
-function ChallengeTarget({ title, message }: { title: string; message: string | null }) {
+function ChallengeTarget({
+  title,
+  message,
+  removed,
+}: {
+  title: string;
+  message: string | null;
+  removed: boolean;
+}) {
   return (
     <span className="flex flex-col gap-1">
       <span className="font-medium">Défi « {title} »</span>
       {message === null ? (
-        <span className="text-xs text-muted">(sans message)</span>
+        <span className="text-xs text-muted">
+          {removed ? 'Mot retiré par la modération' : '(sans message)'}
+        </span>
       ) : (
         <q className="border-l-2 border-primary/40 pl-2 text-sm italic">{message}</q>
       )}
@@ -77,12 +78,13 @@ function ChallengeTarget({ title, message }: { title: string; message: string | 
  * la ligne venait à être effacée en base, `friendChallengeId` passerait à
  * `NULL` et les clichés suffiraient encore.
  */
-function TargetCell({ report }: { report: AdminCommunityReport }) {
+export function TargetCell({ report }: { report: AdminCommunityReport }) {
   if (report.friendChallengeTitle !== null) {
     return (
       <ChallengeTarget
         title={report.friendChallengeTitle}
         message={report.friendChallengeMessage}
+        removed={report.friendChallengeMessageRemoved}
       />
     );
   }
@@ -95,13 +97,39 @@ function TargetCell({ report }: { report: AdminCommunityReport }) {
         {report.encouragementMessage}
       </q>
       {report.encouragementId === null && (
-        <span className="text-xs text-muted">Message retiré depuis</span>
+        <span className="text-xs text-muted">
+          {report.contentRemoved ? 'Retiré par la modération' : 'Message retiré depuis'}
+        </span>
       )}
     </span>
   );
 }
 
-export function CommunityReportRow({ report }: { report: AdminCommunityReport }) {
+/** Combien de fois cette personne a été signalée : le signal d'une récidive. */
+export function ReportedHistory({ report }: { report: AdminCommunityReport }) {
+  const total = report.reportedUserReportsCount;
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+      {report.reportedUserStatus !== 'ACTIVE' && (
+        <Badge status={userStatus(report.reportedUserStatus)} />
+      )}
+      {total > 1 && (
+        <span className={total >= 3 ? 'font-medium text-danger-ink' : undefined}>
+          {total} signalements · {report.reportedUserOpenReportsCount} ouvert
+          {report.reportedUserOpenReportsCount > 1 ? 's' : ''}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function CommunityReportRow({
+  report,
+  onOpen,
+}: {
+  report: AdminCommunityReport;
+  onOpen: () => void;
+}) {
   return (
     // Un signalement résolu le DIT dans sa colonne d'état ; il ne pâlit
     // pas : à 60 % d'opacité, ses textes secondaires tombaient sous 3:1 et
@@ -124,12 +152,18 @@ export function CommunityReportRow({ report }: { report: AdminCommunityReport })
       </td>
       <td className={td}>
         <PartyLink party={report.reportedUser} />
+        <ReportedHistory report={report} />
       </td>
       <td className={`${td} max-w-xs`}>
         <TargetCell report={report} />
       </td>
       <td className={td}>
-        <CommunityReportStatusCell report={report} />
+        <div className="flex flex-col items-start gap-2">
+          <Badge status={reportStatus(report.status)} />
+          <button type="button" onClick={onOpen} className={button('secondary', 'sm')}>
+            {report.status === 'OPEN' ? 'Examiner' : 'Voir la décision'}
+          </button>
+        </div>
       </td>
     </tr>
   );

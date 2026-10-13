@@ -17,13 +17,24 @@ const ACCEPT = MEDIA_ALLOWED_MIME_TYPES.IMAGE.join(',');
  * existe indépendamment de ce qui l'utilise, ce qui permettra demain de
  * réutiliser une photo sur plusieurs exercices sans la redéposer.
  */
-export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary }) {
+export function ExercisePhotoCell({
+  exercise,
+  layout = 'row',
+}: {
+  exercise: AdminExerciseSummary;
+  layout?: 'row' | 'panel';
+}) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] });
+  // La bibliothèque montre qui utilise chaque média : elle se relit aussi.
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'media'] }),
+    ]);
 
   /**
    * L'identifiant du dépôt EN COURS, avec le fichier auquel il appartient.
@@ -66,14 +77,20 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
 
   const busy = upload.isPending || detach.isPending;
 
+  // Dans la fiche latérale, la photo s'affiche en GRAND au-dessus des gestes ;
+  // en ligne de tableau, c'est une vignette de 48 px à côté.
+  const large = layout === 'panel';
   return (
-    <div className="flex items-center gap-3">
+    <div className={large ? 'flex flex-col gap-3' : 'flex items-center gap-3'}>
       {exercise.image === null ? (
         <div
           aria-hidden
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border"
+          className={`flex shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border ${
+            large ? 'aspect-video w-full flex-col gap-2 text-xs' : 'h-12 w-12'
+          }`}
         >
           <ImageIcon />
+          {large && 'Aucune photo : l’application montre la silhouette du muscle.'}
         </div>
       ) : (
         // Différée : une page du catalogue en montre cinquante, chacune en
@@ -84,7 +101,9 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
           alt={`Photo de ${exercise.name}`}
           loading="lazy"
           decoding="async"
-          className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-border"
+          className={`shrink-0 rounded-lg object-cover ring-1 ring-border ${
+            large ? 'aspect-video w-full' : 'h-12 w-12'
+          }`}
         />
       )}
 

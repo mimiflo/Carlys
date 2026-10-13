@@ -195,10 +195,16 @@ export const EXERCISES = EXERCICES.map(([slug, name, groups, equipmentSlugs, pho
   mesh: null,
 }));
 
+// La bibliothèque dit qui montre chaque fichier (`usedBy`) : les photos des
+// exercices le sont par leur exercice, les autres par personne.
+const libre = (asset) => ({ ...asset, usedBy: [] });
+
 export const MEDIA = [
-  ...EXERCISES.flatMap((e) => (e.image === null ? [] : [e.image])),
-  photo(20, 'avant-bras'),
-  photo(21, 'lombaires'),
+  ...EXERCISES.flatMap((e) =>
+    e.image === null ? [] : [{ ...e.image, usedBy: [{ id: e.id, name: e.name }] }],
+  ),
+  libre(photo(20, 'avant-bras')),
+  libre(photo(21, 'lombaires')),
   {
     id: uuid(451),
     kind: 'MESH_3D',
@@ -209,6 +215,7 @@ export const MEDIA = [
     height: null,
     originalName: 'squat-barre.glb',
     createdAt: jour('09-30', '11:12:00'),
+    usedBy: [],
   },
   {
     id: uuid(452),
@@ -220,6 +227,7 @@ export const MEDIA = [
     height: 1920,
     originalName: 'hip-thrust-démonstration.mp4',
     createdAt: jour('10-02', '08:47:00'),
+    usedBy: [],
   },
 ];
 
@@ -281,6 +289,17 @@ export const REPORTS = [
   encouragementMessage: message,
   friendChallengeTitle: defi?.[0] ?? null,
   friendChallengeMessage: defi?.[1] ?? null,
+  friendChallengeMessageRemoved: false,
+  // Le premier résolu a été tranché : contenu retiré, note au dossier.
+  resolvedBy:
+    status === 'RESOLVED' ? partie({ ...USERS[0], displayName: 'Florence (admin)' }) : null,
+  resolutionNote: i === 4 ? 'Spam répété à tout le groupe : message retiré.' : null,
+  contentRemoved: i === 4,
+  userSuspended: false,
+  reportedUserStatus: USERS[vise].status,
+  // Nathan (3) et Louis (9) sont visés deux fois chacun : la récidive se voit.
+  reportedUserReportsCount: vise === 3 || vise === 9 ? 2 : 1,
+  reportedUserOpenReportsCount: vise === 3 || vise === 9 ? 2 : status === 'OPEN' ? 1 : 0,
 }));
 
 // ── Journal d'audit ───────────────────────────────────────────────────────

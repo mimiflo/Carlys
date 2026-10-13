@@ -135,7 +135,7 @@ const ROUTES = [
       const kind = new URL(req.url()).searchParams.get('kind');
       return one(
         D.MEDIA.filter((a) => kind === null || a.kind === kind),
-        z.array(C.mediaAssetSchema),
+        z.array(C.adminMediaAssetSchema),
       );
     },
   ],
@@ -209,6 +209,16 @@ const PAGES = [
   { nom: 'categories', chemin: '/categories', auth: true },
   { nom: 'media', chemin: '/media', auth: true },
   { nom: 'audit', chemin: '/audit', auth: true },
+  // Les fiches latérales, ouvertes d'un clic sur la page (`clics`, dans l'ordre).
+  { nom: 'exercise-sheet', chemin: '/exercises', auth: true, clics: [/^Ouvrir la fiche de/] },
+  { nom: 'media-sheet', chemin: '/media', auth: true, clics: [/^Ouvrir anatomie/] },
+  { nom: 'report-sheet', chemin: '/reports', auth: true, clics: ['Examiner'] },
+  {
+    nom: 'report-decided',
+    chemin: '/reports',
+    auth: true,
+    clics: [{ radio: 'Résolus' }, 'Voir la décision'],
+  },
   { nom: 'privacy', chemin: '/privacy' },
   { nom: 'terms', chemin: '/terms' },
   { nom: 'abonnement', chemin: '/abonnement' },
@@ -276,6 +286,16 @@ async function photographier(context, vue, theme, cible) {
   await onglet.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
   await onglet.evaluate(() => document.fonts.ready);
   await onglet.waitForTimeout(400);
+  for (const clic of cible.clics ?? []) {
+    // Les boutons radio des segments sont masqués à l'œil : on les coche.
+    if (typeof clic === 'object' && 'radio' in clic) {
+      await onglet.getByRole('radio', { name: clic.radio }).check({ force: true });
+    } else {
+      await onglet.getByRole('button', { name: clic }).first().click();
+    }
+    await onglet.waitForLoadState('networkidle');
+    await onglet.waitForTimeout(500);
+  }
 
   // Comparaison sans casse : « Indisponible » en pastille vaut « indisponible » en phrase.
   const corps = (await onglet.innerText('body')).toLowerCase();

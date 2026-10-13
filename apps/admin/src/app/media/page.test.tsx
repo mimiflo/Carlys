@@ -1,4 +1,4 @@
-import type { MediaAsset } from '@carlys/api-contracts';
+import type { AdminMediaAsset } from '@carlys/api-contracts';
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
-const PHOTO: MediaAsset = {
+const PHOTO: AdminMediaAsset = {
   id: '11111111-2222-4333-8444-555555555555',
   kind: 'IMAGE',
   url: 'https://medias.carlys.test/developpe-couche.webp',
@@ -21,6 +21,7 @@ const PHOTO: MediaAsset = {
   height: 600,
   originalName: 'developpe-couche.webp',
   createdAt: '2026-09-01T10:00:00.000Z',
+  usedBy: [],
 };
 
 afterEach(() => {
@@ -42,7 +43,8 @@ describe('Bibliothèque de médias — focus clavier', () => {
   it('« Supprimer » pose le focus sur « Annuler », « Annuler » le rend à « Supprimer »', async () => {
     vi.spyOn(adminApi, 'listMedia').mockResolvedValue([PHOTO]);
     renderPage();
-    const supprimer = await screen.findByRole('button', { name: 'Supprimer' });
+    fireEvent.click(await screen.findByRole('button', { name: `Ouvrir ${PHOTO.originalName}` }));
+    const supprimer = screen.getByRole('button', { name: 'Supprimer' });
     supprimer.focus();
 
     fireEvent.click(supprimer);
@@ -85,5 +87,34 @@ describe('formatBytes', () => {
 
   it('passe aux méga-octets avec UNE décimale, virgule française', () => {
     expect(formatBytes(1024 * 1024 * 3.5)).toBe('3,5 Mo');
+  });
+});
+
+describe('MediaPage — fiche et dépôt', () => {
+  it('un fichier montré par un exercice ne propose pas sa suppression, et dit pourquoi', async () => {
+    vi.spyOn(adminApi, 'listMedia').mockResolvedValue([
+      { ...PHOTO, usedBy: [{ id: 'e1', name: 'Développé couché' }] },
+    ]);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: `Ouvrir ${PHOTO.originalName}` }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Développé couché');
+    expect(screen.queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Détache-le d’abord/)).toBeInTheDocument();
+  });
+
+  it('un fichier déposé part avec le genre lu dans son type', async () => {
+    vi.spyOn(adminApi, 'listMedia').mockResolvedValue([]);
+    const upload = vi.spyOn(adminApi, 'uploadMedia').mockResolvedValue(PHOTO);
+    renderPage();
+    await screen.findByText(/Aucun média de ce genre/);
+
+    const fichier = new File(['x'], 'squat.mp4', { type: 'video/mp4' });
+    fireEvent.drop(screen.getByText('Glisse tes fichiers ici'), {
+      dataTransfer: { files: [fichier] },
+    });
+
+    expect(await screen.findByText('déposé')).toBeInTheDocument();
+    expect(upload).toHaveBeenCalledWith(fichier, 'VIDEO', expect.any(String));
   });
 });

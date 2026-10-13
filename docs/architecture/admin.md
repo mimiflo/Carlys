@@ -94,6 +94,17 @@ d'ajouter sa correspondance dans le test — c'est voulu.
   Inactif, Coupé), publication et santé en libellé + teinte ; `Badge` les
   affiche, point de couleur ET mot (la couleur ne porte jamais seule le sens).
   `lib/audit-labels.ts` fait de même pour les actions du journal.
+- **Exercices et médias** : une liste lisible (vignette, nom, groupe,
+  statuts) ; chaque ligne ouvre une **fiche latérale** (`SidePanel`, un
+  `<dialog>` natif : focus piégé, Échap, retour du focus) qui range les gestes
+  par rubrique — photo, catégories, publication (interrupteur), retrait. La
+  bibliothèque de médias dépose par glisser-déposer (plusieurs fichiers, un
+  par un, genre lu dans le type MIME), et sa fiche montre l'aperçu, les
+  détails, l'URL et **les exercices qui utilisent le fichier** (`usedBy`,
+  rendu par `GET /admin/media`) : la suppression n'est proposée qu'à un
+  fichier libre.
+- **Logo** : le vrai logo Carlys (`public/brand/carlys-mark.webp`, tiré de
+  `apps/mobile/assets/brand/carlys-mark.webp`), favicon et icône compris.
 - **Mouvement** (`globals.css`) : entrée en fondu de 250 ms, squelettes,
   halo des voyants « en service », pastille du segment qui glisse ; tout est
   coupé sous `prefers-reduced-motion: reduce`.
@@ -224,7 +235,7 @@ Chaque ligne dit ce qui est livré et ce qui reste cible ; une ligne sans
 | Notifications | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi |
 | Webhooks (Étape 6+) | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu |
 | Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
-| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, colonne « Contenu visé » : l'encouragement, ou le défi entre amis (« Défi « titre » » puis le mot du créateur cité, ou « (sans message) »), clichés figés au signalement et lus via `encouragementMessage`, `friendChallengeTitle`, `friendChallengeMessage`), résolution et réouverture auditées, permission `community:moderate`. Reste cible : retrait d'un contenu par l'administration |
+| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, colonne « Contenu visé » : l'encouragement, ou le défi entre amis (« Défi « titre » » puis le mot du créateur cité, ou « (sans message) »), clichés figés au signalement et lus via `encouragementMessage`, `friendChallengeTitle`, `friendChallengeMessage`), résolution et réouverture auditées, permission `community:moderate`. Chaque signalement ouvre un **dossier** latéral où l'on tranche (retirer, suspendre, classer, note) ; filtres par statut, motif et personne. La **décision** est livrée : `POST /admin/community/reports/:id/decision` retire le contenu (encouragement supprimé, mot du défi effacé), suspend (permission `user:update` en plus, note obligatoire) ou classe, résout les signalements frères du contenu retiré, audits `admin.community_report_decided` et `admin.community_content_removed` ; liste filtrable par motif et personne, avec auteur de la décision, état du compte et compteurs par personne — voir `docs/product/community.md` |
 
 ## Pages publiques du produit (`src/app/(public)`)
 

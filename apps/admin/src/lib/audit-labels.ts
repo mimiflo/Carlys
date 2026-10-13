@@ -12,6 +12,8 @@ const ACTIONS: Record<string, string> = {
   'account.delete_without_password': 'Suppression de compte sans mot de passe',
   'account.deleted': 'Compte supprimé par son titulaire',
   'account.deleted_by_operator': 'Compte supprimé par l’exploitation',
+  'admin.community_content_removed': 'Contenu retiré par la modération',
+  'admin.community_report_decided': 'Signalement tranché',
   'admin.community_report_reopened': 'Signalement rouvert',
   'admin.community_report_resolved': 'Signalement résolu',
   'admin.entitlement_granted': 'Droit premium offert',

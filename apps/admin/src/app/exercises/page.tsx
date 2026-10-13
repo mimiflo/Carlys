@@ -1,67 +1,95 @@
 'use client';
 
 import { type AdminExerciseSummary } from '@carlys/api-contracts';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { ExerciseCategoriesCell } from '@/components/exercise-categories-cell';
-import { ExerciseDeleteCell } from '@/components/exercise-delete-cell';
-import { ExercisePhotoCell } from '@/components/exercise-photo-cell';
+import { ExerciseSheet } from '@/components/exercise-sheet';
+import { Badge } from '@/components/ui/badge';
 import { button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ArrowRightIcon, ImageIcon } from '@/components/ui/icons';
 import { SearchForm } from '@/components/ui/search-form';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
-import { TableCard, td, th, thead, tr } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { adminApi } from '@/lib/admin-api';
-import { planStatus } from '@/lib/status-labels';
 import { unavailableMessage } from '@/lib/load-error';
+import { planStatus, type StatusLabel } from '@/lib/status-labels';
 
-function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
-  const queryClient = useQueryClient();
-  const toggle = useMutation({
-    mutationFn: () => adminApi.setExercisePublication(exercise.id, !exercise.isPublished),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] }),
-  });
+function catalogStatus(exercise: AdminExerciseSummary): StatusLabel {
+  if (exercise.deletedAt !== null) return { label: 'Supprimé', tone: 'neutral' };
+  return exercise.isPublished
+    ? { label: 'Publié', tone: 'success' }
+    : { label: 'Masqué', tone: 'warning' };
+}
 
-  if (exercise.deletedAt !== null) {
-    return <span className="text-xs text-muted">Supprimé</span>;
-  }
-
+/** Une ligne de la liste : la vignette, le nom, le groupe, les statuts — et la fiche au clic. */
+function ExerciseRow({ exercise, onOpen }: { exercise: AdminExerciseSummary; onOpen: () => void }) {
+  const others =
+    exercise.muscleGroupSlugs.length - (exercise.primaryMuscleGroupName === null ? 0 : 1);
   return (
-    <button
-      type="button"
-      disabled={toggle.isPending}
-      onClick={() => toggle.mutate()}
-      aria-pressed={exercise.isPublished}
-      title={exercise.isPublished ? 'Masquer du catalogue' : 'Publier dans le catalogue'}
-      className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-[background-color,box-shadow] duration-150 hover:ring-1 hover:ring-primary/40 disabled:opacity-50 ${
-        exercise.isPublished ? 'bg-success/12 text-foreground' : 'bg-foreground/6 text-muted'
-      }`}
-    >
-      <span
-        aria-hidden
-        className={`h-1.5 w-1.5 rounded-full ${exercise.isPublished ? 'bg-success' : 'bg-muted'}`}
-      />
-      {exercise.isPublished ? 'Publié' : 'Masqué'}
-    </button>
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Ouvrir la fiche de ${exercise.name}`}
+        className="group flex w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 hover:bg-primary/[0.04] focus-visible:bg-primary/[0.06] focus-visible:outline-none"
+      >
+        {exercise.image === null ? (
+          <span
+            aria-hidden
+            className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border"
+          >
+            <ImageIcon />
+          </span>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- source externe (stockage objet), hors domaines Next
+          <img
+            src={exercise.image.url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-14 w-20 shrink-0 rounded-lg object-cover ring-1 ring-border"
+          />
+        )}
+        <span className="min-w-0 flex-1">
+          {/* Un exercice supprimé se BARRE, il ne pâlit pas : à 60 %
+              d'opacité, son slug tombait à 2,17:1. */}
+          <span
+            className={`block truncate font-medium ${exercise.deletedAt === null ? '' : 'line-through'}`}
+          >
+            {exercise.name}
+          </span>
+          <span className="block truncate font-mono text-xs text-muted">{exercise.slug}</span>
+        </span>
+        <span className="hidden w-48 shrink-0 text-sm md:block">
+          <span className="block truncate">{exercise.primaryMuscleGroupName ?? 'Sans groupe'}</span>
+          <span className="block text-xs text-muted">
+            {others > 0 ? `+ ${others} groupe${others > 1 ? 's' : ''}` : 'groupe principal'}
+            {exercise.equipmentSlugs.length > 0 &&
+              ` · ${exercise.equipmentSlugs.length} matériel${exercise.equipmentSlugs.length > 1 ? 's' : ''}`}
+          </span>
+        </span>
+        <span className="flex w-40 shrink-0 flex-wrap justify-end gap-1.5">
+          <Badge status={catalogStatus(exercise)} />
+          {exercise.isPremium && <Badge status={planStatus(true)} />}
+        </span>
+        <span
+          aria-hidden
+          className="text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+        >
+          <ArrowRightIcon width={16} height={16} />
+        </span>
+      </button>
+    </li>
   );
 }
 
-/**
- * Catalogue vu du back-office.
- *
- * **Tout média passe par ici** : les photos d'exercices ne sont pas embarquées
- * dans l'application, elles sont déposées depuis cet écran et servies par le
- * stockage objet. Ajouter une illustration ne demande donc aucune livraison.
- *
- * Page par page, comme les utilisateurs. La page ne demandait QUE la
- * première : la route en sert cinquante, le catalogue en compte près de
- * deux cents, et les autres n'étaient atteignables qu'en tapant leur nom.
- * Passer en revue les exercices sans photo ou masqués était impossible.
- */
 export default function ExercisesPage() {
   const [submitted, setSubmitted] = useState('');
   const [includeDeleted, setIncludeDeleted] = useState(false);
+  // L'exercice ouvert est lu dans la LISTE à chaque rendu : la fiche suit
+  // donc chaque rafraîchissement (photo remplacée, catégories enregistrées).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
       queryKey: ['admin', 'exercises', submitted, includeDeleted],
@@ -73,21 +101,31 @@ export default function ExercisesPage() {
     });
   const exercises = data?.pages.flatMap((page) => page.items) ?? [];
 
+  const selected = exercises.find((exercise) => exercise.id === selectedId);
+
   return (
     <AdminShell
       title="Exercices"
-      description="Les photos déposées ici sont servies directement aux applications : elles apparaissent à la requête suivante, sans mise à jour de l’app."
+      description="Le catalogue des applications. Ouvre un exercice pour changer sa photo, ses catégories, sa publication. Une photo déposée ici apparaît à la requête suivante, sans mise à jour de l’app."
     >
       <SearchForm
         label="Rechercher un exercice"
         placeholder="Rechercher un exercice…"
-        onSubmit={setSubmitted}
+        onSubmit={(term) => {
+          setSelectedId(null);
+          setSubmitted(term);
+        }}
       >
         <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={includeDeleted}
-            onChange={(event) => setIncludeDeleted(event.target.checked)}
+            onChange={(event) => {
+              // Comme pour les signalements : un exercice sorti de la liste
+              // (supprimé) ne doit pas rouvrir sa fiche en y revenant.
+              setSelectedId(null);
+              setIncludeDeleted(event.target.checked);
+            }}
             className="h-4 w-4 accent-primary"
           />
           Voir les supprimés
@@ -102,58 +140,28 @@ export default function ExercisesPage() {
           </ErrorState>
         )}
         {data !== undefined && (
-          <TableCard>
-            <thead className={thead}>
-              <tr>
-                <th className={th}>Exercice</th>
-                <th className={th}>Catégories</th>
-                <th className={th}>Photo</th>
-                <th className={th}>Catalogue</th>
-                <th className={th}>Retrait</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exercises.map((exercise) => (
-                <tr key={exercise.id} className={tr}>
-                  <td className={td}>
-                    {/* Un exercice supprimé se BARRE, il ne pâlit pas : à
-                        60 % d'opacité, son slug tombait à 2,17:1 et le
-                        bouton « Restaurer », toujours actif, à 2,62. */}
-                    <span
-                      className={`font-medium ${exercise.deletedAt === null ? '' : 'line-through'}`}
-                    >
-                      {exercise.name}
-                    </span>
-                    {exercise.isPremium && (
-                      <span className="ml-2 align-middle">
-                        <Badge status={planStatus(true)} />
-                      </span>
-                    )}
-                    <span className="block font-mono text-xs text-muted">{exercise.slug}</span>
-                  </td>
-                  <td className={td}>
-                    <ExerciseCategoriesCell exercise={exercise} />
-                  </td>
-                  <td className={td}>
-                    <ExercisePhotoCell exercise={exercise} />
-                  </td>
-                  <td className={td}>
-                    <PublicationToggle exercise={exercise} />
-                  </td>
-                  <td className={td}>
-                    <ExerciseDeleteCell exercise={exercise} />
-                  </td>
-                </tr>
-              ))}
-              {exercises.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted">
-                    Aucun exercice trouvé.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </TableCard>
+          <Card className="overflow-hidden">
+            <div className="hidden items-center gap-4 border-b border-border bg-surface-alt/60 px-4 py-2.5 text-xs font-medium text-muted md:flex">
+              <span className="w-20 shrink-0">Photo</span>
+              <span className="flex-1">Exercice</span>
+              <span className="w-48 shrink-0">Groupe musculaire</span>
+              <span className="w-40 shrink-0 text-right">Statut</span>
+              <span className="w-4" />
+            </div>
+            {exercises.length === 0 ? (
+              <p className="px-4 py-12 text-center text-sm text-muted">Aucun exercice trouvé.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {exercises.map((exercise) => (
+                  <ExerciseRow
+                    key={exercise.id}
+                    exercise={exercise}
+                    onOpen={() => setSelectedId(exercise.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </Card>
         )}
         {hasNextPage && (
           <button
@@ -166,6 +174,10 @@ export default function ExercisesPage() {
           </button>
         )}
       </div>
+
+      {selected !== undefined && (
+        <ExerciseSheet exercise={selected} onClose={() => setSelectedId(null)} />
+      )}
     </AdminShell>
   );
 }

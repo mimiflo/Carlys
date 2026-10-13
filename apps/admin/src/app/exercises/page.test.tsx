@@ -85,13 +85,12 @@ describe('Page Exercices', () => {
     await waitFor(() => expect(list).toHaveBeenLastCalledWith('squat', undefined, false));
   });
 
-  it('dit « Aucun exercice trouvé » sur toute la largeur, sans bouton de suite', async () => {
+  it('dit « Aucun exercice trouvé », sans bouton de suite', async () => {
     vi.spyOn(adminApi, 'listExercises').mockResolvedValue(pageOf([]));
 
     renderWithQuery(<ExercisesPage />);
 
-    const vide = await screen.findByText('Aucun exercice trouvé.');
-    expect(vide).toHaveAttribute('colspan', String(screen.getAllByRole('columnheader').length));
+    expect(await screen.findByText('Aucun exercice trouvé.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Charger la suite' })).not.toBeInTheDocument();
   });
 
@@ -124,7 +123,10 @@ describe('Page Exercices', () => {
     async function avecLesSupprimes() {
       renderWithQuery(<ExercisesPage />);
       fireEvent.click(screen.getByRole('checkbox', { name: 'Voir les supprimés' }));
-      await screen.findByText('Développé couché');
+      // Les gestes vivent dans la fiche de l'exercice, ouverte depuis la liste.
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Ouvrir la fiche de Développé couché' }),
+      );
     }
 
     it('après « Confirmer », il va à « Restaurer »', async () => {
@@ -160,5 +162,20 @@ describe('Page Exercices', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Catalogue indisponible : la permission exercise:read est requise.',
     );
+  });
+
+  it('la fiche s’ouvre au clic et se referme, sur l’exercice choisi', async () => {
+    vi.spyOn(adminApi, 'listExercises').mockResolvedValue(pageOf([exercise()]));
+    renderWithQuery(<ExercisesPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Ouvrir la fiche de Développé couché' }),
+    );
+    const fiche = screen.getByRole('dialog', { name: 'Développé couché' });
+    expect(fiche).toHaveTextContent('Photo');
+    expect(screen.getByRole('switch', { name: 'Visible dans l’application' })).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
