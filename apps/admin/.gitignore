@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Écrits et réécrits par `next dev` 16 (consignes pour assistants) : engendrés,
+# jamais versionnés.
+/AGENTS.md
+/CLAUDE.md
