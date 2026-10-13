@@ -146,6 +146,21 @@ describe('Communauté : plafonds qui tiennent (e2e)', () => {
     expect(statuts[10]).toBe(429);
   });
 
+  it('signalements : 10 par minute et par adresse, même rejoués', async () => {
+    // Le signalement OUVERT identique est rendu tel quel (201) : la limite
+    // compte les requêtes, pas les signalements créés.
+    const statuts: number[] = [];
+    for (let i = 0; i < 11; i += 1) {
+      const reponse = await as(tokenB)
+        .post('/api/v1/community/reports')
+        .send({ reportedUserId: userIdA, reason: 'SPAM' });
+      statuts.push(reponse.status);
+    }
+    expect(statuts.slice(0, 10).every((statut) => statut === 201)).toBe(true);
+    expect(statuts[10]).toBe(429);
+    expect(await prisma.communityReport.count({ where: { reporterId: userIdB } })).toBe(1);
+  });
+
   it(`encouragements : ${ENCOURAGEMENTS_PER_FRIEND_PER_DAY} au même ami par jour, puis 429 sans rien écrire`, async () => {
     // Ceux déjà écrits (par le test précédent, s'il a tourné) sont comptés ;
     // on complète jusqu'au plafond, en remettant le débit par IP à zéro pour

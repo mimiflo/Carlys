@@ -23,6 +23,7 @@ interface Stubs {
   findReportById: jest.Mock;
   listReports: jest.Mock;
   setReportStatus: jest.Mock;
+  reportCountsFor: jest.Mock;
 }
 
 function reportRow(overrides: Partial<CommunityReportRow> = {}): CommunityReportRow {
@@ -40,8 +41,14 @@ function reportRow(overrides: Partial<CommunityReportRow> = {}): CommunityReport
     status: 'OPEN',
     createdAt: new Date('2026-09-01T10:00:00Z'),
     resolvedAt: null,
+    resolvedByAdminId: null,
+    resolutionNote: null,
+    contentRemoved: false,
+    userSuspended: false,
     reporter: { id: ME, email: 'moi@carlys.test', profile: { displayName: 'Moi' } },
-    reportedUser: { id: OTHER, email: 'autre@carlys.test', profile: null },
+    reportedUser: { id: OTHER, email: 'autre@carlys.test', status: 'ACTIVE', profile: null },
+    resolvedBy: null,
+    friendChallenge: null,
     ...overrides,
   };
 }
@@ -64,6 +71,7 @@ function buildStubs(): Stubs {
     findReportById: jest.fn().mockResolvedValue(null),
     listReports: jest.fn().mockResolvedValue([]),
     setReportStatus: jest.fn().mockResolvedValue(reportRow({ status: 'RESOLVED' })),
+    reportCountsFor: jest.fn().mockResolvedValue(new Map()),
   };
 }
 
@@ -317,6 +325,7 @@ describe('CommunityModerationService — administration', () => {
 
     const resolved = await buildService(stubs).setReportStatus('signalement-1', 'RESOLVED', ADMIN);
 
+    expect(stubs.setReportStatus).toHaveBeenCalledWith('signalement-1', 'RESOLVED', 'admin-1');
     expect(resolved.status).toBe('RESOLVED');
     expect(resolved.reporter.email).toBe('moi@carlys.test');
     expect(resolved.reportedUser.displayName).toBeNull();
@@ -363,12 +372,42 @@ describe('CommunityModerationService — administration', () => {
       reportRow({ id: 'c' }),
     ]);
 
-    const page = await buildService(stubs).listReports('OPEN', 2);
+    const page = await buildService(stubs).listReports({ status: 'OPEN' }, 2);
 
-    expect(stubs.listReports).toHaveBeenCalledWith('OPEN', 2, undefined);
+    expect(stubs.listReports).toHaveBeenCalledWith({ status: 'OPEN' }, 2, undefined);
     expect(page.items.map((item) => item.id)).toEqual(['a', 'b']);
     expect(page).toMatchObject({ hasMore: true, nextCursor: 'b' });
     expect(page.items[0]?.encouragementMessage).toBeNull();
+  });
+
+  it('filtres transmis tels quels, compteurs de la personne lus en UNE requête pour la page', async () => {
+    const stubs = buildStubs();
+    stubs.listReports.mockResolvedValue([
+      reportRow({ id: 'a' }),
+      reportRow({ id: 'b', reportedUserId: 'tiers' }),
+    ]);
+    stubs.reportCountsFor.mockResolvedValue(new Map([[OTHER, { total: 3, open: 2 }]]));
+
+    const filters = { status: 'OPEN', reason: 'SPAM', reportedUserId: OTHER } as const;
+    const page = await buildService(stubs).listReports(filters, 10, 'curseur');
+
+    expect(stubs.listReports).toHaveBeenCalledWith(filters, 10, 'curseur');
+    expect(stubs.reportCountsFor).toHaveBeenCalledTimes(1);
+    expect(stubs.reportCountsFor).toHaveBeenCalledWith([OTHER, 'tiers']);
+    expect(page.items[0]).toMatchObject({
+      reportedUserReportsCount: 3,
+      reportedUserOpenReportsCount: 2,
+      reportedUserStatus: 'ACTIVE',
+      resolvedBy: null,
+      contentRemoved: false,
+      userSuspended: false,
+      friendChallengeMessageRemoved: false,
+    });
+    // Personne absente des compteurs : zéro, jamais `undefined`.
+    expect(page.items[1]).toMatchObject({
+      reportedUserReportsCount: 0,
+      reportedUserOpenReportsCount: 0,
+    });
   });
 
   it('l’administration lit le cliché du texte, même une fois le message retiré', async () => {
@@ -378,7 +417,7 @@ describe('CommunityModerationService — administration', () => {
       reportRow({ encouragementId: null, encouragementMessage: 'Texte figé' }),
     ]);
 
-    const page = await buildService(stubs).listReports(undefined, 10);
+    const page = await buildService(stubs).listReports({}, 10);
 
     expect(page.items[0]).toMatchObject({
       encouragementId: null,
@@ -402,7 +441,7 @@ describe('CommunityModerationService — administration', () => {
       }),
     ]);
 
-    const page = await buildService(stubs).listReports(undefined, 10);
+    const page = await buildService(stubs).listReports({}, 10);
 
     expect(page.items[0]).toMatchObject({
       friendChallengeId: 'defi-1',

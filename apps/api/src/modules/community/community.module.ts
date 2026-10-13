@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AdminAccessModule } from '../admin/admin-access.module';
+import { AdminUsersModule } from '../admin/admin-users.module';
 import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CommunityChallengesService } from './application/community-challenges.service';
+import { CommunityModerationDecisionService } from './application/community-moderation-decision.service';
 import { CommunityModerationService } from './application/community-moderation.service';
 import { CommunityNotifier } from './application/community-notifier';
 import { CommunityService } from './application/community.service';
@@ -15,6 +17,7 @@ import { CommunityModerationRepository } from './infrastructure/community-modera
 import { CommunityRepository } from './infrastructure/community.repository';
 import { FriendChallengesRepository } from './infrastructure/friend-challenges.repository';
 import { LeaguesRepository } from './infrastructure/leagues.repository';
+import { ModerationDecisionRepository } from './infrastructure/moderation-decision.repository';
 import { AdminCommunityController } from './presentation/http/admin-community.controller';
 import { CommunityChallengesController } from './presentation/http/community-challenges.controller';
 import { CommunityModerationController } from './presentation/http/community-moderation.controller';
@@ -30,7 +33,8 @@ import { LeaguesController } from './presentation/http/leagues.controller';
  */
 @Module({
   // Notifications : demandes d'ami, acceptations et encouragements poussent.
-  imports: [NotificationsModule, AdminAccessModule, AuditModule],
+  // Comptes admin : une décision de modération suspend par le même chemin.
+  imports: [NotificationsModule, AdminAccessModule, AdminUsersModule, AuditModule],
   controllers: [
     CommunityController,
     CommunityChallengesController,
@@ -47,11 +51,13 @@ import { LeaguesController } from './presentation/http/leagues.controller';
     FriendChallengesService,
     LeaguesService,
     CommunityModerationService,
+    CommunityModerationDecisionService,
     CommunityRepository,
     CommunityChallengesRepository,
     FriendChallengesRepository,
     LeaguesRepository,
     CommunityModerationRepository,
+    ModerationDecisionRepository,
   ],
   // Exportés pour la clôture de séance (contribution aux défis SPORT) et
   // pour la suppression du compte (retrait immédiat de la communauté).

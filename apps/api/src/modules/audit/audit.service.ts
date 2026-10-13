@@ -16,8 +16,12 @@ export interface AuditEntry {
   requestId?: string;
   ipAddress?: string;
   userAgent?: string;
-  /** Contexte non sensible uniquement — jamais de mot de passe ni de jeton. */
-  metadata?: Record<string, string | number | boolean | null>;
+  /**
+   * Contexte non sensible uniquement — jamais de mot de passe ni de jeton.
+   * Des valeurs simples, ou une liste de chaînes (des identifiants, par
+   * exemple les signalements résolus d'une même décision de modération).
+   */
+  metadata?: Record<string, string | number | boolean | null | string[]>;
 }
 
 /** Auteur d'un geste du back-office, tel que le journal d'audit le retient. */

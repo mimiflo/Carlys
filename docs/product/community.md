@@ -132,10 +132,45 @@ Côté back-office (`/api/v1/admin/community`, jeton admin, permission
 
 | Méthode | Chemin | Rôle |
 | --- | --- | --- |
-| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le contenu visé, figé au moment du signalement : le texte de l'encouragement (lisible même si l'auteur l'a retiré depuis), ou le titre et le mot du défi (`friendChallengeTitle`, `friendChallengeMessage`) |
-| PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout (`resolvedAt` posé, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) ; rejouer le même statut ne réécrit rien |
+| GET | `/reports?status=&reason=&reportedUserId=&limit=&cursor=` | Signalements, plus récents d'abord, filtres cumulables (statut, motif, personne signalée ; `400` sur une valeur hors contrat), avec les deux personnes (id, e-mail, nom) et le contenu visé, figé au moment du signalement : le texte de l'encouragement (lisible même si l'auteur l'a retiré depuis), ou le titre et le mot du défi (`friendChallengeTitle`, `friendChallengeMessage`, et `friendChallengeMessageRemoved` quand la modération a effacé ce mot). Chaque ligne porte aussi la décision (`resolvedBy` : id, e-mail, nom de l'admin ; `resolutionNote`, `contentRemoved`, `userSuspended`), l'état COURANT du compte visé (`reportedUserStatus`) et ses compteurs (`reportedUserReportsCount`, `reportedUserOpenReportsCount`), lus en une seule requête groupée par page |
+| PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout sans décision (`resolvedAt` et `resolvedBy` posés, note et drapeaux d'une décision précédente effacés, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) en gardant la décision précédente comme historique ; rejouer le même statut ne réécrit rien |
+| POST | `/reports/:id/decision` | Trancher un signalement OUVERT, puis le résoudre — `200` avec le signalement à jour (voir ci-dessous) |
 
-Ces deux routes ont leur écran : la page **Signalements** du back-office
+**La décision** (`{ removeContent: boolean, suspendUser: boolean, note?: string }`,
+contrat `communityReportDecisionSchema`, note de 500 points de code au plus) :
+
+- **Retirer le contenu** (`removeContent`) : l'encouragement visé est
+  SUPPRIMÉ (comme quand son auteur le retire) ; pour un défi entre amis,
+  seul le mot du créateur est effacé (`message` à `NULL`,
+  `messageRemovedAt` daté) — le titre, les membres et les scores restent,
+  et les membres lisent un défi sans mot. Les autres signalements OUVERTS
+  du même contenu sont résolus par la même décision (même note, mêmes
+  drapeaux). Un signalement de la personne en général n'a rien à retirer
+  (`400`) ; un contenu déjà disparu non plus (`409` « Rien à retirer : le
+  contenu n'existe plus. »). Les clichés du signalement, eux, restent.
+- **Suspendre** (`suspendUser`) : exige EN PLUS la permission
+  `user:update` (`403` sinon) et une note non vide (`400`). Passe par le
+  même chemin que la fiche utilisateur (`AdminUsersService.setUserStatus` :
+  sessions révoquées, jetons push supprimés, audit `admin.user_suspended`) ;
+  un compte déjà suspendu ne fait pas échouer la décision, un compte
+  supprimé répond `409` avant toute écriture. La suspension SUIT le commit
+  de la décision : un `409` de course (signalement tranché entre-temps,
+  contenu disparu) n'a jamais suspendu personne. Cas résiduel — compte
+  supprimé entre la vérification et la suspension : la décision reste
+  (contenu retiré, signalements résolus) avec `userSuspended` remis à
+  `false`, un avertissement est journalisé et l'erreur `409` remonte.
+- **Classer sans suite** : les deux à `false`, note facultative.
+- Un signalement déjà résolu : `409` (le rouvrir pour trancher à nouveau).
+- Un défi ne se retire que par son mot : un signalement de défi sans mot,
+  ou dont le mot est déjà effacé, répond `409` « Rien à retirer ».
+- Audit : `admin.community_report_decided` (métadonnées `reason`,
+  `removeContent`, `suspendUser`, `userSuspended` — la suspension
+  réellement faite —, `siblingReportsResolved` et `siblingReportIds`) et, si un
+  contenu est retiré, `admin.community_content_removed` (`resourceType`
+  `encouragement` ou `friend_challenge`). Ni le texte du membre ni la note
+  ne partent dans le journal.
+
+Ces routes ont leur écran : la page **Signalements** du back-office
 (`apps/admin`, `/reports`, entrée de navigation à côté d'Utilisateurs).
 Elle liste les signalements ouverts par défaut (résolus, ou tous, sur
 demande ; pages de 50 par curseur, « Charger la suite ») avec la date, le
@@ -146,13 +181,25 @@ encore dans le fil) ; le message suivi de « Message retiré depuis »
 (`encouragementId` remis à `NULL` par la suppression, la preuve reste) ;
 « La personne en général » quand le signalement ne vise aucun message. Pour
 un défi entre amis : « Défi « titre » », puis le mot du créateur cité, ou
-« (sans message) » s'il n'en avait pas écrit. Un bouton résout chaque signalement, un
-autre le rouvre ; résoudre ne prévient personne et ne touche pas au compte
-visé : les deux personnes renvoient à leur fiche utilisateur, seul endroit
-où l'on suspend. Sans
+« (sans message) » s'il n'en avait pas écrit (« Mot retiré par la
+modération » une fois effacé). Filtres : statut, motif, et « Voir ses N
+signalements » qui limite la liste à une personne ; sous la personne visée,
+son nombre de signalements (rouge à partir de trois) et l'état de son compte
+s'il n'est plus actif.
+
+Chaque ligne ouvre le **dossier** du signalement (panneau latéral) : ce qui
+est signalé, les précisions, les deux personnes, puis la **décision** —
+retirer le contenu (encouragement ou mot du défi ; indisponible quand rien
+ne reste à retirer), suspendre le compte (indisponible sans `user:update`,
+et le panneau dit pourquoi), avec une note obligatoire pour une suspension,
+ou « Classer sans suite ». Un signalement résolu montre la décision prise,
+qui l'a prise, quand, et la note ; « Rouvrir » le rend à la file sans
+défaire la décision (un contenu retiré ne revient pas, une suspension se lève
+sur la fiche du compte). Trancher ne prévient personne. Sans
 `community:moderate`, la page montre le refus du serveur tel quel (403),
-sans le déguiser en panne. Transport : `adminApi.listCommunityReports` et
-`adminApi.setCommunityReportStatus`, portés par
+sans le déguiser en panne. Transport : `adminApi.listCommunityReports`
+(`status`, `cursor`, puis les filtres `{ reason, reportedUserId }`),
+`adminApi.setCommunityReportStatus` et `adminApi.decideCommunityReport`, portés par
 `apps/admin/src/lib/admin-community-api.ts` et étalés dans `adminApi`
 (`admin-api.ts`), réponses validées par `adminCommunityReportSchema`.
 
@@ -167,6 +214,10 @@ Cas particuliers du service :
   `PENDING` dans SON sens, comme une demande neuve. Sans cette règle, une
   adresse ou un code ami connus suffisaient à harceler à coups de demandes,
   avec une notification à chaque coup.
+- **Signalements bornés** : `POST /community/reports` porte son propre
+  seau (10 par minute et par adresse, `429` au-delà), comme les
+  encouragements : chacun arrive dans la file de l'administration. Le rejeu
+  d'un signalement ouvert identique compte comme une requête.
 - **Limite dédiée** : `POST /community/requests` porte son propre seau,
   calqué sur celui des routes d'authentification (10 demandes par minute et
   par adresse, `429` au-delà), indépendant du plafond global.

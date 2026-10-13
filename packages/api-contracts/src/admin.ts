@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { communityReportSchema } from './community';
+import { communityReportReasonSchema, communityReportSchema } from './community';
+import { codePointLength } from './text';
 import { mediaAssetSchema } from './media';
 import {
   entitlementKeySchema,
@@ -282,5 +283,53 @@ export const adminCommunityReportSchema = communityReportSchema.extend({
   encouragementMessage: z.string().nullable(),
   friendChallengeTitle: z.string().nullable(),
   friendChallengeMessage: z.string().nullable(),
+  /** Le mot du défi a été effacé par la modération (le titre reste). */
+  friendChallengeMessageRemoved: z.boolean(),
+  /** Administrateur qui a résolu ou tranché en dernier ; gardé à la réouverture. */
+  resolvedBy: adminCommunityReportPartySchema.nullable(),
+  /** Note de la décision, `null` sans décision ou sans note. */
+  resolutionNote: z.string().nullable(),
+  /** Ce que la décision a fait — l'historique, pas l'état courant. */
+  contentRemoved: z.boolean(),
+  userSuspended: z.boolean(),
+  /** État COURANT du compte signalé. */
+  reportedUserStatus: managedUserStatusSchema,
+  /** Signalements contre cette personne, tous statuts, puis ouverts seulement. */
+  reportedUserReportsCount: z.number().int().nonnegative(),
+  reportedUserOpenReportsCount: z.number().int().nonnegative(),
 });
 export type AdminCommunityReport = z.infer<typeof adminCommunityReportSchema>;
+
+/** GET /admin/community/reports — filtres, tous facultatifs et cumulables. */
+export const adminCommunityReportFiltersSchema = z.object({
+  reason: communityReportReasonSchema.optional(),
+  reportedUserId: z.string().uuid().optional(),
+});
+export type AdminCommunityReportFilters = z.infer<typeof adminCommunityReportFiltersSchema>;
+
+/** Longueur maximale de la note de décision, en POINTS DE CODE. */
+export const COMMUNITY_REPORT_NOTE_MAX_LENGTH = 500;
+
+/**
+ * POST /admin/community/reports/:id/decision — trancher un signalement
+ * OUVERT et le résoudre. `removeContent` retire l'encouragement visé, ou
+ * efface le mot du défi visé (son titre reste) ; `suspendUser` suspend la
+ * personne signalée et exige, en plus, la permission `user:update` et une
+ * note non vide. Les deux à `false` : classé sans suite, note facultative.
+ */
+export const communityReportDecisionSchema = z
+  .object({
+    removeContent: z.boolean(),
+    suspendUser: z.boolean(),
+    note: z
+      .string()
+      .refine((text) => codePointLength(text) <= COMMUNITY_REPORT_NOTE_MAX_LENGTH, {
+        message: `La note tient en ${COMMUNITY_REPORT_NOTE_MAX_LENGTH} caractères au plus.`,
+      })
+      .optional(),
+  })
+  .refine((body) => !body.suspendUser || (body.note ?? '').trim() !== '', {
+    message: 'Une suspension se justifie : la note est obligatoire.',
+    path: ['note'],
+  });
+export type CommunityReportDecision = z.infer<typeof communityReportDecisionSchema>;

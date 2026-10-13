@@ -256,6 +256,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `GET /admin/auth/me` | **admin** | apps/admin (back-office) |
 | `GET /admin/community/reports` | **admin** | apps/admin (back-office) |
 | `PATCH /admin/community/reports/{id}` | **admin** | apps/admin (back-office) |
+| `POST /admin/community/reports/{id}/decision` | **admin** | apps/admin (back-office) |
 | `GET /admin/equipment` | **admin** | apps/admin (back-office) |
 | `GET /admin/exercises` | **admin** | apps/admin (back-office) |
 | `DELETE /admin/exercises/{id}` | **admin** | apps/admin (back-office) |

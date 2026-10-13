@@ -1048,10 +1048,12 @@ model AdminUser {
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
-  roles       AdminUserRole[]
-  auditLogs   AuditLog[]
+  roles                    AdminUserRole[]
+  auditLogs                AuditLog[]
   /// Médias déposés par cet administrateur.
-  mediaAssets MediaAsset[]
+  mediaAssets              MediaAsset[]
+  /// Signalements de la communauté qu'il a résolus ou tranchés en dernier.
+  communityReportsResolved CommunityReport[]
 }
 
 /// Rôle nommé (ex. superadmin, support, content-manager).
@@ -1310,33 +1312,37 @@ enum FriendChallengeMemberStatus {
 /// Un défi lancé par quelqu'un à ses amis.
 model FriendChallenge {
   /// UUID fourni par l'appareil : rejouer la création ne crée pas de doublon.
-  id           String                @id @db.Uuid
-  creatorId    String                @db.Uuid
-  title        String
+  id               String                @id @db.Uuid
+  creatorId        String                @db.Uuid
+  title            String
   /// Le mot du créateur à ses invités (280 points de code au plus, découpé
   /// à l'entrée : au plus 560 unités UTF-16 en base), NULL s'il n'a rien
   /// écrit. Son heure est `createdAt` : il naît avec le défi et ne se
   /// modifie pas, pas même par un rejeu de la création. Lu par les seuls
   /// membres, jamais porté par la notification, et masqué au lecteur qu'un
   /// blocage sépare du créateur.
-  message      String?
-  metric       ChallengeMetric
+  message          String?
+  /// Posé quand la MODÉRATION efface le mot du créateur (`message` passe à
+  /// NULL, le titre reste) : distingue « retiré » de « jamais écrit ». Le
+  /// texte, lui, ne survit que dans le cliché du signalement.
+  messageRemovedAt DateTime?
+  metric           ChallengeMetric
   /// Objectif commun, ou `null` pour un « qui en fait le plus ».
-  target       Int?
+  target           Int?
   /// 3, 7 ou 30 — borné par le DTO, donc extensible sans migration.
-  durationDays Int
-  startsAt     DateTime
+  durationDays     Int
+  startsAt         DateTime
   /// CALCULÉ par le serveur (`startsAt` + `durationDays`), jamais reçu du
   /// client : une fin fournie par l'appelant est un défi éternel en une
   /// requête.
-  endsAt       DateTime
-  status       FriendChallengeStatus @default(OPEN)
+  endsAt           DateTime
+  status           FriendChallengeStatus @default(OPEN)
   /// Posé UNE fois par la clôture paresseuse, et clé de son idempotence :
   /// l'écriture est conditionnée à sa nullité, donc deux lectures
   /// simultanées d'un défi échu n'en règlent qu'une.
-  closedAt     DateTime?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  closedAt         DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   creator User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   members FriendChallengeMember[]
@@ -1758,6 +1764,9 @@ enum CommunityReportStatus {
 /// figé dans `encouragementMessage` au moment du signalement, aussi : la
 /// preuve ne s'efface pas avec le message. Même règle pour un défi : titre
 /// et message figés dans `friendChallengeTitle` et `friendChallengeMessage`.
+/// La DÉCISION du back-office (`POST /admin/community/reports/:id/decision`)
+/// s'y inscrit : qui (`resolvedByAdminId`), pourquoi (`resolutionNote`), et
+/// ce qui a été fait (`contentRemoved`, `userSuspended`).
 model CommunityReport {
   id                     String                @id @default(uuid()) @db.Uuid
   reporterId             String                @db.Uuid
@@ -1783,17 +1792,35 @@ model CommunityReport {
   status                 CommunityReportStatus @default(OPEN)
   createdAt              DateTime              @default(now())
   resolvedAt             DateTime?
+  /// Administrateur qui a résolu (ou tranché) le signalement en dernier.
+  /// Gardé à la réouverture, comme toute la décision : c'est l'historique.
+  /// Mis à NULL si ce compte d'administration est supprimé.
+  resolvedByAdminId      String?               @db.Uuid
+  /// Note de décision (500 points de code au plus, validée à l'entrée),
+  /// obligatoire quand la décision suspend la personne. Jamais montrée au
+  /// signalant ni au signalé.
+  resolutionNote         String?
+  /// La décision a retiré le contenu visé (encouragement supprimé, ou mot
+  /// du défi effacé — son titre reste). Les clichés ci-dessus, eux, restent.
+  contentRemoved         Boolean               @default(false)
+  /// La décision a suspendu la personne signalée (ou l'a trouvée déjà
+  /// suspendue) : le drapeau dit ce qui a été décidé, pas l'état courant.
+  userSuspended          Boolean               @default(false)
 
   reporter        User             @relation("CommunityReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedUser    User             @relation("CommunityReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
   encouragement   Encouragement?   @relation(fields: [encouragementId], references: [id], onDelete: SetNull)
   friendChallenge FriendChallenge? @relation(fields: [friendChallengeId], references: [id], onDelete: SetNull)
+  resolvedBy      AdminUser?       @relation(fields: [resolvedByAdminId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
   @@index([reportedUserId])
   @@index([reporterId])
   @@index([encouragementId])
   @@index([friendChallengeId])
+  /// La clé étrangère vers l'administrateur : sans index, supprimer un
+  /// compte d'administration parcourrait toute la table (`SET NULL`).
+  @@index([resolvedByAdminId])
 }
 
 enum ChallengeKind {

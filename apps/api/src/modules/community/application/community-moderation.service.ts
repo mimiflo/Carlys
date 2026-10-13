@@ -1,5 +1,6 @@
 import {
   type AdminCommunityReport,
+  type AdminCommunityReportFilters,
   type BlockedUser,
   type CommunityReport as ReportContract,
   type CommunityReportReason,
@@ -8,10 +9,12 @@ import {
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { blankToNull } from '../../../common/utilities/blank-to-null';
 import { type AdminActor, AuditService } from '../../audit/audit.service';
+import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import {
-  CommunityModerationRepository,
-  type CommunityReportRow,
-} from '../infrastructure/community-moderation.repository';
+  presentAdminReport,
+  presentOneAdminReport,
+  presentReport,
+} from './community-report.presenter';
 import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 
 export interface CreateReportCommand {
@@ -21,42 +24,6 @@ export interface CreateReportCommand {
   friendChallengeId?: string | null;
   reason: CommunityReportReason;
   details?: string;
-}
-
-function presentReport(row: CommunityReportRow): ReportContract {
-  return {
-    id: row.id,
-    reportedUserId: row.reportedUserId,
-    encouragementId: row.encouragementId,
-    friendChallengeId: row.friendChallengeId,
-    reason: row.reason,
-    details: row.details,
-    status: row.status,
-    createdAt: row.createdAt.toISOString(),
-    resolvedAt: row.resolvedAt?.toISOString() ?? null,
-  };
-}
-
-function presentAdminReport(row: CommunityReportRow): AdminCommunityReport {
-  return {
-    ...presentReport(row),
-    reporter: {
-      id: row.reporter.id,
-      email: row.reporter.email,
-      displayName: row.reporter.profile?.displayName ?? null,
-    },
-    reportedUser: {
-      id: row.reportedUser.id,
-      email: row.reportedUser.email,
-      displayName: row.reportedUser.profile?.displayName ?? null,
-    },
-    // Le cliché pris au signalement, jamais le message vivant : l'auteur a pu
-    // le retirer depuis, la preuve doit rester lisible.
-    encouragementMessage: row.encouragementMessage,
-    // Même règle pour un défi : son titre et son message tels qu'ils étaient.
-    friendChallengeTitle: row.friendChallengeTitle,
-    friendChallengeMessage: row.friendChallengeMessage,
-  };
 }
 
 /**
@@ -163,15 +130,22 @@ export class CommunityModerationService {
   // ── Administration ──────────────────────────────────────────────────────
 
   async listReports(
-    status: CommunityReportStatus | undefined,
+    filters: AdminCommunityReportFilters & { status?: CommunityReportStatus },
     limit: number,
     cursor?: string,
   ): Promise<CursorPage<AdminCommunityReport>> {
-    const rows = await this.moderation.listReports(status, limit, cursor);
-    return cursorPage(rows, limit, presentAdminReport);
+    const rows = await this.moderation.listReports(filters, limit, cursor);
+    const counts = await this.moderation.reportCountsFor(rows.map((row) => row.reportedUserId));
+    return cursorPage(rows, limit, (row) =>
+      presentAdminReport(row, counts.get(row.reportedUserId)),
+    );
   }
 
-  /** Résoudre (ou rouvrir) un signalement — audité, idempotent sur le même statut. */
+  /**
+   * Résoudre (ou rouvrir) un signalement SANS décision — audité, idempotent
+   * sur le même statut. Résoudre pose l'administrateur ; rouvrir garde la
+   * décision précédente comme historique.
+   */
   async setReportStatus(
     reportId: string,
     status: CommunityReportStatus,
@@ -182,9 +156,9 @@ export class CommunityModerationService {
       throw new NotFoundException('Signalement introuvable.');
     }
     if (report.status === status) {
-      return presentAdminReport(report);
+      return presentOneAdminReport(this.moderation, report);
     }
-    const updated = await this.moderation.setReportStatus(reportId, status);
+    const updated = await this.moderation.setReportStatus(reportId, status, actor.adminUserId);
     this.audit.record({
       action:
         status === 'RESOLVED'
@@ -199,6 +173,6 @@ export class CommunityModerationService {
       ipAddress: actor.ipAddress,
       metadata: { reason: report.reason, reporterId: report.reporterId },
     });
-    return presentAdminReport(updated);
+    return presentOneAdminReport(this.moderation, updated);
   }
 }

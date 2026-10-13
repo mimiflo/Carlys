@@ -10,10 +10,17 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { CommunityModerationService } from '../../application/community-moderation.service';
 import { CreateCommunityReportDto } from './dto/community-moderation.dto';
+
+/**
+ * Limite dédiée aux signalements, par adresse IP, comme les encouragements :
+ * chacun arrive dans la file de l'administration, qu'une rafale noierait.
+ */
+const REPORT_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
 /** Ce qu'un membre peut faire pour se protéger : bloquer, retirer, signaler. */
 @ApiTags('community')
@@ -75,6 +82,7 @@ export class CommunityModerationController {
 
   @Post('reports')
   @HttpCode(201)
+  @Throttle(REPORT_THROTTLE)
   @ApiOperation({
     summary:
       'Signaler une personne, un encouragement précis qu’elle m’a envoyé, ou ' +

@@ -1,5 +1,7 @@
 import {
   COMMUNITY_REPORT_DETAILS_MAX_LENGTH,
+  COMMUNITY_REPORT_NOTE_MAX_LENGTH,
+  type CommunityReportDecision,
   type CommunityReportReason,
   communityReportReasonSchema,
   type CommunityReportStatus,
@@ -7,7 +9,7 @@ import {
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { MaxCodePoints } from '../../../../../common/validators/max-code-points';
 
 export class CreateCommunityReportDto {
@@ -65,6 +67,19 @@ export class ListCommunityReportsQuery {
   @IsIn(communityReportStatusSchema.options)
   status?: CommunityReportStatus;
 
+  @ApiPropertyOptional({
+    enum: communityReportReasonSchema.options,
+    description: 'Absent : tous les motifs',
+  })
+  @IsOptional()
+  @IsIn(communityReportReasonSchema.options)
+  reason?: CommunityReportReason;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Les signalements visant cette personne' })
+  @IsOptional()
+  @IsUUID()
+  reportedUserId?: string;
+
   @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
   @IsOptional()
   @IsUUID()
@@ -83,4 +98,36 @@ export class UpdateCommunityReportDto {
   @ApiProperty({ enum: communityReportStatusSchema.options })
   @IsIn(communityReportStatusSchema.options)
   status!: CommunityReportStatus;
+}
+
+/**
+ * La décision sur un signalement ouvert. La règle « note obligatoire pour
+ * suspendre » est celle du contrat (`communityReportDecisionSchema`) ; le
+ * service l'applique après découpe des blancs, avec la permission
+ * `user:update` qu'exige la suspension.
+ */
+export class CommunityReportDecisionDto implements CommunityReportDecision {
+  @ApiProperty({
+    description:
+      'Retirer le contenu visé : l’encouragement est supprimé, le mot du défi ' +
+      'effacé (son titre reste). 400 si le signalement vise la personne en ' +
+      'général, 409 si le contenu n’existe plus.',
+  })
+  @IsBoolean()
+  removeContent!: boolean;
+
+  @ApiProperty({
+    description:
+      'Suspendre la personne signalée (sessions révoquées). Exige la ' +
+      'permission user:update (403) et une note non vide (400).',
+  })
+  @IsBoolean()
+  suspendUser!: boolean;
+
+  // Compté en POINTS DE CODE, comme le contrat.
+  @ApiPropertyOptional({ maxLength: COMMUNITY_REPORT_NOTE_MAX_LENGTH })
+  @IsOptional()
+  @IsString()
+  @MaxCodePoints(COMMUNITY_REPORT_NOTE_MAX_LENGTH)
+  note?: string;
 }

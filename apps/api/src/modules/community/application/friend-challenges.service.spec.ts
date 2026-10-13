@@ -25,6 +25,7 @@ function stored(
     id: 'defi-1',
     creatorId: CHLOE,
     title: 'Qui court le plus',
+    messageRemovedAt: null,
     message,
     metric: 'DISTANCE_METERS',
     target: null,

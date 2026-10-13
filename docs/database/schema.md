@@ -44,7 +44,7 @@ tombé dans ce cas : [migrations.md](migrations.md).
 | Administration | `AdminUser`, `AdminRole`, `AdminPermission`, jointures `AdminUserRole` et `AdminRolePermission`, `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
 | Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem`, `CoachProgramProposal`, `CoachGeneration` — **implémenté** (migrations `20260809120000_coach_ia`, `20260930145758_coach_programme_propose`, `20260930194717_coach_passerelle_generations`) | ✅ |
 | Journal alimentaire | `MealEntry`, `Food`, `MealComponent`, `MealPhoto` — **implémenté**, voir [Journal alimentaire](#journal-alimentaire-et-base-daliments-implémenté) | ✅ |
-| Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport`, `FriendChallenge`, `FriendChallengeMember`, `LeagueMembership` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`, `20260919201000_defis_entre_amis`, `20260919225014_ligues`, `20260924120000_ligues_groupes_de_vingt`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
+| Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport`, `FriendChallenge`, `FriendChallengeMember`, `LeagueMembership` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`, `20260919201000_defis_entre_amis`, `20260919225014_ligues`, `20260924120000_ligues_groupes_de_vingt`, `20261013090000_decision_moderation`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
 
 ## Conventions transverses
 
@@ -1131,8 +1131,16 @@ créé.
   nullables (clichés du titre et du mot du créateur, pris dans la même
   transaction), `reason`
   (`HARCELEMENT | SPAM | CONTENU_INAPPROPRIE | AUTRE`), `details`,
-  `status` (`OPEN | RESOLVED`), `resolvedAt`.
-- Index : `(status, created_at DESC)`, `(reported_user_id)`.
+  `status` (`OPEN | RESOLVED`), `resolvedAt`, et la DÉCISION (migration
+  `20261013090000_decision_moderation`) : `resolvedByAdminId` nullable
+  (n–1 `AdminUser`, `SetNull` ; posé par toute résolution, gardé à la
+  réouverture), `resolutionNote` nullable (500 points de code, obligatoire
+  pour suspendre), `contentRemoved` et `userSuspended` (booléens à `false`
+  par défaut : ce que la décision a fait, pas l'état courant ; une
+  résolution SANS décision les remet à zéro).
+- Index : `(status, created_at DESC)`, `(reported_user_id)` — ce dernier
+  sert aussi les compteurs par personne du back-office (un `GROUP BY`
+  par page) —, et `(resolved_by_admin_id)` pour la clé étrangère.
 - Conservé tant que ni le signalant ni la personne signalée n'est effacé
   (`Cascade` des deux côtés) : même résolu, il reste.
 
@@ -1144,7 +1152,8 @@ Défi lancé par un membre à ses amis (migrations
   créateur, 280 points de code au plus), `metric`, `target` nullable
   (« qui en fait le plus »), `durationDays` (3, 7 ou 30), `startsAt`,
   `endsAt` (calculée par le serveur), `status` (`OPEN | CLOSED | CANCELLED`),
-  `closedAt`.
+  `closedAt`, `messageRemovedAt` nullable (posé quand la modération efface
+  le mot : `message` passe à `NULL`, le titre reste).
 - Index : `(creatorId)`, `(status, endsAt)`. Relations : n–1 `User`
   (`Cascade`) ; 1–n `FriendChallengeMember` ; référencé par
   `CommunityReport` (`SetNull`).

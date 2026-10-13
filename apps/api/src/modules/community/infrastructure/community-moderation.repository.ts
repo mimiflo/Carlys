@@ -19,9 +19,12 @@ const reportPartySelect = {
   profile: { select: { displayName: true } },
 } satisfies Prisma.UserSelect;
 
-const reportInclude = {
+export const reportInclude = {
   reporter: { select: reportPartySelect },
-  reportedUser: { select: reportPartySelect },
+  // Le statut COURANT du compte signalé : la décision de suspendre en dépend.
+  reportedUser: { select: { ...reportPartySelect, status: true } },
+  resolvedBy: { select: { id: true, email: true, displayName: true } },
+  friendChallenge: { select: { messageRemovedAt: true } },
 } satisfies Prisma.CommunityReportInclude;
 
 export type CommunityReportRow = Prisma.CommunityReportGetPayload<{
@@ -36,6 +39,12 @@ export interface CreateReportInput {
   friendChallengeId: string | null;
   reason: CommunityReportReason;
   details: string | null;
+}
+
+export interface ReportFilters {
+  status?: CommunityReportStatus;
+  reason?: CommunityReportReason;
+  reportedUserId?: string;
 }
 
 /** Les CLICHÉS figés à la création d'un signalement, `null` s'ils ne s'appliquent pas. */
@@ -231,14 +240,21 @@ export class CommunityModerationRepository {
     return this.prisma.communityReport.findUnique({ where: { id }, include: reportInclude });
   }
 
-  /** Signalements du plus récent au plus ancien, pagination par curseur (limit + 1). */
+  /**
+   * Signalements du plus récent au plus ancien, pagination par curseur
+   * (limit + 1). Filtres cumulables, chacun absent = pas de filtre.
+   */
   listReports(
-    status: CommunityReportStatus | undefined,
+    filters: ReportFilters,
     limit: number,
     cursor?: string,
   ): Promise<CommunityReportRow[]> {
     return this.prisma.communityReport.findMany({
-      where: status === undefined ? {} : { status },
+      where: {
+        status: filters.status,
+        reason: filters.reason,
+        reportedUserId: filters.reportedUserId,
+      },
       include: reportInclude,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
@@ -246,10 +262,59 @@ export class CommunityModerationRepository {
     });
   }
 
-  setReportStatus(id: string, status: CommunityReportStatus): Promise<CommunityReportRow> {
+  /**
+   * Signalements reçus par chacune de ces personnes, par statut — UNE
+   * requête pour toute une page, jamais une par ligne.
+   */
+  async reportCountsFor(
+    reportedUserIds: readonly string[],
+  ): Promise<Map<string, { total: number; open: number }>> {
+    const counts = new Map<string, { total: number; open: number }>();
+    if (reportedUserIds.length === 0) {
+      return counts;
+    }
+    const groups = await this.prisma.communityReport.groupBy({
+      by: ['reportedUserId', 'status'],
+      where: { reportedUserId: { in: [...new Set(reportedUserIds)] } },
+      _count: { _all: true },
+    });
+    for (const group of groups) {
+      const entry = counts.get(group.reportedUserId) ?? { total: 0, open: 0 };
+      entry.total += group._count._all;
+      if (group.status === CommunityReportStatus.OPEN) {
+        entry.open += group._count._all;
+      }
+      counts.set(group.reportedUserId, entry);
+    }
+    return counts;
+  }
+
+  /**
+   * Résoudre SANS décision pose qui l'a fait et efface la décision
+   * précédente (note, drapeaux) : elle ne doit pas s'afficher sous le nom
+   * d'un autre. Rouvrir ne vide que `resolvedAt` — la décision précédente
+   * reste lisible tant que personne ne résout à nouveau.
+   */
+  setReportStatus(
+    id: string,
+    status: CommunityReportStatus,
+    adminUserId: string,
+  ): Promise<CommunityReportRow> {
+    const resolving = status === CommunityReportStatus.RESOLVED;
     return this.prisma.communityReport.update({
       where: { id },
-      data: { status, resolvedAt: status === CommunityReportStatus.RESOLVED ? new Date() : null },
+      data: {
+        status,
+        resolvedAt: resolving ? new Date() : null,
+        ...(resolving
+          ? {
+              resolvedByAdminId: adminUserId,
+              resolutionNote: null,
+              contentRemoved: false,
+              userSuspended: false,
+            }
+          : {}),
+      },
       include: reportInclude,
     });
   }

@@ -33,6 +33,7 @@ function challenge(
     id: 'defi-1',
     creatorId: CHLOE,
     title: 'Qui court le plus',
+    messageRemovedAt: null,
     message: 'On verra qui tient la semaine.',
     metric: 'DISTANCE_METERS',
     target: null,

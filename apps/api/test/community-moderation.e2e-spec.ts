@@ -25,7 +25,9 @@ import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { createAdminAccount } from './support/admin-fixture';
 import { adminSession } from './support/admin-session';
+import { reinitialiserDebit } from './support/throttle';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -37,9 +39,13 @@ const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
  * Modération de la communauté : retrait d'un encouragement, signalements,
  * blocages OPAQUES, et leur lecture côté back-office.
  *
- * Suite dans sa propre application : elle envoie quatre demandes d'ami
- * (seau dédié de 10/min) et fait deux connexions admin (seau de 10/min
- * aussi), des budgets qu'elle ne veut partager avec personne.
+ * Suite dans sa propre application : elle envoie des demandes d'ami et des
+ * signalements (seaux dédiés de 10/min, remis à zéro avant chaque test) et
+ * fait trois connexions admin (seau de 10/min aussi).
+ *
+ * Les décisions (retrait, suspension) se jouent en fin de suite sur leurs
+ * propres comptes — Dina, Émile, Fanny : suspendre Émile révoque ses
+ * sessions, ce que les scénarios d'Alice et Boris n'ont pas à subir.
  */
 describe('Modération de la communauté (e2e)', () => {
   let app: INestApplication<App>;
@@ -52,6 +58,7 @@ describe('Modération de la communauté (e2e)', () => {
   let userIdC: string;
   let superToken: string;
   let readerToken: string;
+  let moderatorToken: string;
   let reportId: string;
   let reportedEncouragementId: string;
 
@@ -61,6 +68,12 @@ describe('Modération de la communauté (e2e)', () => {
   const superEmail = `e2e-moderation-super-${randomUUID()}@carlys.test`;
   const readerEmail = `e2e-moderation-lecteur-${randomUUID()}@carlys.test`;
   const readerRoleSlug = `e2e-lecteur-${randomUUID().slice(0, 8)}`;
+  const moderatorEmail = `e2e-moderation-moderateur-${randomUUID()}@carlys.test`;
+  const moderatorRoleSlug = `e2e-moderateur-${randomUUID().slice(0, 8)}`;
+  const emailD = `e2e-moderation-d-${randomUUID()}@carlys.test`;
+  const emailE = `e2e-moderation-e-${randomUUID()}@carlys.test`;
+  const emailF = `e2e-moderation-f-${randomUUID()}@carlys.test`;
+  const adminEmails = () => [superEmail, readerEmail, moderatorEmail];
 
   const data = <T>(body: unknown): T => (body as ApiSuccessEnvelope<T>).data;
   const server = () => request(app.getHttpServer());
@@ -147,9 +160,19 @@ describe('Modération de la communauté (e2e)', () => {
     }
     const loginAdmin = async (email: string): Promise<string> =>
       (await adminSession(server, email, ADMIN_PASSWORD)).accessToken;
+    // Modérateur SANS user:update : il tranche, mais ne suspend pas.
+    await createAdminAccount(prisma, {
+      email: moderatorEmail,
+      password: ADMIN_PASSWORD,
+      roleSlug: moderatorRoleSlug,
+      permissions: ['community:moderate'],
+    });
     superToken = await loginAdmin(superEmail);
     readerToken = await loginAdmin(readerEmail);
+    moderatorToken = await loginAdmin(moderatorEmail);
   });
+
+  beforeEach(reinitialiserDebit);
 
   afterAll(async () => {
     // L'APPLICATION SE FERME EN PREMIER, et l'ordre n'est pas cosmétique.
@@ -164,12 +187,16 @@ describe('Modération de la communauté (e2e)', () => {
     // le nettoyage exact : plus rien ne s'écrit derrière lui.
     await app.close();
     await prisma.auditLog.deleteMany({
-      where: { adminUser: { email: { in: [superEmail, readerEmail] } } },
+      where: { adminUser: { email: { in: adminEmails() } } },
     });
-    await prisma.adminUser.deleteMany({ where: { email: { in: [superEmail, readerEmail] } } });
-    await prisma.adminRole.deleteMany({ where: { slug: readerRoleSlug } });
+    await prisma.adminUser.deleteMany({ where: { email: { in: adminEmails() } } });
+    await prisma.adminRole.deleteMany({
+      where: { slug: { in: [readerRoleSlug, moderatorRoleSlug] } },
+    });
     // Blocages, signalements et encouragements suivent les comptes (cascade).
-    await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB, emailC] } } });
+    await prisma.user.deleteMany({
+      where: { email: { in: [emailA, emailB, emailC, emailD, emailE, emailF] } },
+    });
     await prisma.$disconnect();
   });
 
@@ -511,6 +538,319 @@ describe('Modération de la communauté (e2e)', () => {
       friendChallengeMessage: 'Tu vas encore perdre, comme d’habitude.',
       encouragementMessage: null,
       reportedUser: { id: userIdA },
+    });
+  });
+
+  describe('décisions de modération', () => {
+    let tokenD: string;
+    let tokenE: string;
+    let tokenF: string;
+    let userIdD: string;
+    let userIdE: string;
+    let userIdF: string;
+    let encouragementReportId: string;
+    let personReportId: string;
+    let challengeId: string;
+
+    const decide = (token: string, id: string, body: object) =>
+      authed(token).post(`/api/v1/admin/community/reports/${id}/decision`).send(body);
+    const reportsOf = async (filters: string): Promise<AdminCommunityReport[]> =>
+      data<AdminCommunityReport[]>(
+        (await authed(superToken).get(`/api/v1/admin/community/reports?${filters}`).expect(200))
+          .body,
+      );
+    const auditLogs = async (): Promise<AdminAuditLog[]> => {
+      expect(await app.get(AuditService).flush()).toEqual({ abandonnees: 0, echouees: 0 });
+      return data<AdminAuditLog[]>(
+        (await authed(superToken).get('/api/v1/admin/audit-logs?limit=100').expect(200)).body,
+      );
+    };
+    const fileReport = async (token: string, body: object): Promise<string> =>
+      data<CommunityReport>(
+        (await authed(token).post('/api/v1/community/reports').send(body).expect(201)).body,
+      ).id;
+
+    beforeAll(async () => {
+      const register = async (email: string, displayName: string): Promise<AuthResult> =>
+        data<AuthResult>(
+          (
+            await server()
+              .post('/api/v1/auth/register')
+              .send({ email, password: 'MotDePasseSolide42', displayName })
+              .expect(201)
+          ).body,
+        );
+      const d = await register(emailD, 'Dina');
+      const e = await register(emailE, 'Émile');
+      const f = await register(emailF, 'Fanny');
+      [tokenD, tokenE, tokenF] = [d, e, f].map((auth) => auth.tokens.accessToken) as [
+        string,
+        string,
+        string,
+      ];
+      userIdD = d.user.id;
+      userIdE = e.user.id;
+      userIdF = f.user.id;
+      // Émile devient l'ami de Dina et de Fanny.
+      for (const [token, email] of [
+        [tokenD, emailD],
+        [tokenF, emailF],
+      ] as const) {
+        await authed(tokenE).post('/api/v1/community/requests').send({ email }).expect(202);
+        const [pending] = await receivedBy(token);
+        await authed(token).post(`/api/v1/community/requests/${pending?.id}/accept`).expect(204);
+      }
+    });
+
+    it('retirer un encouragement : supprimé du fil, décision lisible, audit sans texte', async () => {
+      await encourage(tokenE, userIdD, 'Message à retirer');
+      const [received] = await feedOf(tokenD);
+      encouragementReportId = await fileReport(tokenD, {
+        reportedUserId: userIdE,
+        encouragementId: received?.id,
+        reason: 'HARCELEMENT',
+      });
+      personReportId = await fileReport(tokenD, { reportedUserId: userIdE, reason: 'AUTRE' });
+
+      const decided = data<AdminCommunityReport>(
+        (
+          await decide(superToken, encouragementReportId, {
+            removeContent: true,
+            suspendUser: false,
+            note: '  Propos insultants.  ',
+          }).expect(200)
+        ).body,
+      );
+      expect(decided).toMatchObject({
+        status: 'RESOLVED',
+        contentRemoved: true,
+        userSuspended: false,
+        resolutionNote: 'Propos insultants.',
+        resolvedBy: { email: superEmail, displayName: 'Admin E2E' },
+        encouragementId: null,
+        encouragementMessage: 'Message à retirer',
+        reportedUserStatus: 'ACTIVE',
+        reportedUserReportsCount: 2,
+        reportedUserOpenReportsCount: 1,
+      });
+      expect(decided.resolvedAt).not.toBeNull();
+      expect(await feedOf(tokenD)).toHaveLength(0);
+      // Le signalement de la personne en général n'est pas un frère : il reste ouvert.
+      expect((await reportsOf(`reportedUserId=${userIdE}&status=OPEN`)).map((r) => r.id)).toEqual([
+        personReportId,
+      ]);
+
+      // Rejouer sur un signalement tranché : 409. Retirer « la personne » : 400.
+      await decide(superToken, encouragementReportId, {
+        removeContent: false,
+        suspendUser: false,
+      }).expect(409);
+      await decide(superToken, personReportId, { removeContent: true, suspendUser: false }).expect(
+        400,
+      );
+      await decide(superToken, randomUUID(), { removeContent: false, suspendUser: false }).expect(
+        404,
+      );
+      await decide(superToken, personReportId, { removeContent: 'oui', suspendUser: false }).expect(
+        400,
+      );
+      await decide(superToken, personReportId, {
+        removeContent: false,
+        suspendUser: false,
+        note: 'x'.repeat(501),
+      }).expect(400);
+      await decide(superToken, personReportId, {
+        removeContent: false,
+        suspendUser: false,
+        inconnu: true,
+      }).expect(400);
+      await decide(readerToken, personReportId, {
+        removeContent: false,
+        suspendUser: false,
+      }).expect(403);
+
+      const logs = await auditLogs();
+      expect(
+        logs.find(
+          (log) =>
+            log.action === 'admin.community_report_decided' &&
+            log.resourceId === encouragementReportId,
+        )?.metadata,
+      ).toEqual({
+        reason: 'HARCELEMENT',
+        removeContent: true,
+        suspendUser: false,
+        userSuspended: false,
+        siblingReportsResolved: 0,
+        siblingReportIds: [],
+      });
+      const removal = logs.find(
+        (log) => log.action === 'admin.community_content_removed' && log.userId === userIdE,
+      );
+      expect(removal).toMatchObject({ resourceType: 'encouragement', resourceId: received?.id });
+      expect(JSON.stringify(logs)).not.toContain('Message à retirer');
+      expect(JSON.stringify(logs)).not.toContain('Propos insultants');
+    });
+
+    it('retirer le mot d’un défi : titre gardé, message nul pour les membres, signalements frères résolus', async () => {
+      challengeId = randomUUID();
+      await authed(tokenE)
+        .post('/api/v1/community/friend-challenges')
+        .send({
+          id: challengeId,
+          title: 'Qui court le plus',
+          metric: 'DISTANCE_METERS',
+          durationDays: 7,
+          message: 'Vous êtes nuls.',
+          invitedUserIds: [userIdD, userIdF],
+        })
+        .expect(201);
+      const target = { reportedUserId: userIdE, friendChallengeId: challengeId };
+      const fromD = await fileReport(tokenD, { ...target, reason: 'CONTENU_INAPPROPRIE' });
+      const fromF = await fileReport(tokenF, { ...target, reason: 'HARCELEMENT' });
+
+      await decide(moderatorToken, fromD, { removeContent: true, suspendUser: false }).expect(200);
+
+      const challenge = data<FriendChallenge>(
+        (await authed(tokenD).get(`/api/v1/community/friend-challenges/${challengeId}`).expect(200))
+          .body,
+      );
+      expect(challenge.title).toBe('Qui court le plus');
+      expect(challenge.message).toBeNull();
+      const stored = await prisma.friendChallenge.findUniqueOrThrow({ where: { id: challengeId } });
+      expect(stored.messageRemovedAt).not.toBeNull();
+
+      const [sibling] = (await reportsOf(`reportedUserId=${userIdE}&reason=HARCELEMENT`)).filter(
+        (report) => report.id === fromF,
+      );
+      expect(sibling).toMatchObject({
+        status: 'RESOLVED',
+        contentRemoved: true,
+        friendChallengeMessageRemoved: true,
+        // La preuve reste : le cliché du mot n'est pas effacé avec lui.
+        friendChallengeMessage: 'Vous êtes nuls.',
+        resolvedBy: { email: moderatorEmail },
+      });
+      // Plus rien à retirer sur ce défi : un signalement rouvert le dit (409),
+      // et ce 409 ne suspend personne, même suspension demandée.
+      await authed(superToken)
+        .patch(`/api/v1/admin/community/reports/${fromF}`)
+        .send({ status: 'OPEN' })
+        .expect(200);
+      await decide(superToken, fromF, { removeContent: true, suspendUser: false }).expect(409);
+      await decide(superToken, fromF, {
+        removeContent: true,
+        suspendUser: true,
+        note: 'Récidive.',
+      }).expect(409);
+      await authed(tokenE).get('/api/v1/community/feed').expect(200);
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: userIdE } })).status).toBe(
+        'ACTIVE',
+      );
+      // Rouvrir garde la décision comme historique...
+      const [reopened] = (await reportsOf(`reportedUserId=${userIdE}&status=OPEN`)).filter(
+        (report) => report.id === fromF,
+      );
+      expect(reopened).toMatchObject({
+        resolvedAt: null,
+        contentRemoved: true,
+        resolvedBy: { email: moderatorEmail },
+      });
+      // ...mais la résoudre SANS décision l'efface : celle du modérateur ne
+      // s'affiche pas sous le nom d'un autre.
+      const plain = data<AdminCommunityReport>(
+        (
+          await authed(superToken)
+            .patch(`/api/v1/admin/community/reports/${fromF}`)
+            .send({ status: 'RESOLVED' })
+            .expect(200)
+        ).body,
+      );
+      expect(plain).toMatchObject({
+        status: 'RESOLVED',
+        resolvedBy: { email: superEmail },
+        resolutionNote: null,
+        contentRemoved: false,
+        userSuspended: false,
+      });
+
+      const logs = await auditLogs();
+      expect(
+        logs.find(
+          (log) => log.action === 'admin.community_report_decided' && log.resourceId === fromD,
+        )?.metadata,
+      ).toMatchObject({ siblingReportsResolved: 1, siblingReportIds: [fromF] });
+      expect(
+        logs.find(
+          (log) =>
+            log.action === 'admin.community_content_removed' && log.resourceId === challengeId,
+        ),
+      ).toMatchObject({ resourceType: 'friend_challenge' });
+    });
+
+    it('suspendre : note obligatoire, permission user:update exigée, sessions révoquées', async () => {
+      await decide(superToken, personReportId, { removeContent: false, suspendUser: true }).expect(
+        400,
+      );
+      await decide(superToken, personReportId, {
+        removeContent: false,
+        suspendUser: true,
+        note: '   ',
+      }).expect(400);
+      // Le modérateur sans user:update tranche, mais ne suspend pas.
+      await decide(moderatorToken, personReportId, {
+        removeContent: false,
+        suspendUser: true,
+        note: 'Récidive.',
+      }).expect(403);
+      await authed(tokenE).get('/api/v1/community/feed').expect(200);
+
+      const decided = data<AdminCommunityReport>(
+        (
+          await decide(superToken, personReportId, {
+            removeContent: false,
+            suspendUser: true,
+            note: 'Récidive après retrait.',
+          }).expect(200)
+        ).body,
+      );
+      expect(decided).toMatchObject({
+        status: 'RESOLVED',
+        userSuspended: true,
+        contentRemoved: false,
+        reportedUserStatus: 'SUSPENDED',
+      });
+      await authed(tokenE).get('/api/v1/community/feed').expect(401);
+
+      const logs = await auditLogs();
+      expect(
+        logs.some((log) => log.action === 'admin.user_suspended' && log.userId === userIdE),
+      ).toBe(true);
+    });
+
+    it('filtres par motif et par personne, compteurs par personne', async () => {
+      await fileReport(tokenF, { reportedUserId: userIdE, reason: 'SPAM' });
+
+      const spam = await reportsOf(`reportedUserId=${userIdE}&reason=SPAM`);
+      expect(spam).toHaveLength(1);
+      expect(spam[0]).toMatchObject({
+        reason: 'SPAM',
+        reportedUser: { id: userIdE },
+        reportedUserStatus: 'SUSPENDED',
+        // L'encouragement, la personne, le défi (deux fois), le spam ; seul
+        // ce dernier est encore ouvert.
+        reportedUserReportsCount: 5,
+        reportedUserOpenReportsCount: 1,
+      });
+      const all = await reportsOf(`reportedUserId=${userIdE}`);
+      expect(all).toHaveLength(5);
+      expect(all.every((report) => report.reportedUser.id === userIdE)).toBe(true);
+      expect(await reportsOf(`reportedUserId=${userIdD}`)).toHaveLength(0);
+
+      await authed(superToken).get('/api/v1/admin/community/reports?reason=INCONNU').expect(400);
+      await authed(superToken)
+        .get('/api/v1/admin/community/reports?reportedUserId=pas-un-uuid')
+        .expect(400);
     });
   });
 });

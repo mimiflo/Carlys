@@ -43,6 +43,14 @@ const REPORT = {
   encouragementMessage: 'Réponds-moi.',
   friendChallengeTitle: null,
   friendChallengeMessage: null,
+  friendChallengeMessageRemoved: false,
+  resolvedBy: null,
+  resolutionNote: null,
+  contentRemoved: false,
+  userSuspended: false,
+  reportedUserStatus: 'ACTIVE',
+  reportedUserReportsCount: 3,
+  reportedUserOpenReportsCount: 1,
 };
 
 /**
@@ -86,6 +94,59 @@ describe('signalements de la communauté', () => {
     );
     expect(page.hasMore).toBe(true);
     expect(page.nextCursor).toBe(REPORT.id);
+  });
+
+  it('transmet les filtres de motif et de personne, après le statut et le curseur', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(respond({ data: [REPORT], meta: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const page = await adminApi.listCommunityReports('OPEN', undefined, {
+      reason: 'SPAM',
+      reportedUserId: REPORT.reportedUserId,
+    });
+
+    const [url] = requestOf(fetchMock);
+    expect(url).toBe(
+      'http://localhost:3000/api/v1/admin/community/reports' +
+        `?status=OPEN&reason=SPAM&reportedUserId=${REPORT.reportedUserId}&limit=50`,
+    );
+    expect(page.items[0]).toMatchObject({
+      reportedUserStatus: 'ACTIVE',
+      reportedUserReportsCount: 3,
+      reportedUserOpenReportsCount: 1,
+    });
+  });
+
+  it('tranche par un POST portant la décision, et rend le signalement résolu', async () => {
+    adminToken.set('jeton-admin');
+    const decided = {
+      ...REPORT,
+      status: 'RESOLVED',
+      resolvedAt: '2026-10-13T08:00:00.000Z',
+      resolvedBy: { id: 'admin-1', email: 'admin@carlys.test', displayName: 'Admin' },
+      resolutionNote: 'Récidive.',
+      contentRemoved: true,
+      userSuspended: true,
+      reportedUserStatus: 'SUSPENDED',
+    };
+    const fetchMock = vi.fn().mockResolvedValue(respond({ data: decided, meta: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const decision = { removeContent: true, suspendUser: true, note: 'Récidive.' };
+    const report = await adminApi.decideCommunityReport(REPORT.id, decision);
+
+    const [url, init] = requestOf(fetchMock);
+    expect(url).toBe(`http://localhost:3000/api/v1/admin/community/reports/${REPORT.id}/decision`);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(decision);
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jeton-admin');
+    expect(report).toMatchObject({
+      status: 'RESOLVED',
+      resolvedBy: { email: 'admin@carlys.test' },
+      contentRemoved: true,
+      userSuspended: true,
+      reportedUserStatus: 'SUSPENDED',
+    });
   });
 
   it('résout par un PATCH portant le statut, et rend le signalement validé', async () => {
