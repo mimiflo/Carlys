@@ -195,6 +195,31 @@ describe('MediaService', () => {
     );
   });
 
+  it('la bibliothèque liste, pour chaque média, les exercices qui le montrent', async () => {
+    const stubs = buildStubs();
+    stubs.repository.list.mockResolvedValue([
+      {
+        id: 'm1',
+        kind: 'IMAGE',
+        storageKey: 'image/m1.png',
+        mimeType: 'image/png',
+        byteSize: 10,
+        width: 1,
+        height: 1,
+        originalName: 'photo.png',
+        createdAt: new Date('2026-10-01T00:00:00Z'),
+        exerciseImages: [{ id: 'e1', name: 'Développé couché' }],
+        exerciseMeshes: [{ id: 'e2', name: 'Squat' }],
+      },
+    ]);
+    const [asset] = await buildService(stubs).list('IMAGE');
+    expect(asset?.usedBy).toEqual([
+      { id: 'e1', name: 'Développé couché' },
+      { id: 'e2', name: 'Squat' },
+    ]);
+    expect(asset?.url).toBe('http://storage.test/carlys-media/image/m1.png');
+  });
+
   it('suppression refusée tant qu’un exercice référence le média', async () => {
     const stubs = buildStubs();
     stubs.repository.findById.mockResolvedValue(row());

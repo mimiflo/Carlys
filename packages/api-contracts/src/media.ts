@@ -41,3 +41,16 @@ export const mediaAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type MediaAsset = z.infer<typeof mediaAssetSchema>;
+
+/**
+ * Le média vu de la BIBLIOTHÈQUE du back-office : le même, plus les
+ * exercices qui le montrent (photo ou maillage), supprimés compris — c'est
+ * ce qui explique qu'une suppression soit refusée.
+ */
+export const mediaUsageSchema = z.object({ id: z.string(), name: z.string() });
+export type MediaUsage = z.infer<typeof mediaUsageSchema>;
+
+export const adminMediaAssetSchema = mediaAssetSchema.extend({
+  usedBy: z.array(mediaUsageSchema),
+});
+export type AdminMediaAsset = z.infer<typeof adminMediaAssetSchema>;

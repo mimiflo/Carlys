@@ -1,5 +1,6 @@
 import {
   MEDIA_ALLOWED_MIME_TYPES,
+  type AdminMediaAsset,
   type MediaAsset as MediaAssetContract,
   type MediaKind,
 } from '@carlys/api-contracts';
@@ -93,9 +94,12 @@ export class MediaService {
     return this.present(created);
   }
 
-  async list(kind?: MediaKind): Promise<MediaAssetContract[]> {
+  async list(kind?: MediaKind): Promise<AdminMediaAsset[]> {
     const rows = await this.repository.list(kind);
-    return rows.map((row) => this.present(row));
+    return rows.map((row) => ({
+      ...this.present(row),
+      usedBy: [...row.exerciseImages, ...row.exerciseMeshes],
+    }));
   }
 
   /**

@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { type MediaAsset, type MediaKind } from '@prisma/client';
+
+/** Un média de la bibliothèque, avec les exercices qui le référencent. */
+export type MediaWithUsage = MediaAsset & {
+  exerciseImages: { id: string; name: string }[];
+  exerciseMeshes: { id: string; name: string }[];
+};
+
+const USAGE = { select: { id: true, name: true }, orderBy: { name: 'asc' } } as const;
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 /** Accès Prisma des médias — et de lui seul. */
@@ -11,9 +19,10 @@ export class MediaRepository {
     return this.prisma.mediaAsset.findFirst({ where: { id, deletedAt: null } });
   }
 
-  list(kind?: MediaKind): Promise<MediaAsset[]> {
+  list(kind?: MediaKind): Promise<MediaWithUsage[]> {
     return this.prisma.mediaAsset.findMany({
       where: { deletedAt: null, ...(kind === undefined ? {} : { kind }) },
+      include: { exerciseImages: USAGE, exerciseMeshes: USAGE },
       orderBy: { createdAt: 'desc' },
       take: 200,
     });

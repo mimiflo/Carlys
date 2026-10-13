@@ -1,4 +1,8 @@
-import { MEDIA_TRANSPORT_HARD_CAP_BYTES, type MediaAsset } from '@carlys/api-contracts';
+import {
+  MEDIA_TRANSPORT_HARD_CAP_BYTES,
+  type AdminMediaAsset,
+  type MediaAsset,
+} from '@carlys/api-contracts';
 import {
   BadRequestException,
   Body,
@@ -90,7 +94,7 @@ export class MediaController {
   @Get()
   @RequirePermissions('media:read')
   @ApiOperation({ summary: 'Médias déposés, du plus récent au plus ancien' })
-  list(@Query() query: ListMediaQuery): Promise<MediaAsset[]> {
+  list(@Query() query: ListMediaQuery): Promise<AdminMediaAsset[]> {
     return this.media.list(query.kind);
   }
 

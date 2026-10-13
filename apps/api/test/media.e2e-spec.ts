@@ -10,6 +10,7 @@ process.env.S3_SECRET_ACCESS_KEY ??= 'carlys-dev-secret';
 process.env.S3_PUBLIC_BASE_URL ??= 'http://localhost:9000/carlys-media';
 
 import {
+  type AdminMediaAsset,
   ADMIN_PERMISSIONS,
   type ApiSuccessEnvelope,
   type AuthResult,
@@ -239,6 +240,14 @@ describe('Médias (e2e)', () => {
       .put(`/api/v1/admin/exercises/${exerciseId}/mesh`)
       .send({ mediaId: imageId })
       .expect(400);
+  });
+
+  it('la bibliothèque dit quel exercice montre le média', async () => {
+    const assets = data<AdminMediaAsset[]>(
+      (await asAdmin(mediaToken).get('/api/v1/admin/media?kind=IMAGE').expect(200)).body,
+    );
+    const asset = assets.find((item) => item.id === imageId);
+    expect(asset?.usedBy.map((usage) => usage.id)).toEqual([exerciseId]);
   });
 
   it('suppression refusée tant qu’un exercice référence le média', async () => {
