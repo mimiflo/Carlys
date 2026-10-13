@@ -47,8 +47,9 @@ afterEach(() => {
 
 describe('firstAllowedRoute', () => {
   it('rend la première entrée que les permissions autorisent RÉELLEMENT', () => {
-    expect(firstAllowedRoute(SUPER_ADMIN)).toBe('/users');
-    expect(firstAllowedRoute(SUPPORT)).toBe('/users');
+    // La vue d'ensemble exige `user:read`, comme ses chiffres clés.
+    expect(firstAllowedRoute(SUPER_ADMIN)).toBe('/overview');
+    expect(firstAllowedRoute(SUPPORT)).toBe('/overview');
     expect(firstAllowedRoute(CONTENT_MANAGER)).toBe('/exercises');
     expect(firstAllowedRoute(['audit:read'])).toBe('/audit');
     expect(firstAllowedRoute(['community:moderate'])).toBe('/reports');
@@ -75,13 +76,14 @@ describe('AdminShell', () => {
     expect(screen.queryByRole('link', { name: 'Journal d’audit' })).not.toBeInTheDocument();
   });
 
-  it('montre les six entrées à qui a toutes les permissions', () => {
+  it('montre les sept entrées à qui a toutes les permissions', () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(SUPER_ADMIN);
 
     render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
 
     expect(liens()).toEqual([
+      'Vue d’ensemble',
       'Utilisateurs',
       'Signalements',
       'Exercices',
@@ -191,5 +193,20 @@ describe('adminPermissions', () => {
     // Un tableau qui mélange des valeurs : seules les chaînes survivent.
     window.sessionStorage.setItem('carlys-admin-permissions', '["user:read",7,null]');
     expect(adminPermissions.get()).toEqual(['user:read']);
+  });
+
+  it('le tiroir prend le focus à l’ouverture et le rend au menu avec Échap', () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(SUPER_ADMIN);
+    render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+
+    const menu = screen.getByRole('button', { name: 'Ouvrir le menu' });
+    fireEvent.click(menu);
+    expect(screen.getByRole('button', { name: 'Fermer le menu' })).toHaveFocus();
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(menu).toHaveFocus();
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
   });
 });

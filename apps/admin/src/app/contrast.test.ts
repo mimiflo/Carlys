@@ -107,6 +107,19 @@ function pairsOf(palette: Record<string, string>): [string, Rgb, Rgb][] {
     ['blanc sur bg-primary-dark (survol)', WHITE, v('--primary-dark')],
     ['blanc sur bg-danger-strong', WHITE, v('--danger-strong')],
     ['text-on-accent sur bg-accent (« Premium »)', v('--on-accent'), v('--accent')],
+    // Refonte d'octobre 2026 : en-têtes de tableau et segments sur surface-alt,
+    // libellés des badges en encre pleine sur leur fond teinté.
+    ['text-muted sur bg-surface-alt (en-têtes, segments)', v('--muted'), v('--surface-alt')],
+    ['texte courant sur bg-surface-alt', v('--foreground'), v('--surface-alt')],
+    ['badge : texte sur bg-success/12', v('--foreground'), over(v('--success'), 0.12, surface)],
+    ['badge : texte sur bg-warning/15', v('--foreground'), over(v('--warning'), 0.15, surface)],
+    ['badge : texte sur bg-danger/12', v('--foreground'), over(v('--danger'), 0.12, surface)],
+    ['badge : texte sur bg-primary/12', v('--foreground'), over(v('--primary'), 0.12, surface)],
+    [
+      'navigation active : text-primary-ink sur bg-primary/12',
+      v('--primary-ink'),
+      over(v('--primary'), 0.12, surface),
+    ],
   ];
 }
 

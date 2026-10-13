@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import { useFocusOnSwap } from './use-focus-on-swap';
+import { button } from './ui/button';
 
 /** Où en est l'exercice dans le catalogue, et donc où va le geste. */
 type CatalogState = 'present' | 'deleted';
@@ -48,7 +49,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
           type="button"
           disabled={mutate.isPending}
           onClick={() => mutate.mutate('present')}
-          className="rounded-lg px-3 py-1 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50"
+          className={button('ghost', 'sm')}
         >
           Restaurer
         </button>
@@ -68,7 +69,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
           requestFocus();
           setConfirming(true);
         }}
-        className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline"
+        className={button('danger-outline', 'sm')}
       >
         Supprimer
       </button>
@@ -90,7 +91,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
           type="button"
           disabled={mutate.isPending}
           onClick={() => mutate.mutate('deleted')}
-          className="rounded-lg bg-danger-strong px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+          className={button('danger', 'sm')}
         >
           Confirmer
         </button>
@@ -101,7 +102,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
             requestFocus();
             setConfirming(false);
           }}
-          className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
+          className={button('ghost', 'sm')}
         >
           Annuler
         </button>

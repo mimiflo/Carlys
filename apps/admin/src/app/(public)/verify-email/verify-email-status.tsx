@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { PublicNotice } from '@/components/public-page';
 import { isNetworkFailure, publicApi, publicFailureMessage } from '@/lib/public-api';
+import { button } from '@/components/ui/button';
 
 /**
  * Un 401 vient d'un jeton inconnu, déjà consommé ou expiré. Aucune surface ne
@@ -62,7 +63,7 @@ export function VerifyEmailStatus() {
           <button
             type="button"
             onClick={() => void verification.refetch()}
-            className="self-start rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink transition-colors hover:bg-primary hover:text-white"
+            className={`${button('secondary')} self-start`}
           >
             Réessayer
           </button>

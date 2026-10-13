@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import { useFocusOnSwap } from './use-focus-on-swap';
+import { button } from './ui/button';
 
 /** Cases à cocher d'un référentiel, avec le principal marqué d'une étoile. */
 function GroupChoice({
@@ -34,7 +35,7 @@ function GroupChoice({
         aria-pressed={isPrimary}
         title={`Faire de « ${name} » le groupe principal`}
         className={`rounded px-1.5 text-xs ${
-          isPrimary ? 'bg-primary/10 text-primary-ink' : 'text-muted hover:bg-black/5'
+          isPrimary ? 'bg-primary/10 text-primary-ink' : 'text-muted hover:bg-foreground/5'
         }`}
       >
         {isPrimary ? 'principal' : 'définir'}
@@ -116,7 +117,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
           requestFocus();
           setOpen(true);
         }}
-        className="rounded-lg px-2 py-1 text-left text-xs text-muted hover:bg-black/5"
+        className="rounded-lg px-2 py-1 text-left text-xs text-muted transition-colors duration-150 hover:bg-primary/5"
       >
         <span className="block font-medium text-foreground">
           {exercise.primaryMuscleGroupName ?? 'Sans groupe'}
@@ -138,7 +139,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
       tabIndex={-1}
       role="group"
       aria-label={`Catégories de ${exercise.name}`}
-      className="w-64 rounded-lg bg-surface p-3 ring-1 ring-black/10 focus-visible:outline-2 focus-visible:outline-primary"
+      className="animate-enter w-64 rounded-xl border border-border bg-surface p-3 shadow-lg focus-visible:outline-2 focus-visible:outline-primary"
     >
       {referentials.isPending && <p className="text-xs text-muted">Chargement…</p>}
       {referentials.isError && (
@@ -148,7 +149,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
       )}
       {referentials.data !== undefined && (
         <>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Muscles</p>
+          <p className="text-xs font-medium text-muted">Muscles</p>
           <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto text-sm">
             {referentials.data.muscleGroups.map((group) => (
               <GroupChoice
@@ -168,7 +169,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
             ))}
           </ul>
 
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">Matériel</p>
+          <p className="mt-3 text-xs font-medium text-muted">Matériel</p>
           <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-sm">
             {referentials.data.equipment.map((item) => (
               <li key={item.id}>
@@ -196,7 +197,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
           type="button"
           disabled={primary === '' || save.isPending}
           onClick={() => save.mutate()}
-          className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+          className={button('primary', 'sm')}
         >
           Enregistrer
         </button>
@@ -206,7 +207,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
             resetDraft();
             close();
           }}
-          className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
+          className={button('ghost', 'sm')}
         >
           Annuler
         </button>

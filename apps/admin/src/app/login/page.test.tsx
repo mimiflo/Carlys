@@ -140,7 +140,7 @@ describe('Page Connexion', () => {
   // Contre-épreuve : le même code doit toujours rendre `/users` à qui y a droit,
   // sans quoi la règle « première page autorisée » serait une redirection en dur
   // déplacée ailleurs.
-  it('envoie sur /users l’administrateur qui peut lire les comptes', async () => {
+  it('envoie sur la vue d’ensemble l’administrateur qui peut lire les comptes', async () => {
     vi.spyOn(adminApi, 'login').mockResolvedValue(DEFI_CODE);
     vi.spyOn(adminApi, 'verifyTotp').mockResolvedValue(resultat(['user:read', 'audit:read']));
 
@@ -149,7 +149,7 @@ describe('Page Connexion', () => {
     await saisitCode();
 
     await waitFor(() => {
-      expect(routerReplace).toHaveBeenCalledWith('/users');
+      expect(routerReplace).toHaveBeenCalledWith('/overview');
     });
   });
 

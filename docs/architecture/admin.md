@@ -74,6 +74,33 @@ sens : une valeur qui s'écarte de son jeton, **et** une couleur ajoutée à la
 main sans jeton en face. Ajouter une variable à `globals.css` suppose donc
 d'ajouter sa correspondance dans le test — c'est voulu.
 
+## Interface : coquille, composants et statuts (refonte d'octobre 2026)
+
+- **Coquille** (`components/admin-shell.tsx`, `admin-nav.tsx`) : barre
+  latérale fixe sur grand écran, tiroir (Échap, voile) sur téléphone ; en-tête
+  de page avec titre, description et actions. Les entrées suivent les
+  permissions, la première est la **vue d'ensemble** (`/overview`, exige
+  `user:read`) : chiffres clés, santé de la plateforme, signalements ouverts
+  (`community:moderate`) et dernières actions auditées (`audit:read`), chaque
+  bloc ne paraissant qu'à qui peut le lire.
+- **Composants** (`components/ui/`) : `button()` et `field` (des classes, pas
+  des composants, pour garder les balises natives), `Card`/`Section`,
+  `TableCard` + classes `thead`/`th`/`tr`/`td`, `Segmented` (de vrais boutons
+  radio masqués), `SearchForm`, `Stat` (chiffre qui monte en 600 ms),
+  `SkeletonRows`/`EmptyState`/`ErrorState`, `Avatar`, icônes SVG maison
+  (`icons.tsx`) — aucune dépendance ajoutée.
+- **Statuts** : jamais une constante d'API à l'écran. `lib/status-labels.ts`
+  traduit compte (Actif, Suspendu, Supprimé), plan, signalement, droit (Actif,
+  Inactif, Coupé), publication et santé en libellé + teinte ; `Badge` les
+  affiche, point de couleur ET mot (la couleur ne porte jamais seule le sens).
+  `lib/audit-labels.ts` fait de même pour les actions du journal.
+- **Mouvement** (`globals.css`) : entrée en fondu de 250 ms, squelettes,
+  halo des voyants « en service », pastille du segment qui glisse ; tout est
+  coupé sous `prefers-reduced-motion: reduce`.
+- **Captures** : `tool/screenshots/capture.mjs` rejoue toutes les pages, en
+  clair, en sombre et sur téléphone, contre une API simulée dont chaque
+  réponse est validée par les contrats (mode d'emploi en tête du script).
+
 ## Conventions (posées à l'Étape 1, appliquées ensuite)
 
 - **Pages d'administration en composants client.** Toutes les pages
@@ -125,7 +152,7 @@ surfaces d'attaque différents. Ce que l'Étape 7 a livré, et ce qui reste :
 Depuis l'Étape 7, `/login` authentifie réellement (`adminApi.login`, puis
 redirection vers la **première page que les permissions reçues autorisent**,
 `firstAllowedRoute`) et le tableau de bord porte les pages accueil,
-connexion, utilisateurs, fiche utilisateur, signalements, audit, exercices,
+connexion, vue d'ensemble, utilisateurs, fiche utilisateur, signalements, audit, exercices,
 catégories et médias. La
 protection reste à durcir côté serveur : elle passe aujourd'hui par le jeton
 d'administration porté par les appels, pas par un middleware de route.

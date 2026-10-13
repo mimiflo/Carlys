@@ -2,60 +2,46 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { adminToken } from '@/lib/admin-api';
+import { AdminNav, firstAllowedRoute } from './admin-nav';
+import { CarlysMark, CloseIcon, LogoutIcon, MenuIcon } from './ui/icons';
 import { useAdminPermissions } from './use-admin-permissions';
 
-/**
- * Chaque entrée porte la permission que sa page EXIGE — la même que le
- * contrôleur correspondant déclare par `@RequirePermissions`.
- *
- * La liste était inconditionnelle : un administrateur « content-manager »,
- * qui n'a ni `user:read` ni `audit:read` ni `community:moderate`, voyait les
- * six entrées, atterrissait sur « Utilisateurs » et n'y trouvait qu'un
- * message d'erreur lui conseillant de se reconnecter — ce qui n'y changeait
- * rien, puisque c'est son rôle et non sa session.
- *
- * Le contrôle d'ACCÈS, lui, reste entièrement côté serveur : masquer une
- * entrée n'interdit rien, cela évite seulement de proposer une porte qu'on
- * sait fermée.
- */
-const NAV_ITEMS = [
-  { href: '/users', label: 'Utilisateurs', permission: 'user:read' },
-  { href: '/reports', label: 'Signalements', permission: 'community:moderate' },
-  { href: '/exercises', label: 'Exercices', permission: 'exercise:read' },
-  { href: '/categories', label: 'Catégories', permission: 'exercise:read' },
-  { href: '/media', label: 'Médias', permission: 'media:read' },
-  { href: '/audit', label: 'Journal d’audit', permission: 'audit:read' },
-] as const;
+export { firstAllowedRoute } from './admin-nav';
 
 /**
- * La première page qu'un administrateur peut RÉELLEMENT ouvrir.
- *
- * `/users` était l'accueil pour tout le monde, y compris pour ceux qui n'ont
- * pas le droit de la lire.
- */
-export function firstAllowedRoute(permissions: readonly string[]): string {
-  return NAV_ITEMS.find((item) => permissions.includes(item.permission))?.href ?? '/users';
-}
-
-/**
- * Coquille des pages du back-office : barre de navigation, déconnexion et
- * garde de session côté client (redirection immédiate vers /login sans
- * jeton — le VRAI contrôle d'accès reste côté serveur, sur chaque requête).
+ * Coquille des pages du back-office : barre latérale (tiroir sur
+ * téléphone), en-tête de page, déconnexion et garde de session côté client
+ * (redirection immédiate vers /login sans jeton — le VRAI contrôle d'accès
+ * reste côté serveur, sur chaque requête).
  *
  * Le jeton est ÉCOUTÉ, pas seulement lu au montage : quand une requête
  * revient en 401 (jeton expiré, compte désactivé), le client l'oublie
  * (`adminToken.expire`), la coquille bascule et renvoie vers la connexion,
  * quelle que soit la page ouverte.
  */
-export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
+export function AdminShell({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   // Jeton lu hors rendu serveur (instantané serveur : null → rien n'est
   // affiché avant l'hydratation, puis redirection si non connecté).
   const token = useSyncExternalStore(adminToken.subscribe, adminToken.get, () => null);
   const permissions = useAdminPermissions();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const opened = useRef(false);
 
   useEffect(() => {
     // Le STOCKAGE décide, pas la valeur rendue. Au chargement d'une page
@@ -68,53 +54,122 @@ export function AdminShell({ title, children }: { title: string; children: React
     }
   }, [token, router]);
 
+  // Le focus suit le tiroir : il y entre à l'ouverture (le contenu dessous
+  // est `inert`), et revient au bouton du menu à la fermeture.
+  useEffect(() => {
+    if (drawerOpen) {
+      opened.current = true;
+      closeButton.current?.focus();
+    } else if (opened.current) {
+      menuButton.current?.focus();
+    }
+  }, [drawerOpen]);
+
+  // Le tiroir se referme avec Échap, comme toute surface posée par-dessus.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [drawerOpen]);
+
   if (token === null) {
     return null;
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-black/5 bg-surface">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-6 px-6 py-4">
-          {/* Le logo ramenait lui aussi à /users, quelles que soient les
-              permissions : il suit la même règle que la redirection après
-              connexion. */}
-          <Link
-            href={firstAllowedRoute(permissions)}
-            className="text-sm font-bold uppercase tracking-widest text-primary-ink"
-          >
-            Carlys Admin
-          </Link>
-          <nav aria-label="Navigation d’administration" className="flex gap-4">
-            {NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
-                className={`text-sm font-medium transition-colors hover:text-primary-ink ${
-                  pathname.startsWith(item.href) ? 'text-primary-ink' : 'text-muted'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+    <div className="flex min-h-full flex-1">
+      {drawerOpen && (
+        <div
+          aria-hidden
+          onClick={() => setDrawerOpen(false)}
+          className="animate-fade fixed inset-0 z-30 bg-foreground/30 lg:hidden"
+        />
+      )}
+      {/* Sur grand écran, ce cadre porte le fond et le filet sur TOUTE la
+          hauteur de la page ; la barre, elle, reste fixée à l’écran. */}
+      <div className="lg:w-60 lg:shrink-0 lg:border-r lg:border-border lg:bg-surface">
+        <aside
+          id="admin-sidebar"
+          className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-surface px-3 py-4 transition-[transform,visibility] duration-250 ease-out lg:w-60 lg:translate-x-0 lg:border-r-0 ${
+            drawerOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible'
+          }`}
+        >
+          <div className="flex items-center justify-between px-2">
+            {/* Le logo suit la même règle que la redirection après connexion :
+              la première page que les permissions ouvrent vraiment. */}
+            <Link
+              href={firstAllowedRoute(permissions)}
+              className="flex items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <CarlysMark />
+              <span className="leading-tight">
+                <span className="block text-sm font-semibold">Carlys</span>{' '}
+                <span className="block text-xs text-muted">Admin</span>
+              </span>
+            </Link>
+            <button
+              ref={closeButton}
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Fermer le menu"
+              className="rounded-lg p-1.5 text-muted hover:bg-foreground/5 lg:hidden"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          <div className="mt-8 flex-1 overflow-y-auto">
+            <p className="px-3 pb-2 text-xs font-medium text-muted">Gestion</p>
+            <AdminNav permissions={permissions} pathname={pathname} />
+          </div>
+
           <button
             type="button"
             onClick={() => {
               adminToken.clear();
               router.replace('/login');
             }}
-            className="ml-auto text-sm font-medium text-muted transition-colors hover:text-danger-ink"
+            className="flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-150 hover:bg-danger/8 hover:text-danger-ink"
           >
+            <LogoutIcon />
             Se déconnecter
           </button>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        <div className="mt-6">{children}</div>
-      </main>
+        </aside>
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col" inert={drawerOpen}>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur lg:hidden">
+          <button
+            ref={menuButton}
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Ouvrir le menu"
+            aria-expanded={drawerOpen}
+            aria-controls="admin-sidebar"
+            className="rounded-lg p-1.5 text-foreground hover:bg-foreground/5"
+          >
+            <MenuIcon />
+          </button>
+          <CarlysMark className="h-6 w-6" />
+          <span className="text-sm font-semibold">{title}</span>
+        </header>
+
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+          <div className="animate-enter flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-[1.75rem]">{title}</h1>
+              {description !== undefined && (
+                <p className="mt-1.5 max-w-2xl text-sm text-muted">{description}</p>
+              )}
+            </div>
+            {actions}
+          </div>
+          <div className="mt-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

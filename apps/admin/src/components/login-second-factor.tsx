@@ -4,6 +4,7 @@ import type { AdminLoginChallenge, AdminLoginResult } from '@carlys/api-contract
 import { useState, type FormEvent } from 'react';
 import { ApiError, adminApi } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';
+import { button, field } from './ui/button';
 
 function codeFailureMessage(cause: unknown): string {
   // 401 : code faux ou déjà servi, ou étape expirée ; 403 : 2FA gelée après
@@ -68,7 +69,7 @@ export function LoginSecondFactor({
           autoFocus
           value={code}
           onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-          className="rounded-lg border border-black/10 px-3 py-2 text-center font-mono text-lg tracking-[0.4em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          className={`${field} h-12 text-center font-mono text-xl tracking-[0.5em]`}
         />
       </label>
       {error !== null && (
@@ -79,15 +80,11 @@ export function LoginSecondFactor({
       <button
         type="submit"
         disabled={isSubmitting || code.length !== 6}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+        className={`${button('primary')} h-10`}
       >
         {isSubmitting ? 'Vérification…' : 'Valider'}
       </button>
-      <button
-        type="button"
-        onClick={onRestart}
-        className="text-sm font-medium text-primary-ink underline"
-      >
+      <button type="button" onClick={onRestart} className={button('ghost')}>
         Recommencer avec mon mot de passe
       </button>
     </form>

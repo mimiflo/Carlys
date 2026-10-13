@@ -3,6 +3,7 @@
 import { MANUAL_ENTITLEMENT_REASON_MAX, type ManagedPaidSubscription } from '@carlys/api-contracts';
 import { useId, useState, type FormEvent, type Ref } from 'react';
 import { PROVIDER_LABELS } from '@/lib/entitlement-labels';
+import { button, textarea } from './ui/button';
 
 /**
  * Couper l'accès premium : le geste le plus lourd de la fiche, donc une
@@ -41,7 +42,7 @@ export function PremiumCutForm({
     <form
       onSubmit={onSubmit}
       aria-label="Couper l’accès premium"
-      className="mt-4 flex flex-col gap-3 rounded-lg p-4 ring-1 ring-danger-strong/40"
+      className="animate-enter mt-4 flex flex-col gap-3 rounded-lg border border-danger/30 bg-danger/[0.04] p-4"
     >
       {paid !== null && (
         <p className="text-sm font-semibold text-danger-ink">
@@ -66,21 +67,13 @@ export function PremiumCutForm({
         maxLength={MANUAL_ENTITLEMENT_REASON_MAX}
         rows={3}
         required
-        className="rounded-lg border border-black/10 px-3 py-2 text-sm"
+        className={textarea}
       />
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={trimmed === '' || isPending}
-          className="rounded-lg bg-danger-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
+        <button type="submit" disabled={trimmed === '' || isPending} className={button('danger')}>
           {isPending ? 'Coupure…' : 'Confirmer la coupure'}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg px-4 py-2 text-sm text-muted hover:bg-black/5"
-        >
+        <button type="button" onClick={onCancel} className={button('ghost')}>
           Annuler
         </button>
       </div>

@@ -8,6 +8,40 @@ import { firstAllowedRoute } from '@/components/admin-shell';
 import { LoginSecondFactor } from '@/components/login-second-factor';
 import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';
+import { button, field } from '@/components/ui/button';
+import { ArrowLeftIcon, CarlysMark } from '@/components/ui/icons';
+
+/** Où en est la connexion : le mot de passe, puis le code de l'appli. */
+function LoginSteps({ step }: { step: 1 | 2 }) {
+  return (
+    <ol
+      className="mt-3 flex items-center gap-2 text-xs text-muted"
+      aria-label="Étapes de connexion"
+    >
+      {(['Mot de passe', 'Code de vérification'] as const).map((label, index) => {
+        const current = index + 1 === step;
+        return (
+          <li
+            key={label}
+            aria-current={current ? 'step' : undefined}
+            className="flex items-center gap-2"
+          >
+            {index > 0 && <span aria-hidden className="h-px w-4 bg-border" />}
+            <span
+              aria-hidden
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[0.6875rem] font-semibold transition-colors duration-250 ${
+                index + 1 <= step ? 'bg-primary text-white' : 'bg-surface-alt text-muted'
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span className={current ? 'font-medium text-foreground' : undefined}>{label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 /**
  * La phrase d'une connexion refusée, décidée par sa CAUSE.
@@ -74,9 +108,11 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex flex-1 items-center justify-center p-8">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-sm ring-1 ring-black/5">
-        <h1 className="text-2xl font-bold tracking-tight">Connexion administrateur</h1>
+    <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+      <div className="animate-enter w-full max-w-sm rounded-xl border border-border bg-surface p-8 shadow-sm">
+        <CarlysMark />
+        <h1 className="mt-6 text-xl font-semibold tracking-tight">Connexion administrateur</h1>
+        <LoginSteps step={challenge === null ? 1 : 2} />
         {expired && (
           <p role="status" className="mt-2 text-sm text-muted">
             Ta session a expiré : reconnecte-toi pour continuer.
@@ -99,7 +135,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className={`${field} text-base`}
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -112,7 +148,7 @@ export default function LoginPage() {
                 minLength={8}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className={`${field} text-base`}
               />
             </label>
             {error !== null && (
@@ -123,16 +159,20 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || email === '' || password.length < 8}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+              className={`${button('primary')} mt-1 h-10`}
             >
               {isSubmitting ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
         )}
-        <Link href="/" className="mt-6 inline-block text-sm font-medium text-primary-ink underline">
-          ← Retour à l’accueil
-        </Link>
       </div>
+      <Link
+        href="/"
+        className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:text-foreground"
+      >
+        <ArrowLeftIcon width={14} height={14} />
+        Retour à l’accueil
+      </Link>
     </main>
   );
 }

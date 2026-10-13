@@ -25,6 +25,10 @@
   --danger-strong: #dc2626;
   --danger-ink: #dc2626;
   --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --surface-alt: #f4f4f6;
+  --border: #e4e4ea;
 }
 
 @theme inline {
@@ -41,6 +45,10 @@
   --color-danger-strong: var(--danger-strong);
   --color-danger-ink: var(--danger-ink);
   --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
 }
 
 /* Les surfaces sombres sont teintées de VIOLET, pas neutres (voir
@@ -54,6 +62,8 @@
     --muted: #a5a5b5;
     --primary-ink: #c88bff;
     --danger-ink: #ef4444;
+    --surface-alt: #1c1529;
+    --border: rgba(255, 255, 255, 0.14);
   }
 }
 
@@ -67,4 +77,80 @@ body {
    recherche. Hors de toute couche, cette règle l'emporte sur le preflight. */
 ::placeholder {
   color: var(--muted);
+}
+
+/* ── Mouvement ─────────────────────────────────────────────────────────────
+   Durées et courbe de tokens.json (motion.duration fast 150, normal 250,
+   slow 400). Une seule entrée par élément, sans cascade : une liste qui
+   arrive en escalier ralentit la lecture d'un back-office. */
+@keyframes carlys-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes carlys-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes carlys-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes carlys-halo {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 0.6;
+  }
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+    opacity: 0;
+  }
+}
+
+@utility animate-enter {
+  animation: carlys-enter 250ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@utility animate-fade {
+  animation: carlys-fade 150ms ease-out both;
+}
+
+@utility animate-skeleton {
+  animation: carlys-pulse 1500ms ease-in-out infinite;
+}
+
+/* Le halo d'un voyant « en service » : il dit que la valeur est VIVANTE
+   (relue toutes les 15 s), pas seulement verte. */
+@utility animate-halo {
+  animation: carlys-halo 1800ms ease-out infinite;
+}
+
+/* Réduction des animations demandée par le système : plus de translation ni
+   de boucle, les changements d'état restent instantanés. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Chiffres alignés partout où l'on compare des nombres (compteurs, dates). */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

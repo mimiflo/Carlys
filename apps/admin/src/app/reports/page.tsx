@@ -6,6 +6,10 @@ import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { CommunityReportRow } from '@/components/community-report-row';
 import { COMMUNITY_REPORTS_QUERY_KEY } from '@/components/community-report-status-cell';
+import { button } from '@/components/ui/button';
+import { Segmented } from '@/components/ui/segmented';
+import { ErrorState, SkeletonRows } from '@/components/ui/states';
+import { TableCard, th, thead } from '@/components/ui/table';
 import { useAdminPermissions } from '@/components/use-admin-permissions';
 import { adminApi } from '@/lib/admin-api';
 import { unavailableMessage } from '@/lib/load-error';
@@ -36,7 +40,7 @@ const EMPTY_MESSAGES: Record<StatusFilter, string> = {
 export default function ReportsPage() {
   const [filter, setFilter] = useState<StatusFilter>('OPEN');
   const status = filter === 'ALL' ? undefined : filter;
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
       queryKey: [...COMMUNITY_REPORTS_QUERY_KEY, filter],
       queryFn: ({ pageParam }) => adminApi.listCommunityReports(status, pageParam),
@@ -51,49 +55,44 @@ export default function ReportsPage() {
   const canSuspend = useAdminPermissions().includes('user:update');
 
   return (
-    <AdminShell title="Signalements">
-      <p className="text-sm text-muted">
-        Résoudre un signalement le classe sans prévenir personne.{' '}
-        {canSuspend
-          ? 'Pour agir sur un compte (suspension), ouvre sa fiche depuis le tableau.'
-          : 'Suspendre un compte demande la permission user:update, que ton rôle n’a pas : transmets le lien de sa fiche à un super-administrateur.'}
-      </p>
+    <AdminShell
+      title="Signalements"
+      description={
+        <>
+          Résoudre un signalement le classe sans prévenir personne.{' '}
+          {canSuspend
+            ? 'Pour agir sur un compte (suspension), ouvre sa fiche depuis le tableau.'
+            : 'Suspendre un compte demande la permission user:update, que ton rôle n’a pas : transmets le lien de sa fiche à un super-administrateur.'}
+        </>
+      }
+    >
+      <div className="max-w-sm">
+        <Segmented
+          legend="Statut"
+          name="status"
+          options={STATUS_FILTERS}
+          value={filter}
+          onChange={setFilter}
+        />
+      </div>
 
-      <fieldset className="mt-6">
-        <legend className="text-sm font-medium">Statut</legend>
-        <div className="mt-2 flex flex-wrap gap-4">
-          {STATUS_FILTERS.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="status"
-                value={option.value}
-                checked={filter === option.value}
-                onChange={() => setFilter(option.value)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {error !== null && (
-        <p className="mt-6 text-sm text-danger-ink" role="alert">
-          {unavailableMessage(error, 'Signalements indisponibles', 'community:moderate')}
-        </p>
-      )}
-      {data !== undefined && (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-black/5 text-xs uppercase tracking-wide text-muted">
+      <div className="mt-6">
+        {isPending && <SkeletonRows />}
+        {error !== null && (
+          <ErrorState onRetry={() => void refetch()}>
+            {unavailableMessage(error, 'Signalements indisponibles', 'community:moderate')}
+          </ErrorState>
+        )}
+        {data !== undefined && (
+          <TableCard>
+            <thead className={thead}>
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Motif</th>
-                <th className="px-4 py-3">Auteur</th>
-                <th className="px-4 py-3">Personne visée</th>
-                <th className="px-4 py-3">Contenu visé</th>
-                <th className="px-4 py-3">Traitement</th>
+                <th className={th}>Date</th>
+                <th className={th}>Motif</th>
+                <th className={th}>Auteur</th>
+                <th className={th}>Personne visée</th>
+                <th className={th}>Contenu visé</th>
+                <th className={th}>Traitement</th>
               </tr>
             </thead>
             <tbody>
@@ -102,25 +101,25 @@ export default function ReportsPage() {
               ))}
               {reports.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-muted">
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted">
                     {EMPTY_MESSAGES[filter]}
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
-      )}
-      {hasNextPage && (
-        <button
-          type="button"
-          disabled={isFetchingNextPage}
-          onClick={() => void fetchNextPage()}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
-        >
-          Charger la suite
-        </button>
-      )}
+          </TableCard>
+        )}
+        {hasNextPage && (
+          <button
+            type="button"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+            className={`${button('secondary')} mt-4`}
+          >
+            Charger la suite
+          </button>
+        )}
+      </div>
     </AdminShell>
   );
 }

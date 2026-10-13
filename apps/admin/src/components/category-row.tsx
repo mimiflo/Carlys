@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import { useFocusOnSwap } from './use-focus-on-swap';
+import { button, field } from './ui/button';
+import { td, tr } from './ui/table';
 
 /** Une catégorie : renommage, rang d'affichage, suppression. */
 export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
@@ -52,15 +54,15 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
   const removable = group.primaryExercisesCount === 0;
 
   return (
-    <tr className="border-b border-black/5 last:border-0">
-      <td className="px-4 py-3">
+    <tr className={tr}>
+      <td className={td}>
         {editing ? (
           <input
             ref={focusTarget}
             value={name}
             onChange={(event) => setName(event.target.value)}
             aria-label={`Nom de ${group.name}`}
-            className="rounded-lg border border-black/10 px-2 py-1 text-sm"
+            className={`${field} h-8 max-w-56`}
           />
         ) : (
           <>
@@ -69,7 +71,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
           </>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         {editing ? (
           <input
             type="number"
@@ -78,16 +80,16 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
             value={sortOrder}
             onChange={(event) => setSortOrder(event.target.value)}
             aria-label={`Rang de ${group.name}`}
-            className="w-20 rounded-lg border border-black/10 px-2 py-1 text-sm"
+            className={`${field} h-8 w-20`}
           />
         ) : (
           group.sortOrder
         )}
       </td>
-      <td className="px-4 py-3 text-muted">
+      <td className={`${td} tabular text-muted`}>
         {group.exercisesCount} dont {group.primaryExercisesCount} en principal
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         <div className="flex flex-wrap gap-2">
           {editing ? (
             <>
@@ -95,7 +97,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 type="button"
                 disabled={save.isPending}
                 onClick={() => save.mutate()}
-                className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                className={button('primary', 'sm')}
               >
                 Enregistrer
               </button>
@@ -106,7 +108,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                   requestFocus();
                   setEditing(false);
                 }}
-                className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
+                className={button('ghost', 'sm')}
               >
                 Annuler
               </button>
@@ -120,7 +122,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 requestFocus();
                 setEditing(true);
               }}
-              className="rounded-lg px-3 py-1 text-xs text-primary-ink hover:bg-primary/10"
+              className={button('ghost', 'sm')}
             >
               Modifier
             </button>
@@ -134,7 +136,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 ? undefined
                 : 'Cette catégorie est le groupe principal d’exercices : reclasse-les d’abord.'
             }
-            className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline disabled:opacity-40 disabled:hover:no-underline"
+            className={button('danger-outline', 'sm')}
           >
             Supprimer
           </button>

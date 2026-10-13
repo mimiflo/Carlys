@@ -5,6 +5,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { CategoryRow } from '@/components/category-row';
+import { button, field } from '@/components/ui/button';
+import { ErrorState, SkeletonRows } from '@/components/ui/states';
+import { TableCard, th, thead } from '@/components/ui/table';
 import { adminApi } from '@/lib/admin-api';
 import { unavailableMessage } from '@/lib/load-error';
 
@@ -35,36 +38,34 @@ function CreateForm() {
 
   return (
     <form
-      className="mt-6 flex flex-wrap items-end gap-3"
+      className="animate-enter flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-5"
       onSubmit={(event) => {
         event.preventDefault();
         create.mutate();
       }}
     >
       <label className="text-sm">
-        <span className="block text-xs uppercase tracking-wide text-muted">Nom</span>
+        <span className="block text-xs font-medium text-muted">Nom</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Trapèzes"
-          className="mt-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
+          className={`${field} mt-1.5 w-56`}
         />
       </label>
       <label className="text-sm">
-        <span className="block text-xs uppercase tracking-wide text-muted">
-          Slug (proposé d’après le nom)
-        </span>
+        <span className="block text-xs font-medium text-muted">Slug (proposé d’après le nom)</span>
         <input
           value={slug}
           onChange={(event) => setSlug(event.target.value)}
           placeholder={slugify(name) || 'trapezes'}
-          className="mt-1 rounded-lg border border-black/10 px-3 py-2 text-sm"
+          className={`${field} mt-1.5 w-56 font-mono`}
         />
       </label>
       <button
         type="submit"
         disabled={name.trim().length < 2 || create.isPending}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        className={button('primary')}
       >
         Ajouter
       </button>
@@ -92,29 +93,27 @@ export default function CategoriesPage() {
   });
 
   return (
-    <AdminShell title="Catégories">
-      <p className="text-sm text-muted">
-        Les groupes musculaires structurent la bibliothèque de l’application : elle se parcourt par
-        catégorie. Une vignette manquante s’affiche sans image, jamais avec celle d’un autre muscle.
-      </p>
-
+    <AdminShell
+      title="Catégories"
+      description="Les groupes musculaires structurent la bibliothèque de l’application : elle se parcourt par catégorie. Une vignette manquante s’affiche sans image, jamais avec celle d’un autre muscle."
+    >
       <CreateForm />
 
-      {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {error !== null && (
-        <p className="mt-6 text-sm text-danger-ink" role="alert">
-          {unavailableMessage(error, 'Catégories indisponibles', 'exercise:read')}
-        </p>
-      )}
-      {data !== undefined && (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-black/5 text-xs uppercase tracking-wide text-muted">
+      <div className="mt-6">
+        {isPending && <SkeletonRows />}
+        {error !== null && (
+          <ErrorState>
+            {unavailableMessage(error, 'Catégories indisponibles', 'exercise:read')}
+          </ErrorState>
+        )}
+        {data !== undefined && (
+          <TableCard>
+            <thead className={thead}>
               <tr>
-                <th className="px-4 py-3">Catégorie</th>
-                <th className="px-4 py-3">Rang</th>
-                <th className="px-4 py-3">Exercices</th>
-                <th className="px-4 py-3">Actions</th>
+                <th className={th}>Catégorie</th>
+                <th className={th}>Rang</th>
+                <th className={th}>Exercices</th>
+                <th className={th}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -123,15 +122,15 @@ export default function CategoriesPage() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-sm text-muted">
                     Aucune catégorie.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
-      )}
+          </TableCard>
+        )}
+      </div>
     </AdminShell>
   );
 }

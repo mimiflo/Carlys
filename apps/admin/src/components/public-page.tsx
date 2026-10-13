@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 /** Surface des pages publiques : même carte que le reste de l'application. */
 export function PublicCard({ children }: { children: ReactNode }) {
   return (
-    <article className="rounded-2xl bg-surface p-8 shadow-sm ring-1 ring-black/5">
+    <article className="animate-enter rounded-xl border border-border bg-surface p-6 sm:p-10">
       {children}
     </article>
   );
@@ -13,7 +13,7 @@ export function PublicCard({ children }: { children: ReactNode }) {
 export function PublicPage({ title, children }: { title: string; children: ReactNode }) {
   return (
     <PublicCard>
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
       <div className="mt-6 flex flex-col gap-4 text-base leading-relaxed">{children}</div>
     </PublicCard>
   );
@@ -33,14 +33,23 @@ export function PublicNotice({
 }) {
   if (tone === 'error') {
     return (
-      <p role="alert" className="text-sm font-medium text-danger-ink">
+      <p
+        role="alert"
+        className="rounded-lg border border-danger/30 bg-danger/6 px-4 py-3 text-sm font-medium text-danger-ink"
+      >
         {children}
       </p>
     );
   }
   return (
-    <p role="status" className="flex items-start gap-2 font-medium">
-      <span aria-hidden className="text-success">
+    <p
+      role="status"
+      className="flex items-start gap-3 rounded-lg bg-success/10 px-4 py-3 font-medium"
+    >
+      <span
+        aria-hidden
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/25 text-xs text-foreground"
+      >
         ✓
       </span>
       <span>{children}</span>

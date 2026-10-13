@@ -1,109 +1,101 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import type { AdminAuditLog } from '@carlys/api-contracts';
 import { AdminShell } from '@/components/admin-shell';
+import { AUDIT_ACTOR_LABELS, auditActorId } from '@/components/audit-actor';
+import { Badge } from '@/components/ui/badge';
+import { button } from '@/components/ui/button';
+import { TableCard, td, th, thead, tr } from '@/components/ui/table';
+import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { adminApi } from '@/lib/admin-api';
+import { auditActionLabel, auditActionTone } from '@/lib/audit-labels';
 import { unavailableMessage } from '@/lib/load-error';
 
-/** Le type d'acteur, en français : « ADMIN » n'est pas un mot de la langue. */
-const ACTOR_LABELS: Record<AdminAuditLog['actorType'], string> = {
-  ADMIN: 'Administration',
-  USER: 'Membre',
-  SYSTEM: 'Système',
-};
-
-/**
- * L'identifiant de CELUI qui a agi, selon son type.
- *
- * Le journal porte deux colonnes d'acteur — `adminUserId` et `userId` —
- * parce qu'elles pointent vers deux tables. Un seul des deux est renseigné
- * à la fois ; c'est `actorType` qui dit lequel regarder.
- */
-function actorId(log: AdminAuditLog): string | null {
-  return log.actorType === 'ADMIN' ? log.adminUserId : log.userId;
-}
-
-/**
- * Journal d'audit append-only, du plus récent au plus ancien.
- *
- * Les pages déjà chargées vivent dans le CACHE de la requête, pas dans un
- * état local. Elles étaient empilées par un `setState` appelé DEPUIS le
- * `queryFn` : en revenant sur la page dans les trente secondes de fraîcheur,
- * React Query servait le cache sans rejouer la fonction, l'état local
- * repartait vide, et le journal affichait « Aucun événement. » — sur une base
- * pleine, et sans le moindre moyen de s'en sortir autrement qu'en attendant.
- */
 export default function AuditPage() {
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
-      queryKey: ['admin', 'audit'],
+      queryKey: ['admin', 'audit', 'pages'],
       queryFn: ({ pageParam }) => adminApi.auditLogs(pageParam),
       initialPageParam: undefined as string | undefined,
-      // `undefined` = fin du journal ; c'est ce qui éteint le bouton.
       getNextPageParam: (last) =>
         last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
     });
   const logs = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <AdminShell title="Journal d’audit">
+    <AdminShell
+      title="Journal d’audit"
+      description="Chaque geste sensible, qui l’a fait et d’où. Le journal ne s’efface pas."
+    >
       {error !== null && (
-        <p className="text-sm text-danger-ink" role="alert">
+        <ErrorState onRetry={() => void refetch()}>
           {unavailableMessage(error, 'Journal indisponible', 'audit:read')}
-        </p>
+        </ErrorState>
       )}
-      <div className="overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-black/5 text-xs uppercase tracking-wide text-muted">
+      {isPending && <SkeletonRows />}
+      {data !== undefined && (
+        <TableCard>
+          <thead className={thead}>
             <tr>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Acteur</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Ressource</th>
-              <th className="px-4 py-3">Origine</th>
+              <th className={th}>Date</th>
+              <th className={th}>Acteur</th>
+              <th className={th}>Action</th>
+              <th className={th}>Ressource</th>
+              <th className={th}>Origine</th>
             </tr>
           </thead>
           <tbody>
             {logs.map((log) => (
-              <tr key={log.id} className="border-b border-black/5 last:border-0">
-                <td className="whitespace-nowrap px-4 py-3">
+              <tr key={log.id} className={tr}>
+                <td className={`${td} tabular whitespace-nowrap text-muted`}>
                   {new Date(log.createdAt).toLocaleString('fr-FR')}
                 </td>
-                <td className="px-4 py-3">
-                  <span className="block">{ACTOR_LABELS[log.actorType]}</span>
+                <td className={td}>
+                  <span className="block font-medium">{AUDIT_ACTOR_LABELS[log.actorType]}</span>
                   {/* L'IDENTITÉ, pas seulement le type. La colonne ne rendait
                       que « ADMIN » ou « USER » — alors que le contrat porte
                       `adminUserId` et `userId` depuis toujours, et que
                       docs/architecture/admin.md promet « qui a fait quoi ».
                       Sur les quatre, la page en rendait deux. */}
-                  <span className="block font-mono text-xs text-muted">{actorId(log) ?? '—'}</span>
+                  <span className="block font-mono text-xs text-muted">
+                    {auditActorId(log) ?? '—'}
+                  </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs">{log.action}</td>
-                <td className="px-4 py-3 font-mono text-xs">
+                <td className={td}>
+                  <Badge
+                    status={{
+                      label: auditActionLabel(log.action),
+                      tone: auditActionTone(log.action),
+                    }}
+                  />
+                  {auditActionLabel(log.action) !== log.action && (
+                    <span className="mt-1 block font-mono text-xs text-muted">{log.action}</span>
+                  )}
+                </td>
+                <td className={`${td} font-mono text-xs`}>
                   {log.resourceType === null ? '—' : `${log.resourceType}:${log.resourceId ?? ''}`}
                 </td>
                 {/* L'adresse d'où l'action est partie : c'est le « d'où »
                     d'une enquête, et le journal la porte déjà. */}
-                <td className="px-4 py-3 font-mono text-xs">{log.ipAddress ?? '—'}</td>
+                <td className={`${td} font-mono text-xs`}>{log.ipAddress ?? '—'}</td>
               </tr>
             ))}
-            {!isPending && logs.length === 0 && (
+            {logs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted">
                   Aucun événement.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </TableCard>
+      )}
       {hasNextPage && (
         <button
           type="button"
           onClick={() => void fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
+          className={`${button('secondary')} mt-4`}
         >
           {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
         </button>

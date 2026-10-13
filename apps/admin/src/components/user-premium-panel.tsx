@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { ApiError, adminApi } from '@/lib/admin-api';
 import { paidSubscriptionSentence, premiumStateSentence } from '@/lib/entitlement-labels';
 import { PremiumCutForm } from './premium-cut-form';
+import { button } from './ui/button';
 import { useAdminPermissions } from './use-admin-permissions';
 import { useFocusOnSwap } from './use-focus-on-swap';
 
@@ -30,8 +31,7 @@ function premiumStateKey(premium: readonly ManagedEntitlement[]): string {
 const MIXED_SENTENCE =
   'Les droits du plan premium n’ont pas tous le même état : le détail est dans la liste des droits. Chaque geste ci-dessous s’applique à tous.';
 
-const SECONDARY_BUTTON =
-  'rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50';
+const SECONDARY_BUTTON = button('secondary');
 
 /**
  * L'accès premium d'un membre : d'où il vient, et trois gestes DISTINCTS.
@@ -131,9 +131,14 @@ export function PremiumPanel({ user }: { user: ManagedUserDetail }) {
   return (
     <section
       aria-labelledby="premium-title"
-      className="rounded-xl bg-surface p-6 ring-1 ring-black/5"
+      className="animate-enter rounded-xl border border-border bg-surface p-6"
     >
-      <h2 id="premium-title" ref={outcomeTarget} tabIndex={-1} className="text-lg font-semibold">
+      <h2
+        id="premium-title"
+        ref={outcomeTarget}
+        tabIndex={-1}
+        className="text-base font-semibold outline-none"
+      >
         Accès premium : {state}
       </h2>
       <p className="mt-2 text-sm">{uniform ? premiumStateSentence(first) : MIXED_SENTENCE}</p>
@@ -192,7 +197,7 @@ export function PremiumPanel({ user }: { user: ManagedUserDetail }) {
                 requestOpenerFocus();
                 setCutting(true);
               }}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-danger-ink ring-1 ring-danger-strong/40 hover:bg-black/5 disabled:opacity-50"
+              className={button('danger-outline')}
             >
               Couper l’accès (bloque aussi les achats)
             </button>

@@ -66,7 +66,9 @@ function declarationsOf(body: string): [string, string][] {
   const declarations: [string, string][] = [];
   for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
     if (name !== undefined && value !== undefined) {
-      declarations.push([name, value.trim().toLowerCase()]);
+      // Les espaces ne comptent pas : Prettier écrit `rgba(255, 255, 255, 0.14)`,
+      // tokens.json `rgba(255,255,255,0.14)`.
+      declarations.push([name, value.replace(/\s+/g, '').toLowerCase()]);
     }
   }
   return declarations;
@@ -159,6 +161,12 @@ const LIGHT: Record<string, string> = {
   // L'encre rouge : danger ne tient que 3,61:1 sur le fond clair.
   '--danger-ink': 'color.semantic.dangerStrong',
   '--success': 'color.semantic.success',
+  // Points des badges « Suspendu », « Ouvert », « Dégradé » et « Info » :
+  // des aplats sous un libellé en encre pleine, jamais une encre.
+  '--warning': 'color.semantic.warning',
+  '--info': 'color.semantic.info',
+  '--surface-alt': 'color.surface.lightSurfaceAlt',
+  '--border': 'color.neutral.200',
 };
 
 const DARK: Record<string, string> = {
@@ -170,6 +178,8 @@ const DARK: Record<string, string> = {
   // en tient 7,63. Le rouge d'erreur, lui, y tient tel quel (4,96).
   '--primary-ink': 'color.brand.primaryLight',
   '--danger-ink': 'color.semantic.danger',
+  '--surface-alt': 'color.surface.darkSurfaceAlt',
+  '--border': 'color.darkRoles.borderStrong',
 };
 
 describe.each([

@@ -4,30 +4,23 @@ import Link from 'next/link';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { button } from '@/components/ui/button';
+import { SearchForm } from '@/components/ui/search-form';
+import { ErrorState, SkeletonRows } from '@/components/ui/states';
+import { TableCard, td, th, thead, tr } from '@/components/ui/table';
 import { adminApi } from '@/lib/admin-api';
 import { unavailableMessage } from '@/lib/load-error';
+import { planStatus, userStatus } from '@/lib/status-labels';
 
-function OverviewCards() {
+/** Le total, en tête de page : la liste, elle, arrive par pages de vingt. */
+function Totals() {
   const { data } = useQuery({ queryKey: ['admin', 'overview'], queryFn: adminApi.overview });
   if (data === undefined) {
-    return null;
+    return 'Les comptes de l’application mobile.';
   }
-  const cards = [
-    { label: 'Comptes', value: data.usersCount },
-    { label: 'Membres premium', value: data.premiumUsersCount },
-    { label: 'Séances terminées', value: data.completedWorkoutSessionsCount },
-    { label: 'Exercices publiés', value: data.publishedExercisesCount },
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      {cards.map((card) => (
-        <div key={card.label} className="rounded-xl bg-surface p-4 ring-1 ring-black/5">
-          <p className="text-2xl font-bold">{card.value}</p>
-          <p className="text-sm text-muted">{card.label}</p>
-        </div>
-      ))}
-    </div>
-  );
+  return `${data.usersCount.toLocaleString('fr-FR')} comptes, dont ${data.premiumUsersCount.toLocaleString('fr-FR')} premium.`;
 }
 
 /**
@@ -36,13 +29,11 @@ function OverviewCards() {
  * La liste ne demandait QUE la première page et n'offrait aucune suite : la
  * route sert vingt comptes par défaut et porte un curseur depuis toujours, si
  * bien que le vingt-et-unième était inatteignable — sans le moindre signe que
- * la liste était coupée. La carte « Comptes » juste au-dessus annonçait
- * pourtant le vrai total.
+ * la liste était coupée. Le total annoncé en tête est le vrai.
  */
 export default function UsersPage() {
-  const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
       queryKey: ['admin', 'users', submitted],
       queryFn: ({ pageParam }) =>
@@ -54,89 +45,83 @@ export default function UsersPage() {
   const users = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <AdminShell title="Utilisateurs">
-      <OverviewCards />
-      <form
-        className="mt-6 flex gap-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSubmitted(search.trim());
-        }}
-      >
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Rechercher par e-mail ou nom…"
-          aria-label="Rechercher un utilisateur"
-          className="w-full max-w-sm rounded-lg border border-black/10 px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
-        >
-          Rechercher
-        </button>
-      </form>
+    <AdminShell title="Utilisateurs" description={<Totals />}>
+      <SearchForm
+        label="Rechercher un utilisateur"
+        placeholder="Rechercher par e-mail ou nom…"
+        onSubmit={setSubmitted}
+      />
 
-      {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {error !== null && (
-        <p className="mt-6 text-sm text-danger-ink" role="alert">
-          {unavailableMessage(error, 'Liste indisponible', 'user:read')}
-        </p>
-      )}
-      {data !== undefined && (
-        <div className="mt-6 overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-black/5 text-xs uppercase tracking-wide text-muted">
+      <div className="mt-6">
+        {isPending && <SkeletonRows />}
+        {error !== null && (
+          <ErrorState onRetry={() => void refetch()}>
+            {unavailableMessage(error, 'Liste indisponible', 'user:read')}
+          </ErrorState>
+        )}
+        {data !== undefined && (
+          <TableCard>
+            <thead className={thead}>
               <tr>
-                <th className="px-4 py-3">E-mail</th>
-                <th className="px-4 py-3">Nom</th>
-                <th className="px-4 py-3">Statut</th>
-                <th className="px-4 py-3">Plan</th>
-                <th className="px-4 py-3">Inscription</th>
+                <th className={th}>Utilisateur</th>
+                <th className={th}>Statut</th>
+                <th className={th}>Plan</th>
+                <th className={th}>Inscription</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b border-black/5 last:border-0">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/users/${user.id}`}
-                      className="font-medium text-primary-ink underline"
-                    >
-                      {user.email}
-                    </Link>
+                <tr key={user.id} className={tr}>
+                  <td className={td}>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={user.displayName} email={user.email} />
+                      <div className="min-w-0">
+                        {user.displayName === null ? (
+                          <span className="block text-muted">Sans nom</span>
+                        ) : (
+                          <span className="block truncate font-medium">{user.displayName}</span>
+                        )}
+                        <Link
+                          href={`/users/${user.id}`}
+                          className="block truncate text-xs text-primary-ink hover:underline"
+                        >
+                          {user.email}
+                        </Link>
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3">{user.displayName ?? '—'}</td>
-                  <td className="px-4 py-3">{user.status}</td>
-                  <td className="px-4 py-3">{user.isPremium ? 'Premium' : 'Gratuit'}</td>
-                  <td className="px-4 py-3">
+                  <td className={td}>
+                    <Badge status={userStatus(user.status)} />
+                  </td>
+                  <td className={td}>
+                    <Badge status={planStatus(user.isPremium)} />
+                  </td>
+                  <td className={`${td} tabular text-muted`}>
                     {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                  <td colSpan={4} className="px-4 py-12 text-center text-sm text-muted">
                     Aucun utilisateur trouvé.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
-      )}
-      {hasNextPage && (
-        <button
-          type="button"
-          onClick={() => void fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
-        >
-          {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-        </button>
-      )}
+          </TableCard>
+        )}
+        {hasNextPage && (
+          <button
+            type="button"
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className={`${button('secondary')} mt-4`}
+          >
+            {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
+          </button>
+        )}
+      </div>
     </AdminShell>
   );
 }

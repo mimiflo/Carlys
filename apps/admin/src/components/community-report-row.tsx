@@ -7,6 +7,7 @@ import {
 } from '@carlys/api-contracts';
 import Link from 'next/link';
 import { CommunityReportStatusCell } from './community-report-status-cell';
+import { td, tr } from './ui/table';
 
 /** Motifs tels que le membre les a choisis, dans les mots de l'écran mobile. */
 const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, string> = {
@@ -33,7 +34,7 @@ function PartyLink({ party }: { party: AdminCommunityReportParty }) {
     <Link
       href={`/users/${party.id}`}
       title={party.email}
-      className="font-medium text-primary-ink underline"
+      className="font-medium text-primary-ink hover:underline"
     >
       {party.displayName ?? party.email}
     </Link>
@@ -53,7 +54,7 @@ function ChallengeTarget({ title, message }: { title: string; message: string | 
       {message === null ? (
         <span className="text-xs text-muted">(sans message)</span>
       ) : (
-        <q className="italic">{message}</q>
+        <q className="border-l-2 border-primary/40 pl-2 text-sm italic">{message}</q>
       )}
     </span>
   );
@@ -90,7 +91,9 @@ function TargetCell({ report }: { report: AdminCommunityReport }) {
   }
   return (
     <span className="flex flex-col gap-1">
-      <q className="italic">{report.encouragementMessage}</q>
+      <q className="border-l-2 border-primary/40 pl-2 text-sm italic">
+        {report.encouragementMessage}
+      </q>
       {report.encouragementId === null && (
         <span className="text-xs text-muted">Message retiré depuis</span>
       )}
@@ -103,26 +106,29 @@ export function CommunityReportRow({ report }: { report: AdminCommunityReport })
     // Un signalement résolu le DIT dans sa colonne d'état ; il ne pâlit
     // pas : à 60 % d'opacité, ses textes secondaires tombaient sous 3:1 et
     // le bouton « Rouvrir », toujours actif, avec eux.
-    <tr className="border-b border-black/5 last:border-0">
-      <td className="whitespace-nowrap px-4 py-3">
-        {new Date(report.createdAt).toLocaleString('fr-FR')}
+    <tr className={tr}>
+      <td className={`${td} tabular whitespace-nowrap text-muted`}>
+        {new Date(report.createdAt).toLocaleString('fr-FR', {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        })}
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         <span className="font-medium">{COMMUNITY_REPORT_REASON_LABELS[report.reason]}</span>
         {report.details !== null && (
           <span className="block max-w-xs text-xs text-muted">{report.details}</span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         <PartyLink party={report.reporter} />
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         <PartyLink party={report.reportedUser} />
       </td>
-      <td className="max-w-xs px-4 py-3">
+      <td className={`${td} max-w-xs`}>
         <TargetCell report={report} />
       </td>
-      <td className="px-4 py-3">
+      <td className={td}>
         <CommunityReportStatusCell report={report} />
       </td>
     </tr>

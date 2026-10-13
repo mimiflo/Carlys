@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import type { InlineNode, MarkdownBlock } from '@/lib/markdown';
 
 const HEADING_CLASSES: Record<1 | 2 | 3, string> = {
-  1: 'text-2xl font-bold tracking-tight',
-  2: 'mt-8 text-lg font-semibold',
+  1: 'text-2xl font-semibold tracking-tight sm:text-3xl',
+  2: 'mt-8 border-t border-border pt-8 text-lg font-semibold',
   3: 'mt-6 text-base font-semibold',
 };
 
@@ -20,7 +20,11 @@ function renderInline(nodes: readonly InlineNode[]): ReactNode[] {
         );
       case 'link':
         return (
-          <a key={index} href={node.href} className="text-primary-ink underline">
+          <a
+            key={index}
+            href={node.href}
+            className="text-primary-ink underline-offset-2 hover:underline"
+          >
             {renderInline(node.children)}
           </a>
         );

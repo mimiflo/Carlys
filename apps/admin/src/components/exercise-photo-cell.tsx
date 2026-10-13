@@ -4,6 +4,8 @@ import { MEDIA_ALLOWED_MIME_TYPES, type AdminExerciseSummary } from '@carlys/api
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { adminApi, ApiError } from '@/lib/admin-api';
+import { button } from './ui/button';
+import { ImageIcon } from './ui/icons';
 
 const ACCEPT = MEDIA_ALLOWED_MIME_TYPES.IMAGE.join(',');
 
@@ -67,7 +69,12 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
   return (
     <div className="flex items-center gap-3">
       {exercise.image === null ? (
-        <div aria-hidden className="h-12 w-12 shrink-0 rounded-lg bg-black/5 ring-1 ring-black/5" />
+        <div
+          aria-hidden
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border"
+        >
+          <ImageIcon />
+        </div>
       ) : (
         // Différée : une page du catalogue en montre cinquante, chacune en
         // taille d'origine derrière sa vignette de 48 px.
@@ -77,7 +84,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
           alt={`Photo de ${exercise.name}`}
           loading="lazy"
           decoding="async"
-          className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-black/5"
+          className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-border"
         />
       )}
 
@@ -107,7 +114,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="rounded-lg border border-black/10 px-2.5 py-1 text-xs font-semibold transition-colors hover:border-primary hover:text-primary-ink disabled:opacity-50"
+            className={button('secondary', 'sm')}
           >
             {upload.isPending
               ? 'Dépôt…'

@@ -7,9 +7,9 @@ import { useState, type FormEvent } from 'react';
 import * as z from 'zod/mini';
 import { PublicNotice } from '@/components/public-page';
 import { publicApi, publicFailureMessage } from '@/lib/public-api';
+import { button, field } from '@/components/ui/button';
 
-const INPUT_CLASSES =
-  'rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
+const INPUT_CLASSES = `${field} text-base`;
 
 /**
  * Mêmes bornes que le DTO de l'API : refuser ici ce que le serveur refuserait.
@@ -129,11 +129,7 @@ export function ResetPasswordForm() {
         />
       </label>
       {error !== null && <PublicNotice tone="error">{error}</PublicNotice>}
-      <button
-        type="submit"
-        disabled={reset.isPending}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
-      >
+      <button type="submit" disabled={reset.isPending} className={`${button('primary')} h-10`}>
         {reset.isPending ? 'Enregistrement…' : 'Changer mon mot de passe'}
       </button>
     </form>

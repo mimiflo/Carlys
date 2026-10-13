@@ -3,6 +3,9 @@
 import { type AdminCommunityReport } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError, adminApi } from '@/lib/admin-api';
+import { reportStatus } from '@/lib/status-labels';
+import { Badge } from './ui/badge';
+import { button } from './ui/button';
 
 /** Préfixe des requêtes de la page : une résolution invalide TOUS les filtres. */
 export const COMMUNITY_REPORTS_QUERY_KEY = ['admin', 'community-reports'] as const;
@@ -24,7 +27,8 @@ export function CommunityReportStatusCell({ report }: { report: AdminCommunityRe
   });
 
   return (
-    <div>
+    <div className="flex flex-col items-start gap-2">
+      <Badge status={reportStatus(report.status)} />
       {report.resolvedAt !== null && !isOpen && (
         <span className="block text-xs text-muted">
           Résolu le {new Date(report.resolvedAt).toLocaleDateString('fr-FR')}
@@ -34,11 +38,7 @@ export function CommunityReportStatusCell({ report }: { report: AdminCommunityRe
         type="button"
         disabled={mutate.isPending}
         onClick={() => mutate.mutate()}
-        className={
-          isOpen
-            ? 'rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark disabled:opacity-50'
-            : 'rounded-lg px-3 py-1 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50'
-        }
+        className={isOpen ? button('primary', 'sm') : button('ghost', 'sm')}
       >
         {isOpen ? 'Résoudre' : 'Rouvrir'}
       </button>

@@ -3,6 +3,8 @@
 import { healthReportSchema, type HealthReport } from '@carlys/api-contracts';
 import { useQuery } from '@tanstack/react-query';
 import { publicEnv } from '@/lib/env';
+import { DEGRADED, healthStatus, type StatusLabel } from '@/lib/status-labels';
+import { Badge } from './ui/badge';
 
 async function fetchHealth(): Promise<HealthReport> {
   const response = await fetch(`${publicEnv.apiBaseUrl}/health`, {
@@ -22,17 +24,28 @@ const COMPONENT_LABELS: Record<string, string> = {
   redis: 'Cache (Redis)',
 };
 
-function StatusDot({ up }: { up: boolean }) {
+/** « 3 j 4 h », « 5 h 12 min », « 40 min » : la durée lisible d'un coup d'œil. */
+export function uptimeLabel(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days} j ${hours % 24} h`;
+  if (hours > 0) return `${hours} h ${minutes % 60} min`;
+  return `${minutes} min`;
+}
+
+function Row({ label, status }: { label: string; status: StatusLabel }) {
   return (
-    <span
-      aria-hidden
-      className={`inline-block h-2.5 w-2.5 rounded-full ${up ? 'bg-success' : 'bg-danger'}`}
-    />
+    <li className="flex items-center justify-between gap-4 py-3">
+      <span className="text-sm font-medium">{label}</span>
+      <Badge status={status} live={status.tone === 'success'} />
+    </li>
   );
 }
 
 /**
- * L'état de la plateforme, sur la page d'accueil PUBLIQUE (aucune connexion).
+ * L'état de la plateforme, sur la page d'accueil PUBLIQUE (aucune connexion)
+ * et dans la vue d'ensemble.
  *
  * Elle affichait `component.error` mot pour mot : pour une base arrêtée,
  * « Can't reach database server at `10.20.30.40:5432` », soit l'hôte et le
@@ -43,39 +56,66 @@ function StatusDot({ up }: { up: boolean }) {
  * et `docker compose up -d` ».
  */
 export function ApiStatus() {
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, dataUpdatedAt } = useQuery({
     queryKey: ['api-health'],
     queryFn: fetchHealth,
     refetchInterval: 15_000,
   });
 
   if (isPending) {
-    return <p className="text-sm text-muted">Vérification de l’API…</p>;
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        <span className="sr-only">Vérification de l’API…</span>
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="animate-skeleton h-8 rounded-lg bg-foreground/6" />
+        ))}
+      </div>
+    );
   }
 
   if (isError || data === undefined) {
     return (
-      <p className="text-sm text-danger-ink" role="status">
-        API injoignable pour le moment : l’état de la plateforme n’a pas pu être lu.
-      </p>
+      <div role="status" className="flex items-center justify-between gap-4">
+        <p className="text-sm text-danger-ink">
+          API injoignable pour le moment : l’état de la plateforme n’a pas pu être lu.
+        </p>
+        <Badge status={healthStatus(false)} />
+      </div>
     );
   }
 
+  const allUp =
+    data.status === 'ok' && Object.values(data.components).every((c) => c.status === 'up');
+
+  // La zone annoncée aux lecteurs d'écran ne porte que la SYNTHÈSE : elle ne
+  // change que si un statut change. L'heure de vérification, relue toutes
+  // les 15 s, reste hors de la zone — sinon tout le bloc serait relu à
+  // chaque fois.
   return (
-    <ul className="flex flex-col gap-2 text-sm" role="status">
-      <li className="flex items-center gap-2">
-        <StatusDot up={data.status === 'ok'} />
-        <span>API : {data.status === 'ok' ? 'opérationnelle' : 'dégradée'}</span>
-      </li>
-      {Object.entries(data.components).map(([name, component]) => (
-        <li key={name} className="flex items-center gap-2">
-          <StatusDot up={component.status === 'up'} />
-          <span>
-            {COMPONENT_LABELS[name] ?? name} :{' '}
-            {component.status === 'up' ? 'en service' : 'indisponible'}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div>
+      <div
+        className={`flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 ${
+          allUp ? 'bg-success/10' : 'bg-warning/15'
+        }`}
+      >
+        <p role="status" className="text-sm font-semibold">
+          {allUp ? 'Tous les services sont opérationnels' : 'Service dégradé'}
+        </p>
+        <p className="tabular text-xs text-muted">
+          En ligne depuis {uptimeLabel(data.uptimeSeconds)} · vérifié à{' '}
+          {new Date(dataUpdatedAt).toLocaleTimeString('fr-FR')}
+        </p>
+      </div>
+      <ul className="mt-2 divide-y divide-border">
+        <Row label="API" status={data.status === 'ok' ? healthStatus(true) : DEGRADED} />
+        {Object.entries(data.components).map(([name, component]) => (
+          <Row
+            key={name}
+            label={COMPONENT_LABELS[name] ?? name}
+            status={healthStatus(component.status === 'up')}
+          />
+        ))}
+      </ul>
+    </div>
   );
 }

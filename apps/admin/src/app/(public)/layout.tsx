@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { CarlysMark } from '@/components/ui/icons';
 
 /**
  * Mise en page des pages PUBLIQUES du produit : liens reçus par e-mail,
@@ -10,23 +11,24 @@ import type { ReactNode } from 'react';
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-black/5 bg-surface">
+      <header className="border-b border-border bg-surface/80 backdrop-blur">
         <div className="mx-auto w-full max-w-2xl px-6 py-4">
-          <span className="text-sm font-bold uppercase tracking-widest text-primary-ink">
+          <span className="flex items-center gap-2.5 text-sm font-semibold">
+            <CarlysMark />
             Carlys
           </span>
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">{children}</main>
-      <footer className="border-t border-black/5">
+      <footer className="border-t border-border">
         <nav
           aria-label="Informations légales"
           className="mx-auto flex w-full max-w-2xl flex-wrap gap-4 px-6 py-4 text-sm text-muted"
         >
-          <Link href="/privacy" className="transition-colors hover:text-primary-ink">
+          <Link href="/privacy" className="transition-colors duration-150 hover:text-primary-ink">
             Politique de confidentialité
           </Link>
-          <Link href="/terms" className="transition-colors hover:text-primary-ink">
+          <Link href="/terms" className="transition-colors duration-150 hover:text-primary-ink">
             Conditions d’utilisation
           </Link>
         </nav>
