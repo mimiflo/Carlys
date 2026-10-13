@@ -42,7 +42,9 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/unbound-method': 'off',
     },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts']),
+  // `tool/` : outillage de poste (harnais de captures Playwright), du JS non typé
+  // qui ne part dans aucun build ; les règles typées n'y rendaient que du bruit.
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts', 'tool/**']),
 ]);
 
 export default eslintConfig;
