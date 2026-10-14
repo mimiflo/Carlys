@@ -91,12 +91,19 @@ class TemplateEditorController
   void addSet(int exerciseIndex) {
     final exercise = _draft.exercises[exerciseIndex];
     final last = exercise.sets.isEmpty ? null : exercise.sets.last;
+    // Une série chronométrée se recopie en durée et distance, sans les
+    // répétitions par défaut qui feraient d'une planche « 8 répétitions ».
+    final timed =
+        last?.targetDurationSeconds != null ||
+        last?.targetDistanceMeters != null;
     _replaceSets(exerciseIndex, [
       ...exercise.sets,
       DraftSet(
         kind: last?.kind ?? SetKind.normal,
-        targetReps: last?.targetReps ?? defaultReps,
+        targetReps: timed ? last?.targetReps : last?.targetReps ?? defaultReps,
         targetWeightKg: last?.targetWeightKg,
+        targetDurationSeconds: last?.targetDurationSeconds,
+        targetDistanceMeters: last?.targetDistanceMeters,
         restSeconds: last?.restSeconds ?? defaultRestSeconds,
       ),
     ]);

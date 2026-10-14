@@ -228,6 +228,8 @@ class AddSetInput {
       kind: kind,
       reps: reps,
       weightKg: weightKg,
+      durationSeconds: durationSeconds,
+      distanceMeters: distanceMeters,
       restSeconds: restSeconds,
       rpe: rpe,
       plannedReps: plannedReps ?? this.plannedReps,

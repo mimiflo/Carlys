@@ -21,6 +21,8 @@ class DraftSet {
     this.kind = SetKind.normal,
     this.targetReps,
     this.targetWeightKg,
+    this.targetDurationSeconds,
+    this.targetDistanceMeters,
     this.restSeconds,
   });
 
@@ -33,6 +35,11 @@ class DraftSet {
   /// `null` = aucune charge prévue (poids du corps, ou charge décidée le jour
   /// même) — c'est un cas légitime, pas une saisie incomplète.
   final double? targetWeightKg;
+
+  /// Cibles chronométrées (gainage, course) : l'éditeur ne les saisit pas,
+  /// mais un modèle rouvert puis enregistré ne doit pas les effacer.
+  final int? targetDurationSeconds;
+  final int? targetDistanceMeters;
   final int? restSeconds;
 
   DraftSet copyWith({
@@ -48,6 +55,8 @@ class DraftSet {
       targetWeightKg: targetWeightKg == null
           ? this.targetWeightKg
           : targetWeightKg(),
+      targetDurationSeconds: targetDurationSeconds,
+      targetDistanceMeters: targetDistanceMeters,
       restSeconds: restSeconds ?? this.restSeconds,
     );
   }
@@ -57,6 +66,8 @@ class DraftSet {
     kind: kind,
     targetReps: targetReps,
     targetWeightKg: targetWeightKg,
+    targetDurationSeconds: targetDurationSeconds,
+    targetDistanceMeters: targetDistanceMeters,
     restSeconds: restSeconds,
   );
 }
@@ -138,6 +149,8 @@ class TemplateDraft {
                   kind: set.kind,
                   targetReps: set.targetReps,
                   targetWeightKg: set.targetWeightKg,
+                  targetDurationSeconds: set.targetDurationSeconds,
+                  targetDistanceMeters: set.targetDistanceMeters,
                   restSeconds: set.restSeconds,
                 ),
             ],

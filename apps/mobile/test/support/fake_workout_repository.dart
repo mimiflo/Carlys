@@ -157,6 +157,8 @@ class FakeWorkoutRepository implements WorkoutRepository {
                 syncState: set.syncState,
                 reps: reps ?? set.reps,
                 weightKg: weightKg ?? set.weightKg,
+                durationSeconds: set.durationSeconds,
+                distanceMeters: set.distanceMeters,
                 restSeconds: set.restSeconds,
                 rpe: set.rpe,
                 plannedReps: set.plannedReps,
