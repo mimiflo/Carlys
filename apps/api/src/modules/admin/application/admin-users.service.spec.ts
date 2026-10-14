@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
+import { type AppConfigService } from '../../../config/app-config.service';
 import { type AuditService } from '../../audit/audit.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { type AdminUsersRepository } from '../infrastructure/admin-users.repository';
@@ -48,12 +49,14 @@ function buildStubs(): Stubs {
 
 const auditStub = { record: jest.fn() };
 const entitlementsStub = { resyncFromSubscriptions: jest.fn().mockResolvedValue(undefined) };
+const configStub = { accountPurgeDays: 30 };
 
 function buildService(stubs: Stubs): AdminUsersService {
   return new AdminUsersService(
     stubs as unknown as AdminUsersRepository,
     auditStub as unknown as AuditService,
     entitlementsStub as unknown as EntitlementsService,
+    configStub as unknown as AppConfigService,
   );
 }
 
@@ -133,6 +136,41 @@ describe('AdminUsersService', () => {
     expect(auditStub.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'admin.entitlement_granted', actorType: 'ADMIN' }),
     );
+  });
+
+  it('la liste masque les comptes supprimés, sauf demande explicite', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.listUsers(undefined, 20);
+    expect(stubs.listUsers).toHaveBeenLastCalledWith(undefined, 20, undefined, false);
+
+    await service.listUsers('membre', 20, undefined, true);
+    expect(stubs.listUsers).toHaveBeenLastCalledWith('membre', 20, undefined, true);
+  });
+
+  it('la fiche d’un compte supprimé dit quand il sera effacé pour de bon', async () => {
+    const stubs = buildStubs();
+    stubs.findUserById.mockResolvedValue(
+      userRow({ status: UserStatus.DELETED, deletedAt: new Date('2026-10-12T08:00:00Z') }),
+    );
+    const detail = await buildService(stubs).userDetail('user-1');
+    // Le délai de la purge (30 jours, celui qu'annonce la politique).
+    expect(detail.purgeAfter).toBe('2026-11-11T08:00:00.000Z');
+
+    // Et c'est bien le réglage du serveur qui fait foi, pas un 30 écrit ici.
+    configStub.accountPurgeDays = 7;
+    try {
+      const court = await buildService(stubs).userDetail('user-1');
+      expect(court.purgeAfter).toBe('2026-10-19T08:00:00.000Z');
+    } finally {
+      configStub.accountPurgeDays = 30;
+    }
+  });
+
+  it('un compte vivant n’a pas de date d’effacement', async () => {
+    const detail = await buildService(buildStubs()).userDetail('user-1');
+    expect(detail.purgeAfter).toBeNull();
   });
 
   it('utilisateur inconnu → 404', async () => {

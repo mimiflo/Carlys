@@ -33,11 +33,14 @@ function Totals() {
  */
 export default function UsersPage() {
   const [submitted, setSubmitted] = useState('');
+  // Les comptes supprimés n'attendent plus que la purge : hors de la liste,
+  // sauf à les demander.
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
-      queryKey: ['admin', 'users', submitted],
+      queryKey: ['admin', 'users', submitted, includeDeleted],
       queryFn: ({ pageParam }) =>
-        adminApi.listUsers(submitted === '' ? undefined : submitted, pageParam),
+        adminApi.listUsers(submitted === '' ? undefined : submitted, pageParam, includeDeleted),
       initialPageParam: undefined as string | undefined,
       getNextPageParam: (last) =>
         last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
@@ -50,7 +53,17 @@ export default function UsersPage() {
         label="Rechercher un utilisateur"
         placeholder="Rechercher par e-mail ou nom…"
         onSubmit={setSubmitted}
-      />
+      >
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={includeDeleted}
+            onChange={(event) => setIncludeDeleted(event.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Voir les supprimés
+        </label>
+      </SearchForm>
 
       <div className="mt-6">
         {isPending && <SkeletonRows />}

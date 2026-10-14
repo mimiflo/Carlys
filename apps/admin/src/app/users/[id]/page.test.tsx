@@ -373,6 +373,36 @@ describe('Fiche utilisateur', () => {
     expect(screen.getByText(/Ouvert par l’abonnement/)).toBeInTheDocument();
   });
 
+  it('un compte supprimé dit à partir de quand il est effacé pour de bon', async () => {
+    connecte(ADMIN_PERMISSIONS);
+    vi.spyOn(adminApi, 'userDetail').mockResolvedValue({
+      ...USER,
+      status: 'DELETED',
+      email: 'supprime+11111111-2222-4333-8444-555555555555@carlys.invalid',
+      displayName: null,
+      purgeAfter: '2026-11-11T08:00:00.000Z',
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/identité est déjà effacée/)).toBeInTheDocument();
+    expect(screen.getByText('11/11/2026')).toBeInTheDocument();
+    // Plus d'identité ni de geste : le titre le dit, droits et actions partent.
+    expect(screen.getByRole('heading', { name: 'Compte supprimé' })).toBeInTheDocument();
+    expect(screen.queryByText('Droits')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Suspendre/ })).not.toBeInTheDocument();
+  });
+
+  it('un compte vivant ne parle pas d’effacement', async () => {
+    connecte(ADMIN_PERMISSIONS);
+    vi.spyOn(adminApi, 'userDetail').mockResolvedValue({ ...USER, purgeAfter: null });
+
+    renderPage();
+
+    await screen.findByText('membre@carlys.test');
+    expect(screen.queryByText(/identité est déjà effacée/)).not.toBeInTheDocument();
+  });
+
   it('montre un refus de permission (403) comme tel, pas comme une panne', async () => {
     connecte();
     vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);

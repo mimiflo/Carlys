@@ -68,6 +68,14 @@ export class SearchManagedUsersDto {
   @IsUUID()
   cursor?: string;
 
+  @ApiPropertyOptional({
+    description: 'Inclure les comptes supprimés (en attente de purge) ; absents par défaut',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  includeDeleted: boolean = false;
+
   /**
    * Ni `@IsOptional` ni `@Type` : absent, il garde sa valeur par défaut ;
    * présent, c'est un entier, jamais `"20"`, `true` ou `null` (un corps JSON

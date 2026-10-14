@@ -88,9 +88,13 @@ const ROUTES = [
     'POST',
     /^\/api\/v1\/admin\/users\/search$/,
     (_m, req, o) => {
-      const terme = (req.postDataJSON()?.search ?? '').toLowerCase();
-      const trouves = D.USERS.filter((u) =>
-        `${u.email} ${u.displayName ?? ''}`.toLowerCase().includes(terme),
+      const corps = req.postDataJSON() ?? {};
+      const terme = (corps.search ?? '').toLowerCase();
+      // Comme l'API : les comptes supprimés n'y sont que sur demande.
+      const trouves = D.USERS.filter(
+        (u) =>
+          (corps.includeDeleted === true || u.status !== 'DELETED') &&
+          `${u.email} ${u.displayName ?? ''}`.toLowerCase().includes(terme),
       );
       return page(o.usersEmpty ? [] : trouves, C.managedUserSummarySchema);
     },
@@ -195,6 +199,7 @@ async function repondre(route, options) {
 // ── Pages à photographier ─────────────────────────────────────────────────
 
 const FICHE = D.USERS[0].id;
+const SUPPRIME = D.USERS.find((u) => u.status === 'DELETED').id;
 /** `attendu` : un mot d'erreur que la variante DOIT montrer (il n'est alors pas une faute). */
 const PAGES = [
   { nom: 'home', chemin: '/' },
@@ -204,6 +209,7 @@ const PAGES = [
   { nom: 'users', chemin: '/users', auth: true },
   { nom: 'users-empty', chemin: '/users', auth: true, options: { usersEmpty: true } },
   { nom: 'user-detail', chemin: `/users/${FICHE}`, auth: true },
+  { nom: 'user-deleted', chemin: `/users/${SUPPRIME}`, auth: true },
   { nom: 'reports', chemin: '/reports', auth: true },
   { nom: 'exercises', chemin: '/exercises', auth: true },
   { nom: 'categories', chemin: '/categories', auth: true },

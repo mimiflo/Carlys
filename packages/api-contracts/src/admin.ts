@@ -124,6 +124,12 @@ export const managedUserDetailSchema = managedUserSummarySchema.extend({
   entitlements: z.array(managedEntitlementSchema),
   /** Facultatif pour un client antérieur ; le serveur le renseigne toujours. */
   paidSubscription: managedPaidSubscriptionSchema.nullable().optional(),
+  /**
+   * Compte SUPPRIMÉ : à partir de quand la purge quotidienne l'efface pour de
+   * bon (suppression + `CARLYS_ACCOUNT_PURGE_DAYS`, 30 jours par défaut).
+   * `null` pour un compte vivant ; facultatif pour un serveur antérieur.
+   */
+  purgeAfter: z.string().nullable().optional(),
 });
 export type ManagedUserDetail = z.infer<typeof managedUserDetailSchema>;
 

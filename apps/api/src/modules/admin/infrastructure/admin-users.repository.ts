@@ -36,17 +36,24 @@ export class AdminUsersRepository {
     private readonly sessionCache: SessionCache,
   ) {}
 
-  listUsers(search: string | undefined, limit: number, cursor?: string): Promise<ManagedUserRow[]> {
+  listUsers(
+    search: string | undefined,
+    limit: number,
+    cursor: string | undefined,
+    includeDeleted: boolean,
+  ): Promise<ManagedUserRow[]> {
     return this.prisma.user.findMany({
-      where:
-        search === undefined
+      where: {
+        ...(includeDeleted ? {} : { status: { not: UserStatus.DELETED } }),
+        ...(search === undefined
           ? {}
           : {
               OR: [
                 { email: { contains: search, mode: 'insensitive' } },
                 { profile: { displayName: { contains: search, mode: 'insensitive' } } },
               ],
-            },
+            }),
+      },
       include: { profile: true, entitlements: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,

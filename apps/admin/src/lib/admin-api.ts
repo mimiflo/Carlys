@@ -114,12 +114,17 @@ export const adminApi = {
   /**
    * Terme et curseur partent dans le CORPS d'un POST, jamais dans l'URL : la
    * recherche porte souvent une adresse e-mail, et une URL finit dans les
-   * journaux d'accès et l'historique du navigateur.
+   * journaux d'accès et l'historique du navigateur. Les comptes SUPPRIMÉS
+   * (en attente de purge) n'y sont que sur demande.
    */
-  async listUsers(search?: string, cursor?: string): Promise<Page<ManagedUserSummary>> {
+  async listUsers(
+    search?: string,
+    cursor?: string,
+    includeDeleted = false,
+  ): Promise<Page<ManagedUserSummary>> {
     const body = await call('/admin/users/search', {
       method: 'POST',
-      body: JSON.stringify({ search, cursor }),
+      body: JSON.stringify({ search, cursor, ...(includeDeleted ? { includeDeleted } : {}) }),
     });
     return parsePage(body, managedUserSummarySchema);
   },

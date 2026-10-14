@@ -61,6 +61,7 @@ export class AdminUsersController {
       dto.search === '' ? undefined : dto.search,
       dto.limit,
       dto.cursor,
+      dto.includeDeleted,
     );
     return enveloped(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore }, request);
   }

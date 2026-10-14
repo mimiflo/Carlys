@@ -257,6 +257,45 @@ describe('Administration (e2e)', () => {
     }
   });
 
+  it('un compte supprimé quitte la liste, reste joignable sur demande, et dit sa date d’effacement', async () => {
+    const deletedAt = new Date('2026-10-12T08:00:00Z');
+    const deleted = await prisma.user.create({
+      data: {
+        email: `e2e-admin-supprime-${randomUUID()}@carlys.invalid`,
+        friendCode: `supprime:${randomUUID()}`,
+        status: 'DELETED',
+        deletedAt,
+      },
+    });
+    try {
+      const search = async (body: Record<string, unknown>) =>
+        data<ManagedUserSummary[]>(
+          (await asAdmin(superToken).post('/api/v1/admin/users/search').send(body).expect(200))
+            .body,
+        ).map((user) => user.id);
+
+      // Par défaut : absent — il n'attend plus que la purge.
+      expect(await search({ search: 'e2e-admin-supprime-' })).not.toContain(deleted.id);
+      // Sur demande : présent.
+      expect(await search({ search: 'e2e-admin-supprime-', includeDeleted: true })).toContain(
+        deleted.id,
+      );
+      // Un booléen, pas une chaîne.
+      await asAdmin(superToken)
+        .post('/api/v1/admin/users/search')
+        .send({ includeDeleted: 'oui' })
+        .expect(400);
+
+      // La fiche dit quand la purge l'efface (30 jours par défaut).
+      const detail = data<ManagedUserDetail>(
+        (await asAdmin(superToken).get(`/api/v1/admin/users/${deleted.id}`).expect(200)).body,
+      );
+      expect(detail.purgeAfter).toBe('2026-11-11T08:00:00.000Z');
+    } finally {
+      await prisma.user.delete({ where: { id: deleted.id } });
+    }
+  });
+
   it('synthèse plateforme : compteurs cohérents', async () => {
     const overview = data<AdminOverview>(
       (await asAdmin(superToken).get('/api/v1/admin/overview').expect(200)).body,

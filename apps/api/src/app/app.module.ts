@@ -59,12 +59,13 @@ import { WorkoutTemplatesModule } from '../modules/workout_templates/workout-tem
             ],
             remove: true,
           },
-          transport: config.isDevelopment
-            ? {
-                target: 'pino-pretty',
-                options: { singleLine: true, translateTime: 'SYS:HH:MM:ss' },
-              }
-            : undefined,
+          transport:
+            config.nodeEnv === 'development'
+              ? {
+                  target: 'pino-pretty',
+                  options: { singleLine: true, translateTime: 'SYS:HH:MM:ss' },
+                }
+              : undefined,
         },
       }),
     }),

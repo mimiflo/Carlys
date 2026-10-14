@@ -3,6 +3,7 @@ import {
   DEFAULT_RATE_LIMIT_TTL_SECONDS,
 } from '@carlys/shared-config';
 import { z } from 'zod';
+import { DEFAULT_PURGE_DELAY_DAYS } from '../modules/users/application/deleted-accounts-purge';
 import { coachGatewayEnv } from './coach-gateway.env';
 import { DEVELOPMENT_DEFAULTS, refineProductionEnv } from './env.production';
 
@@ -102,6 +103,17 @@ export const envSchema = z
     JWT_ISSUER: z.string().min(1).default('carlys-api'),
     JWT_AUDIENCE: z.string().min(1).default('carlys-mobile'),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    // Délai avant l'effacement définitif d'un compte supprimé, par défaut celui
+    // qu'annonce la politique de confidentialité (une seule source :
+    // `DEFAULT_PURGE_DELAY_DAYS`). La purge quotidienne le lit
+    // (`_purge_comptes.sh`) ; l'API aussi, pour que le back-office affiche la
+    // vraie date d'effacement.
+    CARLYS_ACCOUNT_PURGE_DAYS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(3650)
+      .default(DEFAULT_PURGE_DELAY_DAYS),
 
     AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
     AUTH_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),

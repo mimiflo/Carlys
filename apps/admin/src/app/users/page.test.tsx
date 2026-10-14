@@ -69,7 +69,7 @@ describe('Page Utilisateurs', () => {
     expect(await screen.findByText('membre3@carlys.test')).toBeInTheDocument();
     // Les comptes déjà lus restent à l'écran : on empile, on ne remplace pas.
     expect(screen.getByText('membre1@carlys.test')).toBeInTheDocument();
-    expect(listUsers).toHaveBeenLastCalledWith(undefined, 'curseur-page-2');
+    expect(listUsers).toHaveBeenLastCalledWith(undefined, 'curseur-page-2', false);
   });
 
   it('sans suite, aucun bouton ne le laisse croire', async () => {
@@ -99,7 +99,21 @@ describe('Page Utilisateurs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }));
 
     expect(await screen.findByText('membre1@carlys.test')).toBeInTheDocument();
-    expect(listUsers).toHaveBeenLastCalledWith('alice', undefined);
+    expect(listUsers).toHaveBeenLastCalledWith('alice', undefined, false);
+  });
+
+  it('les comptes supprimés n’y sont que sur demande', async () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(ADMIN_PERMISSIONS);
+    vi.spyOn(adminApi, 'overview').mockRejectedValue(new Error('hors sujet ici'));
+    const listUsers = vi.spyOn(adminApi, 'listUsers').mockResolvedValue(pageOf([compte(1)], null));
+
+    renderPage();
+    await screen.findByText('membre1@carlys.test');
+    expect(listUsers).toHaveBeenLastCalledWith(undefined, undefined, false);
+
+    fireEvent.click(screen.getByLabelText('Voir les supprimés'));
+    await waitFor(() => expect(listUsers).toHaveBeenLastCalledWith(undefined, undefined, true));
   });
 
   /**

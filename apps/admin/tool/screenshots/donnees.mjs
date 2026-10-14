@@ -29,10 +29,12 @@ const PERSONNES = [
   ['gabriel.simon', 'Gabriel Simon', 'ACTIVE', true, true, '10-01'],
 ];
 
+// Un compte supprimé est déjà anonymisé, comme en vrai : adresse
+// tombstone, plus de nom.
 export const USERS = PERSONNES.map(([login, nom, status, verifie, premium, date], i) => ({
   id: uuid(101 + i),
-  email: `${login}@example.com`,
-  displayName: nom,
+  email: status === 'DELETED' ? `supprime+${uuid(101 + i)}@carlys.invalid` : `${login}@example.com`,
+  displayName: status === 'DELETED' ? null : nom,
   status,
   emailVerified: verifie,
   isPremium: premium,
@@ -69,6 +71,8 @@ export function userDetail(id) {
     : [];
   return {
     ...user,
+    // Supprimé le 12 octobre : la purge l'efface 30 jours plus tard.
+    purgeAfter: user.status === 'DELETED' ? jour('11-11', '08:00:00') : null,
     sessionsCount: user.isPremium ? 3 : 1,
     completedWorkoutsCount: user.isPremium ? 87 : 12,
     entitlements,

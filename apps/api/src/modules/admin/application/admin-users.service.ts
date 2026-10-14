@@ -5,6 +5,7 @@ import {
 } from '@carlys/api-contracts';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
+import { AppConfigService } from '../../../config/app-config.service';
 import { type AdminActor, AuditService } from '../../audit/audit.service';
 import {
   EntitlementsService,
@@ -49,14 +50,20 @@ export class AdminUsersService {
     private readonly admin: AdminUsersRepository,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementsService,
+    private readonly config: AppConfigService,
   ) {}
 
+  /**
+   * Les comptes, sans les SUPPRIMÉS par défaut : anonymisés, ils n'attendent
+   * plus que la purge, et encombraient la liste des comptes vivants.
+   */
   async listUsers(
     search: string | undefined,
     limit: number,
     cursor?: string,
+    includeDeleted = false,
   ): Promise<CursorPage<ManagedUserSummary>> {
-    const rows = await this.admin.listUsers(search, limit, cursor);
+    const rows = await this.admin.listUsers(search, limit, cursor, includeDeleted);
     return cursorPage(rows, limit, presentSummary);
   }
 
@@ -74,6 +81,12 @@ export class AdminUsersService {
       completedWorkoutsCount: activity.completedCount,
       entitlements: presentManagedEntitlements(row.entitlements, now),
       paidSubscription: paidSubscriptionOf(subscriptions, now),
+      purgeAfter:
+        row.deletedAt === null
+          ? null
+          : new Date(
+              row.deletedAt.getTime() + this.config.accountPurgeDays * 86_400_000,
+            ).toISOString(),
     };
   }
 

@@ -449,7 +449,8 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   politique demande d'écrire AVANT de supprimer. Le délai de 30 jours est
   écrit en huit endroits, à changer
   ENSEMBLE avec `CARLYS_ACCOUNT_PURGE_DAYS` ou `DEFAULT_PURGE_DELAY_DAYS`
-  (`users/application/deleted-accounts-purge.ts`) : `docs/legal/privacy.md`
+  (`users/application/deleted-accounts-purge.ts`, que reprend aussi le
+  défaut de `env.schema.ts` pour la date du back-office) : `docs/legal/privacy.md`
   (sections 6 et 7), `docs/legal/terms.md` (section 9), l'écran de suppression
   (`account_deletion_summary.dart`), ce paragraphe,
   `docs/security/authentication.md` (encadré de statut),

@@ -22,10 +22,6 @@ export class AppConfigService {
     return this.nodeEnv === 'production';
   }
 
-  get isDevelopment(): boolean {
-    return this.nodeEnv === 'development';
-  }
-
   get port(): number {
     return this.config.get('PORT', { infer: true });
   }
@@ -110,6 +106,10 @@ export class AppConfigService {
 
   get refreshTokenTtlDays(): number {
     return this.config.get('REFRESH_TOKEN_TTL_DAYS', { infer: true });
+  }
+
+  get accountPurgeDays(): number {
+    return this.config.get('CARLYS_ACCOUNT_PURGE_DAYS', { infer: true });
   }
 
   get maxLoginAttempts(): number {

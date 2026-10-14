@@ -55,12 +55,16 @@ export default function UserDetailPage() {
         </ErrorState>
       )}
       {user !== undefined && (
+        // Un compte supprimé est déjà anonymisé et n'a plus rien à gérer :
+        // la fiche dit seulement ce qu'il en reste et quand il disparaît.
         <div className="flex flex-col gap-6">
           <Card className="p-6">
             <div className="flex flex-wrap items-center gap-4">
               <Avatar name={user.displayName} email={user.email} size="lg" />
               <div className="min-w-48 flex-1">
-                <h2 className="truncate text-lg font-semibold">{user.displayName ?? user.email}</h2>
+                <h2 className="truncate text-lg font-semibold">
+                  {user.status === 'DELETED' ? 'Compte supprimé' : (user.displayName ?? user.email)}
+                </h2>
                 <p className="truncate text-sm text-muted">{user.email}</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -76,36 +80,50 @@ export default function UserDetailPage() {
               <Fact label="Appareils connectés">{user.sessionsCount}</Fact>
               <Fact label="Séances terminées">{user.completedWorkoutsCount}</Fact>
             </dl>
+            {user.purgeAfter != null && (
+              <p className="mt-6 rounded-lg bg-surface-alt px-4 py-3 text-sm text-muted">
+                Compte supprimé : son identité est déjà effacée. La purge quotidienne efface le
+                reste pour de bon à partir du{' '}
+                <span className="font-medium text-foreground">
+                  {new Date(user.purgeAfter).toLocaleDateString('fr-FR')}
+                </span>
+                .
+              </p>
+            )}
           </Card>
 
-          <Section
-            title="Droits"
-            description="Ce que le compte peut utiliser, et d’où vient chaque droit."
-          >
-            <ul className="divide-y divide-border">
-              {user.entitlements.map((entitlement) => (
-                <li
-                  key={entitlement.key}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
-                >
-                  <div>
-                    <span className="font-mono text-xs">{entitlement.key}</span>
-                    <span className="block text-muted">
-                      {sourceLabel(entitlement)}
-                      {entitlement.expiresAt !== null &&
-                        ` · expire le ${new Date(entitlement.expiresAt).toLocaleDateString('fr-FR')}`}
-                    </span>
-                  </div>
-                  <Badge status={entitlementStatus(entitlement)} />
-                </li>
-              ))}
-            </ul>
-          </Section>
+          {user.status !== 'DELETED' && (
+            <>
+              <Section
+                title="Droits"
+                description="Ce que le compte peut utiliser, et d’où vient chaque droit."
+              >
+                <ul className="divide-y divide-border">
+                  {user.entitlements.map((entitlement) => (
+                    <li
+                      key={entitlement.key}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+                    >
+                      <div>
+                        <span className="font-mono text-xs">{entitlement.key}</span>
+                        <span className="block text-muted">
+                          {sourceLabel(entitlement)}
+                          {entitlement.expiresAt !== null &&
+                            ` · expire le ${new Date(entitlement.expiresAt).toLocaleDateString('fr-FR')}`}
+                        </span>
+                      </div>
+                      <Badge status={entitlementStatus(entitlement)} />
+                    </li>
+                  ))}
+                </ul>
+              </Section>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <PremiumPanel user={user} />
-            <UserAccountActions user={user} />
-          </div>
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <PremiumPanel user={user} />
+                <UserAccountActions user={user} />
+              </div>
+            </>
+          )}
         </div>
       )}
     </AdminShell>
