@@ -5,8 +5,7 @@ import { type EntitlementsService } from '../../subscriptions/application/entitl
 import { CoachAvailability } from './coach.availability';
 
 const ABONNE = {
-  entitlementsFor: () =>
-    Promise.resolve({ entitlements: [{ key: 'ai_coaching', isActive: true }] }),
+  hasEntitlement: (_userId: string, key: string) => Promise.resolve(key === 'ai_coaching'),
 } as unknown as EntitlementsService;
 
 function porte(config: {

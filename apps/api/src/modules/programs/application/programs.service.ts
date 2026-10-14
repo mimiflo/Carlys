@@ -40,6 +40,25 @@ export interface SavedProgram {
 }
 
 /**
+ * Plafond du plan gratuit, pour l'écriture manuelle comme pour la génération.
+ * **Décision serveur**, jamais le client — et seulement à la CRÉATION : un
+ * compte redevenu gratuit garde ses programmes existants, il ne peut
+ * simplement plus en ajouter.
+ */
+export async function assertProgramQuota(
+  entitlements: EntitlementsService,
+  programs: ProgramsRepository,
+  userId: string,
+): Promise<void> {
+  if (await entitlements.hasEntitlement(userId, 'unlimited_programs')) return;
+  if ((await programs.countLive(userId)) >= PROGRAM_FREE_LIMIT) {
+    throw new ForbiddenException(
+      `Le plan gratuit garde ${PROGRAM_FREE_LIMIT} programmes. Passe Premium pour en créer davantage.`,
+    );
+  }
+}
+
+/**
  * Programmes multi-semaines : le plan dans le TEMPS.
  *
  * Même mécanique d'écriture que les modèles de séance — identifiants venus de
@@ -84,7 +103,7 @@ export class ProgramsService {
 
     const isCreation = existing === null;
     if (isCreation) {
-      await this.assertQuota(userId);
+      await assertProgramQuota(this.entitlements, this.programs, userId);
     } else {
       await this.assertDoneDaysStay(existing, userId, input);
     }
@@ -177,22 +196,6 @@ export class ProgramsService {
         ? 'Cette séance est déjà faite : sa case reste au jour où tu t’es entraîné.'
         : 'Une séance de ce programme est déjà faite : son premier jour ne peut plus changer que dans la même semaine.',
     );
-  }
-
-  /**
-   * Plafond du plan gratuit. **Décision serveur**, jamais le client — et
-   * seulement à la CRÉATION : un compte redevenu gratuit garde ses programmes
-   * existants, il ne peut simplement plus en ajouter.
-   */
-  private async assertQuota(userId: string): Promise<void> {
-    const unlimited = await this.entitlements.hasEntitlement(userId, 'unlimited_programs');
-    if (unlimited) return;
-    const count = await this.programs.countLive(userId);
-    if (count >= PROGRAM_FREE_LIMIT) {
-      throw new ForbiddenException(
-        `Le plan gratuit garde ${PROGRAM_FREE_LIMIT} programmes. Passe Premium pour en créer davantage.`,
-      );
-    }
   }
 
   private async buildDays(

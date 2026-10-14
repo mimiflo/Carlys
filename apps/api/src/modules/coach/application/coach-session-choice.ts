@@ -90,11 +90,7 @@ export function parseChoice(content: string, composition: CoachComposition): Ses
  * exercice de chaque muscle à tour de rôle, 3 × 12, tenue dans le temps.
  */
 export function fallbackChoice(composition: CoachComposition): SessionChoice {
-  const byMuscle = new Map<string, CoachSessionCandidate[]>();
-  for (const item of composition.candidates) {
-    const key = item.muscle ?? '';
-    byMuscle.set(key, [...(byMuscle.get(key) ?? []), item]);
-  }
+  const byMuscle = Map.groupBy(composition.candidates, (item) => item.muscle ?? '');
   const { max } = exerciseRange(composition.minutes);
   const wanted = Math.min(max, 5);
   const picked: CoachSessionCandidate[] = [];

@@ -338,7 +338,7 @@ apps/api/src/modules/coach/
     openai-compatible.client.ts  # CoachModelPort, API compatible OpenAI (nos Ollama)
 ```
 
-Un seul fournisseur (`coachModelFor`, dans `coach.module.ts`) : nos workers,
+Un seul fournisseur (la fabrique de `COACH_MODEL_PORT`, dans `coach.module.ts`) : nos workers,
 par le client compatible OpenAI. Le client Anthropic et le repli cloud ont
 été retirés le 3 octobre 2026, à la demande du propriétaire : les messages
 ne quittent jamais le serveur. Voir

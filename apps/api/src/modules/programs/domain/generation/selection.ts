@@ -84,12 +84,7 @@ function sortPool(list: PoolExercise[], experience: TrainingExperience): PoolExe
 
 /** Range le pool par groupe PRINCIPAL, chaque liste triée (score, puis slug). */
 export function groupPool(pool: PoolExercise[], experience: TrainingExperience): PoolByGroup {
-  const byGroup: PoolByGroup = new Map();
-  for (const exercise of pool) {
-    const list = byGroup.get(exercise.primary) ?? [];
-    list.push(exercise);
-    byGroup.set(exercise.primary, list);
-  }
+  const byGroup: PoolByGroup = Map.groupBy(pool, (exercise) => exercise.primary);
   for (const [group, list] of byGroup) byGroup.set(group, sortPool(list, experience));
   return byGroup;
 }

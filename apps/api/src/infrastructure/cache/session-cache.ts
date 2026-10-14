@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { type Redis } from 'ioredis';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { withTimeout } from '../../common/utilities/with-timeout';
 import { RedisService } from './redis.service';
 
 /**
@@ -79,13 +80,8 @@ interface RedisWithSessionCommands extends Redis {
 }
 
 /** La commande, ou un rejet passé [COMMAND_TIMEOUT_MS]. */
-function borne<T>(command: Promise<T>): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const delai = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Redis trop lent')), COMMAND_TIMEOUT_MS);
-  });
-  return Promise.race([command, delai]).finally(() => clearTimeout(timer));
-}
+const borne = <T>(command: Promise<T>): Promise<T> =>
+  withTimeout(command, COMMAND_TIMEOUT_MS, 'Redis (cache des sessions)');
 
 export interface CachedSession {
   /** Échéance en millisecondes, ou `null` : absente du cache. */

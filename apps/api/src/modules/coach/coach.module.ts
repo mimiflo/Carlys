@@ -38,17 +38,6 @@ import { CoachController } from './presentation/http/coach.controller';
 import { CoachInternalController } from './presentation/http/coach-internal.controller';
 
 /**
- * Un seul fournisseur : NOS workers (`COACH_WORKER_URLS` ou
- * `COACH_API_BASE_URL`), par le client compatible OpenAI. Aucun repli vers un
- * prestataire : les messages ne quittent jamais le serveur (décision du
- * 3 octobre 2026, ADR 0013). Sans worker, le coach est indisponible
- * (`CoachAvailability`), il n'appelle rien.
- */
-export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): CoachModelPort {
-  return new OpenAiCompatibleCoachClient(config, pool);
-}
-
-/**
  * Coach IA — l'IA propose, l'application exécute.
  *
  * Le module importe les domaines voisins pour leurs SERVICES : le coach lit
@@ -112,10 +101,14 @@ export function coachModelFor(config: AppConfigService, pool: CoachWorkerPool): 
           },
         ),
     },
+    // Un seul fournisseur : NOS workers, par le client compatible OpenAI.
+    // Aucun repli vers un prestataire : les messages ne quittent jamais le
+    // serveur (ADR 0013). Sans worker, `CoachAvailability` ferme la porte.
     {
       provide: COACH_MODEL_PORT,
       inject: [AppConfigService, CoachWorkerPool],
-      useFactory: coachModelFor,
+      useFactory: (config: AppConfigService, pool: CoachWorkerPool): CoachModelPort =>
+        new OpenAiCompatibleCoachClient(config, pool),
     },
   ],
 })

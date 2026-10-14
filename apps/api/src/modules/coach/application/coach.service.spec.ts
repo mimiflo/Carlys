@@ -152,9 +152,9 @@ function buildService(
   workOpen?: { inc: jest.Mock; dec: jest.Mock },
 ): CoachService {
   const entitlements = {
-    entitlementsFor: jest
-      .fn()
-      .mockResolvedValue({ entitlements: [{ key: 'ai_coaching', isActive: acces.abonne }] }),
+    hasEntitlement: jest.fn((_userId: string, key: string) =>
+      Promise.resolve(key === 'ai_coaching' && acces.abonne),
+    ),
   };
   const config = {
     coachEnabled: acces.coachEnabled,

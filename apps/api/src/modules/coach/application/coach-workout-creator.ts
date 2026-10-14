@@ -117,13 +117,10 @@ export class CoachWorkoutCreator {
  * identifiant deux fois dans le corps est refusé par les modèles).
  */
 function exercisesOf(sets: readonly ProposedSet[]) {
-  const byPosition = new Map<number, ProposedSet[]>();
   const ordered = [...sets].sort(
     (a, b) => a.exercisePosition - b.exercisePosition || a.setPosition - b.setPosition,
   );
-  for (const set of ordered) {
-    byPosition.set(set.exercisePosition, [...(byPosition.get(set.exercisePosition) ?? []), set]);
-  }
+  const byPosition = Map.groupBy(ordered, (set) => set.exercisePosition);
   return [...byPosition.values()].flatMap(([first, ...rest]) =>
     first === undefined
       ? []

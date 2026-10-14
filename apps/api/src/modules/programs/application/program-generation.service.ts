@@ -1,12 +1,7 @@
-import {
-  PROGRAM_FREE_LIMIT,
-  type GeneratedProgram,
-  type GenerationReport,
-} from '@carlys/api-contracts';
+import { type GeneratedProgram, type GenerationReport } from '@carlys/api-contracts';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +14,7 @@ import { GenerationRepository } from '../infrastructure/generation.repository';
 import { ProgramsRepository } from '../infrastructure/programs.repository';
 import { toRows } from './generation-rows';
 import { presentProgramDetail } from './program.presenter';
+import { assertProgramQuota } from './programs.service';
 
 export interface GenerateProgramInput {
   name?: string;
@@ -93,7 +89,7 @@ export class ProgramGenerationService {
 
     const profile = await this.users.training(userId);
     this.assertComplete(profile);
-    await this.assertQuota(userId);
+    await assertProgramQuota(this.entitlements, this.programs, userId);
 
     // Personne ne « possède » son corps : sans cette union, qui coche
     // {haltères, banc} perdrait les pompes et la planche. C'est aussi ce qui
@@ -200,18 +196,6 @@ export class ProgramGenerationService {
         message: 'Complète ton profil d’entraînement avant de générer.',
         details: missing,
       });
-    }
-  }
-
-  /** Même plafond que l'écriture manuelle, et seulement à la création. */
-  private async assertQuota(userId: string): Promise<void> {
-    const unlimited = await this.entitlements.hasEntitlement(userId, 'unlimited_programs');
-    if (unlimited) return;
-    const count = await this.programs.countLive(userId);
-    if (count >= PROGRAM_FREE_LIMIT) {
-      throw new ForbiddenException(
-        `Le plan gratuit garde ${PROGRAM_FREE_LIMIT} programmes. Passe Premium pour en créer davantage.`,
-      );
     }
   }
 

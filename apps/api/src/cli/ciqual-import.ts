@@ -89,11 +89,9 @@ function usage(): string {
 
 /** Les ignorés, regroupés par raison, avec quelques exemples nommés. */
 function ignoredLines(report: CiqualImportReport): string[] {
-  const byReason = new Map<string, string[]>();
-  for (const food of report.ignored) {
-    byReason.set(food.reason, [...(byReason.get(food.reason) ?? []), `${food.code} ${food.name}`]);
-  }
-  return [...byReason.entries()].map(([reason, foods]) => {
+  const byReason = Map.groupBy(report.ignored, (food) => food.reason);
+  return [...byReason.entries()].map(([reason, ignored]) => {
+    const foods = ignored.map((food) => `${food.code} ${food.name}`);
     const examples = foods.slice(0, 3).join(' ; ');
     return `      ${reason} : ${foods.length} (ex. ${examples}${foods.length > 3 ? ' ; …' : ''})`;
   });

@@ -53,11 +53,7 @@ export class CoachAvailability {
   }
 
   private async assertEntitled(userId: string): Promise<void> {
-    const { entitlements } = await this.entitlements.entitlementsFor(userId);
-    const granted = entitlements.some(
-      (entitlement) => entitlement.key === REQUIRED_ENTITLEMENT && entitlement.isActive,
-    );
-    if (!granted) {
+    if (!(await this.entitlements.hasEntitlement(userId, REQUIRED_ENTITLEMENT))) {
       throw new ForbiddenException('Le coach est réservé aux abonnés.');
     }
   }

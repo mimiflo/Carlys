@@ -5,7 +5,7 @@ import {
   type MuscleGroup,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { cursorPage } from '../../../common/utilities/cursor-page';
+import { type CursorPage, cursorPage } from '../../../common/utilities/cursor-page';
 import { AppConfigService } from '../../../config/app-config.service';
 import { CacheService } from '../../../infrastructure/cache/cache.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
@@ -20,13 +20,10 @@ import {
   presentMuscleGroup,
 } from './exercise.presenter';
 
-export interface ExercisesPage {
-  items: ExerciseSummary[];
-  nextCursor: string | null;
-  hasMore: boolean;
+export type ExercisesPage = CursorPage<ExerciseSummary> & {
   /** Total des exercices retenus par les filtres, toutes pages confondues. */
   total: number;
-}
+};
 
 /** Préfixe commun : l'invalidation du catalogue purge tout d'un coup. */
 // Exporté : dist/cli/catalog-seed purge ce préfixe après un chargement direct
