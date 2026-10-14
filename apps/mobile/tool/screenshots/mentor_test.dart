@@ -29,6 +29,7 @@ import 'package:carlys_mobile/features/mentor/presentation/screens/mentor_settin
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_bandeau.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_card.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
@@ -266,19 +267,44 @@ void main() {
     await capture(tester, 'mentor-04-voix');
   });
 
-  testWidgets('la visite guidée — première étape', (tester) async {
-    await monter(tester, ouvrir: showMentorTourSheet, fond: fondAccueil(null));
-    expect(find.text('Visite guidée · 1 sur 7'), findsOneWidget);
-    await capture(tester, 'mentor-05-visite');
-  });
-
-  testWidgets('la visite guidée — terminée, et rejouable', (tester) async {
+  // La visite guidée, étape par étape : les pièces déjà vues portent leur
+  // coche, la courante son dégradé, et chaque scène sa nuit violette.
+  Future<void> visite(WidgetTester tester, int vues, String nom) async {
     SharedPreferences.setMockInitialValues({
-      MentorPrefsStore.visiteVuesKey: [for (final step in mentorTour) step.id],
+      MentorPrefsStore.visiteVuesKey: [
+        for (final step in mentorTour.take(vues)) step.id,
+      ],
+      MentorPrefsStore.voixParleeKey: false,
     });
     await monter(tester, ouvrir: showMentorTourSheet, fond: fondAccueil(null));
+    // Les scènes ne se décodent qu'en vrai asynchrone.
+    await tester.runAsync(
+      () => precacheImage(
+        AssetImage(
+          vues < mentorTour.length
+              ? mentorTourIllustrations[mentorTour[vues].id]!
+              : mentorTourFinIllustration,
+        ),
+        tester.element(find.byType(MentorTourCard)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, nom);
+  }
+
+  for (var vues = 0; vues < mentorTour.length; vues++) {
+    testWidgets('la visite guidée — étape ${vues + 1}', (tester) async {
+      await visite(tester, vues, 'mentor-05-visite-${vues + 1}');
+      expect(
+        find.text('Étape ${vues + 1} sur ${mentorTour.length}'),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('la visite guidée — terminée, et rejouable', (tester) async {
+    await visite(tester, 7, 'mentor-06-visite-terminee');
     expect(find.text('Visite terminée'), findsOneWidget);
-    await capture(tester, 'mentor-06-visite-terminee');
   });
 
   // La page « Mentor Carlys » des réglages, plein écran comme dans l'appli.

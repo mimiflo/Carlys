@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:carlys_mobile/features/mentor/domain/mentor_tour.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_card.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_chemin.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +39,21 @@ void main() {
         expect(mentorTourIcons.keys, contains(step.id));
       }
       expect(mentorTourIcons.length, mentorTour.length);
+    });
+
+    test('chaque étape a son illustration, et le fichier existe', () {
+      // Une scène manquante ferait une carte vide (et une exception
+      // d'image) : la table couvre le manifeste, chaque fichier est livré.
+      for (final step in mentorTour) {
+        expect(mentorTourIllustrations.keys, contains(step.id));
+      }
+      expect(mentorTourIllustrations.length, mentorTour.length);
+      for (final asset in [
+        ...mentorTourIllustrations.values,
+        mentorTourFinIllustration,
+      ]) {
+        expect(File(asset).existsSync(), isTrue, reason: asset);
+      }
     });
   });
 

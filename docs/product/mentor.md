@@ -133,7 +133,18 @@ sept pastilles (`mentor_tour_chemin.dart` — vue, courante, à venir ; chaque
 étape porte l'icône de sa pièce, table `mentorTourIcons` gardée par le même
 test que les routes) : « Aller voir » est
 l'ancrage réel (marque vue, ferme, navigue), « Étape suivante » avance sur
-place. La visite se rejoue depuis les réglages du Mentor, à volonté.
+place (« Terminer la visite » à la dernière). La visite se rejoue depuis
+les réglages du Mentor, à volonté.
+
+Maquette d'octobre 2026 : en-tête « Visite guidée / Découvre ton espace »
+avec sa croix, « Étape N sur 7 » et sa jauge, une coche sur chaque pastille
+vue, puis la **carte illustrée** de la pièce (`mentor_tour_card.dart`) :
+une scène de nuit violette par étape (`assets/illustrations/visite_*.webp`,
+tirées des maquettes, fondu transparent sur les bords ; table
+`mentorTourIllustrations`, gardée par un test qui vérifie aussi que chaque
+fichier existe), le titre, le propos, et le bouton « écouter » du Mentor
+dans le coin. La fin montre « 7 espaces découverts », le sommet atteint,
+« Revenir à l'accueil » et « Revoir la visite ».
 
 Le domaine ne connaît AUCUNE route : la table étape → destination vit dans
 la présentation (`mentorTourRoutes`), et un test interdit l'étape sans

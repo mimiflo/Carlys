@@ -36,7 +36,7 @@ const List<MentorTourStep> mentorTour = [
     corps:
         'Ta journée en un écran : ta constance, la séance du jour, la '
         'question du jour et ta forme. Tout le reste part d’ici.',
-    libelleAller: 'Rester ici',
+    libelleAller: 'Voir l’accueil',
   ),
   MentorTourStep(
     id: 'entrainement',
@@ -83,9 +83,9 @@ const List<MentorTourStep> mentorTour = [
     id: 'coach',
     titre: 'Le coach IA',
     corps:
-        'Il lit tes vraies données (séances, records, journal) avant de '
-        'répondre, et te propose des séances adaptées. C’est lui qui porte '
-        'la voix que tu choisis pour ton Mentor.',
+        'Il s’appuie sur tes séances, tes records et ton journal pour te '
+        'proposer un entraînement adapté. Ses réponses adoptent la voix de '
+        'ton Mentor.',
     libelleAller: 'Voir le coach',
   ),
 ];

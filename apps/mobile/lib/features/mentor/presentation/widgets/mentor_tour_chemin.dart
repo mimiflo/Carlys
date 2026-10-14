@@ -19,7 +19,7 @@ const Map<String, IconData> mentorTourIcons = {
 /// Le chemin de la visite : les sept pièces en pastilles, d'un coup d'œil.
 ///
 /// Trois états, du plus discret au plus visible : à venir (éteinte), vue
-/// (teinte primaire), courante (dégradé violet `cta`). Purement décoratif
+/// (icône violette et coche), courante (dégradé violet `cta`). Purement décoratif
 /// pour un lecteur d'écran : l'en-tête « x sur 7 » dit déjà l'avancement.
 class MentorTourChemin extends StatelessWidget {
   const MentorTourChemin({required this.vues, this.etapeCourante, super.key});
@@ -61,29 +61,49 @@ class _Pastille extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xs),
+    final pastille = Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: courante ? AppColors.cta : null,
-        color: courante
-            ? null
-            : (vue ? AppColors.primaryBadgeBg : AppColors.darkSurfaceAlt),
-        border: courante
-            ? null
-            : Border.all(
-                color: vue
-                    ? AppColors.primaryBadgeBorder
-                    : AppColors.darkBorder,
-              ),
+        color: courante ? null : AppColors.darkSurfaceAlt,
+        border: courante ? null : Border.all(color: AppColors.darkBorder),
       ),
       child: Icon(
         icon,
-        size: 16,
+        size: 20,
         color: courante
             ? AppColors.neutral0
             : (vue ? AppColors.primaryLight : AppColors.darkIconInactive),
       ),
+    );
+    if (!vue || courante) return pastille;
+    // Une pièce vue porte sa coche, comme sur la maquette.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        pastille,
+        Positioned(
+          top: -AppSpacing.xxs,
+          right: -AppSpacing.xxs,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.xxs / 2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary,
+              border: Border.all(
+                color: AppColors.darkSurface,
+                width: AppSpacing.xxs / 2,
+              ),
+            ),
+            child: const Icon(
+              AppIcons.check,
+              size: 10,
+              color: AppColors.neutral0,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

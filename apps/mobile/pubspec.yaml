@@ -175,7 +175,8 @@ flutter:
     - assets/profiles/
     # Illustrations d'écran fournies par le produit (WebP, redimensionnées à
     # ce que l'écran affiche). `sommet.webp` : la bannière « Toujours plus
-    # loin » du profil.
+    # loin » du profil ; `visite_*.webp` : les scènes de la visite guidée du
+    # Mentor (fondu transparent sur les bords).
     - assets/illustrations/
 
   # Polices de la refonte (licences OFL dans assets/fonts/) :

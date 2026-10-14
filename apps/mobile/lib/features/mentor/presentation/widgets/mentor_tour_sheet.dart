@@ -6,7 +6,9 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/mentor_tour.dart';
 import '../providers/mentor_providers.dart';
+import 'mentor_sheet_header.dart';
 import 'mentor_speak_button.dart';
+import 'mentor_tour_card.dart';
 import 'mentor_tour_chemin.dart';
 
 /// Où chaque étape emmène. La table vit ICI, pas dans le manifeste : le
@@ -22,11 +24,11 @@ const Map<String, String> mentorTourRoutes = {
   'coach': AppRoutes.coach,
 };
 
-/// Feuille de la visite guidée : UNE étape à la fois, l'ordre du manifeste,
-/// le chemin des sept pièces sous les yeux, et deux gestes — y aller
-/// (l'ancrage réel), ou passer à la suivante. Rien n'est verrouillé :
-/// fermer la feuille n'engage à rien, et « déjà vu » se rejoue depuis les
-/// réglages du Mentor.
+/// Feuille de la visite guidée (maquette d'octobre 2026) : UNE étape à la
+/// fois, l'ordre du manifeste, le chemin des sept pièces sous les yeux, la
+/// scène illustrée de la pièce, et deux gestes — y aller (l'ancrage réel),
+/// ou passer à la suivante. Rien n'est verrouillé : fermer la feuille
+/// n'engage à rien, et « déjà vu » se rejoue depuis les réglages du Mentor.
 Future<void> showMentorTourSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorTourSheet());
 }
@@ -37,130 +39,169 @@ class _MentorTourSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(mentorTourProgressProvider);
+    final vues = ref.watch(mentorTourVuesProvider).valueOrNull ?? const {};
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.gutter),
-      child: progress == null
-          ? const AppLoadingIndicator()
-          : (progress.terminee
-                ? _VisiteTerminee(
-                    onRejouer: () =>
-                        ref.read(mentorActionsProvider).rejouerVisite(),
-                  )
-                : _Etape(progress: progress)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const MentorSheetHeader(
+            title: 'Visite guidée',
+            tagline: 'Découvre ton espace',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (progress == null)
+            const AppLoadingIndicator()
+          else if (progress.terminee)
+            _VisiteTerminee(
+              onRejouer: () => ref.read(mentorActionsProvider).rejouerVisite(),
+            )
+          else
+            _Etape(progress: progress, vues: vues),
+        ],
+      ),
     );
   }
 }
 
-/// Une étape : sa position, le chemin, son titre, son propos, ses gestes.
-class _Etape extends ConsumerWidget {
-  const _Etape({required this.progress});
+/// L'avancement : où en est la visite, la jauge, le chemin des pièces.
+class _Avancement extends StatelessWidget {
+  const _Avancement({
+    required this.label,
+    required this.part,
+    required this.vues,
+    this.etapeCourante,
+  });
 
-  final MentorTourProgress progress;
+  final String label;
+  final double part;
+  final Set<String> vues;
+  final String? etapeCourante;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final etape = progress.prochaine!;
-    final vues = ref.watch(mentorTourVuesProvider).valueOrNull ?? const {};
-
+  Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Visite guidée · ${progress.vues + 1} sur ${progress.total}',
-          style: AppTypography.label.copyWith(
-            color: AppColors.darkTextTertiary,
+          label,
+          style: AppTypography.heading.copyWith(
+            color: AppColors.darkTextPrimary,
           ),
         ),
-        const SizedBox(height: AppSpacing.xxs),
-        AppGauge(
-          progress: (progress.vues + 1) / progress.total,
-          color: AppColors.primaryLight,
-          height: 3,
+        const SizedBox(height: AppSpacing.sm),
+        AppGauge(progress: part, color: AppColors.primary),
+        const SizedBox(height: AppSpacing.lg),
+        MentorTourChemin(vues: vues, etapeCourante: etapeCourante),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+  }
+}
+
+/// La phrase discrète sous les gestes.
+class _PiedDeFeuille extends StatelessWidget {
+  const _PiedDeFeuille(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+      ),
+    );
+  }
+}
+
+/// Une étape : sa position, le chemin, sa scène, ses gestes.
+class _Etape extends ConsumerWidget {
+  const _Etape({required this.progress, required this.vues});
+
+  final MentorTourProgress progress;
+  final Set<String> vues;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final etape = progress.prochaine!;
+    final derniere = progress.vues + 1 == progress.total;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Avancement(
+          label: 'Étape ${progress.vues + 1} sur ${progress.total}',
+          part: (progress.vues + 1) / progress.total,
+          vues: vues,
+          etapeCourante: etape.id,
         ),
-        const SizedBox(height: AppSpacing.md),
-        MentorTourChemin(vues: vues, etapeCourante: etape.id),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.cta,
-              ),
-              child: Icon(
-                mentorTourIcons[etape.id] ?? AppIcons.mentor,
-                size: 20,
-                color: AppColors.neutral0,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(etape.titre, style: theme.textTheme.titleLarge),
-            ),
-            MentorSpeakButton(
-              speechKey: 'mentor.visite.${etape.id}',
-              text: '${etape.titre}. ${etape.corps}',
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          etape.corps,
-          style: AppTypography.body.copyWith(
-            color: AppColors.darkTextSecondary,
+        MentorTourCard(
+          illustration:
+              mentorTourIllustrations[etape.id] ?? mentorTourFinIllustration,
+          titre: etape.titre,
+          corps: etape.corps,
+          action: MentorSpeakButton(
+            speechKey: 'mentor.visite.${etape.id}',
+            text: '${etape.titre}. ${etape.corps}',
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
         AppButton(
           label: etape.libelleAller,
-          onPressed: () => _aller(context, ref, etape),
+          onPressed: () => _fermerPuisAller(
+            context,
+            mentorTourRoutes[etape.id],
+            avant: () =>
+                ref.read(mentorActionsProvider).marquerEtapeVue(etape.id),
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         AppButton(
-          label: 'Étape suivante',
+          label: derniere ? 'Terminer la visite' : 'Étape suivante',
           variant: AppButtonVariant.secondary,
           onPressed: () =>
               ref.read(mentorActionsProvider).marquerEtapeVue(etape.id),
         ),
+        const _PiedDeFeuille('Tu peux reprendre la visite à tout moment.'),
       ],
     );
   }
+}
 
-  /// « Aller voir » est l'ancrage réel : l'étape se marque vue, la feuille
-  /// se ferme, et la navigation emmène sur la pièce présentée.
-  ///
-  /// La garde porte sur la route de LA feuille (le navigateur racine est
-  /// toujours « monté ») : si elle a été balayée ou déjà fermée pendant
-  /// l'écriture, on ne pop rien et on ne navigue pas — naviguer depuis une
-  /// feuille disparue surprendrait. Et « y aller » va TOUJOURS, accueil
-  /// compris : la feuille s'ouvre aussi depuis les réglages du profil,
-  /// « Rester ici » y laissait l'utilisateur sur le profil.
-  Future<void> _aller(
-    BuildContext context,
-    WidgetRef ref,
-    MentorTourStep etape,
-  ) async {
-    final route = ModalRoute.of(context);
-    final navigator = Navigator.of(context);
-    final router = GoRouter.of(context);
-    await ref.read(mentorActionsProvider).marquerEtapeVue(etape.id);
-    if (!context.mounted || !(route?.isCurrent ?? false)) {
-      return;
-    }
-    navigator.pop();
-    final destination = mentorTourRoutes[etape.id];
-    if (destination != null) {
-      router.go(destination);
-    }
+/// « Aller voir » est l'ancrage réel : [avant] s'exécute (l'étape se marque
+/// vue), la feuille se ferme, et la navigation emmène sur la pièce.
+///
+/// La garde porte sur la route de LA feuille (le navigateur racine est
+/// toujours « monté ») : si elle a été balayée ou déjà fermée pendant
+/// l'écriture, on ne pop rien et on ne navigue pas — naviguer depuis une
+/// feuille disparue surprendrait. Et « y aller » va TOUJOURS, accueil
+/// compris : la feuille s'ouvre aussi depuis les réglages du Mentor.
+Future<void> _fermerPuisAller(
+  BuildContext context,
+  String? destination, {
+  Future<void> Function()? avant,
+}) async {
+  final route = ModalRoute.of(context);
+  final navigator = Navigator.of(context);
+  final router = GoRouter.of(context);
+  await avant?.call();
+  if (!context.mounted || !(route?.isCurrent ?? false)) {
+    return;
+  }
+  navigator.pop();
+  if (destination != null) {
+    router.go(destination);
   }
 }
 
-/// La fin de la visite : le bandeau violet qui la salue, le chemin
-/// complet, et une porte pour la revoir.
+/// La fin de la visite : le chemin complet, le sommet atteint, et deux
+/// portes — revenir à l'accueil, ou revoir la visite.
 class _VisiteTerminee extends StatelessWidget {
   const _VisiteTerminee({required this.onRejouer});
 
@@ -169,63 +210,32 @@ class _VisiteTerminee extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: const BoxDecoration(
-            gradient: AppColors.cta,
-            borderRadius: AppRadius.cardSecondaryAll,
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                AppIcons.checkCircle,
-                size: 28,
-                color: AppColors.neutral0,
-              ),
-              const SizedBox(width: AppSpacing.gapRow),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Blanc PLEIN : à 80 %, 3,36:1 sur le violet clair.
-                    Text(
-                      'Les sept pièces vues',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.neutral0,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      'Visite terminée',
-                      style: AppTypography.title.copyWith(
-                        color: AppColors.neutral0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        _Avancement(
+          label: '${mentorTour.length} espaces découverts',
+          part: 1,
+          vues: {for (final step in mentorTour) step.id},
         ),
-        const SizedBox(height: AppSpacing.md),
-        MentorTourChemin(vues: {for (final step in mentorTour) step.id}),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'Tu as fait le tour des grandes pièces. Tout reste là où tu l’as '
-          'vu, et tu peux revoir la visite quand tu veux.',
-          style: AppTypography.body.copyWith(
-            color: AppColors.darkTextSecondary,
-          ),
+        const MentorTourCard(
+          illustration: mentorTourFinIllustration,
+          titre: 'Visite terminée',
+          corps:
+              'Tu as fait le tour de Carlys. Tout reste à portée de main, et '
+              'tu peux revoir la visite quand tu veux.',
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
+        AppButton(
+          label: 'Revenir à l’accueil',
+          onPressed: () => _fermerPuisAller(context, AppRoutes.home),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         AppButton(
           label: 'Revoir la visite',
           variant: AppButtonVariant.secondary,
           onPressed: onRejouer,
         ),
+        const _PiedDeFeuille('Retrouve la visite dans les réglages du Mentor.'),
       ],
     );
   }

@@ -464,13 +464,13 @@ void main() {
 
     await tester.tap(find.text('Visite guidée'));
     await tester.pumpAndSettle();
-    expect(find.text('Visite guidée · 1 sur 7'), findsOneWidget);
+    expect(find.text('Étape 1 sur 7'), findsOneWidget);
     expect(find.text('L’accueil'), findsOneWidget);
 
     // « Étape suivante » marque l'étape vue et déroule la suivante.
     await tester.tap(find.text('Étape suivante'));
     await tester.pumpAndSettle();
-    expect(find.text('Visite guidée · 2 sur 7'), findsOneWidget);
+    expect(find.text('Étape 2 sur 7'), findsOneWidget);
     expect(find.text('L’entraînement'), findsOneWidget);
   });
 }
