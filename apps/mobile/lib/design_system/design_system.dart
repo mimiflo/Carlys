@@ -58,6 +58,7 @@ export 'components/app_segmented_tabs.dart';
 export 'components/app_select_chip.dart';
 export 'components/app_settings_group.dart';
 export 'components/app_sheet.dart';
+export 'components/app_sheet_header.dart';
 export 'components/app_stat_tile.dart';
 export 'components/app_text_field.dart';
 export 'components/app_thumbnail.dart';

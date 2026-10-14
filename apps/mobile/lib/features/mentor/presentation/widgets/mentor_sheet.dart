@@ -9,10 +9,10 @@ import '../providers/mentor_providers.dart';
 import 'mentor_bandeau.dart';
 import 'mentor_coach_note.dart';
 import 'mentor_link_row.dart';
-import 'mentor_sheet_header.dart';
 import 'mentor_style_sheet.dart';
 import 'mentor_tour_sheet.dart';
 import 'mentor_voice_card.dart';
+import 'mentor_voice_line.dart' show mentorWordSpeechKey;
 
 /// La feuille du Mentor (maquette d'octobre 2026) : son mot du moment, la
 /// visite guidée, sa voix.
@@ -78,7 +78,7 @@ class _MentorSheetState extends ConsumerState<_MentorSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MentorSheetHeader(
+          const AppSheetHeader(
             title: 'Mentor Carlys',
             tagline: 'Un mot pour avancer',
           ),

@@ -105,17 +105,18 @@ void main() {
   ) async {
     await openOnboarding(tester);
 
-    expect(find.text('1/6'), findsOneWidget);
+    expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
     expect(find.byIcon(AppIcons.back), findsNothing);
     // Se reconnaître d'abord : l'identité ouvre le parcours, avec les MÊMES
-    // cartes illustrées que l'écran Profil Carlys.
-    expect(find.text('TON IDENTITÉ'), findsOneWidget);
-    expect(find.text('LE CONSTRUCTEUR'), findsOneWidget);
+    // cartes (médaillons) que l'écran Profil Carlys.
+    expect(find.text('Quel Carlys es-tu ?'), findsOneWidget);
+    expect(find.text('TA FAÇON D’AVANCER'), findsOneWidget);
+    expect(find.text('Le Constructeur'), findsOneWidget);
     expect(find.textContaining('construire les bases'), findsOneWidget);
 
     // Aucune réponse choisie : le CTA ne fait rien.
     await tapContinue(tester);
-    expect(find.text('1/6'), findsOneWidget);
+    expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
   });
 
   testWidgets('choisir une identité pose le badge et débloque le CTA', (
@@ -123,13 +124,13 @@ void main() {
   ) async {
     await openOnboarding(tester);
 
-    expect(find.text('Ton profil'), findsNothing);
-    await tapCard(tester, 'LE CONSTRUCTEUR');
-    // Le même marquage que l'écran Profil Carlys : badge sur la sélection.
-    expect(find.text('Ton profil'), findsOneWidget);
+    expect(find.text('Sélectionné'), findsNothing);
+    await tapCard(tester, 'Le Constructeur');
+    // Le marquage de l'écran Profil Carlys, au mot de l'onboarding.
+    expect(find.text('Sélectionné'), findsOneWidget);
 
     await tapContinue(tester);
-    expect(find.text('2/6'), findsOneWidget);
+    expect(find.text('ÉTAPE 2 SUR 6'), findsOneWidget);
     // Le POURQUOI des séances vient tout de suite après l'identité : c'est
     // l'objectif d'ENTRAÎNEMENT (Plan 4), distinct du plan nutrition qui
     // arrive à l'étape suivante — deux questions, deux réponses.
@@ -141,14 +142,14 @@ void main() {
   testWidgets('le retour ramène à l’étape précédente', (tester) async {
     await openOnboarding(tester);
 
-    await tapCard(tester, 'LE CONSTRUCTEUR');
+    await tapCard(tester, 'Le Constructeur');
     await tapContinue(tester);
 
     await tester.tap(find.byIcon(AppIcons.back));
     await tester.pumpAndSettle();
-    expect(find.text('1/6'), findsOneWidget);
+    expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
     // La réponse déjà donnée reste sélectionnée.
-    expect(find.text('Ton profil'), findsOneWidget);
+    expect(find.text('Sélectionné'), findsOneWidget);
   });
 
   testWidgets('les 6 étapes enregistrent identité, objectif ET profil', (
@@ -156,7 +157,7 @@ void main() {
   ) async {
     final nutrition = await openOnboarding(tester);
 
-    await tapCard(tester, 'LE CHALLENGER');
+    await tapCard(tester, 'Le Challenger');
     await tapContinue(tester);
 
     expect(find.text('TON ENTRAÎNEMENT'), findsOneWidget);

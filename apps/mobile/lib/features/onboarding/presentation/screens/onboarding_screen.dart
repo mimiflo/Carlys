@@ -152,6 +152,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     stepCount: _stepCount,
                     onBack: _step == 0 || _saving ? null : _back,
                   ),
+                  const SizedBox(height: AppSpacing.lg),
                   Expanded(
                     child: _buildBottomBlock(authenticated: authenticated),
                   ),

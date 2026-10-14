@@ -170,8 +170,8 @@ flutter:
     # Pack de RECETTES : contenu éditorial embarqué lui aussi. Une recette se
     # lit en cuisine, où le réseau manque souvent.
     - assets/nutrition/
-    # Illustrations des 4 profils Carlys (voir le README du dossier). Tant
-    # qu'un fichier manque, la carte pose un repli de marque — jamais un trou.
+    # Médaillons des 4 profils Carlys (voir le README du dossier). Un fichier
+    # manquant laisse un disque de marque et l'icône — jamais un trou.
     - assets/profiles/
     # Illustrations d'écran fournies par le produit (WebP, redimensionnées à
     # ce que l'écran affiche). `sommet.webp` : la bannière « Toujours plus

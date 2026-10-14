@@ -6,7 +6,6 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/mentor_tour.dart';
 import '../providers/mentor_providers.dart';
-import 'mentor_sheet_header.dart';
 import 'mentor_speak_button.dart';
 import 'mentor_tour_card.dart';
 import 'mentor_tour_chemin.dart';
@@ -47,7 +46,7 @@ class _MentorTourSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MentorSheetHeader(
+          const AppSheetHeader(
             title: 'Visite guidée',
             tagline: 'Découvre ton espace',
           ),

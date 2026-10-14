@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/providers/today_metrics.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
 import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
@@ -70,19 +71,39 @@ void main() {
     testWidgets('profils Carlys, $largeur points, texte ×$texte : noms et '
         'descriptions entiers', (tester) async {
       setPhone(tester, width: largeur, textScale: texte);
-      for (final profile in CarlysProfile.values) {
-        await tester.pumpWidget(
-          monte(
-            CarlysProfileCard(
-              profile: profile,
-              isCurrent: profile == CarlysProfile.challenger,
-              onTap: () {},
+      // Les deux libellés de la carte retenue : « Sélectionné » est le plus
+      // long, et c'est celui de l'onboarding.
+      for (final libelle in const ['Ton profil', 'Sélectionné']) {
+        for (final profile in CarlysProfile.values) {
+          await tester.pumpWidget(
+            monte(
+              CarlysProfileCard(
+                profile: profile,
+                isCurrent: profile == CarlysProfile.challenger,
+                selectedLabel: libelle,
+                onTap: () {},
+              ),
             ),
-          ),
-        );
-        final carte = find.byType(CarlysProfileCard);
-        expect(truncatedTexts(carte), isEmpty, reason: profile.name);
-        expect(midWordBreaks(carte), isEmpty, reason: profile.name);
+          );
+          final carte = find.byType(CarlysProfileCard);
+          final raison = '${profile.name} · $libelle';
+          expect(truncatedTexts(carte), isEmpty, reason: raison);
+          expect(midWordBreaks(carte), isEmpty, reason: raison);
+          expect(tester.takeException(), isNull, reason: raison);
+          // « Entier » ne suffit pas : un texte réduit jusqu'à l'illisible
+          // passe les deux gardes. La colonne du nom garde de la place.
+          final colonne = find
+              .ancestor(
+                of: find.text(carlysProfileContentOf(profile).title),
+                matching: find.byType(Column),
+              )
+              .first;
+          expect(
+            tester.getSize(colonne).width,
+            greaterThanOrEqualTo(100),
+            reason: raison,
+          );
+        }
       }
     });
   }

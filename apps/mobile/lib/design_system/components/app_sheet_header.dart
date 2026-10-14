@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../../design_system/design_system.dart';
+import '../icons/app_icons.dart';
+import 'app_round_icon_button.dart';
+import 'app_screen_header.dart';
 
-/// L'en-tête des feuilles du Mentor (maquette d'octobre 2026) : le titre
-/// centré, sa ligne mono, et la croix qui ferme.
-class MentorSheetHeader extends StatelessWidget {
-  const MentorSheetHeader({
-    required this.title,
-    required this.tagline,
-    super.key,
-  });
+/// L'en-tête d'une feuille (maquettes d'octobre 2026 : Mentor, profils) :
+/// le titre centré, sa ligne mono, et la croix qui ferme.
+class AppSheetHeader extends StatelessWidget {
+  const AppSheetHeader({required this.title, required this.tagline, super.key});
 
   final String title;
   final String tagline;

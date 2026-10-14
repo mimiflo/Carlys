@@ -63,20 +63,21 @@ class OnboardingQuestion extends StatelessWidget {
     return switch (step) {
       // L'identité OUVRE le parcours : se reconnaître avant de mesurer —
       // c'est l'accroche, et le reste des questions s'y adosse. Les cartes
-      // sont CELLES de l'écran Profil Carlys (illustration, titre,
-      // description, anneau animé sur la sélection) : même langage visuel
-      // du premier écran au dernier.
+      // sont CELLES de l'écran Profil Carlys (médaillon, titre,
+      // description, coche sur la sélection) : même langage visuel du
+      // premier écran au dernier.
       0 => OnboardingStepBody(
-        label: 'Ton identité',
-        question: 'Quel Carlys\nes-tu ?',
-        subtitle:
-            'Une identité, pas un niveau : tu pourras en changer '
-            'à tout moment.',
+        centered: true,
+        label: 'Ta façon d’avancer',
+        question: 'Quel Carlys es-tu ?',
+        subtitle: 'Choisis ce qui te ressemble.\nCe n’est pas un niveau.',
+        footnote: 'Tu pourras changer à tout moment.',
         options: [
           for (final value in CarlysProfile.values)
             CarlysProfileCard(
               profile: value,
               isCurrent: carlysProfile == value,
+              selectedLabel: 'Sélectionné',
               onTap: () => onCarlysProfile(value),
             ),
         ],

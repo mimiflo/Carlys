@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
-/// En-tête de l'onboarding sur UNE ligne : retour, barre de progression
-/// continue, compteur « 2/4 ».
+/// En-tête de l'onboarding (maquette d'octobre 2026) : retour, puis au
+/// centre « Étape 2 sur 6 » et une barre en segments — un par étape, les
+/// étapes faites et la courante en violet.
 class OnboardingHeader extends StatelessWidget {
   const OnboardingHeader({
     required this.step,
@@ -18,18 +18,17 @@ class OnboardingHeader extends StatelessWidget {
   final int stepCount;
 
   /// `null` à la première étape : la flèche disparaît, sa place reste
-  /// réservée pour que la barre ne bouge pas d'une étape à l'autre.
+  /// réservée pour que le centre ne bouge pas d'une étape à l'autre.
   final VoidCallback? onBack;
 
-  /// Géométrie de la maquette : flèche 22, barre de 3 de haut.
   static const double _iconSize = 22;
-  static const double _barHeight = 3;
+  static const double _segmentHeight = 6;
+
+  /// La barre ne s'étire pas sur toute la largeur : elle reste un repère.
+  static const double _barMaxWidth = 240;
 
   @override
   Widget build(BuildContext context) {
-    final position =
-        '${formatThousands(step + 1)}/${formatThousands(stepCount)}';
-
     return Row(
       children: [
         SizedBox(
@@ -46,63 +45,60 @@ class OnboardingHeader extends StatelessWidget {
                     child: const Icon(
                       AppIcons.back,
                       size: _iconSize,
-                      color: AppColors.darkTextSecondary,
+                      color: AppColors.primaryLight,
                     ),
                   ),
                 ),
         ),
-        const SizedBox(width: AppSpacing.gapRow),
         Expanded(
           child: Semantics(
             label: 'Étape ${step + 1} sur $stepCount',
-            child: _ProgressBar(
-              progress: (step + 1) / stepCount,
-              height: _barHeight,
+            excludeSemantics: true,
+            child: Column(
+              children: [
+                Text(
+                  'ÉTAPE ${step + 1} SUR $stepCount',
+                  style: AppTypography.labelMono.copyWith(
+                    color: AppColors.primaryLight,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _barMaxWidth),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < stepCount; i++) ...[
+                        if (i > 0) const SizedBox(width: AppSpacing.xxs),
+                        Expanded(child: _Segment(on: i <= step)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.gapRow),
-        Text(
-          position,
-          style: AppTypography.labelMono.copyWith(
-            color: AppColors.darkTextTertiary,
-          ),
-        ),
+        const SizedBox(width: _iconSize),
       ],
     );
   }
 }
 
-/// Barre continue : piste neutre, remplissage accent proportionnel.
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.progress, required this.height});
+/// Un segment : piste neutre, ou violet quand l'étape est atteinte.
+class _Segment extends StatelessWidget {
+  const _Segment({required this.on});
 
-  final double progress;
-  final double height;
+  final bool on;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: AppRadius.fullAll,
-      child: SizedBox(
-        height: height,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const ColoredBox(color: AppColors.gaugeTrack),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: progress.clamp(0, 1)),
-              duration: AppMotion.resolve(context, AppMotion.normal),
-              curve: AppMotion.standard,
-              builder: (context, value, child) => FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: value,
-                child: child,
-              ),
-              child: const ColoredBox(color: AppColors.accent),
-            ),
-          ],
-        ),
+    return AnimatedContainer(
+      duration: AppMotion.resolve(context, AppMotion.normal),
+      curve: AppMotion.standard,
+      height: OnboardingHeader._segmentHeight,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.fullAll,
+        color: on ? AppColors.primary : AppColors.gaugeTrack,
       ),
     );
   }

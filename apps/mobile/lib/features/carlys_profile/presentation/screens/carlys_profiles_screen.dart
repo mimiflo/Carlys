@@ -23,34 +23,46 @@ class CarlysProfilesScreen extends ConsumerWidget {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil Carlys')),
       body: SafeArea(
         bottom: false,
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.gutter,
-            AppSpacing.md,
+            AppSpacing.xs,
             AppSpacing.gutter,
             bottomInset + AppSpacing.gapSection,
           ),
           children: [
+            const AppScreenHeader.centered(
+              title: 'Profil Carlys',
+              tagline: 'Ta façon d’avancer',
+            ),
+            const SizedBox(height: AppSpacing.lg),
             Text(
-              'Quatre identités, pas des niveaux : un débutant peut être '
-              'Stratège, un sportif avancé Challenger, et tu peux changer '
-              'à tout moment.',
-              style: AppTypography.body.copyWith(
-                color: AppColors.darkTextTertiary,
+              'Quatre identités, pas des niveaux. Choisis celle qui te '
+              'ressemble aujourd’hui.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyLarge.copyWith(
+                color: AppColors.primaryLight,
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.lg),
             for (final profile in CarlysProfile.values) ...[
               CarlysProfileCard(
                 profile: profile,
                 isCurrent: profile == current,
                 onTap: () => _openSheet(context, ref, profile, current),
               ),
-              const SizedBox(height: AppSpacing.gapTile),
+              const SizedBox(height: AppSpacing.sm),
             ],
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Tu peux changer de profil à tout moment.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
+            ),
           ],
         ),
       ),

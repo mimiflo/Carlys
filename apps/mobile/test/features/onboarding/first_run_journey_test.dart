@@ -156,7 +156,7 @@ void main() {
 
   /// Répond aux 6 étapes de l'onboarding (l'identité d'abord) puis valide.
   Future<void> answerOnboarding(WidgetTester tester) async {
-    await tapText(tester, 'LE CONSTRUCTEUR');
+    await tapText(tester, 'Le Constructeur');
     await tapText(tester, 'Continuer');
 
     // L'objectif d'ENTRAÎNEMENT d'abord, la nutrition ensuite : deux
@@ -209,14 +209,14 @@ void main() {
       expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
       // Les quatre univers sont annoncés, sans prétendre être navigables.
       expect(find.byType(BrandPillars), findsOneWidget);
-      expect(find.text('1/6'), findsNothing);
+      expect(find.text('ÉTAPE 1 SUR 6'), findsNothing);
       expect(find.byType(AppBottomBar), findsNothing);
 
       // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
       expect(find.text('J’ai déjà un compte'), findsNothing);
 
       await passWelcomePage(tester);
-      expect(find.text('1/6'), findsOneWidget);
+      expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
     },
   );
 
@@ -227,7 +227,7 @@ void main() {
       await launch(tester);
 
       // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
-      expect(find.text('1/6'), findsOneWidget);
+      expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
       expect(find.byType(AppBottomBar), findsNothing);
 
       await answerOnboarding(tester);
@@ -272,7 +272,7 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
       expect(find.byType(AppBottomBar), findsOneWidget);
-      expect(find.text('1/6'), findsNothing);
+      expect(find.text('ÉTAPE 1 SUR 6'), findsNothing);
     },
   );
 
@@ -394,7 +394,7 @@ void main() {
     await tapText(tester, 'Se connecter');
 
     expect(auth.loginCalls, 1);
-    expect(find.text('1/6'), findsOneWidget);
+    expect(find.text('ÉTAPE 1 SUR 6'), findsOneWidget);
     // Session ouverte : le lien de connexion n'a plus lieu d'être.
     expect(find.text('J’ai déjà un compte'), findsNothing);
   });
@@ -406,7 +406,7 @@ void main() {
     await launch(tester, passWelcome: false);
 
     expect(find.text('Crée ton compte'), findsOneWidget);
-    expect(find.text('1/6'), findsNothing);
+    expect(find.text('ÉTAPE 1 SUR 6'), findsNothing);
 
     // Qui a déjà un compte rejoint la connexion depuis l'inscription.
     await tapText(tester, 'Se connecter');
@@ -421,7 +421,7 @@ void main() {
       await launch(tester, passWelcome: false);
 
       expect(find.byType(AppBottomBar), findsOneWidget);
-      expect(find.text('1/6'), findsNothing);
+      expect(find.text('ÉTAPE 1 SUR 6'), findsNothing);
       expect(find.text('CARLYS PREMIUM'), findsNothing);
     },
   );

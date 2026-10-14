@@ -6,9 +6,9 @@ import '../../domain/entities/carlys_profile.dart';
 /// Contenu ÉDITORIAL des quatre profils : titres, devises, descriptions et
 /// publics — les textes de la spécification produit, mot pour mot.
 ///
-/// Les illustrations sont attendues dans `assets/profiles/<slug>.webp`
-/// (voir le README du dossier) ; tant qu'elles n'y sont pas, la carte pose
-/// un repli de marque (dégradé + icône) — jamais un trou.
+/// Les médaillons vivent dans `assets/profiles/medaillon_<slug>.webp` (voir
+/// le README du dossier) ; un fichier manquant laisse un disque de marque et
+/// l'icône du profil — jamais un trou.
 class CarlysProfileContent {
   const CarlysProfileContent({
     required this.title,
@@ -32,12 +32,12 @@ class CarlysProfileContent {
   /// Description courte de la carte (celle de la maquette).
   final String tagline;
 
-  /// « Pour : » — les publics du profil.
+  /// « Pour toi si… » — ce que le profil sert.
   final List<String> audience;
 
   final String assetPath;
 
-  /// Repli tant que l'illustration n'est pas fournie.
+  /// Repli si le médaillon manque.
   final IconData icon;
 }
 
@@ -50,13 +50,12 @@ CarlysProfileContent carlysProfileContentOf(CarlysProfile profile) {
           'Découvrir, apprendre, construire les bases. '
           'Santé et culture avant tout.',
       audience: [
-        'Découvrir l’application.',
-        'Découvrir le sport.',
+        'Découvrir l’application et le sport.',
         'Reprendre progressivement.',
         'Se maintenir en bonne santé.',
         'Développer sa culture sportive.',
       ],
-      assetPath: 'assets/profiles/constructeur.webp',
+      assetPath: 'assets/profiles/medaillon_constructeur.webp',
       icon: AppIcons.profileConstructeur,
     ),
     CarlysProfile.challenger => const CarlysProfileContent(
@@ -71,7 +70,7 @@ CarlysProfileContent carlysProfileContentOf(CarlysProfile profile) {
         'Progresser physiquement.',
         'Progresser intellectuellement.',
       ],
-      assetPath: 'assets/profiles/challenger.webp',
+      assetPath: 'assets/profiles/medaillon_challenger.webp',
       icon: AppIcons.profileChallenger,
     ),
     CarlysProfile.athlete => const CarlysProfileContent(
@@ -81,11 +80,11 @@ CarlysProfileContent carlysProfileContentOf(CarlysProfile profile) {
           'Discipline et constance pour atteindre des '
           'objectifs ambitieux.',
       audience: [
-        'Les personnes pratiquant régulièrement.',
-        'Les personnes ayant un objectif précis.',
-        'Les objectifs nécessitant discipline et constance.',
+        'Pratiquer régulièrement.',
+        'Poursuivre un objectif précis.',
+        'Construire sa discipline et sa constance.',
       ],
-      assetPath: 'assets/profiles/athlete.webp',
+      assetPath: 'assets/profiles/medaillon_athlete.webp',
       icon: AppIcons.profileAthlete,
     ),
     CarlysProfile.stratege => const CarlysProfileContent(
@@ -95,12 +94,12 @@ CarlysProfileContent carlysProfileContentOf(CarlysProfile profile) {
           'Apprendre avant d’agir. Comprendre pour optimiser '
           'chaque décision.',
       audience: [
-        'Les personnes qui veulent apprendre.',
+        'Apprendre et approfondir ses connaissances.',
         'Comprendre le fonctionnement du corps.',
         'Comprendre l’entraînement et la nutrition.',
         'Planifier avant d’agir.',
       ],
-      assetPath: 'assets/profiles/stratege.webp',
+      assetPath: 'assets/profiles/medaillon_stratege.webp',
       icon: AppIcons.profileStratege,
     ),
   };

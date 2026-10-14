@@ -1,12 +1,13 @@
-# Illustrations des profils Carlys
+# Médaillons des profils Carlys
 
-Quatre fichiers attendus (format `webp`, paysage, ~800 × 600) :
+Quatre disques (format `webp` avec canal alpha, ~230 px), tirés des
+maquettes d'octobre 2026 :
 
-- `constructeur.webp`
-- `challenger.webp`
-- `athlete.webp`
-- `stratege.webp`
+- `medaillon_constructeur.webp`
+- `medaillon_challenger.webp`
+- `medaillon_athlete.webp`
+- `medaillon_stratege.webp` (la carte déborde du cercle, d'où l'alpha)
 
-Tant qu'un fichier manque, la carte du profil affiche un repli de marque
-(dégradé violet + icône) — jamais un trou. Déposer les fichiers ici suffit :
-aucun changement de code n'est nécessaire.
+Un fichier manquant laisse un disque de marque et l'icône du profil — jamais
+un trou. Remplacer un fichier par une version plus grande suffit : aucun
+changement de code n'est nécessaire.

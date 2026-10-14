@@ -2220,10 +2220,25 @@ void main() {
       '16-onboarding',
       shows: find.byType(OnboardingScreen),
     );
+
+    // Une identité choisie : coche et « Sélectionné », CTA débloqué.
+    await tester.scrollUntilVisible(
+      find.text('Le Stratège'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Le Stratège'));
+    await settle(tester);
+    await capture(
+      tester,
+      '16b-onboarding-selection',
+      shows: find.text('Sélectionné'),
+    );
   });
 
   testWidgets('profils Carlys', (tester) async {
-    await pumpApp(tester);
+    // Un compte Challenger : la page montre une carte retenue.
+    await pumpApp(tester, user: profileUser);
     // Illustrations des profils : décodage en temps réel avant capture,
     // comme toute image du bundle.
     final context = tester.element(find.byType(MaterialApp));
@@ -2248,17 +2263,28 @@ void main() {
     );
 
     await tester.scrollUntilVisible(
-      find.text('LE STRATÈGE'),
+      find.text('Le Stratège'),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await tester.tap(find.text('LE STRATÈGE'));
+    await tester.tap(find.text('Le Stratège'));
     await settle(tester);
     await capture(
       tester,
       '35-profil-fiche',
       shows: find.text('« Je veux comprendre avant d’agir. »'),
+    );
+
+    // La fiche du profil ACTUEL : le compte est Challenger.
+    Navigator.of(tester.element(find.text('Choisir ce profil'))).pop();
+    await settle(tester);
+    await tester.tap(find.text('Le Challenger'));
+    await settle(tester);
+    await capture(
+      tester,
+      '35b-profil-fiche-actuel',
+      shows: find.text('C’est ton profil actuel'),
     );
   });
 

@@ -405,6 +405,17 @@ abstract final class AppColors {
     colors: [darkSurfaceAlt, primaryDeep],
   );
 
+  /// Le mot du Mentor quand il FÊTE un cap (maquette d'octobre 2026) : le
+  /// violet profond qui s'embrase vers l'orange en haut à droite. Une
+  /// célébration de franchissement : le seul cas où le Mentor prend la
+  /// signature (règle 9). Arrêts « Ink » : le blanc y tient AA partout.
+  static const LinearGradient mentorCelebration = LinearGradient(
+    begin: Alignment.bottomLeft,
+    end: Alignment.topRight,
+    colors: [primaryDeep, primaryDeep, signatureInkMid, signatureInkEnd],
+    stops: [0, 0.55, 0.88, 1],
+  );
+
   /// Halo d'une popup : le violet qui descend du médaillon et s'éteint avant
   /// le texte. Violet par règle (CLAUDE.md, règle 9) : une popup n'est pas
   /// une surface de marque. Son pic ([primaryBadgeBg] sur [darkSurface]) est

@@ -27,6 +27,7 @@ import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
 import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
 import 'package:carlys_mobile/features/mentor/presentation/screens/mentor_settings_screen.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_bandeau.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_celebration_bandeau.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_card.dart';
@@ -254,6 +255,30 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture(tester, 'mentor-03-feuille');
+  });
+
+  testWidgets('la feuille du Mentor quand il fête un cap', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      MentorPrefsStore.voixParleeKey: false,
+    });
+    await monter(
+      tester,
+      style: MentorStyle.bienveillant,
+      ouvrir: showMentorSheet,
+      fond: fondAccueil(MentorStyle.bienveillant),
+      overrides: [
+        earnedRewardsProvider.overrideWith((ref) async => [_fraiche]),
+      ],
+    );
+    expect(find.text('Une nouvelle récompense est à toi.'), findsOneWidget);
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(mentorMedalAsset),
+        tester.element(find.byType(MentorCelebrationBandeau)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'mentor-03b-feuille-celebration');
   });
 
   testWidgets('le choix de la voix — Bienveillant sélectionné', (tester) async {

@@ -5,6 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:flutter/material.dart';
@@ -82,9 +83,9 @@ Future<void> openCarlysProfiles(WidgetTester tester) async {
 }
 
 /// L'anneau au segment voyageur — la marque du profil ACTUEL.
-final Finder travelingRing = find.byWidgetPredicate(
-  (widget) =>
-      widget is CustomPaint && widget.foregroundPainter is AppDashBorderPainter,
+/// La carte du profil retenu (liseré violet plein, coche, « Ton profil »).
+final Finder selectedCard = find.byWidgetPredicate(
+  (widget) => widget is CarlysProfileCard && widget.isCurrent,
 );
 
 void main() {
@@ -111,17 +112,17 @@ void main() {
     await tester.pumpAndSettle();
     await openCarlysProfiles(tester);
 
-    expect(find.text('LE CONSTRUCTEUR'), findsOneWidget);
-    expect(find.text('LE CHALLENGER'), findsOneWidget);
-    expect(find.text('L’ATHLÈTE'), findsOneWidget);
-    expect(find.text('LE STRATÈGE'), findsOneWidget);
+    expect(find.text('Le Constructeur'), findsOneWidget);
+    expect(find.text('Le Challenger'), findsOneWidget);
+    expect(find.text('L’Athlète'), findsOneWidget);
+    expect(find.text('Le Stratège'), findsOneWidget);
 
-    // Le visiteur de démonstration est Challenger : un seul badge, et
-    // l'anneau animé n'entoure que SA carte.
+    // Le visiteur de démonstration est Challenger : un seul badge, sur SA
+    // carte.
     expect(find.text('Ton profil'), findsOneWidget);
-    expect(travelingRing, findsOneWidget);
+    expect(selectedCard, findsOneWidget);
     expect(
-      find.descendant(of: travelingRing, matching: find.text('LE CHALLENGER')),
+      find.descendant(of: selectedCard, matching: find.text('Le Challenger')),
       findsOneWidget,
     );
   });
@@ -135,43 +136,44 @@ void main() {
 
     // La carte du Stratège est la dernière : elle se mérite en défilant.
     await tester.scrollUntilVisible(
-      find.text('LE STRATÈGE'),
+      find.text('Le Stratège'),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('LE STRATÈGE'));
+    await tester.tap(find.text('Le Stratège'));
     await tester.pumpAndSettle();
 
     expect(find.text('« Je veux comprendre avant d’agir. »'), findsOneWidget);
     expect(find.text('Planifier avant d’agir.'), findsOneWidget);
 
+    // La fiche est haute : son bouton se mérite en défilant.
+    await tester.ensureVisible(find.text('Choisir ce profil'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Choisir ce profil'));
     await tester.pumpAndSettle();
 
     // Le badge a suivi : le Stratège est désormais le profil actuel…
     final strategeCard = find.ancestor(
-      of: find.text('LE STRATÈGE'),
-      matching: find.byType(Semantics),
+      of: find.text('Le Stratège'),
+      matching: find.byType(CarlysProfileCard),
     );
     expect(
-      find.descendant(
-        of: strategeCard.first,
-        matching: find.text('Ton profil'),
-      ),
+      find.descendant(of: strategeCard, matching: find.text('Ton profil')),
       findsOneWidget,
     );
-    // …et il n'y en a toujours qu'un — l'anneau animé a suivi lui aussi.
+    // …et il n'y en a toujours qu'un : la sélection a suivi.
     expect(find.text('Ton profil'), findsOneWidget);
-    expect(travelingRing, findsOneWidget);
+    expect(selectedCard, findsOneWidget);
     expect(
-      find.descendant(of: travelingRing, matching: find.text('LE STRATÈGE')),
+      find.descendant(of: selectedCard, matching: find.text('Le Stratège')),
       findsOneWidget,
     );
 
     // Sa fiche le dit, et ne propose plus de le choisir.
-    await tester.tap(find.text('LE STRATÈGE'));
+    await tester.tap(find.text('Le Stratège'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('C’est ton profil actuel'));
     expect(find.text('C’est ton profil actuel'), findsOneWidget);
     expect(find.text('Choisir ce profil'), findsNothing);
   });
@@ -187,7 +189,10 @@ void main() {
     // Aucun profil choisi sur ce compte : pas de badge.
     expect(find.text('Ton profil'), findsNothing);
 
-    await tester.tap(find.text('LE CONSTRUCTEUR'));
+    await tester.tap(find.text('Le Constructeur'));
+    await tester.pumpAndSettle();
+    // La fiche est haute : son bouton se mérite en défilant.
+    await tester.ensureVisible(find.text('Choisir ce profil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Choisir ce profil'));
     await tester.pumpAndSettle();

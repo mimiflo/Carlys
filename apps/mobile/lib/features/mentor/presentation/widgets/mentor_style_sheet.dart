@@ -7,7 +7,6 @@ import '../../domain/entities/mentor_style.dart';
 import '../../domain/mentor_word.dart';
 import '../controllers/mentor_speech_controller.dart';
 import '../providers/mentor_providers.dart';
-import 'mentor_sheet_header.dart';
 import 'mentor_voice_card.dart';
 
 /// Feuille « La voix du Mentor » : quatre styles, un choix, modifiable à
@@ -35,7 +34,7 @@ class _MentorStyleSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MentorSheetHeader(
+          const AppSheetHeader(
             title: 'La voix du Mentor',
             tagline: 'Le ton qui te correspond',
           ),

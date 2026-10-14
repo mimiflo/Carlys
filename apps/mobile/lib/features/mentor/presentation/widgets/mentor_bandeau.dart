@@ -3,11 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_prefs.dart';
 import '../../domain/mentor_word.dart';
-import 'mentor_speak_button.dart';
-
-/// La phrase « le mot du moment », pour le bouton comme pour la lecture à
-/// l'ouverture de la feuille : une seule clé, un seul bouton « Arrêter ».
-const String mentorWordSpeechKey = 'mentor.mot';
+import 'mentor_celebration_bandeau.dart';
+import 'mentor_voice_line.dart';
 
 /// Les montagnes violettes derrière le mot : WebP 1280 × 533, qualité 92,
 /// 11 Ko — plus bas, le dégradé lisse du fond se marquait en bandes.
@@ -56,6 +53,9 @@ class MentorBandeau extends StatelessWidget {
   Widget build(BuildContext context) {
     final mot = this.mot;
     final voix = this.voix;
+    if (mot != null && mot.estCelebration) {
+      return MentorCelebrationBandeau(mot: mot, voix: voix);
+    }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.padCard),
       decoration: const BoxDecoration(
@@ -94,7 +94,9 @@ class MentorBandeau extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
+                // Entier : à ×2 sur 320 points, « Regarde » se coupait en
+                // son milieu ; le mot se resserre plutôt.
+                AppWholeWordsText(
                   mot == null
                       ? 'Ses interventions sont coupées : son mot revient '
                             'quand tu les réactives.'
@@ -105,34 +107,7 @@ class MentorBandeau extends StatelessWidget {
                 ),
                 if (mot != null) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      if (voix != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.neutral0.withValues(alpha: 0.16),
-                            borderRadius: AppRadius.fullAll,
-                          ),
-                          child: Text(
-                            voix,
-                            style: AppTypography.label.copyWith(
-                              color: AppColors.neutral0,
-                            ),
-                          ),
-                        ),
-                      const Spacer(),
-                      MentorSpeakButton(
-                        speechKey: mentorWordSpeechKey,
-                        text: mot.message,
-                        color: AppColors.neutral0,
-                        size: 24,
-                      ),
-                    ],
-                  ),
+                  MentorVoiceLine(message: mot.message, voix: voix),
                 ],
               ],
             ),

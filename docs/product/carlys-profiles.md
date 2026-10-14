@@ -24,12 +24,14 @@ et l'on évolue d'un profil à l'autre à tout moment.
 - Feature `lib/features/carlys_profile/` : enum + dépôt (`PATCH /users/me`),
   actions (choisir **puis** rafraîchir l'utilisateur — la sélection affichée
   vient toujours de `AuthUser.carlysProfile`, une seule source de vérité).
-- Écran `/profil-carlys` : quatre cartes (illustration, titre, description,
-  chevron) fidèles à la maquette ; le profil actuel porte un badge « Ton
-  profil ». Chaque carte ouvre sa fiche (`showAppSheet`) : devise, publics
-  (« Pour »), bouton « Choisir ce profil ».
+- Écran `/profil-carlys` (maquette d'octobre 2026) : en-tête « Profil
+  Carlys / Ta façon d'avancer », quatre cartes (médaillon, nom, description,
+  chevron) ; le profil actuel prend le liseré violet plein, sa coche et la
+  pastille « Ton profil ». Chaque carte ouvre sa fiche (`showAppSheet`) :
+  médaillon, devise, description, « Pour toi si… », bouton « Choisir ce
+  profil » ou, pour le profil actuel, « C'est ton profil actuel ».
 - Entrées : la **première question de l'onboarding** (« Quel Carlys es-tu ? »,
-  étape 1/5 — se reconnaître est l'accroche du parcours, avant les questions
+  étape 1 sur 6, mêmes cartes, la sélection dit « Sélectionné » — se reconnaître est l'accroche du parcours, avant les questions
   métaboliques), puis la carte d'identité du profil (sa phrase est celle du
   profil choisi), et les réglages → groupe « Identité Carlys » → « Mon
   profil » (« À choisir » tant que rien ne l'est) pour changer à tout
@@ -64,13 +66,14 @@ composent côté serveur et se choisissent indépendamment.
   d'angle par profil — voir `docs/product/coach-ia.md`, section « Prompt et
   mise en cache ».
 
-## Illustrations
+## Médaillons
 
-Attendues dans `apps/mobile/assets/profiles/` (`constructeur.webp`,
-`challenger.webp`, `athlete.webp`, `stratege.webp` — voir le README du
-dossier). Tant qu'un fichier manque, la carte pose un **repli de marque**
-(dégradé violet + icône du profil) : déposer les fichiers suffit, aucun
-changement de code.
+Un disque violet et son pictogramme par profil, tirés des maquettes
+d'octobre 2026 : `apps/mobile/assets/profiles/medaillon_<slug>.webp` (canal
+alpha : la carte du Stratège déborde du cercle ; voir le README du dossier).
+Ils remplacent les photos d'avant. Un fichier manquant laisse un **disque de
+marque** et l'icône du profil ; un test vérifie que les quatre sont livrés.
+Remplacer un fichier par une version plus grande suffit.
 
 ## Couverture
 
