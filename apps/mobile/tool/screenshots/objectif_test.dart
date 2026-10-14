@@ -25,6 +25,7 @@ import 'package:carlys_mobile/features/workout_program/presentation/providers/tr
 import 'package:carlys_mobile/features/workout_program/presentation/screens/training_setup_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/training_goal_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/services/local_rest_alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_rest_alarm.dart';
 import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
@@ -107,6 +109,8 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          // Les autorisations du premier lancement préparent l'alarme de repos.
+          restAlarmProvider.overrideWithValue(FakeRestAlarm()),
         ],
         child: const CarlysApp(),
       ),
@@ -114,7 +118,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Jusqu'à l'étape 2 : identité choisie, puis l'objectif d'entraînement.
-    await tester.tap(find.text('LE CONSTRUCTEUR'));
+    await tester.tap(find.text('Le Constructeur'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Continuer'));
     await tester.tap(find.text('Continuer'));

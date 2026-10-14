@@ -55,6 +55,7 @@ import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart'
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/meal_editor_controller.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_editor_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/metabolism_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
@@ -1233,12 +1234,16 @@ void main() {
     await pumpApp(tester, nutrition: nutrition);
     await openNutrition(tester);
     await tester.scrollUntilVisible(
-      find.text('Journal'),
+      find.text('Journal alimentaire'),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await capture(tester, '30-nutrition-journal', shows: find.text('Journal'));
+    await capture(
+      tester,
+      '30-nutrition-journal',
+      shows: find.text('Journal alimentaire'),
+    );
   });
 
   // L'écran « Ajouter / Modifier ce repas » (maquette du 25 septembre
@@ -1377,13 +1382,8 @@ void main() {
   testWidgets('nouveau repas, en cours de saisie', (tester) async {
     await pumpApp(tester, nutrition: nutritionOf());
     await openNutrition(tester);
-    await tester.scrollUntilVisible(
-      find.text('Ajouter un repas'),
-      240,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await settle(tester);
-    await tester.tap(find.text('Ajouter un repas'));
+    // Le raccourci du haut de l'écran : le journal porte le même geste.
+    await tester.tap(find.text('Ajouter un repas').first);
     await settle(tester);
 
     // Une heure FIXE plutôt que « maintenant » : la pastille l'affiche, et
@@ -2044,10 +2044,13 @@ void main() {
   testWidgets('nutrition — métabolisme complet', (tester) async {
     await pumpApp(tester);
     await openNutrition(tester);
+    // Le métabolisme a sa page, ouverte par le raccourci « Mes besoins ».
+    await tester.tap(find.text('Mes besoins'));
+    await settle(tester);
     await capture(
       tester,
       '10-nutrition-metabolisme',
-      shows: find.byType(NutritionScreen),
+      shows: find.byType(MetabolismScreen),
     );
 
     await tester.scrollUntilVisible(

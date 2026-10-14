@@ -19,7 +19,7 @@ class CarlysProfileContent {
     required this.icon,
   });
 
-  /// « Le Constructeur » — rendu en capitales par la carte.
+  /// « Le Constructeur », tel qu'il s'affiche.
   final String title;
 
   /// « Constructeur », « Athlète » : le titre sans son article, là où il
