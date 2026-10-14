@@ -46,12 +46,9 @@ enum MealQuantityUnit {
   /// Rabattre l'inconnu sur « g » écrirait « 2 g » là où le serveur dit
   /// « 2 pièces », c'est-à-dire une quantité FAUSSE plutôt qu'absente.
   static MealQuantityUnit? fromApi(String? value) {
-    for (final unit in MealQuantityUnit.values) {
-      if (unit.apiValue == value) {
-        return unit;
-      }
-    }
-    return null;
+    return MealQuantityUnit.values
+        .where((unit) => unit.apiValue == value)
+        .firstOrNull;
   }
 
   /// La quantité écrite en toutes lettres : « 250 g », « 1,5 portion »,

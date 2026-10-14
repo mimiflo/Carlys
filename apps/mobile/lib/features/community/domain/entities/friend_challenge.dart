@@ -23,14 +23,12 @@ enum ChallengeMetric {
   final String label;
 
   static ChallengeMetric fromApi(String? value) {
-    for (final metric in ChallengeMetric.values) {
-      if (metric.apiValue == value) {
-        return metric;
-      }
-    }
     // Un serveur plus récent peut compter une chose que cette version
     // ignore : le défi reste lisible, seule la métrique se dégrade.
-    return ChallengeMetric.workouts;
+    return ChallengeMetric.values
+            .where((metric) => metric.apiValue == value)
+            .firstOrNull ??
+        ChallengeMetric.workouts;
   }
 }
 
@@ -44,12 +42,10 @@ enum FriendChallengeStatus {
   final String apiValue;
 
   static FriendChallengeStatus fromApi(String? value) {
-    for (final status in FriendChallengeStatus.values) {
-      if (status.apiValue == value) {
-        return status;
-      }
-    }
-    return FriendChallengeStatus.open;
+    return FriendChallengeStatus.values
+            .where((status) => status.apiValue == value)
+            .firstOrNull ??
+        FriendChallengeStatus.open;
   }
 }
 
@@ -64,12 +60,10 @@ enum FriendChallengeMemberStatus {
   final String apiValue;
 
   static FriendChallengeMemberStatus fromApi(String? value) {
-    for (final status in FriendChallengeMemberStatus.values) {
-      if (status.apiValue == value) {
-        return status;
-      }
-    }
-    return FriendChallengeMemberStatus.invited;
+    return FriendChallengeMemberStatus.values
+            .where((status) => status.apiValue == value)
+            .firstOrNull ??
+        FriendChallengeMemberStatus.invited;
   }
 }
 
@@ -149,12 +143,7 @@ class FriendChallenge {
 
   /// Le créateur, parmi les membres.
   FriendChallengeMember? get creator {
-    for (final member in members) {
-      if (member.isCreator) {
-        return member;
-      }
-    }
-    return null;
+    return members.where((member) => member.isCreator).firstOrNull;
   }
 
   /// Ceux qui sont DANS le défi ou y sont attendus : les acceptés et les
@@ -169,12 +158,7 @@ class FriendChallenge {
 
   /// Ma ligne du classement, s'il y en a une.
   FriendChallengeMember? get me {
-    for (final member in members) {
-      if (member.isMe) {
-        return member;
-      }
-    }
-    return null;
+    return members.where((member) => member.isMe).firstOrNull;
   }
 
   /// Le classement affichable : ceux qui ont accepté, dans l'ordre du

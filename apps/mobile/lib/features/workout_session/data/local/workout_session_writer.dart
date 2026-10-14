@@ -206,7 +206,6 @@ class WorkoutSessionWriter {
             durationSeconds: Value(input.durationSeconds),
             distanceMeters: Value(input.distanceMeters),
             restSeconds: Value(input.restSeconds),
-            rpe: Value(input.rpe),
             plannedReps: Value(input.plannedReps),
             plannedWeightKg: Value(input.plannedWeightKg),
             completedAt: completedAt,
@@ -231,7 +230,6 @@ class WorkoutSessionWriter {
           if (input.distanceMeters != null)
             'distanceMeters': input.distanceMeters,
           if (input.restSeconds != null) 'restSeconds': input.restSeconds,
-          if (input.rpe != null) 'rpe': input.rpe,
           if (input.plannedReps != null) 'plannedReps': input.plannedReps,
           if (input.plannedWeightKg != null)
             'plannedWeightKg': input.plannedWeightKg,

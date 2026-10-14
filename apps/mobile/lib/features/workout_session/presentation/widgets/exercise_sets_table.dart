@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
+import 'exercise_set_header.dart';
 import 'exercise_set_row.dart';
 
 /// « Séries de l'exercice » : le tableau des séries faites, de celle en
@@ -48,9 +49,6 @@ class ExerciseSetsTable extends StatelessWidget {
     final counter = total == null
         ? '${formatThousands(validated)} validée${validated > 1 ? 's' : ''}'
         : '${formatThousands(validated)} / ${formatThousands(total)} validées';
-    final header = AppTypography.labelMono.copyWith(
-      color: AppColors.darkTextSecondary,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -82,33 +80,9 @@ class ExerciseSetsTable extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ExcludeSemantics(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: ExerciseSetColumns.rank,
-                        child: Text(
-                          'SÉRIE',
-                          textAlign: TextAlign.center,
-                          style: header,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(timeMode ? 'DURÉE' : 'KG', style: header),
-                      ),
-                      Expanded(
-                        child: Text(
-                          timeMode ? 'DISTANCE' : 'REPS',
-                          style: header,
-                        ),
-                      ),
-                      const SizedBox(width: ExerciseSetColumns.status),
-                      const SizedBox(width: AppSpacing.sm),
-                    ],
-                  ),
-                ),
+              ExerciseSetHeader(
+                first: timeMode ? 'DURÉE' : 'KG',
+                second: timeMode ? 'DISTANCE' : 'REPS',
               ),
               for (final (index, set) in sets.indexed) ...[
                 const Divider(height: 1, color: AppColors.rowDivider),

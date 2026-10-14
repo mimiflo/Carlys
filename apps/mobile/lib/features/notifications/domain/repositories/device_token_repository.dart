@@ -28,12 +28,11 @@ enum NotificationCategory {
   final String label;
 
   static NotificationCategory? fromWire(String value) {
-    for (final category in NotificationCategory.values) {
-      if (category.wire == value) return category;
-    }
     // Une catégorie inconnue vient d'un serveur plus récent : on l'ignore
     // plutôt que de faire échouer l'écran des réglages.
-    return null;
+    return NotificationCategory.values
+        .where((category) => category.wire == value)
+        .firstOrNull;
   }
 }
 

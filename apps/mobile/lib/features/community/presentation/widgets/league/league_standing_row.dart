@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/utilities/formatting.dart';
 import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/league.dart';
+import '../me_highlight.dart';
 import 'league_crown.dart';
 import 'league_metal.dart';
 import 'league_wording.dart';
@@ -119,15 +120,7 @@ class LeagueStandingRow extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        decoration: me
-            ? const BoxDecoration(
-                color: AppColors.primaryBadgeBg,
-                borderRadius: AppRadius.mdAll,
-                border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.primaryBadgeBorder),
-                ),
-              )
-            : null,
+        decoration: me ? meHighlight : null,
         child: LayoutBuilder(
           builder: (context, constraints) => rowFor(
             math.max(0, constraints.maxWidth - _fixedWidth - _minNameWidth),

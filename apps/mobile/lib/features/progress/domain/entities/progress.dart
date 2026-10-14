@@ -280,14 +280,11 @@ enum ProgressEventKind {
       this == ProgressEventKind.title;
 
   static ProgressEventKind? fromApi(String? value) {
-    for (final kind in ProgressEventKind.values) {
-      if (kind.apiValue == value) {
-        return kind;
-      }
-    }
     // Un serveur plus récent peut inventer un type : la ligne est IGNORÉE
     // plutôt que rendue vide — une frise ne montre pas des trous.
-    return null;
+    return ProgressEventKind.values
+        .where((kind) => kind.apiValue == value)
+        .firstOrNull;
   }
 }
 

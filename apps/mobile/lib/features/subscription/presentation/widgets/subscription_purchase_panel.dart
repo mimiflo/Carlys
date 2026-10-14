@@ -121,14 +121,10 @@ class _SubscriptionPurchasePanelState
   /// recommande. Le choix par défaut n'est pas décidé par l'application.
   SubscriptionOffer _resolveSelection(OfferCatalog catalog) {
     final chosen = _selectedId;
-    if (chosen != null) {
-      for (final offer in catalog.offers) {
-        if (offer.id == chosen) return offer;
-      }
-    }
-    return catalog.offers.firstWhere(
-      (offer) => offer.isRecommended,
-      orElse: () => catalog.offers.first,
-    );
+    return catalog.offers.where((offer) => offer.id == chosen).firstOrNull ??
+        catalog.offers.firstWhere(
+          (offer) => offer.isRecommended,
+          orElse: () => catalog.offers.first,
+        );
   }
 }

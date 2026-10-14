@@ -358,12 +358,7 @@ CarlysTitle? titleOfReward(String rewardId) {
     return null;
   }
   final nom = rewardId.substring(titleRewardPrefix.length);
-  for (final titre in CarlysTitle.values) {
-    if (titre.name == nom) {
-      return titre;
-    }
-  }
-  return null;
+  return CarlysTitle.values.asNameMap()[nom];
 }
 
 /// Les récompenses méritées par ces faits, dans l'ordre du catalogue.

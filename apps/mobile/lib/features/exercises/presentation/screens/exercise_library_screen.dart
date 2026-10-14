@@ -63,10 +63,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
     if (slug == null) return null;
     final groups = ref.watch(muscleGroupsProvider).valueOrNull;
     if (groups == null) return null;
-    for (final group in groups) {
-      if (group.slug == slug) return group.name;
-    }
-    return null;
+    return groups.where((group) => group.slug == slug).firstOrNull?.name;
   }
 
   @override

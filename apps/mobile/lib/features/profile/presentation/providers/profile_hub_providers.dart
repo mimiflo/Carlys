@@ -67,12 +67,10 @@ final activeProgramProvider = FutureProvider.autoDispose<ProgramDetail?>((
   ref,
 ) async {
   final programs = await ref.watch(programsProvider.future);
-  for (final program in programs) {
-    if (program.isActive) {
-      return ref.watch(programDetailProvider(program.id).future);
-    }
-  }
-  return null;
+  final active = programs.where((program) => program.isActive).firstOrNull;
+  return active == null
+      ? null
+      : ref.watch(programDetailProvider(active.id).future);
 });
 
 /// La position d'aujourd'hui dans le programme suivi : `null` sans

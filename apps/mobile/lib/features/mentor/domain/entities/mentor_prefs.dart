@@ -13,13 +13,9 @@ enum MentorFrequency {
   final String label;
 
   static MentorFrequency fromWire(String? wire) {
-    for (final frequency in values) {
-      if (frequency.wire == wire) {
-        return frequency;
-      }
-    }
     // Valeur absente ou inconnue : le cran DISCRET, jamais le plus bavard.
-    return MentorFrequency.hebdomadaire;
+    return values.where((frequency) => frequency.wire == wire).firstOrNull ??
+        MentorFrequency.hebdomadaire;
   }
 }
 

@@ -24,12 +24,7 @@ enum CommunityTab {
 
   /// L'onglet d'un paramètre de route, ou `null` s'il n'en désigne aucun.
   static CommunityTab? fromSlug(String? slug) {
-    for (final tab in CommunityTab.values) {
-      if (tab.slug == slug) {
-        return tab;
-      }
-    }
-    return null;
+    return CommunityTab.values.where((tab) => tab.slug == slug).firstOrNull;
   }
 }
 

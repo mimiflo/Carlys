@@ -45,11 +45,6 @@ enum TrainingGoal {
   /// Null pour une valeur absente OU inconnue : un serveur plus récent qui
   /// ajouterait un objectif ne doit pas faire planter les anciens clients.
   static TrainingGoal? fromWire(String? wire) {
-    for (final goal in values) {
-      if (goal.wire == wire) {
-        return goal;
-      }
-    }
-    return null;
+    return values.where((goal) => goal.wire == wire).firstOrNull;
   }
 }

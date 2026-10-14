@@ -55,10 +55,5 @@ AcademyLevel? academyLevelOf(int abordees) {
 
 /// Le prochain niveau à atteindre, ou `null` au sommet du barème.
 AcademyLevel? nextAcademyLevelOf(int abordees) {
-  for (final niveau in academyLevels) {
-    if (abordees < niveau.seuil) {
-      return niveau;
-    }
-  }
-  return null;
+  return academyLevels.where((niveau) => abordees < niveau.seuil).firstOrNull;
 }

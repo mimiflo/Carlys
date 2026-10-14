@@ -126,15 +126,14 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
     List<WorkoutSetEntry> exerciseSets,
     PickedExercise? exercise,
   ) {
-    for (final set in exerciseSets.reversed) {
-      if (set.reps != null && set.weightKg != null) {
-        return set;
-      }
-    }
-    if (exercise == null) {
-      return null;
-    }
-    return ref.watch(previousPerformanceProvider(exercise.name)).valueOrNull;
+    return exerciseSets.reversed
+            .where((set) => set.reps != null && set.weightKg != null)
+            .firstOrNull ??
+        (exercise == null
+            ? null
+            : ref
+                  .watch(previousPerformanceProvider(exercise.name))
+                  .valueOrNull);
   }
 
   Future<void> _pickExercise() async {

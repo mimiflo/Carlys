@@ -98,12 +98,11 @@ class ProgramDetail {
   final List<ProgramDayEntry> days;
 
   ProgramDayEntry? dayAt(int weekNumber, int dayOfWeek) {
-    for (final day in days) {
-      if (day.weekNumber == weekNumber && day.dayOfWeek == dayOfWeek) {
-        return day;
-      }
-    }
-    return null;
+    return days
+        .where(
+          (day) => day.weekNumber == weekNumber && day.dayOfWeek == dayOfWeek,
+        )
+        .firstOrNull;
   }
 
   /// `startsOn` se change par [withStartsOn] et non ici : `copyWith` ne sait

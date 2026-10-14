@@ -40,11 +40,6 @@ enum MentorStyle {
   /// Null pour une valeur absente OU inconnue : un serveur plus récent qui
   /// ajouterait un style ne doit pas faire planter les anciens clients.
   static MentorStyle? fromWire(String? wire) {
-    for (final style in values) {
-      if (style.wire == wire) {
-        return style;
-      }
-    }
-    return null;
+    return values.where((style) => style.wire == wire).firstOrNull;
   }
 }

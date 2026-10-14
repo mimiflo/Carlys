@@ -42,8 +42,6 @@ import '../../../core/utilities/serial_queue.dart';
 
 /// Persistance locale des questions abordées.
 class AnsweredLessonsStore {
-  AnsweredLessonsStore();
-
   static const _logger = AppLogger('AnsweredLessonsStore');
 
   /// Clé des préférences locales.

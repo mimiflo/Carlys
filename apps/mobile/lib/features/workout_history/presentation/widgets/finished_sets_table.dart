@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
+import '../../../workout_session/presentation/widgets/exercise_set_header.dart';
 import '../../../workout_session/presentation/widgets/exercise_set_row.dart';
 import '../../domain/services/exercise_breakdown.dart';
 
@@ -25,40 +26,13 @@ class FinishedSetsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final header = AppTypography.labelMono.copyWith(
-      color: AppColors.darkTextSecondary,
-    );
     final timed = exercise.timed;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ExcludeSemantics(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: ExerciseSetColumns.rank,
-                  child: Text(
-                    'SÉRIE',
-                    textAlign: TextAlign.center,
-                    style: header,
-                  ),
-                ),
-                Expanded(
-                  child: Text(timed ? 'DURÉE' : 'CHARGE', style: header),
-                ),
-                Expanded(
-                  child: Text(
-                    timed ? 'DISTANCE' : 'RÉPÉTITIONS',
-                    style: header,
-                  ),
-                ),
-                const SizedBox(width: ExerciseSetColumns.status),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-            ),
-          ),
+        ExerciseSetHeader(
+          first: timed ? 'DURÉE' : 'CHARGE',
+          second: timed ? 'DISTANCE' : 'RÉPÉTITIONS',
         ),
         for (final (index, set) in exercise.sets.indexed) ...[
           const Divider(height: 1, color: AppColors.rowDivider),

@@ -27,12 +27,8 @@ class ExerciseRecordsTiles extends ConsumerWidget {
       exerciseRecordsProvider((id: exerciseId, name: exerciseName)),
     );
 
-    double? valueOf(PersonalRecordType type) {
-      for (final record in records) {
-        if (record.type == type) return record.value;
-      }
-      return null;
-    }
+    double? valueOf(PersonalRecordType type) =>
+        records.where((record) => record.type == type).firstOrNull?.value;
 
     final maxWeight = valueOf(PersonalRecordType.maxWeight);
     final maxReps = valueOf(PersonalRecordType.maxReps);

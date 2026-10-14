@@ -30,12 +30,7 @@ enum TrainingExperience {
 
   /// Null pour une valeur absente OU inconnue — jamais un niveau deviné.
   static TrainingExperience? fromWire(String? wire) {
-    for (final experience in values) {
-      if (experience.wire == wire) {
-        return experience;
-      }
-    }
-    return null;
+    return values.where((experience) => experience.wire == wire).firstOrNull;
   }
 }
 

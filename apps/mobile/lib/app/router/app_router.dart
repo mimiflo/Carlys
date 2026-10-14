@@ -110,7 +110,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: false,
     refreshListenable: refreshListenable,
     redirect: (context, state) {
       final location = state.matchedLocation;
@@ -145,22 +144,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        name: 'splash',
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: AppRoutes.login,
-        name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.register,
-        name: 'register',
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
-        name: 'forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
@@ -180,7 +175,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                name: 'home',
                 builder: (context, state) => const HomeScreen(),
               ),
             ],
@@ -189,12 +183,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.training,
-                name: 'training',
                 builder: (context, state) => const TrainingHubScreen(),
               ),
               GoRoute(
                 path: AppRoutes.exercises,
-                name: 'exercises',
                 // `?groupe=<slug>` ouvre la bibliothèque déjà filtrée sur un
                 // muscle (fiches d'anatomie de l'Academy).
                 builder: (context, state) => ExerciseLibraryScreen(
@@ -203,7 +195,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: ':idOrSlug',
-                    name: 'exercise-detail',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => ExerciseDetailScreen(
                       idOrSlug: state.pathParameters['idOrSlug'] ?? '',
@@ -213,12 +204,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: AppRoutes.coach,
-                name: 'coach',
                 builder: (context, state) => const CoachPage(),
                 routes: [
                   GoRoute(
                     path: 'objectif',
-                    name: 'coach-goal',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => const CoachGoalScreen(),
                   ),
@@ -234,17 +223,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.nutrition,
-                name: 'nutrition',
                 builder: (context, state) => const NutritionScreen(),
                 routes: [
                   GoRoute(
                     path: 'recettes',
-                    name: 'recipes',
                     builder: (context, state) => const RecipesScreen(),
                   ),
                   GoRoute(
                     path: 'scan',
-                    name: 'meal-scan',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => MealScanScreen(
                       day: DateTime.tryParse(
@@ -254,7 +240,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'metabolisme',
-                    name: 'metabolism',
                     builder: (context, state) => const MetabolismScreen(),
                   ),
                   // Plein écran, hors de la coquille : on saisit un repas
@@ -262,7 +247,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   // quoi il serait lu comme un identifiant.
                   GoRoute(
                     path: 'repas/nouveau',
-                    name: 'meal-new',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => MealEditorScreen(
                       day: DateTime.tryParse(
@@ -272,7 +256,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'repas/:mealId',
-                    name: 'meal-edit',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => MealEditorScreen(
                       mealId: state.pathParameters['mealId'] ?? '',
@@ -286,12 +269,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.progress,
-                name: 'progress',
                 builder: (context, state) => const ProgressScreen(),
                 routes: [
                   GoRoute(
                     path: 'exercises/:exerciseId',
-                    name: 'exercise-progression',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => ExerciseProgressionScreen(
                       exerciseId: state.pathParameters['exerciseId'] ?? '',
@@ -299,7 +280,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'timeline',
-                    name: 'timeline',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => const TimelineScreen(),
                   ),
@@ -311,12 +291,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.academy,
-                name: 'academy',
                 builder: (context, state) => const AcademyScreen(),
                 routes: [
                   GoRoute(
                     path: 'quiz/:domaine',
-                    name: 'academy-domain-quiz',
                     // Plein écran : un quiz se joue d'un trait, la bottom
                     // bar n'a rien à y faire.
                     parentNavigatorKey: _rootNavigatorKey,
@@ -329,12 +307,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   // pas un aparté plein écran.
                   GoRoute(
                     path: 'parcours',
-                    name: 'academy-journey',
                     builder: (context, state) => const JourneyScreen(),
                     routes: [
                       GoRoute(
                         path: ':etape',
-                        name: 'academy-journey-stage',
                         builder: (context, state) => JourneyStageScreen(
                           rang:
                               int.tryParse(
@@ -353,7 +329,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.community,
-                name: 'community',
                 builder: (context, state) => CommunityScreen(
                   initialTab: CommunityTab.fromSlug(
                     state.uri.queryParameters['onglet'],
@@ -364,7 +339,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   // barre du bas, comme la fiche d'un exercice.
                   GoRoute(
                     path: 'defis/:challengeId',
-                    name: 'friend-challenge',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => FriendChallengeScreen(
                       challengeId: state.pathParameters['challengeId'] ?? '',
@@ -382,13 +356,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // destination quotidienne.
       GoRoute(
         path: AppRoutes.profile,
-        name: 'profile',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.profileSettings,
-        name: 'profile-settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileSettingsScreen(),
       ),
@@ -396,7 +368,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Plein écran, hors coquille (pas de bottom bar) ────────────
       GoRoute(
         path: AppRoutes.activeWorkout,
-        name: 'active-workout',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ActiveWorkoutScreen(),
       ),
@@ -404,13 +375,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // l'identifiant d'un nouveau modèle est un UUID généré sur l'appareil.
       GoRoute(
         path: AppRoutes.templates,
-        name: 'templates',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const TemplatesScreen(),
         routes: [
           GoRoute(
             path: ':templateId',
-            name: 'template-editor',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => TemplateEditorScreen(
               templateId: state.pathParameters['templateId'] ?? '',
@@ -422,7 +391,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // nouveau programme naît d'un UUID généré sur l'appareil.
       GoRoute(
         path: AppRoutes.programs,
-        name: 'programs',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProgramsScreen(),
         routes: [
@@ -430,13 +398,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // paramètre serait avalé par lui.
           GoRoute(
             path: 'preparation',
-            name: 'program-setup',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const TrainingSetupScreen(),
           ),
           GoRoute(
             path: ':programId',
-            name: 'program-detail',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => ProgramDetailScreen(
               programId: state.pathParameters['programId'] ?? '',
@@ -444,7 +410,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'calendrier',
-                name: 'program-calendar',
                 parentNavigatorKey: _rootNavigatorKey,
                 builder: (context, state) => ProgramCalendarScreen(
                   programId: state.pathParameters['programId'] ?? '',
@@ -456,13 +421,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.history,
-        name: 'history',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const WorkoutHistoryScreen(),
         routes: [
           GoRoute(
             path: ':sessionId',
-            name: 'workout-detail',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => WorkoutDetailScreen(
               sessionId: state.pathParameters['sessionId'] ?? '',
@@ -472,7 +435,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.sessions,
-        name: 'sessions',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SessionsScreen(),
       ),
@@ -481,61 +443,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // les protège donc comme n'importe quel autre écran.
       GoRoute(
         path: AppRoutes.changePassword,
-        name: 'change-password',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
         path: AppRoutes.deleteAccount,
-        name: 'delete-account',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: AppRoutes.subscription,
-        name: 'subscription',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SubscriptionScreen(),
       ),
       GoRoute(
         path: AppRoutes.settings,
-        name: 'settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.progression,
-        name: 'progression',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProgressionScreen(),
       ),
       GoRoute(
         path: AppRoutes.manifesto,
-        name: 'manifesto',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ManifestoScreen(),
       ),
       GoRoute(
         path: AppRoutes.mentor,
-        name: 'mentor',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MentorSettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.carlysProfiles,
-        name: 'carlys-profiles',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CarlysProfilesScreen(),
       ),
       GoRoute(
         path: AppRoutes.welcome,
-        name: 'welcome',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        name: 'onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
       ),

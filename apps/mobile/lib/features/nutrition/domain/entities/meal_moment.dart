@@ -21,12 +21,9 @@ enum MealMoment {
   /// pourrait servir un moment que cette version ignore, et l'écran le
   /// proposera d'après l'heure plutôt que d'en afficher un faux.
   static MealMoment? fromApi(Object? value) {
-    for (final moment in MealMoment.values) {
-      if (moment.apiValue == value) {
-        return moment;
-      }
-    }
-    return null;
+    return MealMoment.values
+        .where((moment) => moment.apiValue == value)
+        .firstOrNull;
   }
 
   /// Le moment PROPOSÉ pour un repas pris à [local] (heure de l'appareil).

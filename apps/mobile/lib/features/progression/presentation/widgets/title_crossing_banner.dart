@@ -31,13 +31,9 @@ class TitleCrossingBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final earned = ref.watch(earnedRewardsProvider).valueOrNull ?? const [];
-    EarnedReward? crossing;
-    for (final entry in earned) {
-      if (entry.isNew && entry.reward.kind == RewardKind.titre) {
-        crossing = entry;
-        break;
-      }
-    }
+    final crossing = earned
+        .where((entry) => entry.isNew && entry.reward.kind == RewardKind.titre)
+        .firstOrNull;
     if (crossing == null) return const SizedBox.shrink();
 
     final reward = crossing.reward;

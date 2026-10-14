@@ -90,12 +90,7 @@ class SessionPlan {
 
   /// Prochaine série prévue du programme, `null` quand tout est fait ou sauté.
   SessionPlanItem? get current {
-    for (final item in items) {
-      if (item.isPending) {
-        return item;
-      }
-    }
-    return null;
+    return items.where((item) => item.isPending).firstOrNull;
   }
 
   /// Items d'un exercice donné, dans l'ordre.

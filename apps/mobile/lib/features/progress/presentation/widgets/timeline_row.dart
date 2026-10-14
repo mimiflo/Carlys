@@ -138,12 +138,11 @@ class TimelineRow extends StatelessWidget {
     if (key == null) {
       return null;
     }
-    for (final rule in rewardCatalog) {
-      if (rule.reward.id == key) {
-        return rule.reward.label;
-      }
-    }
-    return null;
+    return rewardCatalog
+        .where((rule) => rule.reward.id == key)
+        .firstOrNull
+        ?.reward
+        .label;
   }
 
   /// « 85 kg », « 12 répétitions », « 700 kg sur une série ».

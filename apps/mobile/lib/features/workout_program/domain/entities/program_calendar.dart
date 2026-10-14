@@ -51,12 +51,10 @@ enum ProgramDayStatus {
   /// ignore, et le calendrier doit rester lisible. « À venir » est le seul
   /// repli qui n'accuse personne.
   static ProgramDayStatus fromApi(String? value) {
-    for (final status in ProgramDayStatus.values) {
-      if (status.apiValue == value) {
-        return status;
-      }
-    }
-    return ProgramDayStatus.upcoming;
+    return ProgramDayStatus.values
+            .where((status) => status.apiValue == value)
+            .firstOrNull ??
+        ProgramDayStatus.upcoming;
   }
 }
 

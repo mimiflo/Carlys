@@ -19,8 +19,6 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/utilities/serial_queue.dart';
 
 class RewardLedger {
-  RewardLedger();
-
   static const _logger = AppLogger('RewardLedger');
 
   /// Clé des préférences locales.

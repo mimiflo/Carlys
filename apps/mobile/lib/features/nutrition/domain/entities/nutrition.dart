@@ -26,12 +26,9 @@ enum BiologicalSex {
   final String label;
 
   static BiologicalSex? fromApi(String? value) {
-    for (final sex in BiologicalSex.values) {
-      if (sex.apiValue == value) {
-        return sex;
-      }
-    }
-    return null;
+    return BiologicalSex.values
+        .where((sex) => sex.apiValue == value)
+        .firstOrNull;
   }
 }
 
@@ -50,12 +47,9 @@ enum ActivityLevel {
   final String description;
 
   static ActivityLevel? fromApi(String? value) {
-    for (final level in ActivityLevel.values) {
-      if (level.apiValue == value) {
-        return level;
-      }
-    }
-    return null;
+    return ActivityLevel.values
+        .where((level) => level.apiValue == value)
+        .firstOrNull;
   }
 }
 
@@ -71,12 +65,9 @@ enum NutritionGoal {
   final String label;
 
   static NutritionGoal? fromApi(String? value) {
-    for (final goal in NutritionGoal.values) {
-      if (goal.apiValue == value) {
-        return goal;
-      }
-    }
-    return null;
+    return NutritionGoal.values
+        .where((goal) => goal.apiValue == value)
+        .firstOrNull;
   }
 }
 
@@ -99,12 +90,9 @@ enum BmiCategory {
   /// règle que le reste du sous-système, écrite dans
   /// `metabolism_mappers.dart`.
   static BmiCategory? fromApi(String? value) {
-    for (final category in BmiCategory.values) {
-      if (category.apiValue == value) {
-        return category;
-      }
-    }
-    return null;
+    return BmiCategory.values
+        .where((category) => category.apiValue == value)
+        .firstOrNull;
   }
 }
 
@@ -122,12 +110,9 @@ enum MetabolismMissingField {
   final String label;
 
   static MetabolismMissingField? fromApi(String? value) {
-    for (final field in MetabolismMissingField.values) {
-      if (field.apiValue == value) {
-        return field;
-      }
-    }
-    return null;
+    return MetabolismMissingField.values
+        .where((field) => field.apiValue == value)
+        .firstOrNull;
   }
 }
 

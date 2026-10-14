@@ -27,14 +27,12 @@ enum LeagueDivision {
   int get rung => index;
 
   static LeagueDivision fromApi(String? value) {
-    for (final division in LeagueDivision.values) {
-      if (division.apiValue == value) {
-        return division;
-      }
-    }
     // Un serveur plus récent peut ajouter une division : la ligue reste
     // lisible, on la montre au plus bas plutôt que de casser l'écran.
-    return LeagueDivision.bronze;
+    return LeagueDivision.values
+            .where((division) => division.apiValue == value)
+            .firstOrNull ??
+        LeagueDivision.bronze;
   }
 }
 
@@ -157,12 +155,7 @@ class League {
 
   /// Ma ligne du classement, s'il y en a une.
   LeagueStanding? get me {
-    for (final standing in standings) {
-      if (standing.isMe) {
-        return standing;
-      }
-    }
-    return null;
+    return standings.where((standing) => standing.isMe).firstOrNull;
   }
 
   /// Jours restants avant la fermeture, jamais négatif.

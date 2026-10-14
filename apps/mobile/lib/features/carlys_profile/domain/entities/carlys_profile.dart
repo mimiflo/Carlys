@@ -17,11 +17,6 @@ enum CarlysProfile {
   /// Null pour une valeur absente OU inconnue : un serveur plus récent qui
   /// ajouterait un profil ne doit pas faire planter les anciens clients.
   static CarlysProfile? fromWire(String? wire) {
-    for (final profile in values) {
-      if (profile.wire == wire) {
-        return profile;
-      }
-    }
-    return null;
+    return values.where((profile) => profile.wire == wire).firstOrNull;
   }
 }

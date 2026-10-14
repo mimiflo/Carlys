@@ -4,6 +4,7 @@ import '../../../../../core/utilities/formatting.dart';
 import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/friend_challenge.dart';
 import '../league/league_wording.dart';
+import '../me_highlight.dart';
 import 'friend_challenge_wording.dart';
 
 /// Le classement du défi : ceux qui ont accepté, du premier au dernier, et
@@ -107,15 +108,7 @@ class _StandingRow extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        decoration: me
-            ? const BoxDecoration(
-                color: AppColors.primaryBadgeBg,
-                borderRadius: AppRadius.mdAll,
-                border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.primaryBadgeBorder),
-                ),
-              )
-            : null,
+        decoration: me ? meHighlight : null,
         child: Row(
           children: [
             SizedBox(

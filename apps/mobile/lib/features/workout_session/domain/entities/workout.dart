@@ -184,7 +184,6 @@ class AddSetInput {
     this.durationSeconds,
     this.distanceMeters,
     this.restSeconds,
-    this.rpe,
     this.plannedReps,
     this.plannedWeightKg,
     this.planItemId,
@@ -204,7 +203,6 @@ class AddSetInput {
   final int? distanceMeters;
 
   final int? restSeconds;
-  final int? rpe;
 
   /// Cible affichée à l'instant de la validation. Renseignée par le cas
   /// d'usage d'appariement au plan, jamais saisie à la main par un écran.
@@ -231,7 +229,6 @@ class AddSetInput {
       durationSeconds: durationSeconds,
       distanceMeters: distanceMeters,
       restSeconds: restSeconds,
-      rpe: rpe,
       plannedReps: plannedReps ?? this.plannedReps,
       plannedWeightKg: plannedWeightKg ?? this.plannedWeightKg,
       planItemId: planItemId ?? this.planItemId,

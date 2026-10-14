@@ -68,9 +68,9 @@ class FirstStepsBody extends ConsumerWidget {
   /// une médaille de constance au-dessus d'un bouton « ouvrir une leçon »
   /// promettrait une chose et en donnerait une autre.
   static Reward? _firstReward(List<Reward> upcoming) {
-    for (final reward in upcoming) {
-      if (reward.value == CarlysValue.maitrise) return reward;
-    }
-    return upcoming.isEmpty ? null : upcoming.first;
+    return upcoming
+            .where((reward) => reward.value == CarlysValue.maitrise)
+            .firstOrNull ??
+        upcoming.firstOrNull;
   }
 }
