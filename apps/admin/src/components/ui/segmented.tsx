@@ -39,7 +39,7 @@ export function Segmented<T extends string>({
         {options.map((option) => (
           <label
             key={option.value}
-            className={`relative z-10 flex cursor-pointer items-center justify-center rounded-md px-3 font-medium transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
+            className={`relative z-10 flex cursor-pointer items-center justify-center rounded-md px-2 font-medium whitespace-nowrap sm:px-3 transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary ${
               option.value === value ? 'text-foreground' : 'text-muted hover:text-foreground'
             }`}
           >

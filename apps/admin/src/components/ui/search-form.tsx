@@ -29,7 +29,7 @@ export function SearchForm({
         onSubmit(search.trim());
       }}
     >
-      <div className="relative w-full max-w-md flex-1">
+      <div className="relative min-w-0 max-w-md flex-1 basis-52">
         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
           <SearchIcon width={16} height={16} />
         </span>

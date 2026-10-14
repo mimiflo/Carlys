@@ -44,22 +44,22 @@ function CreateForm() {
         create.mutate();
       }}
     >
-      <label className="text-sm">
+      <label className="w-full text-sm sm:w-auto">
         <span className="block text-xs font-medium text-muted">Nom</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Trapèzes"
-          className={`${field} mt-1.5 w-56`}
+          className={`${field} mt-1.5 sm:w-56`}
         />
       </label>
-      <label className="text-sm">
+      <label className="w-full text-sm sm:w-auto">
         <span className="block text-xs font-medium text-muted">Slug (proposé d’après le nom)</span>
         <input
           value={slug}
           onChange={(event) => setSlug(event.target.value)}
           placeholder={slugify(name) || 'trapezes'}
-          className={`${field} mt-1.5 w-56 font-mono`}
+          className={`${field} mt-1.5 font-mono sm:w-56`}
         />
       </label>
       <button

@@ -141,24 +141,24 @@ export function CommunityReportRow({
           timeStyle: 'short',
         })}
       </td>
-      <td className={td}>
+      <td data-label="Motif" className={td}>
         <span className="font-medium">{COMMUNITY_REPORT_REASON_LABELS[report.reason]}</span>
         {report.details !== null && (
           <span className="block max-w-xs text-xs text-muted">{report.details}</span>
         )}
       </td>
-      <td className={td}>
+      <td data-label="Auteur" className={td}>
         <PartyLink party={report.reporter} />
       </td>
-      <td className={td}>
+      <td data-label="Personne visée" className={td}>
         <PartyLink party={report.reportedUser} />
         <ReportedHistory report={report} />
       </td>
-      <td className={`${td} max-w-xs`}>
+      <td data-label="Contenu visé" className={`${td} max-w-xs`}>
         <TargetCell report={report} />
       </td>
-      <td className={td}>
-        <div className="flex flex-col items-start gap-2">
+      <td className={`${td} max-md:basis-full`}>
+        <div className="flex flex-wrap items-center gap-2 md:flex-col md:items-start">
           <Badge status={reportStatus(report.status)} />
           <button type="button" onClick={onOpen} className={button('secondary', 'sm')}>
             {report.status === 'OPEN' ? 'Examiner' : 'Voir la décision'}

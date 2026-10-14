@@ -32,12 +32,12 @@ function ExerciseRow({ exercise, onOpen }: { exercise: AdminExerciseSummary; onO
         type="button"
         onClick={onOpen}
         aria-label={`Ouvrir la fiche de ${exercise.name}`}
-        className="group flex w-full items-center gap-4 px-4 py-3 text-left transition-colors duration-150 hover:bg-primary/[0.04] focus-visible:bg-primary/[0.06] focus-visible:outline-none"
+        className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left md:flex md:gap-4 transition-colors duration-150 hover:bg-primary/[0.04] focus-visible:bg-primary/[0.06] focus-visible:outline-none"
       >
         {exercise.image === null ? (
           <span
             aria-hidden
-            className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border"
+            className="row-span-2 flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border"
           >
             <ImageIcon />
           </span>
@@ -48,10 +48,10 @@ function ExerciseRow({ exercise, onOpen }: { exercise: AdminExerciseSummary; onO
             alt=""
             loading="lazy"
             decoding="async"
-            className="h-14 w-20 shrink-0 rounded-lg object-cover ring-1 ring-border"
+            className="row-span-2 h-14 w-20 shrink-0 rounded-lg object-cover ring-1 ring-border"
           />
         )}
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 self-end md:flex-1 md:self-auto">
           {/* Un exercice supprimé se BARRE, il ne pâlit pas : à 60 %
               d'opacité, son slug tombait à 2,17:1. */}
           <span
@@ -69,13 +69,13 @@ function ExerciseRow({ exercise, onOpen }: { exercise: AdminExerciseSummary; onO
               ` · ${exercise.equipmentSlugs.length} matériel${exercise.equipmentSlugs.length > 1 ? 's' : ''}`}
           </span>
         </span>
-        <span className="flex w-40 shrink-0 flex-wrap justify-end gap-1.5">
+        <span className="col-start-2 flex flex-wrap gap-1.5 self-start md:w-40 md:shrink-0 md:justify-end md:self-auto">
           <Badge status={catalogStatus(exercise)} />
           {exercise.isPremium && <Badge status={planStatus(true)} />}
         </span>
         <span
           aria-hidden
-          className="text-muted transition-transform duration-150 group-hover:translate-x-0.5"
+          className="col-start-3 row-span-2 row-start-1 text-muted transition-transform duration-150 group-hover:translate-x-0.5"
         >
           <ArrowRightIcon width={16} height={16} />
         </span>

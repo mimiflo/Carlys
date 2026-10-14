@@ -2,16 +2,17 @@ import type { ReactNode } from 'react';
 import { Card } from './card';
 
 /**
- * Les tableaux du back-office : une carte qui défile en largeur sur
- * téléphone, des en-têtes discrets, des lignes de 52 px qui s'éclairent au
- * survol. Les classes `th`/`td` restent des chaînes : les cellules gardent
+ * Les tableaux du back-office : des en-têtes discrets, des lignes de 52 px
+ * qui s'éclairent au survol ; au téléphone, une carte par ligne
+ * (`.table-stack`, dans globals.css — une cellule y nomme sa colonne par
+ * `data-label`). Les classes `th`/`td` restent des chaînes : les cellules gardent
  * leurs balises natives, et les tests leurs rôles.
  */
 export function TableCard({ children }: { children: ReactNode }) {
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">{children}</table>
+      <div className="md:overflow-x-auto">
+        <table className="table-stack w-full text-left text-sm">{children}</table>
       </div>
     </Card>
   );

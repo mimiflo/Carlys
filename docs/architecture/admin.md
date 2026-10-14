@@ -105,11 +105,18 @@ d'ajouter sa correspondance dans le test — c'est voulu.
   fichier libre.
 - **Logo** : le vrai logo Carlys (`public/brand/carlys-mark.webp`, tiré de
   `apps/mobile/assets/brand/carlys-mark.webp`), favicon et icône compris.
+- **Téléphone** : tout le panel se tient à 390 px. Sous `md`, chaque
+  tableau (`TableCard`) se lit en **cartes** : une ligne = un bloc, la
+  première cellule en tête, les autres à la suite avec leur intitulé
+  (`data-label` sur la cellule, rendu par `.table-stack` dans `globals.css`) ;
+  l'en-tête de colonne reste lu par les lecteurs d'écran. La liste des
+  exercices passe ses statuts sous le nom, les fiches latérales prennent tout
+  l'écran.
 - **Mouvement** (`globals.css`) : entrée en fondu de 250 ms, squelettes,
   halo des voyants « en service », pastille du segment qui glisse ; tout est
   coupé sous `prefers-reduced-motion: reduce`.
 - **Captures** : `tool/screenshots/capture.mjs` rejoue toutes les pages, en
-  clair, en sombre et sur téléphone, contre une API simulée dont chaque
+  clair, en sombre et sur téléphone (toutes les pages et fiches), contre une API simulée dont chaque
   réponse est validée par les contrats (mode d'emploi en tête du script).
 
 ## Conventions (posées à l'Étape 1, appliquées ensuite)

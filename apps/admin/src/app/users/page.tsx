@@ -96,7 +96,7 @@ export default function UsersPage() {
                   <td className={td}>
                     <Badge status={planStatus(user.isPremium)} />
                   </td>
-                  <td className={`${td} tabular text-muted`}>
+                  <td data-label="Inscription" className={`${td} tabular text-muted`}>
                     {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                   </td>
                 </tr>

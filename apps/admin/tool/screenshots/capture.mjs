@@ -197,13 +197,13 @@ async function repondre(route, options) {
 const FICHE = D.USERS[0].id;
 /** `attendu` : un mot d'erreur que la variante DOIT montrer (il n'est alors pas une faute). */
 const PAGES = [
-  { nom: 'home', chemin: '/', mobile: true },
+  { nom: 'home', chemin: '/' },
   { nom: 'home-degraded', chemin: '/', options: { degrade: true }, attendu: 'Service dégradé' },
-  { nom: 'login', chemin: '/login', mobile: true },
-  { nom: 'overview', chemin: '/overview', auth: true, mobile: true },
-  { nom: 'users', chemin: '/users', auth: true, mobile: true },
+  { nom: 'login', chemin: '/login' },
+  { nom: 'overview', chemin: '/overview', auth: true },
+  { nom: 'users', chemin: '/users', auth: true },
   { nom: 'users-empty', chemin: '/users', auth: true, options: { usersEmpty: true } },
-  { nom: 'user-detail', chemin: `/users/${FICHE}`, auth: true, mobile: true },
+  { nom: 'user-detail', chemin: `/users/${FICHE}`, auth: true },
   { nom: 'reports', chemin: '/reports', auth: true },
   { nom: 'exercises', chemin: '/exercises', auth: true },
   { nom: 'categories', chemin: '/categories', auth: true },
@@ -254,7 +254,8 @@ const VUES = [
     nom: 'mobile',
     viewport: { width: 390, height: 844 },
     themes: ['light'],
-    filtre: (p) => p.mobile === true,
+    // Toutes les pages, fiches comprises : l'admin se tient aussi au téléphone.
+    filtre: () => true,
   },
 ];
 

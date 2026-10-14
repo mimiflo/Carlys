@@ -71,7 +71,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
           </>
         )}
       </td>
-      <td className={td}>
+      <td data-label="Rang" className={td}>
         {editing ? (
           <input
             type="number"
@@ -86,7 +86,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
           group.sortOrder
         )}
       </td>
-      <td className={`${td} tabular text-muted`}>
+      <td data-label="Exercices" className={`${td} tabular text-muted`}>
         {group.exercisesCount} dont {group.primaryExercisesCount} en principal
       </td>
       <td className={td}>

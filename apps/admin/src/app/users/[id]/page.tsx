@@ -59,7 +59,7 @@ export default function UserDetailPage() {
           <Card className="p-6">
             <div className="flex flex-wrap items-center gap-4">
               <Avatar name={user.displayName} email={user.email} size="lg" />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-48 flex-1">
                 <h2 className="truncate text-lg font-semibold">{user.displayName ?? user.email}</h2>
                 <p className="truncate text-sm text-muted">{user.email}</p>
               </div>

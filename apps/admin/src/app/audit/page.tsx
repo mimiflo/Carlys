@@ -50,7 +50,7 @@ export default function AuditPage() {
                 <td className={`${td} tabular whitespace-nowrap text-muted`}>
                   {new Date(log.createdAt).toLocaleString('fr-FR')}
                 </td>
-                <td className={td}>
+                <td data-label="Acteur" className={td}>
                   <span className="block font-medium">{AUDIT_ACTOR_LABELS[log.actorType]}</span>
                   {/* L'IDENTITÉ, pas seulement le type. La colonne ne rendait
                       que « ADMIN » ou « USER » — alors que le contrat porte
@@ -61,7 +61,7 @@ export default function AuditPage() {
                     {auditActorId(log) ?? '—'}
                   </span>
                 </td>
-                <td className={td}>
+                <td className={`${td} max-md:basis-full`}>
                   <Badge
                     status={{
                       label: auditActionLabel(log.action),
@@ -72,12 +72,14 @@ export default function AuditPage() {
                     <span className="mt-1 block font-mono text-xs text-muted">{log.action}</span>
                   )}
                 </td>
-                <td className={`${td} font-mono text-xs`}>
+                <td data-label="Ressource" className={`${td} font-mono text-xs max-md:break-all`}>
                   {log.resourceType === null ? '—' : `${log.resourceType}:${log.resourceId ?? ''}`}
                 </td>
                 {/* L'adresse d'où l'action est partie : c'est le « d'où »
                     d'une enquête, et le journal la porte déjà. */}
-                <td className={`${td} font-mono text-xs`}>{log.ipAddress ?? '—'}</td>
+                <td data-label="Origine" className={`${td} font-mono text-xs`}>
+                  {log.ipAddress ?? '—'}
+                </td>
               </tr>
             ))}
             {logs.length === 0 && (

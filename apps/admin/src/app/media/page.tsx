@@ -20,7 +20,7 @@ export { formatBytes } from '@/lib/format-bytes';
 const KINDS: readonly { value: MediaKind | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'Tous' },
   { value: 'IMAGE', label: 'Images' },
-  { value: 'MESH_3D', label: 'Maillages 3D' },
+  { value: 'MESH_3D', label: '3D' },
   { value: 'VIDEO', label: 'Vidéos' },
 ];
 

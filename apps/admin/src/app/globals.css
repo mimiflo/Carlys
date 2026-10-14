@@ -170,3 +170,50 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Au téléphone (sous `md`), un tableau se lit en CARTES : une ligne devient
+   un bloc, ses cellules s'y suivent et passent à la ligne quand la place
+   manque. La première cellule (le sujet de la ligne) prend toute la largeur ;
+   une cellule qui porte `data-label` affiche son intitulé au-dessus, puisque
+   l'en-tête de colonne n'est plus visible (il reste lu par les lecteurs
+   d'écran). Posée par `TableCard` : rien à faire page par page. */
+@media (width < 48rem) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack,
+  .table-stack tbody {
+    display: block;
+  }
+  .table-stack tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem 1.25rem;
+    padding: 1rem;
+  }
+  .table-stack td {
+    display: block;
+    max-width: 100%;
+  }
+  /* L'état vide (`colspan`) garde son propre espacement. */
+  .table-stack td:not([colspan]) {
+    padding: 0;
+  }
+  .table-stack td:first-child {
+    flex-basis: 100%;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+}
