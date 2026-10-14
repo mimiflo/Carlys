@@ -52,14 +52,7 @@ function GroupChoice({
  * c'est ce que sont des cases à cocher, et c'est ce qui rend l'appel
  * idempotent : le rejouer ne peut pas dédoubler un rattachement.
  */
-export function ExerciseCategoriesCell({
-  exercise,
-  inline = false,
-}: {
-  exercise: AdminExerciseSummary;
-  /** Dans la fiche latérale : l'éditeur prend toute la largeur, sans ombre de popover. */
-  inline?: boolean;
-}) {
+export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSummary }) {
   const queryClient = useQueryClient();
   const { target: focusTarget, request: requestFocus } = useFocusOnSwap();
   const [open, setOpen] = useState(false);
@@ -146,9 +139,8 @@ export function ExerciseCategoriesCell({
       tabIndex={-1}
       role="group"
       aria-label={`Catégories de ${exercise.name}`}
-      className={`animate-enter rounded-xl border border-border bg-surface p-3 focus-visible:outline-2 focus-visible:outline-primary ${
-        inline ? 'w-full' : 'w-64 shadow-lg'
-      }`}
+      // Dans la fiche latérale (son seul hôte) : toute la largeur, sans ombre de popover.
+      className="animate-enter w-full rounded-xl border border-border bg-surface p-3 focus-visible:outline-2 focus-visible:outline-primary"
     >
       {referentials.isPending && <p className="text-xs text-muted">Chargement…</p>}
       {referentials.isError && (
@@ -159,9 +151,7 @@ export function ExerciseCategoriesCell({
       {referentials.data !== undefined && (
         <>
           <p className="text-xs font-medium text-muted">Muscles</p>
-          <ul
-            className={`mt-1 space-y-1 overflow-y-auto text-sm ${inline ? 'max-h-72' : 'max-h-40'}`}
-          >
+          <ul className="mt-1 max-h-72 space-y-1 overflow-y-auto text-sm">
             {referentials.data.muscleGroups.map((group) => (
               <GroupChoice
                 key={group.id}

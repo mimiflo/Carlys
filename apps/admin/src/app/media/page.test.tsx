@@ -4,7 +4,8 @@ import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { renderWithQuery } from '@/testing/fixtures';
-import MediaPage, { formatBytes } from './page';
+import { formatBytes } from '@/lib/format-bytes';
+import MediaPage from './page';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/media',

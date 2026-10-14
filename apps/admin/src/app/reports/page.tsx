@@ -1,11 +1,11 @@
 'use client';
 
 import { type CommunityReportReason, type CommunityReportStatus } from '@carlys/api-contracts';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { CommunityReportRow } from '@/components/community-report-row';
 import { COMMUNITY_REPORTS_QUERY_KEY } from '@/components/community-report-status-cell';
+import { useCursorPages } from '@/components/cursor-pages';
 import { ReportSheet } from '@/components/report-sheet';
 import { button, field } from '@/components/ui/button';
 import { CloseIcon } from '@/components/ui/icons';
@@ -36,8 +36,8 @@ const EMPTY_MESSAGES: Record<StatusFilter, string> = {
  * (une personne, un encouragement précis ou un défi entre amis), lu ici avec
  * les deux comptes et le contenu visé, du plus récent au plus ancien.
  *
- * La pagination passe par `useInfiniteQuery` plutôt que par l'accumulation
- * manuelle du journal d'audit : ici une résolution invalide la liste, et le
+ * La pagination passe par `useCursorPages` (`useInfiniteQuery`) plutôt que par
+ * une accumulation manuelle : ici une résolution invalide la liste, et le
  * rechargement qui suit ne doit pas dédoubler les pages déjà lues.
  */
 export default function ReportsPage() {
@@ -51,15 +51,19 @@ export default function ReportsPage() {
     ...(reason === '' ? {} : { reason }),
     ...(person === null ? {} : { reportedUserId: person.id }),
   };
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: [...COMMUNITY_REPORTS_QUERY_KEY, filter, reason || 'ALL', person?.id ?? 'ALL'],
-      queryFn: ({ pageParam }) => adminApi.listCommunityReports(status, pageParam, filters),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (last) =>
-        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
-    });
-  const reports = data?.pages.flatMap((page) => page.items) ?? [];
+  const {
+    items: reports,
+    data,
+    isPending,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCursorPages(
+    [...COMMUNITY_REPORTS_QUERY_KEY, filter, reason || 'ALL', person?.id ?? 'ALL'],
+    (cursor) => adminApi.listCommunityReports(status, cursor, filters),
+  );
   // Le support traite les signalements mais ne suspend pas (pas de
   // `user:update`) : la décision le dit au lieu de proposer un geste refusé.
   const canSuspend = useAdminPermissions().includes('user:update');

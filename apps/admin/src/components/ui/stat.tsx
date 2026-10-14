@@ -29,7 +29,7 @@ export function Stat({
           </span>
         )}
       </div>
-      <p className="tabular mt-3 text-2xl font-semibold sm:text-3xl tracking-tight">
+      <p className="tabular-nums mt-3 text-2xl font-semibold sm:text-3xl tracking-tight">
         {shown === value ? (
           NUMBER.format(value)
         ) : (

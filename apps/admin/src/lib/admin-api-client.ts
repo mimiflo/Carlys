@@ -212,12 +212,8 @@ export async function callUpload(path: string, form: FormData): Promise<unknown>
 
 /** Chaîne de requête : les paramètres absents ou vides ne sont pas envoyés. */
 export function query(params: Record<string, string | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== '') {
-      search.set(key, value);
-    }
-  }
-  const encoded = search.toString();
+  const encoded = new URLSearchParams(
+    Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  ).toString();
   return encoded === '' ? '' : `?${encoded}`;
 }

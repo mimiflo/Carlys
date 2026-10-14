@@ -166,11 +166,6 @@ body {
   }
 }
 
-/* Chiffres alignés partout où l'on compare des nombres (compteurs, dates). */
-.tabular {
-  font-variant-numeric: tabular-nums;
-}
-
 /* Au téléphone (sous `md`), un tableau se lit en CARTES : une ligne devient
    un bloc, ses cellules s'y suivent et passent à la ligne quand la place
    manque. La première cellule (le sujet de la ligne) prend toute la largeur ;

@@ -8,8 +8,6 @@ import { AdminNav, firstAllowedRoute } from './admin-nav';
 import { CarlysMark, CloseIcon, LogoutIcon, MenuIcon } from './ui/icons';
 import { useAdminPermissions } from './use-admin-permissions';
 
-export { firstAllowedRoute } from './admin-nav';
-
 /**
  * Coquille des pages du back-office : barre latérale (tiroir sur
  * téléphone), en-tête de page, déconnexion et garde de session côté client

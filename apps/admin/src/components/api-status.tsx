@@ -101,7 +101,7 @@ export function ApiStatus() {
         <p role="status" className="text-sm font-semibold">
           {allUp ? 'Tous les services sont opérationnels' : 'Service dégradé'}
         </p>
-        <p className="tabular text-xs text-muted">
+        <p className="tabular-nums text-xs text-muted">
           En ligne depuis {uptimeLabel(data.uptimeSeconds)} · vérifié à{' '}
           {new Date(dataUpdatedAt).toLocaleTimeString('fr-FR')}
         </p>

@@ -52,7 +52,7 @@ export function RecentAudit() {
               />
               <p className="mt-1 text-xs text-muted">{AUDIT_ACTOR_LABELS[log.actorType]}</p>
             </div>
-            <time dateTime={log.createdAt} className="tabular text-xs text-muted">
+            <time dateTime={log.createdAt} className="tabular-nums text-xs text-muted">
               {new Date(log.createdAt).toLocaleString('fr-FR', {
                 dateStyle: 'short',
                 timeStyle: 'short',

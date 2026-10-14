@@ -6,16 +6,10 @@ import { AlertIcon, InboxIcon, RefreshIcon } from './icons';
  * Les états d'une liste : chargement (squelette aux dimensions du contenu),
  * vide (une phrase qui dit pourquoi), erreur (le message ET de quoi réessayer).
  */
-export function SkeletonRows({
-  rows = 6,
-  label = 'Chargement…',
-}: {
-  rows?: number;
-  label?: string;
-}) {
+export function SkeletonRows({ rows = 6 }: { rows?: number }) {
   return (
     <div aria-busy="true" className="animate-fade flex flex-col gap-2">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">Chargement…</span>
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="animate-skeleton h-12 rounded-lg bg-foreground/6" />
       ))}

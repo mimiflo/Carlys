@@ -1,12 +1,11 @@
 'use client';
 
 import { type AdminExerciseSummary } from '@carlys/api-contracts';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { LoadMore, useCursorPages } from '@/components/cursor-pages';
 import { ExerciseSheet } from '@/components/exercise-sheet';
 import { Badge } from '@/components/ui/badge';
-import { button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRightIcon, ImageIcon } from '@/components/ui/icons';
 import { SearchForm } from '@/components/ui/search-form';
@@ -90,16 +89,16 @@ export default function ExercisesPage() {
   // L'exercice ouvert est lu dans la LISTE à chaque rendu : la fiche suit
   // donc chaque rafraîchissement (photo remplacée, catégories enregistrées).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: ['admin', 'exercises', submitted, includeDeleted],
-      queryFn: ({ pageParam }) =>
-        adminApi.listExercises(submitted === '' ? undefined : submitted, pageParam, includeDeleted),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (last) =>
-        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
-    });
-  const exercises = data?.pages.flatMap((page) => page.items) ?? [];
+  const {
+    items: exercises,
+    data,
+    isPending,
+    error,
+    refetch,
+    ...more
+  } = useCursorPages(['admin', 'exercises', submitted, includeDeleted], (cursor) =>
+    adminApi.listExercises(submitted === '' ? undefined : submitted, cursor, includeDeleted),
+  );
 
   const selected = exercises.find((exercise) => exercise.id === selectedId);
 
@@ -163,16 +162,7 @@ export default function ExercisesPage() {
             )}
           </Card>
         )}
-        {hasNextPage && (
-          <button
-            type="button"
-            onClick={() => void fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className={`${button('secondary')} mt-4`}
-          >
-            {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-          </button>
-        )}
+        <LoadMore {...more} />
       </div>
 
       {selected !== undefined && (

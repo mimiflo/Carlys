@@ -86,7 +86,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
           group.sortOrder
         )}
       </td>
-      <td data-label="Exercices" className={`${td} tabular text-muted`}>
+      <td data-label="Exercices" className={`${td} tabular-nums text-muted`}>
         {group.exercisesCount} dont {group.primaryExercisesCount} en principal
       </td>
       <td className={td}>

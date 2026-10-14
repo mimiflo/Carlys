@@ -15,8 +15,6 @@ import { adminApi } from '@/lib/admin-api';
 import { formatBytes } from '@/lib/format-bytes';
 import { unavailableMessage } from '@/lib/load-error';
 
-export { formatBytes } from '@/lib/format-bytes';
-
 const KINDS: readonly { value: MediaKind | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'Tous' },
   { value: 'IMAGE', label: 'Images' },
@@ -60,7 +58,7 @@ function MediaCard({ asset, onOpen }: { asset: AdminMediaAsset; onOpen: () => vo
         <div className="flex items-start justify-between gap-2 p-3">
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium">{asset.originalName}</span>
-            <span className="tabular block text-xs text-muted">
+            <span className="tabular-nums block text-xs text-muted">
               {formatBytes(asset.byteSize)}
               {asset.width !== null && asset.height !== null && ` · ${asset.width}×${asset.height}`}
             </span>

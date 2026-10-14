@@ -33,10 +33,10 @@ export function ExerciseSheet({
       onClose={onClose}
     >
       <PanelSection title="Photo">
-        <ExercisePhotoCell exercise={exercise} layout="panel" />
+        <ExercisePhotoCell exercise={exercise} />
       </PanelSection>
       <PanelSection title="Catégories">
-        <ExerciseCategoriesCell exercise={exercise} inline />
+        <ExerciseCategoriesCell exercise={exercise} />
       </PanelSection>
       <PanelSection title="Publication">
         <ExercisePublication exercise={exercise} />

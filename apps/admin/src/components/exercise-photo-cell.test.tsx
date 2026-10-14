@@ -36,7 +36,7 @@ function fileInput(container: HTMLElement): HTMLInputElement {
 
 describe('ExercisePhotoCell', () => {
   // Le champ est `sr-only` et c'est le bouton visible qui l'ouvre : resté
-  // focalisable, il faisait un arrêt de tabulation invisible par ligne.
+  // focalisable, il faisait un arrêt de tabulation invisible.
   it('le champ fichier caché sort de l’ordre de tabulation', () => {
     const { container } = renderWithQuery(inRow(<ExercisePhotoCell exercise={DEVELOPPE_COUCHE} />));
 
@@ -78,7 +78,8 @@ describe('ExercisePhotoCell', () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
-  // Cinquante lignes par page, chacune avec l'original derrière sa vignette.
+  // L'original en taille réelle derrière la vignette : il ne doit pas
+  // bloquer l'ouverture de la fiche.
   it('la vignette ne se charge qu’à l’approche de l’écran, et se décode à part', () => {
     renderWithQuery(inRow(<ExercisePhotoCell exercise={exercise({ image: PHOTO })} />));
 

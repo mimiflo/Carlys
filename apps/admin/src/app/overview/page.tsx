@@ -88,7 +88,7 @@ function OpenReports() {
         </ErrorState>
       ) : (
         <div className="flex items-end justify-between gap-4">
-          <p className="tabular text-4xl font-semibold tracking-tight">
+          <p className="tabular-nums text-4xl font-semibold tracking-tight">
             {data === undefined ? '…' : `${data.items.length}${data.hasMore ? '+' : ''}`}
           </p>
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/15">

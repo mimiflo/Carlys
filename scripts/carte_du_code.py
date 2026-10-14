@@ -41,22 +41,18 @@ def module_de(chemin: str) -> tuple[str, str] | None:
     """(appli, module) du fichier, ou None s'il n'est pas du code applicatif."""
     if est_test(chemin) or not re.search(r"\.(ts|tsx|dart)$", chemin):
         return None
-    for prefixe, appli in (
-        ("apps/api/src/modules/", "api"),
-        ("apps/mobile/lib/features/", "mobile"),
-        ("apps/admin/src/app/", "admin"),
+    # Les dossiers de modules d'abord : `apps/api/src/` les contient.
+    for prefixe, appli, a_la_racine in (
+        ("apps/api/src/modules/", "api", "accueil"),
+        ("apps/mobile/lib/features/", "mobile", "accueil"),
+        ("apps/admin/src/app/", "admin", "accueil"),
+        ("apps/api/src/", "api", "démarrage"),
+        ("apps/mobile/lib/", "mobile", "démarrage"),
+        ("apps/admin/src/", "admin", "démarrage"),
     ):
         if chemin.startswith(prefixe):
             reste = chemin[len(prefixe):]
-            return (appli, reste.split("/")[0] if "/" in reste else "accueil")
-    for prefixe, appli in (
-        ("apps/api/src/", "api"),
-        ("apps/mobile/lib/", "mobile"),
-        ("apps/admin/src/", "admin"),
-    ):
-        if chemin.startswith(prefixe):
-            reste = chemin[len(prefixe):]
-            return (appli, reste.split("/")[0] if "/" in reste else "démarrage")
+            return (appli, reste.split("/")[0] if "/" in reste else a_la_racine)
     m = re.match(r"packages/([^/]+)/src/", chemin)
     return ("paquets", m.group(1)) if m else None
 
@@ -76,11 +72,10 @@ def imports_dart(fichier: str) -> list[str]:
 def construire() -> dict:
     graphe = json.loads((RACINE / "graphify-out/graph.json").read_text(encoding="utf-8"))
     par_id = {n["id"]: n for n in graphe["nodes"]}
-    fichiers = sorted({n["source_file"] for n in graphe["nodes"] if n.get("source_file")})
-    fichiers += sorted(
-        str(p.relative_to(RACINE)) for p in (RACINE / "apps/mobile/lib").rglob("*.dart")
+    fichiers = sorted(
+        {n["source_file"] for n in graphe["nodes"] if n.get("source_file")}
+        | {str(p.relative_to(RACINE)) for p in (RACINE / "apps/mobile/lib").rglob("*.dart")}
     )
-    fichiers = sorted(set(fichiers))
 
     contenu: dict[tuple, list[str]] = defaultdict(list)
     lignes: Counter = Counter()
@@ -90,22 +85,25 @@ def construire() -> dict:
             contenu[mod].append(f)
             lignes[mod] += sum(1 for _ in (RACINE / f).open(encoding="utf-8"))
 
-    liens: Counter = Counter()
-    vus = set()
-    for lien in graphe["links"]:
-        if lien.get("relation") not in TS_RELATIONS:
-            continue
-        cible = (par_id.get(lien["target"]) or {}).get("source_file")
-        source = lien.get("source_file")
-        if source and cible and (source, cible) not in vus:
-            vus.add((source, cible))
-    for f in (f for mod in contenu for f in contenu[mod] if f.endswith(".dart")):
-        for cible in imports_dart(f):
-            vus.add((f, cible))
-    for source, cible in vus:
-        a, b = module_de(source), module_de(cible)
-        if a and b and a != b and a in contenu and b in contenu:
-            liens[(a, b)] += 1
+    # Paires (fichier, fichier importé), chacune comptée une fois.
+    vus = {
+        (lien["source_file"], cible)
+        for lien in graphe["links"]
+        if lien.get("relation") in TS_RELATIONS
+        and lien.get("source_file")
+        and (cible := (par_id.get(lien["target"]) or {}).get("source_file"))
+    } | {
+        (f, cible)
+        for mod in contenu
+        for f in contenu[mod]
+        if f.endswith(".dart")
+        for cible in imports_dart(f)
+    }
+    liens = Counter(
+        (a, b)
+        for a, b in (map(module_de, paire) for paire in vus)
+        if a != b and a in contenu and b in contenu
+    )
 
     ident = {mod: f"{mod[0]}:{mod[1]}" for mod in contenu}
     commit = subprocess.run(

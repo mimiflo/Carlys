@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { AdminLoginChallenge, AdminLoginResult } from '@carlys/api-contracts';
 import { useState, useSyncExternalStore, type FormEvent } from 'react';
-import { firstAllowedRoute } from '@/components/admin-shell';
+import { firstAllowedRoute } from '@/components/admin-nav';
 import { LoginSecondFactor } from '@/components/login-second-factor';
 import { ApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 import { isNetworkFailure } from '@/lib/api-transport';

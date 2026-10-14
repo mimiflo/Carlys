@@ -17,13 +17,7 @@ const ACCEPT = MEDIA_ALLOWED_MIME_TYPES.IMAGE.join(',');
  * existe indépendamment de ce qui l'utilise, ce qui permettra demain de
  * réutiliser une photo sur plusieurs exercices sans la redéposer.
  */
-export function ExercisePhotoCell({
-  exercise,
-  layout = 'row',
-}: {
-  exercise: AdminExerciseSummary;
-  layout?: 'row' | 'panel';
-}) {
+export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary }) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -77,33 +71,28 @@ export function ExercisePhotoCell({
 
   const busy = upload.isPending || detach.isPending;
 
-  // Dans la fiche latérale, la photo s'affiche en GRAND au-dessus des gestes ;
-  // en ligne de tableau, c'est une vignette de 48 px à côté.
-  const large = layout === 'panel';
+  // Dans la fiche latérale (son seul hôte), la photo s'affiche en GRAND
+  // au-dessus des gestes.
   return (
-    <div className={large ? 'flex flex-col gap-3' : 'flex items-center gap-3'}>
+    <div className="flex flex-col gap-3">
       {exercise.image === null ? (
         <div
           aria-hidden
-          className={`flex shrink-0 items-center justify-center rounded-lg bg-surface-alt text-muted ring-1 ring-border ${
-            large ? 'aspect-video w-full flex-col gap-2 text-xs' : 'h-12 w-12'
-          }`}
+          className="flex aspect-video w-full shrink-0 flex-col items-center justify-center gap-2 rounded-lg bg-surface-alt text-xs text-muted ring-1 ring-border"
         >
           <ImageIcon />
-          {large && 'Aucune photo : l’application montre la silhouette du muscle.'}
+          Aucune photo : l’application montre la silhouette du muscle.
         </div>
       ) : (
-        // Différée : une page du catalogue en montre cinquante, chacune en
-        // taille d'origine derrière sa vignette de 48 px.
+        // Différée : la fiche ne la charge qu'en approchant de l'écran, en
+        // taille d'origine.
         // eslint-disable-next-line @next/next/no-img-element -- source externe (stockage objet), hors domaines Next
         <img
           src={exercise.image.url}
           alt={`Photo de ${exercise.name}`}
           loading="lazy"
           decoding="async"
-          className={`shrink-0 rounded-lg object-cover ring-1 ring-border ${
-            large ? 'aspect-video w-full' : 'h-12 w-12'
-          }`}
+          className="aspect-video w-full shrink-0 rounded-lg object-cover ring-1 ring-border"
         />
       )}
 

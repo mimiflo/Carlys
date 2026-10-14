@@ -48,7 +48,6 @@ export type MediaAsset = z.infer<typeof mediaAssetSchema>;
  * ce qui explique qu'une suppression soit refusée.
  */
 export const mediaUsageSchema = z.object({ id: z.string(), name: z.string() });
-export type MediaUsage = z.infer<typeof mediaUsageSchema>;
 
 export const adminMediaAssetSchema = mediaAssetSchema.extend({
   usedBy: z.array(mediaUsageSchema),

@@ -3,7 +3,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_PERMISSIONS, adminPermissions, adminToken } from '@/lib/admin-api';
-import { AdminShell, firstAllowedRoute } from './admin-shell';
+import { firstAllowedRoute } from './admin-nav';
+import { AdminShell } from './admin-shell';
 
 /**
  * Le back-office recevait les permissions de l'administrateur à la connexion

@@ -1,10 +1,9 @@
 'use client';
 
-import { useInfiniteQuery } from '@tanstack/react-query';
 import { AdminShell } from '@/components/admin-shell';
 import { AUDIT_ACTOR_LABELS, auditActorId } from '@/components/audit-actor';
+import { LoadMore, useCursorPages } from '@/components/cursor-pages';
 import { Badge } from '@/components/ui/badge';
-import { button } from '@/components/ui/button';
 import { TableCard, td, th, thead, tr } from '@/components/ui/table';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { adminApi } from '@/lib/admin-api';
@@ -12,15 +11,14 @@ import { auditActionLabel, auditActionTone } from '@/lib/audit-labels';
 import { unavailableMessage } from '@/lib/load-error';
 
 export default function AuditPage() {
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: ['admin', 'audit', 'pages'],
-      queryFn: ({ pageParam }) => adminApi.auditLogs(pageParam),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (last) =>
-        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
-    });
-  const logs = data?.pages.flatMap((page) => page.items) ?? [];
+  const {
+    items: logs,
+    data,
+    isPending,
+    error,
+    refetch,
+    ...more
+  } = useCursorPages(['admin', 'audit', 'pages'], (cursor) => adminApi.auditLogs(cursor));
 
   return (
     <AdminShell
@@ -47,7 +45,7 @@ export default function AuditPage() {
           <tbody>
             {logs.map((log) => (
               <tr key={log.id} className={tr}>
-                <td className={`${td} tabular whitespace-nowrap text-muted`}>
+                <td className={`${td} tabular-nums whitespace-nowrap text-muted`}>
                   {new Date(log.createdAt).toLocaleString('fr-FR')}
                 </td>
                 <td data-label="Acteur" className={td}>
@@ -92,16 +90,7 @@ export default function AuditPage() {
           </tbody>
         </TableCard>
       )}
-      {hasNextPage && (
-        <button
-          type="button"
-          onClick={() => void fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className={`${button('secondary')} mt-4`}
-        >
-          {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-        </button>
-      )}
+      <LoadMore {...more} />
     </AdminShell>
   );
 }

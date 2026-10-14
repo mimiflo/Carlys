@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { LoadMore, useCursorPages } from '@/components/cursor-pages';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { button } from '@/components/ui/button';
 import { SearchForm } from '@/components/ui/search-form';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { TableCard, td, th, thead, tr } from '@/components/ui/table';
@@ -36,16 +36,16 @@ export default function UsersPage() {
   // Les comptes supprimés n'attendent plus que la purge : hors de la liste,
   // sauf à les demander.
   const [includeDeleted, setIncludeDeleted] = useState(false);
-  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: ['admin', 'users', submitted, includeDeleted],
-      queryFn: ({ pageParam }) =>
-        adminApi.listUsers(submitted === '' ? undefined : submitted, pageParam, includeDeleted),
-      initialPageParam: undefined as string | undefined,
-      getNextPageParam: (last) =>
-        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
-    });
-  const users = data?.pages.flatMap((page) => page.items) ?? [];
+  const {
+    items: users,
+    data,
+    isPending,
+    error,
+    refetch,
+    ...more
+  } = useCursorPages(['admin', 'users', submitted, includeDeleted], (cursor) =>
+    adminApi.listUsers(submitted === '' ? undefined : submitted, cursor, includeDeleted),
+  );
 
   return (
     <AdminShell title="Utilisateurs" description={<Totals />}>
@@ -109,7 +109,7 @@ export default function UsersPage() {
                   <td className={td}>
                     <Badge status={planStatus(user.isPremium)} />
                   </td>
-                  <td data-label="Inscription" className={`${td} tabular text-muted`}>
+                  <td data-label="Inscription" className={`${td} tabular-nums text-muted`}>
                     {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                   </td>
                 </tr>
@@ -124,16 +124,7 @@ export default function UsersPage() {
             </tbody>
           </TableCard>
         )}
-        {hasNextPage && (
-          <button
-            type="button"
-            onClick={() => void fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className={`${button('secondary')} mt-4`}
-          >
-            {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
-          </button>
-        )}
+        <LoadMore {...more} />
       </div>
     </AdminShell>
   );

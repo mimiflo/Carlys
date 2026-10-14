@@ -135,7 +135,7 @@ export function CommunityReportRow({
     // pas : à 60 % d'opacité, ses textes secondaires tombaient sous 3:1 et
     // le bouton « Rouvrir », toujours actif, avec eux.
     <tr className={tr}>
-      <td className={`${td} tabular whitespace-nowrap text-muted`}>
+      <td className={`${td} tabular-nums whitespace-nowrap text-muted`}>
         {new Date(report.createdAt).toLocaleString('fr-FR', {
           dateStyle: 'short',
           timeStyle: 'short',
