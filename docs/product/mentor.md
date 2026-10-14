@@ -153,7 +153,11 @@ destination comme la destination orpheline.
 ## Les célébrations, au franchissement
 
 Quand une récompense vient d'être gagnée, le mot du Mentor devient sa
-célébration, à sa voix. Trois gardes, toutes héritées de règles écrites :
+célébration, à sa voix. Dans sa feuille, le bandeau change de robe (maquette
+d'octobre 2026, `mentor_celebration_bandeau.dart`) : la médaille, « Un
+nouveau cap », « Une nouvelle récompense est à toi. », puis le mot de sa
+voix, sur le dégradé `mentorCelebration` (violet profond embrasé vers
+l'orange — le seul cas où le Mentor prend la signature). Trois gardes, toutes héritées de règles écrites :
 
 - **`EarnedReward.isNew` uniquement** : vrai seulement dans la session du
   franchissement, APRÈS la garde de première lecture du journal — sur un
