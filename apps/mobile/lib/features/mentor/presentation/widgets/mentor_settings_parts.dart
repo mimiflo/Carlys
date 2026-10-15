@@ -34,7 +34,9 @@ class MentorSettingsHero extends StatelessWidget {
         Text(
           'Un Mentor à ton image, pour avancer à ton rythme.',
           textAlign: TextAlign.center,
-          style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ],
     );

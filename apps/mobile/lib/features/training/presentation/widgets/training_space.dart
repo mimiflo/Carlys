@@ -182,7 +182,9 @@ class _Wording extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxs),
         Text(
           subtitle,
-          style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ],
     );

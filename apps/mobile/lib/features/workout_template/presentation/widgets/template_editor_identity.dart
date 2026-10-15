@@ -110,7 +110,9 @@ class TemplateEditorIdentity extends StatelessWidget {
               ? 'Aucun exercice pour l’instant. Ajoutes-en depuis le '
                     'catalogue, puis règle les séries prévues.'
               : 'Glisse les poignées pour changer l’ordre.',
-          style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
       ],

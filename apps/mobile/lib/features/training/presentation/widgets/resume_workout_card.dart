@@ -136,7 +136,9 @@ class _Wording extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxs),
           Text(
             'Reprendre là où tu t’es arrêté.',
-            style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ],
       ),

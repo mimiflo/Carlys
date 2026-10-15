@@ -83,7 +83,9 @@ class CoachStateView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             if (body case final body?) ...[
               const SizedBox(height: AppSpacing.gapSection),

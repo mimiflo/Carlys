@@ -51,18 +51,18 @@
   --color-border: var(--border);
 }
 
-/* Les surfaces sombres sont teintées de VIOLET, pas neutres (voir
-   $comment-dark dans tokens.json) : un gris sous le violet électrique le fait
-   paraître sale. C'est exactement là que la copie avait dérivé. */
+/* Les surfaces sombres sont en GRAPHITE neutre (voir $comment-dark dans
+   tokens.json) : le violet reste aux accents. Copie à tenir alignée sur les
+   jetons — c'est exactement là qu'elle avait dérivé. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #08050e;
+    --background: #08080b;
     --foreground: #f4f4f6;
-    --surface: #15101f;
+    --surface: #121215;
     --muted: #a5a5b5;
     --primary-ink: #c88bff;
     --danger-ink: #ef4444;
-    --surface-alt: #1c1529;
+    --surface-alt: #18181b;
     --border: rgba(255, 255, 255, 0.14);
   }
 }

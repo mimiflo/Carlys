@@ -135,7 +135,9 @@ class _Texts extends StatelessWidget {
         const SizedBox(height: AppSpacing.xxs),
         AppWholeWordsText(
           content.tagline,
-          style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ],
     );

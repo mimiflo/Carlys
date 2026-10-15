@@ -350,7 +350,7 @@ void main() {
   });
 
   group('AppThumbnail', () {
-    testWidgets('sans photo : le dessin violet, jamais une case vide', (
+    testWidgets('sans photo : une plaque et son icône, jamais une case vide', (
       tester,
     ) async {
       var touches = 0;
@@ -373,7 +373,7 @@ void main() {
         find.byWidgetPredicate(
           (w) =>
               w is DecoratedBox &&
-              (w.decoration as BoxDecoration).gradient == AppColors.violetRamp,
+              (w.decoration as BoxDecoration).color == AppColors.surfaceIcon,
         ),
         findsOneWidget,
       );

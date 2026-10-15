@@ -172,23 +172,25 @@ abstract final class AppColors {
 
   // Surfaces — thème sombre de RÉFÉRENCE (dark-first)
   //
-  // Teintées de violet plutôt que neutres : un fond gris sous un violet
-  // électrique le fait paraître sale ; le même violet sur un fond qui en
-  // porte la trace ressort.
-  static const Color darkBackground = Color(0xFF08050E);
-  static const Color darkSurface = Color(0xFF15101F);
-  static const Color darkSurfaceAlt = Color(0xFF1C1529);
+  // GRAPHITE neutre, à peine froid (arbitrage du propriétaire, 15 octobre
+  // 2026 : « trop de violet dans l'application »). Teintées de violet, elles
+  // doublaient le violet de chaque écran ; neutres, elles le laissent aux
+  // accents (boutons, sélection, jauges, icônes). Chaque gris garde la
+  // LUMINANCE du violet qu'il remplace : les contrastes mesurés tiennent.
+  static const Color darkBackground = Color(0xFF08080B);
+  static const Color darkSurface = Color(0xFF121215);
+  static const Color darkSurfaceAlt = Color(0xFF18181B);
 
   /// Voile derrière une popup (tokens.json → color.surface.darkScrim) : le
   /// fond de l'application à 72 %. Il éteint l'écran sans le noircir, et la
   /// carte centrée devient la seule chose qu'on lise.
-  static const Color darkScrim = Color(0xB808050E); // fond .72
+  static const Color darkScrim = Color(0xB808080B); // fond .72
 
   /// Voile LÉGER derrière un simple message passager (tokens.json →
   /// color.surface.darkScrimSoft) : le fond de l'application à 40 %.
   /// Purement visuel, il laisse passer le toucher ; il détache la carte des
   /// cartes de l'écran sans l'éteindre.
-  static const Color darkScrimSoft = Color(0x6608050E); // fond .40
+  static const Color darkScrimSoft = Color(0x6608080B); // fond .40
 
   // Rôles de texte et traits du thème sombre
   //
@@ -247,13 +249,13 @@ abstract final class AppColors {
   // tous d'un jeton, et doivent suivre la palette si elle change. Le
   // précédent est documenté : les scènes 3D codaient leur vert en dur, et
   // l'hélice serait restée verte après le changement de palette.
-  static const Color backdropClear = Color(0x0008050E); // fond .00
-  static const Color backdropVeil = Color(0xC708050E); // fond .78
-  static const Color backdropVeilStrong = Color(0xCC08050E); // fond .80
-  static const Color backdropVeilSoft = Color(0x6B08050E); // fond .42
+  static const Color backdropClear = Color(0x0008080B); // fond .00
+  static const Color backdropVeil = Color(0xC708080B); // fond .78
+  static const Color backdropVeilStrong = Color(0xCC08080B); // fond .80
+  static const Color backdropVeilSoft = Color(0x6B08080B); // fond .42
 
   /// Cœur de la plaque sombre qui rend le texte lisible : un noir franc, et
-  /// non le fond violacé, pour ne pas teinter la personne photographiée.
+  /// non le fond de l'application, pour ne pas teinter la personne photographiée.
   static const Color backdropPlate = Color(0xEB000000); // noir .92
   static const Color backdropPlateEdge = Color(0xC7030308); // noir violacé .78
   static const Color backdropHaloMagenta = Color(0x33C42EE0); // signature .20
@@ -271,8 +273,8 @@ abstract final class AppColors {
   /// Encre de l'ombre portée du bloc de signature : le MÊME fond que les
   /// voiles ci-dessus, à deux densités. Elle décolle le mot et la devise du
   /// cliché quand la page de marque est vue en plein soleil.
-  static const Color brandInkShadow = Color(0xD908050E); // fond .85
-  static const Color brandInkShadowTight = Color(0x9908050E); // fond .60
+  static const Color brandInkShadow = Color(0xD908080B); // fond .85
+  static const Color brandInkShadowTight = Color(0x9908080B); // fond .60
 
   /// Lueur du sceau de marque, dérivée du dégradé de signature.
   static const Color brandMarkGlow = Color(0x59C42EE0); // signature .35
@@ -284,10 +286,10 @@ abstract final class AppColors {
   // elles dérivent toutes de la palette de marque.
 
   /// Haut du dégradé d'une carte gravée (cran « Maître »).
-  static const Color surfaceEngraved = Color(0xFF241533);
+  static const Color surfaceEngraved = Color(0xFF1B1B1E);
 
   /// Haut du dégradé de la plaque du dernier cran (« Icône »).
-  static const Color surfaceIcon = Color(0xFF2E1A40);
+  static const Color surfaceIcon = Color(0xFF222225);
 
   /// Fond profond des sceaux : c'est lui qui creuse la silhouette.
   static const Color primaryDeep = Color(0xFF4A1580);

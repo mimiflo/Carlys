@@ -465,10 +465,14 @@ Chaque fonctionnalité livrée comprend :
    du contenu plausible derrière une feuille), et l'identité Carlys (tokens
    du design system) — un écran gris de lignes nues n'est pas fini, même
    s'il fonctionne.
-9. **Le thème, c'est le VIOLET** (préférence propriétaire actée le
-   18 septembre 2026, après correction demandée). Les bandeaux, en-têtes et
-   accents se peignent avec les dégradés violets de l'appli (`AppColors.cta`,
-   `violetRamp`) et `primary`/`primaryLight` sur fonds sombres. Le dégradé
+9. **Le violet est un ACCENT, pas un décor** (préférence propriétaire actée le
+   18 septembre 2026, resserrée le 15 octobre 2026 : « trop de violet dans
+   l'application »). Fonds et cartes sont en graphite neutre
+   (`darkBackground`, `darkSurface`…) ; le violet ne peint que ce qui agit
+   ou se mesure : bouton principal (`AppColors.cta`), choix sélectionné,
+   onglet actif, jauges et graphiques, icônes, liens. Un texte descriptif
+   s'écrit en gris (`darkTextSecondary`), jamais en lilas ; une pastille
+   d'icône est une plaque (`surfaceIcon`), pas un aplat violet. Le dégradé
    de marque multicolore (`AppColors.signature`, violet → magenta → orange)
    est **réservé aux surfaces de marque et aux célébrations de
    franchissement existantes** (bienvenue, franchissement de titre, domaine

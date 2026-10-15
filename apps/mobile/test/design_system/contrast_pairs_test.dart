@@ -661,8 +661,8 @@ final _table = <Ligne>[
       ),
     ];
   }),
-  Ligne('AppThumbnail sans photo : le dessin blanc sur chaque arrêt du '
-      'violet, et l’appareil photo sur son disque', (tester) async {
+  Ligne('AppThumbnail sans photo : le dessin violet clair sur sa plaque, '
+      'et l’appareil photo sur son disque', (tester) async {
     await poser(
       tester,
       AppThumbnail(
@@ -677,13 +677,12 @@ final _table = <Ligne>[
     );
     final disque = _fondDe(tester, find.byIcon(AppIcons.mealPhoto));
     return [
-      for (final arret in stopsOf(AppColors.violetRamp))
-        (
-          quoi: 'dessin du moment sur ${hex(arret)}',
-          encre: tester.widget<Icon>(find.byIcon(AppIcons.mealLunch)).color!,
-          fond: arret,
-          seuil: wcagGraphic,
-        ),
+      (
+        quoi: 'dessin du moment sur ${hex(AppColors.surfaceIcon)}',
+        encre: tester.widget<Icon>(find.byIcon(AppIcons.mealLunch)).color!,
+        fond: AppColors.surfaceIcon,
+        seuil: wcagGraphic,
+      ),
       (
         quoi: 'appareil photo sur son disque ${hex(disque)}',
         encre: tester.widget<Icon>(find.byIcon(AppIcons.mealPhoto)).color!,
@@ -693,7 +692,7 @@ final _table = <Ligne>[
     ];
   }),
   Ligne('AppThumbnail pendant la préparation d’une photo : l’indicateur '
-      'blanc sur chaque arrêt du violet', (tester) async {
+      'violet clair sur sa plaque', (tester) async {
     await poser(
       tester,
       const AppThumbnail(
@@ -707,13 +706,12 @@ final _table = <Ligne>[
       find.byType(CircularProgressIndicator),
     );
     return [
-      for (final arret in stopsOf(AppColors.violetRamp))
-        (
-          quoi: 'indicateur sur ${hex(arret)}',
-          encre: indicateur.color!,
-          fond: arret,
-          seuil: wcagGraphic,
-        ),
+      (
+        quoi: 'indicateur sur ${hex(AppColors.surfaceIcon)}',
+        encre: indicateur.color!,
+        fond: AppColors.surfaceIcon,
+        seuil: wcagGraphic,
+      ),
     ];
   }),
 ];

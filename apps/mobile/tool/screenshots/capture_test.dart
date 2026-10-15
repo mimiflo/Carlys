@@ -1485,10 +1485,13 @@ void main() {
     await settle(tester);
     await tester.tap(find.byTooltip('Semaine suivante'));
     await settle(tester);
+    // L'écran, pas le bouton du jour : selon le jour de la semaine où l'on
+    // capture, aujourd'hui tombe sur une séance (« Démarrer la séance ») ou
+    // sur un jour de repos de l'exemple — les deux sont justes.
     await capture(
       tester,
       '34c-calendrier-aujourdhui',
-      shows: find.text('Démarrer la séance'),
+      shows: find.byType(ProgramCalendarScreen),
     );
   });
 

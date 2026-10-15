@@ -20,13 +20,15 @@ class AppThumbnailAction {
   final VoidCallback onPressed;
 }
 
-/// Une VIGNETTE carrée aux angles arrondis : une photo, ou à défaut un
-/// dessin violet — jamais une case vide.
+/// Une VIGNETTE carrée aux angles arrondis : une photo, ou à défaut une
+/// icône — jamais une case vide.
 ///
-/// Sans [image] (ou si elle ne se charge pas), la vignette se peint au
-/// dégradé violet de l'application ([AppColors.violetRamp], une surface sans
-/// texte) et porte [fallbackIcon] en blanc : le moment du repas, une
-/// assiette. Un cadre gris vide laisserait croire à une photo manquée.
+/// Sans [image] (ou si elle ne se charge pas), la vignette se peint en
+/// plaque ([AppColors.surfaceIcon]) et porte [fallbackIcon] en violet clair :
+/// le moment du repas, une assiette. Une plaque pleine violette doublait le
+/// violet de chaque liste (« trop de violet », 15 octobre 2026) ; l'icône
+/// suffit à dire qu'il n'y a pas de photo, sans laisser croire à une photo
+/// manquée.
 ///
 /// [action] pose un petit bouton rond en bas à droite. Le disque est un
 /// ornement de 32 points ; la zone qui répond au doigt fait la cible
@@ -101,17 +103,21 @@ class AppThumbnail extends StatelessWidget {
     final photo = image;
     final waiting = busy || loading;
     final fallback = DecoratedBox(
-      decoration: const BoxDecoration(gradient: AppColors.violetRamp),
+      decoration: const BoxDecoration(color: AppColors.surfaceIcon),
       child: Center(
         child: waiting
             ? SizedBox.square(
                 dimension: size * 0.3,
                 child: CircularProgressIndicator(
-                  color: AppColors.neutral0,
+                  color: AppColors.primaryLight,
                   semanticsLabel: busyLabel,
                 ),
               )
-            : Icon(fallbackIcon, size: size * 0.4, color: AppColors.neutral0),
+            : Icon(
+                fallbackIcon,
+                size: size * 0.4,
+                color: AppColors.primaryLight,
+              ),
       ),
     );
     final picture = Semantics(

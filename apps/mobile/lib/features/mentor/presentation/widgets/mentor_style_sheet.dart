@@ -42,7 +42,9 @@ class _MentorStyleSheet extends ConsumerWidget {
           Text(
             'Le fond ne change pas, le ton oui.\nChange quand tu veux.',
             textAlign: TextAlign.center,
-            style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           for (final style in MentorStyle.values) ...[

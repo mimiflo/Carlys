@@ -98,10 +98,12 @@ class HomeHero extends StatelessWidget {
           const Positioned.fill(child: AppSceneScrim.vertical()),
           const Positioned.fill(child: AppSceneScrim.lateral()),
           const Positioned.fill(
+            // Moitié de la maquette (0,32) : le halo baignait tout le haut
+            // de l'écran de violet (« trop de violet », 15 octobre 2026).
             child: AppSceneGlow(
               center: Alignment(0.48, -0.16),
               radius: 0.71,
-              alpha: 0.32,
+              alpha: 0.16,
             ),
           ),
           Padding(

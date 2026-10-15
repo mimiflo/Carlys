@@ -136,7 +136,9 @@ class _SummaryBody extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Text(
               '${formatThousands(count)} exercice${count > 1 ? 's' : ''}',
-              style: AppTypography.body.copyWith(color: AppColors.primaryLight),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
           ],
         ),

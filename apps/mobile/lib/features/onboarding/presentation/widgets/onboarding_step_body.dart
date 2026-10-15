@@ -56,7 +56,9 @@ class OnboardingStepBody extends StatelessWidget {
           subtitle,
           textAlign: align,
           style: centered
-              ? AppTypography.bodyLarge.copyWith(color: AppColors.primaryLight)
+              ? AppTypography.bodyLarge.copyWith(
+                  color: AppColors.darkTextSecondary,
+                )
               : AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
         ),
         const SizedBox(height: AppSpacing.lg),
