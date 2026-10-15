@@ -6,8 +6,8 @@ import '../../../../design_system/design_system.dart';
 import '../../../workout_program/domain/entities/training_profile.dart';
 import '../../../workout_program/presentation/providers/training_goal_providers.dart';
 import '../../../workout_program/presentation/providers/training_profile_providers.dart';
-import '../../../workout_program/presentation/widgets/training_equipment_section.dart';
 import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
+import '../../../workout_program/presentation/widgets/training_place_choices.dart';
 import '../../../workout_program/presentation/widgets/training_setup_sections.dart';
 import '../utils/coach_frame.dart';
 
@@ -65,9 +65,9 @@ class CoachGoalScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Ton matériel'),
+              const AppSectionLabel('Où tu t’entraînes'),
               const SizedBox(height: AppSpacing.sm),
-              TrainingEquipmentSection(profile: value),
+              TrainingPlaceChoices(profile: value),
             ],
           ),
           (null, AsyncError()) => AppErrorState(

@@ -360,6 +360,11 @@ abstract final class AppIcons {
     fontFamily: _equipmentFont,
   );
 
+  // Où l'on s'entraîne (la question globale du coach sur le matériel).
+  static const IconData trainingPlaceGym = equipmentMachine;
+  static const IconData trainingPlaceHome = home;
+  static const IconData trainingPlaceBodyweight = equipmentBodyweight;
+
   // ── Communauté ────────────────────────────────────────────────────
   static const IconData block = Icons.block_rounded;
   static const IconData report = Icons.flag_outlined;

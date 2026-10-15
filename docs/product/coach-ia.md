@@ -91,7 +91,7 @@ tour n'échoue pas. Une séance supprimée de « Mes modèles » ne revient pas.
 **Le cadre du fil.** En tête du coach, une carte demande d'emblée
 l'objectif, le niveau et le matériel qui manquent, et ouvre la page du
 coach ; tout choisi, une ligne les rappelle (« Objectif : Prise de
-muscle · avec haltères, banc ») et « Modifier » y ramène.
+muscle · en salle de sport ») et « Modifier » y ramène.
 
 **Demandé AVANT de réfléchir, sur SA page** (3 octobre 2026, à la demande
 du propriétaire). La carte ne suffisait pas : on l'ignorait, on écrivait,
@@ -106,6 +106,18 @@ rien n'est envoyé. Une fois par visite ; sans compte, ou profil pas encore
 lu (hors ligne), rien ne retient une question (`coachFrameMissingProvider`,
 même règle que la carte : `utils/coach_frame.dart`). La carte du fil
 (« Choisir maintenant », « Modifier ») ouvre la même page.
+
+**Le matériel se demande globalement** (15 octobre 2026, à la demande du
+propriétaire). La page du coach ne liste plus le matériel accessoire par
+accessoire : elle demande où l'on s'entraîne (`TrainingPlace` :
+« Salle de sport », « À la maison », « Sans matériel »). Le choix remplace
+tout le matériel du profil d'entraînement par celui du lieu, pris dans le
+catalogue (la salle de sport, c'est tout le catalogue) ; le coach et la
+génération de programme lisent cette même liste, sans rien changer côté
+serveur. Le détail reste réglable dans « Préparer mon programme » : un
+matériel réglé là, qui ne correspond à aucun lieu, est signalé sur la page
+du coach plutôt que décoché en silence, et la ligne du fil le nomme
+(« avec barre, haltères »).
 
 ### Séance demandée : composée à coup sûr (2 octobre 2026)
 

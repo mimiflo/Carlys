@@ -78,6 +78,11 @@ class TrainingProfileActions {
     return _patch(equipmentSlugs: kit.toList());
   });
 
+  /// Remplace TOUT le matériel d'un geste : le choix d'un lieu
+  /// d'entraînement (salle, maison, sans matériel).
+  Future<void> replaceEquipment(List<String> slugs) =>
+      _patch(equipmentSlugs: slugs);
+
   Future<void> _patch({
     TrainingExperience? experience,
     int? weeklySessionsTarget,

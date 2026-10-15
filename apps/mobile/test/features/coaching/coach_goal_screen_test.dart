@@ -24,6 +24,7 @@ void main() {
     WidgetTester tester, {
     required TrainingProfile profil,
     TrainingGoal? objectif,
+    FakeTrainingProfileRepository? repository,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
@@ -33,12 +34,18 @@ void main() {
       ProviderScope(
         overrides: [
           trainingProfileRepositoryProvider.overrideWithValue(
-            FakeTrainingProfileRepository(initial: profil),
+            repository ?? FakeTrainingProfileRepository(initial: profil),
           ),
           exercisesRepositoryProvider.overrideWithValue(
             FakeExercisesRepository(const [])
               ..equipmentRefs = const [
+                EquipmentRef(
+                  id: 'e0',
+                  slug: 'poids-du-corps',
+                  name: 'Poids du corps',
+                ),
                 EquipmentRef(id: 'e1', slug: 'halteres', name: 'Haltères'),
+                EquipmentRef(id: 'e2', slug: 'poulie', name: 'Poulie'),
               ],
           ),
           currentTrainingGoalProvider.overrideWithValue(objectif),
@@ -80,10 +87,12 @@ void main() {
     // Sous les huit objectifs : le niveau, puis le matériel.
     await tester.scrollUntilVisible(find.text('TON NIVEAU'), 300);
     expect(find.text('TON NIVEAU'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('TON MATÉRIEL'), 300);
-    expect(find.text('TON MATÉRIEL'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Poids libres'), 300);
-    expect(find.text('Rien de coché'), findsOneWidget);
+    // Le matériel se demande globalement : un lieu, pas une liste.
+    await tester.scrollUntilVisible(find.text('OÙ TU T’ENTRAÎNES'), 300);
+    await tester.scrollUntilVisible(find.text('Sans matériel'), 300);
+    expect(find.text('Salle de sport'), findsOneWidget);
+    expect(find.text('À la maison'), findsOneWidget);
+    expect(find.text('Poids libres'), findsNothing);
     // Pas l'écran des programmes : ni rythme, ni génération.
     expect(find.textContaining('Générer'), findsNothing);
     expect(find.textContaining('par semaine'), findsNothing);
@@ -111,5 +120,61 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Avant que je réfléchisse'), findsNothing);
     expect(rendus, [true]);
+  });
+
+  testWidgets('« Salle de sport » écrit tout le matériel du catalogue', (
+    tester,
+  ) async {
+    final profils = FakeTrainingProfileRepository(initial: vide);
+    await ouvrir(tester, profil: vide, repository: profils);
+
+    await tester.scrollUntilVisible(find.text('Salle de sport'), 300);
+    await tester.tap(find.text('Salle de sport'));
+    await tester.pumpAndSettle();
+
+    expect(profils.equipmentWrites.last, [
+      'poids-du-corps',
+      'halteres',
+      'poulie',
+    ]);
+    // Le lieu choisi se voit coché.
+    expect(
+      tester
+          .widget<AppChoiceCard>(
+            find.ancestor(
+              of: find.text('Salle de sport'),
+              matching: find.byType(AppChoiceCard),
+            ),
+          )
+          .selected,
+      isTrue,
+    );
+  });
+
+  testWidgets('matériel réglé au détail ailleurs : signalé, aucun lieu coché', (
+    tester,
+  ) async {
+    await ouvrir(
+      tester,
+      profil: const TrainingProfile(
+        goal: null,
+        experience: null,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: ['poulie'],
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.textContaining('réglé au détail'),
+      300,
+    );
+    expect(find.textContaining('réglé au détail'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<AppChoiceCard>(find.byType(AppChoiceCard))
+          .where((card) => card.selected),
+      isEmpty,
+    );
   });
 }

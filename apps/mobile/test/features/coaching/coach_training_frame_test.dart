@@ -74,15 +74,36 @@ void main() {
         experience: TrainingExperience.beginner,
         weeklySessionsTarget: 3,
         sessionMinutesTarget: 45,
+        equipmentSlugs: ['barre'],
+      ),
+    );
+
+    // Réglé au détail (aucun lieu ne donne une barre seule) : il nomme le
+    // matériel.
+    expect(find.text('Objectif : Perte de gras · avec barre'), findsOneWidget);
+    expect(find.text('Modifier'), findsOneWidget);
+    expect(find.text('AVANT DE COMMENCER'), findsNothing);
+  });
+
+  testWidgets('un lieu choisi se dit en mots, pas en liste de matériel', (
+    tester,
+  ) async {
+    await monter(
+      tester,
+      goal: TrainingGoal.fatLoss,
+      profile: const TrainingProfile(
+        goal: TrainingGoal.fatLoss,
+        experience: TrainingExperience.beginner,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        // Tout le catalogue de ce test : la salle de sport.
         equipmentSlugs: ['barre', 'halteres'],
       ),
     );
 
     expect(
-      find.text('Objectif : Perte de gras · avec barre, haltères'),
+      find.text('Objectif : Perte de gras · en salle de sport'),
       findsOneWidget,
     );
-    expect(find.text('Modifier'), findsOneWidget);
-    expect(find.text('AVANT DE COMMENCER'), findsNothing);
   });
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../exercises/presentation/providers/exercise_catalog_providers.dart';
+import '../../../workout_program/domain/entities/training_place.dart';
 import '../../../workout_program/presentation/providers/training_goal_providers.dart';
 import '../../../workout_program/presentation/providers/training_profile_providers.dart';
 import '../utils/coach_frame.dart';
@@ -16,8 +17,8 @@ import 'coach_card_frame.dart';
 /// page du coach (« Avant que je réfléchisse ») — sans eux, il compose à
 /// l'aveugle, et on l'oublie. Et la première question envoyée sans eux
 /// ouvre cette même page AVANT qu'il ne réfléchisse (`CoachPage._send`). Tout
-/// choisi : une ligne le rappelle (« Objectif : Perte de gras · avec
-/// haltères, barre »), qu'un appui permet de changer.
+/// choisi : une ligne le rappelle (« Objectif : Perte de gras · en salle de
+/// sport »), qu'un appui permet de changer.
 ///
 /// Lecture en échec ou pas encore là : rien, le coach reste utilisable.
 class CoachTrainingFrame extends ConsumerWidget {
@@ -71,17 +72,27 @@ class CoachTrainingFrame extends ConsumerWidget {
       );
     }
 
+    // Un lieu se dit en mots (« en salle de sport ») ; un matériel réglé au
+    // détail, par ses trois premiers accessoires.
+    final place = TrainingPlace.matching(
+      profile.equipmentSlugs.toSet(),
+      names.keys,
+    );
     final owned = [
       for (final slug in profile.equipmentSlugs) names[slug] ?? slug,
     ];
-    final equipment = owned.length <= 3
-        ? owned.join(', ')
-        : '${owned.take(3).join(', ')} +${owned.length - 3}';
-    // Catalogue pas encore lu (hors ligne) : l'objectif seul, jamais les
-    // identifiants bruts du matériel.
-    final summary = catalog == null
+    final equipment = switch (place) {
+      TrainingPlace.gym => 'en salle de sport',
+      TrainingPlace.home => 'à la maison',
+      TrainingPlace.bodyweight => 'sans matériel',
+      null when owned.length <= 3 => 'avec ${owned.join(', ')}',
+      null => 'avec ${owned.take(3).join(', ')} +${owned.length - 3}',
+    };
+    // Catalogue pas encore lu (hors ligne) ou vide : l'objectif seul,
+    // jamais les identifiants bruts du matériel.
+    final summary = names.isEmpty
         ? 'Objectif : ${goal!.label}'
-        : 'Objectif : ${goal!.label} · avec $equipment';
+        : 'Objectif : ${goal!.label} · $equipment';
     return Semantics(
       button: true,
       label: '$summary. Modifier',

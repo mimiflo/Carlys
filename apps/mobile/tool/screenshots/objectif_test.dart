@@ -300,29 +300,46 @@ void main() {
         experience: TrainingExperience.intermediate,
         weeklySessionsTarget: null,
         sessionMinutesTarget: null,
-        equipmentSlugs: ['halteres', 'kettlebell', 'poids-du-corps'],
+        // Le matériel « À la maison » : la carte du lieu se coche.
+        equipmentSlugs: [
+          'poids-du-corps',
+          'halteres',
+          'kettlebell',
+          'banc',
+          'elastique',
+          'barre-de-traction',
+          'tapis',
+        ],
       ),
       TrainingGoal.hyrox,
     );
     await tester.scrollUntilVisible(
-      find.text('Accessoires'),
+      find.text('Sans matériel'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     await capture(tester, 'objectif-08-coach-pret');
+  });
 
-    // Les deux dernières familles, dépliées : chaque matériel a son glyphe.
-    await tester.tap(find.text('Accessoires'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Au poids du corps'));
-    await tester.pumpAndSettle();
+  testWidgets('coach : matériel réglé au détail ailleurs', (tester) async {
+    await pageDuCoach(
+      tester,
+      const TrainingProfile(
+        goal: TrainingGoal.hyrox,
+        experience: TrainingExperience.intermediate,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: ['halteres', 'barre'],
+      ),
+      TrainingGoal.hyrox,
+    );
     await tester.scrollUntilVisible(
-      find.text('Tapis'),
+      find.textContaining('réglé au détail'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    await capture(tester, 'objectif-09-coach-familles');
+    await capture(tester, 'objectif-09-coach-detail');
   });
 }
