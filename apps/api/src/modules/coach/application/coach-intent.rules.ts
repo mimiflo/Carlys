@@ -48,6 +48,13 @@ export const QUICK =
   /\b(quelque chose|un truc) (de )?(rapide|court|simple|efficace|intense)\b|\bun truc\b/;
 export const WORK = /\b(travailler|bosser|muscler|renforcer|m'entrainer|entrainer)\b/;
 export const WANT = /\b(je veux|j'aimerais|je voudrais|j'ai envie|aujourd'hui|ce soir|ce matin)\b/;
+/**
+ * « Je veux faire pec triceps », « ce soir je fais jambes » : faire un
+ * MUSCLE, c'est le travailler (signalé le 15 octobre 2026 : la demande
+ * partait en conseil, et le modèle répondait en texte, sans carte). Le
+ * passé (« j'ai fait pecs ») n'en est pas un.
+ */
+export const DO = /\b(faire|fais|attaquer|taper)\b/;
 export const SHORT_ON_TIME = /\b(peu de temps|pas (beaucoup|trop|le) (de )?temps|presse)\b/;
 
 /** Ce qui fait d'un « que me conseilles-tu ? » un conseil, pas une séance. */

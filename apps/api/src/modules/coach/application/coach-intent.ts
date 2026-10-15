@@ -2,6 +2,7 @@ import {
   ANAPHORA,
   CREATE,
   DETAILED,
+  DO,
   FRUSTRATED,
   KNOWLEDGE,
   minutesIn,
@@ -88,7 +89,8 @@ function asksForWorkout(message: string, question: string, turns: readonly Coach
     SHORT_ON_TIME.test(question) ||
     WHAT_TO_DO.test(question) ||
     QUICK.test(question) ||
-    (WORK.test(question) && WANT.test(question));
+    ((WORK.test(question) || (DO.test(question) && namedMuscles(question).size > 0)) &&
+      WANT.test(question));
   if (!soft || NOT_TRAINING.test(question)) return false;
   // « Que me conseilles-tu ? » juste après une question de repas : la suite
   // de CE sujet, pas une séance.

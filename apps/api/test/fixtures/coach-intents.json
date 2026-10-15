@@ -211,6 +211,30 @@
     {
       "message": "Crée une séance haut du corps et enregistre-la.",
       "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "aujourd'hui je veux faire pec triceps",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Aujourd’hui je veux faire pecs triceps",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "Je veux faire jambes ce soir.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "j'aimerais bosser le dos aujourd'hui",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "J'ai envie de faire épaules et biceps.",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
+    },
+    {
+      "message": "ce soir je fais pecs triceps",
+      "expected": "WORKOUT_PROPOSAL_REQUIRED"
     }
   ],
   "other": [
@@ -373,6 +397,14 @@
     {
       "message": "Est-ce que tu peux créer une séance jambes ?",
       "expected": "WORKOUT_CREATION_REQUIRED"
+    },
+    {
+      "message": "Aujourd’hui j’ai fait pecs triceps, combien de repos avant de les refaire ?",
+      "expected": "DATA_QUERY"
+    },
+    {
+      "message": "Je veux des gros pecs, je mange quoi ?",
+      "expected": "DATA_QUERY"
     }
   ]
 }

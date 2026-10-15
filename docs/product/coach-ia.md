@@ -177,6 +177,15 @@ proposée ni créée pour les 29 questions qui n'en demandaient pas (médiane
 33 s). Sur les tours dont le journal a été gardé, la carte était composée
 par le modèle lui-même : le repli serveur n'a pas servi.
 
+**« Je veux faire pec triceps »** (signalé le 15 octobre 2026). Faire un
+muscle, c'est demander une séance : le résolveur ne reconnaissait que
+« séance » ou « travailler », la demande partait en conseil et le modèle
+répondait en texte, sans carte (et proposait des tractions). Un verbe
+« faire » au présent (`DO` : faire, fais, attaquer, taper) avec un muscle
+nommé et un souhait ou un moment (« je veux », « aujourd'hui », « ce
+soir ») exige désormais la carte ; le passé (« j'ai fait pecs triceps,
+combien de repos ? ») n'en demande pas.
+
 Un worker en panne donne la séance composée par le serveur : aucun appel ne
 part ailleurs, il n'existe aucun autre fournisseur.
 
