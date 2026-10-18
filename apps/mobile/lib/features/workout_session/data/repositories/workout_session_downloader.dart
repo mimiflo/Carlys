@@ -88,8 +88,7 @@ class WorkoutSessionDownloader {
         if (stopped()) return restored;
         final detail = await pending;
         if (await _wouldBreakSingleActiveRule(detail)) continue;
-        await write(detail);
-        restored++;
+        if (await write(detail, untouchedOnly: true)) restored++;
       }
     }
     return restored;
@@ -164,6 +163,14 @@ class WorkoutSessionDownloader {
     return refs;
   }
 
+  /// La séance locale porte-t-elle une saisie non acquittée ?
+  Future<bool> _touchedLocally(String sessionId) async {
+    final local = await (_db.select(
+      _db.localWorkoutSessions,
+    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
+    return local != null && await _hasLocalChanges(local);
+  }
+
   Future<bool> _hasLocalChanges(LocalWorkoutSession session) async {
     final sessionId = session.id;
     if (session.syncStatus != 'synced') {
@@ -196,8 +203,18 @@ class WorkoutSessionDownloader {
   /// connaît son identifiant — une correction ou une pierre tombale en file
   /// porte une vérité que le serveur n'a pas encore reçue, l'opération la
   /// lui appliquera.
-  Future<void> write(RemoteWorkoutSession session) {
+  ///
+  /// [untouchedOnly] (le rapatriement) : la séance est relue DANS la
+  /// transaction, et rien n'est écrit si elle porte entre-temps une saisie
+  /// locale non acquittée — une clôture faite pendant le téléchargement du
+  /// détail était sinon écrasée, marquée `synced`, et ne partait plus.
+  /// Rend `false` quand la séance a été laissée telle quelle.
+  Future<bool> write(
+    RemoteWorkoutSession session, {
+    bool untouchedOnly = false,
+  }) {
     return _db.transaction(() async {
+      if (untouchedOnly && await _touchedLocally(session.id)) return false;
       await _db
           .into(_db.localWorkoutSessions)
           .insertOnConflictUpdate(
@@ -250,6 +267,7 @@ class WorkoutSessionDownloader {
         session.id,
         session.plan.map((item) => _planRow(session.id, item)).toList(),
       );
+      return true;
     });
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:carlys_mobile/core/database/app_database.dart';
@@ -49,6 +50,9 @@ class _FakeRemote implements WorkoutSessionRemoteDataSource {
   final bool paged;
   final List<int?> limits = [];
 
+  /// Retient la réponse des détails tant qu'un test ne l'ouvre pas.
+  Completer<void>? gate;
+
   /// Détails en vol en même temps, au plus fort.
   int inFlight = 0;
   int maxInFlight = 0;
@@ -92,6 +96,7 @@ class _FakeRemote implements WorkoutSessionRemoteDataSource {
     detailCalls.add(sessionId);
     maxInFlight = max(maxInFlight, ++inFlight);
     await Future<void>.delayed(Duration.zero);
+    await gate?.future;
     inFlight--;
     if (sessionId == failingDetail) throw StateError('détail illisible');
     return sessions.firstWhere((session) => session.id == sessionId);
@@ -630,5 +635,32 @@ void main() {
 
       expect(remote.detailCalls, ['seance-0']);
     });
+  });
+
+  test('une séance close ICI pendant le téléchargement de son détail reste '
+      'close', () async {
+    // La vérification « rien de local en attente » précède le lot ; le
+    // détail arrive après. Une clôture faite entre les deux était écrasée
+    // par la version serveur, marquée `synced` : la séance se rouvrait, et
+    // sa clôture ne partait plus jamais.
+    final remote = _FakeRemote([_pushSession()]);
+    final workouts = repositoryOn(remote);
+    await workouts.restoreSessions();
+
+    api.networkDown = true; // la clôture reste en file, non acquittée
+    remote.gate = Completer<void>();
+    final run = workouts.restoreSessions();
+    await pumpEventQueue();
+    expect(remote.detailCalls, hasLength(2), reason: 'détail en vol');
+
+    await workouts.completeWorkout('session-1');
+    remote.gate!.complete();
+    await run;
+
+    final row = await (db.select(
+      db.localWorkoutSessions,
+    )..where((session) => session.id.equals('session-1'))).getSingle();
+    expect(row.status, WorkoutStatus.completed.apiValue);
+    expect(row.syncStatus, isNot('synced'));
   });
 }
