@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, type QueryKey } from '@tanstack/react-query';
-import type { Page } from '@/lib/admin-api-client';
+import { adminToken, type Page } from '@/lib/admin-api-client';
 import { button } from './ui/button';
 
 /**
@@ -19,6 +19,9 @@ export function useCursorPages<T>(
       initialPageParam: undefined as string | undefined,
       getNextPageParam: (last) =>
         last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
+      // Sans session, aucune requête : elle partirait en 401 avant même que
+      // la coquille renvoie vers /login.
+      enabled: adminToken.get() !== null,
     });
   const items = data?.pages.flatMap((page) => page.items) ?? [];
   return { items, data, isPending, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage };

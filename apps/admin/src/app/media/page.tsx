@@ -11,7 +11,7 @@ import { ImageIcon } from '@/components/ui/icons';
 import { Segmented } from '@/components/ui/segmented';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/ui/states';
 import { useAdminPermissions } from '@/components/use-admin-permissions';
-import { adminApi } from '@/lib/admin-api';
+import { adminApi, adminToken } from '@/lib/admin-api';
 import { formatBytes } from '@/lib/format-bytes';
 import { unavailableMessage } from '@/lib/load-error';
 
@@ -25,12 +25,16 @@ const KINDS: readonly { value: MediaKind | 'ALL'; label: string }[] = [
 function MediaCard({ asset, onOpen }: { asset: AdminMediaAsset; onOpen: () => void }) {
   const used = asset.usedBy.length;
   return (
-    <li className="animate-enter">
+    // Hors de l'écran, la carte n'est ni mise en page ni peinte (la liste en
+    // compte jusqu'à 200) ; 14rem réserve à peu près sa hauteur, `auto` garde
+    // la vraie une fois la carte vue. Ce confinement coupe ce qui déborde du
+    // `<li>` : l'anneau de focus se dessine donc À L'INTÉRIEUR, sans ombre.
+    <li className="animate-enter [contain-intrinsic-height:auto_14rem] [content-visibility:auto]">
       <button
         type="button"
         onClick={onOpen}
         aria-label={`Ouvrir ${asset.originalName}`}
-        className="group block w-full overflow-hidden rounded-xl border border-border bg-surface text-left transition duration-250 hover:border-primary/30 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary"
+        className="group block w-full overflow-hidden rounded-xl border border-border bg-surface text-left transition duration-250 hover:border-primary/30 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
       >
         <div className="flex aspect-video items-center justify-center overflow-hidden bg-surface-alt">
           {asset.kind === 'IMAGE' ? (
@@ -89,6 +93,7 @@ export default function MediaPage() {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['admin', 'media', kind],
     queryFn: () => adminApi.listMedia(kind === 'ALL' ? undefined : kind),
+    enabled: adminToken.get() !== null,
   });
 
   const remove = useMutation({

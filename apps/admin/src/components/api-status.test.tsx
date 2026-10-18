@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { HealthReport as ContractHealthReport } from '@carlys/api-contracts';
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { testQueryClient } from '@/testing/fixtures';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ApiStatus, uptimeLabel } from './api-status';
+import { ApiStatus, uptimeLabel, type HealthReport } from './api-status';
 
 /**
  * La page d'accueil est PUBLIQUE. Elle affichait le message brut d'une sonde
@@ -81,4 +82,11 @@ describe('uptimeLabel', () => {
     expect(uptimeLabel(5 * 3600 + 12 * 60)).toBe('5 h 12 min');
     expect(uptimeLabel(3 * 86400 + 4 * 3600)).toBe('3 j 4 h');
   });
+});
+
+// Le schéma local (`zod/mini`, pour le poids de l'accueil) recopie le contrat :
+// qu'il y ajoute une valeur (un statut « degraded »), et c'est le typecheck qui
+// casse, pas l'accueil, qui dirait sinon « API injoignable ».
+it('lit tout ce que le contrat de santé autorise', () => {
+  expectTypeOf<ContractHealthReport>().toExtend<HealthReport>();
 });

@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('session expirée sur une page du back-office', () => {
-  it('un 401 renvoie vers la connexion et ne laisse rien à l’écran', async () => {
+  it('un 401 renvoie vers la connexion et ne laisse aucun contenu à l’écran', async () => {
     adminToken.set('jeton-perime');
     adminPermissions.set(ADMIN_PERMISSIONS);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(repondre(401)));
@@ -49,7 +49,9 @@ describe('session expirée sur une page du back-office', () => {
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/login'));
     expect(adminToken.wasExpired()).toBe(true);
-    expect(screen.queryByRole('heading', { name: 'Journal d’audit' })).not.toBeInTheDocument();
+    // Seule la coquille reste (titre compris), le temps de la redirection.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(screen.queryByText(/permission audit:read/)).not.toBeInTheDocument();
   });
 

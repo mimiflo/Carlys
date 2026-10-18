@@ -1,10 +1,22 @@
 'use client';
 
-import { healthReportSchema, type HealthReport } from '@carlys/api-contracts';
 import { useQuery } from '@tanstack/react-query';
+// `zod/mini` et non le contrat `healthReportSchema` (Zod classique) : ce
+// composant est sur l'accueil PUBLIC, qui n'a pas à charger Zod complet pour
+// trois champs. Seuls les champs AFFICHÉS sont lus ; `error`, que la page ne
+// montre jamais, n'est pas même gardé.
+import * as z from 'zod/mini';
 import { publicEnv } from '@/lib/env';
 import { DEGRADED, healthStatus, type StatusLabel } from '@/lib/status-labels';
 import { Badge } from './ui/badge';
+
+const healthReportSchema = z.object({
+  status: z.enum(['ok', 'error']),
+  uptimeSeconds: z.number(),
+  components: z.record(z.string(), z.object({ status: z.enum(['up', 'down']) })),
+});
+
+export type HealthReport = z.infer<typeof healthReportSchema>;
 
 async function fetchHealth(): Promise<HealthReport> {
   const response = await fetch(`${publicEnv.apiBaseUrl}/health`, {
@@ -64,11 +76,19 @@ export function ApiStatus() {
 
   if (isPending) {
     return (
-      <div aria-busy="true" className="flex flex-col gap-3">
+      // À la forme du contenu (bandeau, puis l'API et chaque composant
+      // connu) : l'arrivée de la réponse ne fait rien sauter.
+      <div aria-busy="true">
         <span className="sr-only">Vérification de l’API…</span>
-        {[0, 1, 2].map((index) => (
-          <div key={index} className="animate-skeleton h-8 rounded-lg bg-foreground/6" />
-        ))}
+        <div className="animate-skeleton h-11 rounded-lg bg-foreground/6" />
+        <ul aria-hidden className="mt-2 divide-y divide-border">
+          {['API', ...Object.keys(COMPONENT_LABELS)].map((name) => (
+            <li key={name} className="flex items-center justify-between gap-4 py-3">
+              <span className="animate-skeleton h-4 w-32 rounded bg-foreground/6" />
+              <span className="animate-skeleton h-6 w-24 rounded-full bg-foreground/6" />
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }

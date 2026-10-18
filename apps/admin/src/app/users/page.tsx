@@ -10,13 +10,19 @@ import { Badge } from '@/components/ui/badge';
 import { SearchForm } from '@/components/ui/search-form';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { TableCard, td, th, thead, tr } from '@/components/ui/table';
-import { adminApi } from '@/lib/admin-api';
+import { adminApi, adminToken } from '@/lib/admin-api';
 import { unavailableMessage } from '@/lib/load-error';
 import { planStatus, userStatus } from '@/lib/status-labels';
 
 /** Le total, en tête de page : la liste, elle, arrive par pages de vingt. */
 function Totals() {
-  const { data } = useQuery({ queryKey: ['admin', 'overview'], queryFn: adminApi.overview });
+  // La coquille rend sa description AVANT la session (pré-rendu) : sans
+  // jeton, la phrase fixe, et aucune requête.
+  const { data } = useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: adminApi.overview,
+    enabled: adminToken.get() !== null,
+  });
   if (data === undefined) {
     return 'Les comptes de l’application mobile.';
   }

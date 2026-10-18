@@ -1,8 +1,18 @@
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  type RenderOptions,
+} from '@testing-library/react';
+import { type ReactElement, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_PERMISSIONS, adminPermissions, adminToken } from '@/lib/admin-api';
+import { testQueryClient } from '@/testing/fixtures';
 import { firstAllowedRoute } from './admin-nav';
 import { AdminShell } from './admin-shell';
 
@@ -34,6 +44,15 @@ const CONTENT_MANAGER = [
 ];
 const SUPPORT = ['user:read', 'audit:read', 'community:moderate'];
 
+// La coquille vide le cache de la session qui finit : elle vit sous un client.
+let client = testQueryClient();
+function WithQuery({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+function render(ui: ReactElement, options: RenderOptions = {}) {
+  return rtlRender(ui, { wrapper: WithQuery, ...options });
+}
+
 function liens(): string[] {
   return screen
     .getAllByRole('link')
@@ -42,8 +61,12 @@ function liens(): string[] {
 }
 
 afterEach(() => {
-  routerReplace.mockClear();
+  // Démonter d'abord : effacer la session sous une coquille encore montée la
+  // fait re-rendre, et sa redirection débordait sur le test suivant.
+  cleanup();
   adminToken.clear();
+  routerReplace.mockClear();
+  client = testQueryClient();
 });
 
 describe('firstAllowedRoute', () => {
@@ -132,6 +155,39 @@ describe('AdminShell', () => {
     expect(screen.queryByText('contenu')).not.toBeInTheDocument();
   });
 
+  // Le HTML pré-rendu au build (aucun jeton) était un `<body>` vide : rien à
+  // peindre avant l'hydratation. La coquille et son titre y sont désormais ;
+  // le contenu et la navigation, qui dépendent de la session, non.
+  it('fin de session : les données admin en cache partent, le reste demeure', () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(SUPER_ADMIN);
+    client.setQueryData(['admin', 'overview'], { users: 1234 });
+    client.setQueryData(['api-health'], { status: 'ok' });
+    render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+
+    act(() => adminToken.expire());
+
+    expect(client.getQueryData(['admin', 'overview'])).toBeUndefined();
+    expect(client.getQueryData(['api-health'])).toEqual({ status: 'ok' });
+  });
+
+  it('sans jeton, rend le titre et la description, jamais le contenu ni la navigation', () => {
+    adminPermissions.set(SUPER_ADMIN);
+
+    render(
+      <AdminShell title="Utilisateurs" description="Les comptes.">
+        contenu
+      </AdminShell>,
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Utilisateurs' })).toBeInTheDocument();
+    expect(screen.getByText('Les comptes.')).toBeInTheDocument();
+    expect(screen.queryByText('contenu')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toEqual([]);
+    expect(routerReplace).toHaveBeenCalledWith('/login');
+  });
+
   // Une page du back-office est rendue au build (statique) : au chargement,
   // React HYDRATE avec l'instantané serveur (aucun jeton), et l'effet de
   // garde s'exécutait avant le rendu qui lit le vrai jeton. Chaque
@@ -140,7 +196,11 @@ describe('AdminShell', () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(SUPER_ADMIN);
     const container = document.createElement('div');
-    container.innerHTML = renderToString(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+    container.innerHTML = renderToString(
+      <WithQuery>
+        <AdminShell title="Utilisateurs">contenu</AdminShell>
+      </WithQuery>,
+    );
     document.body.append(container);
 
     render(<AdminShell title="Utilisateurs">contenu</AdminShell>, { container, hydrate: true });

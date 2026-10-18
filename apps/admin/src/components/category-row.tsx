@@ -8,6 +8,9 @@ import { useFocusOnSwap } from './use-focus-on-swap';
 import { button, field } from './ui/button';
 import { td, tr } from './ui/table';
 
+/** Partagée par la page Catégories et la fiche d'un exercice : un seul cache. */
+export const MUSCLE_GROUPS_QUERY_KEY = ['admin', 'muscle-groups'] as const;
+
 /** Une catégorie : renommage, rang d'affichage, suppression. */
 export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
   const queryClient = useQueryClient();
@@ -17,7 +20,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
   // Le champ Nom à l'ouverture, « Modifier » à la fermeture.
   const { target: focusTarget, request: requestFocus } = useFocusOnSwap();
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'muscle-groups'] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: MUSCLE_GROUPS_QUERY_KEY });
 
   /**
    * Le brouillon repart de ce que la LISTE affiche — à l'ouverture comme à

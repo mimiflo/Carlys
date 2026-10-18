@@ -4,6 +4,7 @@ import { type AdminExerciseSummary } from '@carlys/api-contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
+import { MUSCLE_GROUPS_QUERY_KEY } from './category-row';
 import { useFocusOnSwap } from './use-focus-on-swap';
 import { button } from './ui/button';
 
@@ -81,14 +82,23 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
     setOpen(false);
   };
 
-  const referentials = useQuery({
-    queryKey: ['admin', 'referentials'],
-    queryFn: async () => ({
-      muscleGroups: await adminApi.listMuscleGroups(),
-      equipment: await adminApi.listEquipment(),
-    }),
+  // Deux requêtes PARALLÈLES (elles s'enchaînaient), et la clé des groupes
+  // est celle de la page Catégories : son cache sert ici, et inversement.
+  const muscleGroups = useQuery({
+    queryKey: MUSCLE_GROUPS_QUERY_KEY,
+    queryFn: () => adminApi.listMuscleGroups(),
     enabled: open,
   });
+  const equipmentList = useQuery({
+    queryKey: ['admin', 'equipment'],
+    queryFn: () => adminApi.listEquipment(),
+    enabled: open,
+  });
+  const referentials =
+    muscleGroups.data !== undefined && equipmentList.data !== undefined
+      ? { muscleGroups: muscleGroups.data, equipment: equipmentList.data }
+      : undefined;
+  const referentialsFailed = muscleGroups.isError || equipmentList.isError;
 
   const save = useMutation({
     mutationFn: () =>
@@ -142,17 +152,19 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
       // Dans la fiche latérale (son seul hôte) : toute la largeur, sans ombre de popover.
       className="animate-enter w-full rounded-xl border border-border bg-surface p-3 focus-visible:outline-2 focus-visible:outline-primary"
     >
-      {referentials.isPending && <p className="text-xs text-muted">Chargement…</p>}
-      {referentials.isError && (
+      {referentials === undefined && !referentialsFailed && (
+        <p className="text-xs text-muted">Chargement…</p>
+      )}
+      {referentialsFailed && (
         <p className="text-xs text-danger-ink" role="alert">
           Référentiels indisponibles.
         </p>
       )}
-      {referentials.data !== undefined && (
+      {referentials !== undefined && (
         <>
           <p className="text-xs font-medium text-muted">Muscles</p>
           <ul className="mt-1 max-h-72 space-y-1 overflow-y-auto text-sm">
-            {referentials.data.muscleGroups.map((group) => (
+            {referentials.muscleGroups.map((group) => (
               <GroupChoice
                 key={group.id}
                 slug={group.slug}
@@ -172,7 +184,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
 
           <p className="mt-3 text-xs font-medium text-muted">Matériel</p>
           <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-sm">
-            {referentials.data.equipment.map((item) => (
+            {referentials.equipment.map((item) => (
               <li key={item.id}>
                 <label className="flex items-center gap-2">
                   <input

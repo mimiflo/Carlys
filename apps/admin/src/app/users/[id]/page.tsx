@@ -13,7 +13,7 @@ import { ArrowLeftIcon } from '@/components/ui/icons';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { UserAccountActions } from '@/components/user-account-actions';
 import { PremiumPanel } from '@/components/user-premium-panel';
-import { ApiError, adminApi } from '@/lib/admin-api';
+import { ApiError, adminApi, adminToken } from '@/lib/admin-api';
 import { sourceLabel } from '@/lib/entitlement-labels';
 import { entitlementStatus, planStatus, userStatus } from '@/lib/status-labels';
 
@@ -34,6 +34,7 @@ export default function UserDetailPage() {
   } = useQuery({
     queryKey: ['admin', 'user', userId],
     queryFn: () => adminApi.userDetail(userId),
+    enabled: adminToken.get() !== null,
   });
 
   return (

@@ -4,11 +4,11 @@ import { type AdminMuscleGroup } from '@carlys/api-contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
-import { CategoryRow } from '@/components/category-row';
+import { CategoryRow, MUSCLE_GROUPS_QUERY_KEY } from '@/components/category-row';
 import { button, field } from '@/components/ui/button';
 import { ErrorState, SkeletonRows } from '@/components/ui/states';
 import { TableCard, th, thead } from '@/components/ui/table';
-import { adminApi } from '@/lib/admin-api';
+import { adminApi, adminToken } from '@/lib/admin-api';
 import { unavailableMessage } from '@/lib/load-error';
 
 /** Slug proposé à partir du nom : accents retirés, espaces en tirets. */
@@ -30,7 +30,7 @@ function CreateForm() {
     mutationFn: () =>
       adminApi.createMuscleGroup({ slug: slug === '' ? slugify(name) : slug, name }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'muscle-groups'] });
+      await queryClient.invalidateQueries({ queryKey: MUSCLE_GROUPS_QUERY_KEY });
       setName('');
       setSlug('');
     },
@@ -88,8 +88,9 @@ function CreateForm() {
  */
 export default function CategoriesPage() {
   const { data, isPending, error } = useQuery<AdminMuscleGroup[]>({
-    queryKey: ['admin', 'muscle-groups'],
+    queryKey: MUSCLE_GROUPS_QUERY_KEY,
     queryFn: () => adminApi.listMuscleGroups(),
+    enabled: adminToken.get() !== null,
   });
 
   return (

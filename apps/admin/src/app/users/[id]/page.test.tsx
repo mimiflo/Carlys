@@ -453,13 +453,19 @@ describe('Fiche utilisateur', () => {
     expect(alert).not.toHaveTextContent('Utilisateur introuvable.');
   });
 
-  it('sans jeton, ne rend rien et renvoie vers la connexion', () => {
-    vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);
+  // Sans jeton, la coquille et son titre seuls (le pré-rendu les peint) :
+  // aucune donnée du compte, et aucune requête qui partirait en 401.
+  it('sans jeton, ne demande ni ne rend la fiche et renvoie vers la connexion', () => {
+    const detail = vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);
 
     renderPage();
 
     expect(routerReplace).toHaveBeenCalledWith('/login');
-    expect(screen.queryByRole('heading', { name: /fiche utilisateur/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: /fiche utilisateur/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(USER.email)).not.toBeInTheDocument();
+    expect(detail).not.toHaveBeenCalled();
   });
 
   it('avec un jeton, ne renvoie jamais vers la connexion', async () => {

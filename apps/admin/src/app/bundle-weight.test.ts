@@ -104,6 +104,9 @@ function publicEntries(): string[] {
 describe('les pages publiques ne chargent ni Zod classique ni les contrats', () => {
   const entries = [
     ...publicEntries(),
+    // L'accueil, public lui aussi : son état de la plateforme lisait le
+    // contrat `healthReportSchema`, soit Zod classique (~46 Ko gzip).
+    join(srcRoot, 'app/page.tsx'),
     join(srcRoot, 'app/layout.tsx'),
     join(srcRoot, 'app/providers.tsx'),
   ];

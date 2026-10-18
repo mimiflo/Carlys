@@ -88,6 +88,30 @@ describe('ExerciseCategoriesCell — brouillon', () => {
   });
 });
 
+describe('ExerciseCategoriesCell — référentiels', () => {
+  // Les deux listes s'enchaînaient : le matériel attendait les groupes.
+  it('demande les groupes et le matériel EN PARALLÈLE', () => {
+    vi.spyOn(adminApi, 'listMuscleGroups').mockReturnValue(new Promise(() => {}));
+    const equipment = vi.spyOn(adminApi, 'listEquipment');
+    renderWithQuery(inRow(<ExerciseCategoriesCell exercise={DEVELOPPE_COUCHE} />));
+
+    fireEvent.click(screen.getByRole('button', { name: /modifier/i }));
+
+    expect(equipment).toHaveBeenCalledTimes(1);
+  });
+
+  it('montre les groupes que la page Catégories a déjà mis en cache', async () => {
+    // La relecture réseau ne répond jamais : seul le cache partagé peut servir.
+    vi.spyOn(adminApi, 'listMuscleGroups').mockReturnValue(new Promise(() => {}));
+    const { client } = renderWithQuery(
+      inRow(<ExerciseCategoriesCell exercise={DEVELOPPE_COUCHE} />),
+    );
+    client.setQueryData(['admin', 'muscle-groups'], MUSCLE_GROUPS);
+
+    expect(await openEditor()).toBeInTheDocument();
+  });
+});
+
 describe('ExerciseCategoriesCell — focus clavier', () => {
   it('ouvrir pose le focus sur l’éditeur, annuler le rend au bouton d’origine', async () => {
     renderWithQuery(inRow(<ExerciseCategoriesCell exercise={DEVELOPPE_COUCHE} />));

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { AdminShell } from '@/components/admin-shell';
 import { ApiStatus } from '@/components/api-status';
-import { Section } from '@/components/ui/card';
+import { Card, Section } from '@/components/ui/card';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
@@ -14,7 +14,7 @@ import {
   UsersIcon,
 } from '@/components/ui/icons';
 import { Stat } from '@/components/ui/stat';
-import { ErrorState, SkeletonRows } from '@/components/ui/states';
+import { ErrorState } from '@/components/ui/states';
 import { useAdminPermissions } from '@/components/use-admin-permissions';
 import { COMMUNITY_REPORTS_QUERY_KEY } from '@/components/community-report-status-cell';
 import { RecentAudit } from '@/components/recent-audit';
@@ -26,6 +26,8 @@ const PERCENT = new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFracti
 function share(part: number, total: number): string {
   return PERCENT.format(total === 0 ? 0 : part / total);
 }
+
+const STATS_GRID = 'grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4';
 
 function KeyFigures() {
   const { data, error, refetch } = useQuery({
@@ -40,10 +42,22 @@ function KeyFigures() {
     );
   }
   if (data === undefined) {
-    return <SkeletonRows rows={2} />;
+    // La grille des `Stat`, quatre cartes à leur hauteur : rien ne saute à
+    // l'arrivée des chiffres.
+    return (
+      <div aria-busy="true" className={STATS_GRID}>
+        <span className="sr-only">Chargement…</span>
+        {[0, 1, 2, 3].map((index) => (
+          <Card key={index} className="min-h-32.5 p-4 sm:min-h-35.5 sm:p-5">
+            <div className="animate-skeleton h-4 w-24 rounded bg-foreground/6" />
+            <div className="animate-skeleton mt-7 h-8 w-20 rounded bg-foreground/6" />
+          </Card>
+        ))}
+      </div>
+    );
   }
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    <div className={STATS_GRID}>
       <Stat label="Comptes" value={data.usersCount} icon={<UsersIcon />} />
       <Stat
         label="Membres premium"

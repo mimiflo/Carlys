@@ -6,16 +6,16 @@ supervision de la plateforme dès l'Étape 1, puis administration complète
 
 ## Pile technique
 
-| Brique | Choix | Remarques |
-| --- | --- | --- |
-| Framework | Next.js 16, App Router | `output: "standalone"` pour Docker |
-| Langage | TypeScript strict | `tsc --noEmit` en CI |
-| Styles | Tailwind CSS v4 | thème alimenté par les tokens Carlys |
-| Données serveur | TanStack Query 5 | cache, retry, refetch |
-| Formulaires | état React local + Zod (`zod/mini` sur les pages publiques) | aucune bibliothèque de formulaires : React Hook Form n'a jamais été installé (absent du lockfile) |
-| Contrats API | `@carlys/api-contracts` | schémas Zod, consommés par leurs **sources** (voir « Poids des pages ») |
-| Tests | vitest + Testing Library (jsdom) | `pnpm test` |
-| Port | **3001** | `next dev --port 3001` / `next start --port 3001` |
+| Brique          | Choix                                                       | Remarques                                                                                         |
+| --------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Framework       | Next.js 16, App Router                                      | `output: "standalone"` pour Docker                                                                |
+| Langage         | TypeScript strict                                           | `tsc --noEmit` en CI                                                                              |
+| Styles          | Tailwind CSS v4                                             | thème alimenté par les tokens Carlys                                                              |
+| Données serveur | TanStack Query 5                                            | cache, retry, refetch                                                                             |
+| Formulaires     | état React local + Zod (`zod/mini` sur les pages publiques) | aucune bibliothèque de formulaires : React Hook Form n'a jamais été installé (absent du lockfile) |
+| Contrats API    | `@carlys/api-contracts`                                     | schémas Zod, consommés par leurs **sources** (voir « Poids des pages »)                           |
+| Tests           | vitest + Testing Library (jsdom)                            | `pnpm test`                                                                                       |
+| Port            | **3001**                                                    | `next dev --port 3001` / `next start --port 3001`                                                 |
 
 ## Structure `src/`
 
@@ -137,7 +137,11 @@ d'ajouter sa correspondance dans le test — c'est voulu.
   pour leur poids) ; le serveur revalide tout. Aucune bibliothèque de
   formulaires : aucun formulaire du back-office n'en justifie une.
 - **Réponses API toujours validées** par les schémas de
-  `@carlys/api-contracts` avant usage.
+  `@carlys/api-contracts` avant usage. Une exception, l'état de santé de
+  l'accueil PUBLIC (`components/api-status.tsx`) : un schéma `zod/mini` local
+  ne lit que les trois champs affichés, pour ne pas charger Zod complet
+  (−45 Ko gzip sur `/`) ; un test de types (`expectTypeOf`) casse si le
+  contrat autorise un jour ce que ce schéma refuserait.
 - **Composants accessibles** : structure sémantique, `aria-labelledby`,
   `role="status"` pour les zones vivantes, états `focus-visible` — déjà
   appliqués sur la page d'accueil et le composant de statut.
@@ -194,6 +198,13 @@ ramenait à la connexion. Désormais :
   l'hydratation d'une page statique, l'instantané serveur vaut `null`, et
   l'effet renvoyait vers `/login` un administrateur connecté à chaque
   rechargement ;
+- **sans jeton, la coquille se rend quand même** (octobre 2026) : cadre,
+  titre et description, pré-rendus au build, donc peints avant le
+  JavaScript ; la navigation n'est qu'un squelette (les permissions ne sont
+  pas connues) et le contenu attend le jeton. Aucune requête de page ne part
+  sans jeton (`enabled: adminToken.get() !== null`, dans `useCursorPages` et
+  les `useQuery` de page) ; une session qui finit vide le cache `['admin', …]`
+  (`AdminShell`), pour qu'aucune donnée ne survive à la déconnexion ;
 - les erreurs de chargement se disent par leur CAUSE (`lib/load-error.ts`) :
   403 → la permission requise, 401 → session expirée, réseau → « le serveur
   ne répond pas », le reste → panne passagère.
@@ -232,17 +243,17 @@ ou permission manquante, tout est refusé.
 Chaque ligne dit ce qui est livré et ce qui reste cible ; une ligne sans
 « Livré » n'existe pas encore.
 
-| Domaine | Cible |
-| --- | --- |
-| Utilisateurs | **Livré (partiel)** — `/users` (recherche par `POST /admin/users/search` : le terme, souvent une adresse, ne passe ni dans l'URL de l'API ni dans celle de la page) et fiche `/users/[id]` (identité, statut, adresse vérifiée ou non, droits et leur origine ; pour un compte supprimé, titré « Compte supprimé », sans droits ni gestes : la date de son effacement définitif), suspension et réactivation (toutes les sessions révoquées, jetons push supprimés). Les comptes supprimés, déjà anonymisés et en attente de purge, quittent la liste par défaut : la case « Voir les supprimés » les y remet. Restent cibles : sessions par appareil dans la fiche, confirmation et raison pour la suspension, suppression d'un compte sur demande écrite depuis le back-office (elle se fait aujourd'hui en ligne de commande, `--compte-actif`) |
+| Domaine                | Cible                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Utilisateurs           | **Livré (partiel)** — `/users` (recherche par `POST /admin/users/search` : le terme, souvent une adresse, ne passe ni dans l'URL de l'API ni dans celle de la page) et fiche `/users/[id]` (identité, statut, adresse vérifiée ou non, droits et leur origine ; pour un compte supprimé, titré « Compte supprimé », sans droits ni gestes : la date de son effacement définitif), suspension et réactivation (toutes les sessions révoquées, jetons push supprimés). Les comptes supprimés, déjà anonymisés et en attente de purge, quittent la liste par défaut : la case « Voir les supprimés » les y remet. Restent cibles : sessions par appareil dans la fiche, confirmation et raison pour la suspension, suppression d'un compte sur demande écrite depuis le back-office (elle se fait aujourd'hui en ligne de commande, `--compte-actif`)                                                                                                                                                                                                                                                                                                                           |
 | Abonnements (Étape 6+) | **Livré (partiel)** — la fiche montre l'ORIGINE de chaque droit (`source` : abonnement et son fournisseur, offert à la main, coupé à la main, jamais ouvert) et l'abonnement qui paie (`paidSubscription`). L'accès premium a trois gestes distincts (`components/user-premium-panel.tsx`) : « Offrir le premium » (octroi manuel), « Couper l'accès » (confirmation, raison obligatoire journalisée, avertissement quand un abonnement payé court : la coupure n'arrête pas la facturation et bloque les achats) et « Rendre la main à l'abonnement » (`DELETE /admin/users/:id/entitlements/:key`). Chaque geste vise TOUT le plan — chaque clé de `PREMIUM_ENTITLEMENT_KEYS`, coach IA et programmes illimités compris —, l'une après l'autre (`adminApi.setPremium`, `adminApi.releasePremium`) : un seul appel par clé, donc une entrée d'audit par clé. La route décide droit par droit, sans transaction commune ; un geste interrompu laisse un état partiel, que le panneau annonce « partiel » et que le même geste, idempotent, achève. Restent cibles : une décision de plan en une transaction côté API : historique Stripe/RevenueCat, remboursements, litiges |
-| Exercices | **Livré (partiel)** — `/exercises` : catalogue publiés ET non publiés, recherche, « Charger la suite » (curseur, cinquante par page), publication/dépublication, photo (dépôt, remplacement, retrait), reclassement (brouillon repris de la liste à chaque ouverture et à l'annulation). Taxonomie : `/categories` crée, renomme et supprime les groupes musculaires (livré) ; le matériel reste en lecture seule. Reste cible : création/édition d'exercices |
-| Programmes | création et édition de programmes d'entraînement, assignation, versions |
-| Médias | **Livré (partiel)** — dépôt et rattachement depuis la page Exercices ; `/media` liste la bibliothèque (aperçus chargés à l'approche de l'écran) et supprime un média, avec confirmation. Reste cible : RÉUTILISER un média existant sur un autre exercice sans le redéposer |
-| Notifications | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi |
-| Webhooks (Étape 6+) | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu |
-| Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
-| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, colonne « Contenu visé » : l'encouragement, ou le défi entre amis (« Défi « titre » » puis le mot du créateur cité, ou « (sans message) »), clichés figés au signalement et lus via `encouragementMessage`, `friendChallengeTitle`, `friendChallengeMessage`), résolution et réouverture auditées, permission `community:moderate`. Chaque signalement ouvre un **dossier** latéral où l'on tranche (retirer, suspendre, classer, note) ; filtres par statut, motif et personne. La **décision** est livrée : `POST /admin/community/reports/:id/decision` retire le contenu (encouragement supprimé, mot du défi effacé), suspend (permission `user:update` en plus, note obligatoire) ou classe, résout les signalements frères du contenu retiré, audits `admin.community_report_decided` et `admin.community_content_removed` ; liste filtrable par motif et personne, avec auteur de la décision, état du compte et compteurs par personne — voir `docs/product/community.md` |
+| Exercices              | **Livré (partiel)** — `/exercises` : catalogue publiés ET non publiés, recherche, « Charger la suite » (curseur, cinquante par page), publication/dépublication, photo (dépôt, remplacement, retrait), reclassement (brouillon repris de la liste à chaque ouverture et à l'annulation). Taxonomie : `/categories` crée, renomme et supprime les groupes musculaires (livré) ; le matériel reste en lecture seule. Reste cible : création/édition d'exercices                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Programmes             | création et édition de programmes d'entraînement, assignation, versions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Médias                 | **Livré (partiel)** — dépôt et rattachement depuis la page Exercices ; `/media` liste la bibliothèque (aperçus chargés à l'approche de l'écran) et supprime un média, avec confirmation. Reste cible : RÉUTILISER un média existant sur un autre exercice sans le redéposer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Notifications          | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Webhooks (Étape 6+)    | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Statistiques           | tableaux de bord d'usage : inscriptions, rétention, séances, revenus                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Modération             | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, colonne « Contenu visé » : l'encouragement, ou le défi entre amis (« Défi « titre » » puis le mot du créateur cité, ou « (sans message) »), clichés figés au signalement et lus via `encouragementMessage`, `friendChallengeTitle`, `friendChallengeMessage`), résolution et réouverture auditées, permission `community:moderate`. Chaque signalement ouvre un **dossier** latéral où l'on tranche (retirer, suspendre, classer, note) ; filtres par statut, motif et personne. La **décision** est livrée : `POST /admin/community/reports/:id/decision` retire le contenu (encouragement supprimé, mot du défi effacé), suspend (permission `user:update` en plus, note obligatoire) ou classe, résout les signalements frères du contenu retiré, audits `admin.community_report_decided` et `admin.community_content_removed` ; liste filtrable par motif et personne, avec auteur de la décision, état du compte et compteurs par personne — voir `docs/product/community.md`                                                  |
 
 ## Pages publiques du produit (`src/app/(public)`)
 
@@ -251,12 +262,12 @@ groupe de routes Next.js `(public)` doté de sa propre mise en page
 (`layout.tsx` : en-tête sobre, pied de page avec les liens légaux, aucun lien
 vers `/login`, aucune coquille d'administration) :
 
-| Route | Contenu | Appel API |
-| --- | --- | --- |
-| `/reset-password?token=…` | formulaire nouveau mot de passe + confirmation, bornes du DTO (`PASSWORD_MIN_LENGTH` / `PASSWORD_MAX_LENGTH` de `@carlys/api-contracts/password-limits`, module sans Zod), états succès / lien expiré / saisie invalide / réseau | `POST /auth/reset-password` |
-| `/verify-email?token=…` | vérification lancée à l'ouverture, états vérifié / lien invalide / réseau (avec « Réessayer ») | `POST /auth/verify-email` |
-| `/abonnement/merci`, `/abonnement` | retours Stripe (succès / annulation), statiques | aucun |
-| `/privacy`, `/terms` | `docs/legal/privacy.md` et `terms.md` rendus au build (`force-static`) | aucun |
+| Route                              | Contenu                                                                                                                                                                                                                          | Appel API                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `/reset-password?token=…`          | formulaire nouveau mot de passe + confirmation, bornes du DTO (`PASSWORD_MIN_LENGTH` / `PASSWORD_MAX_LENGTH` de `@carlys/api-contracts/password-limits`, module sans Zod), états succès / lien expiré / saisie invalide / réseau | `POST /auth/reset-password` |
+| `/verify-email?token=…`            | vérification lancée à l'ouverture, états vérifié / lien invalide / réseau (avec « Réessayer »)                                                                                                                                   | `POST /auth/verify-email`   |
+| `/abonnement/merci`, `/abonnement` | retours Stripe (succès / annulation), statiques                                                                                                                                                                                  | aucun                       |
+| `/privacy`, `/terms`               | `docs/legal/privacy.md` et `terms.md` rendus au build (`force-static`)                                                                                                                                                           | aucun                       |
 
 Décisions :
 
@@ -318,14 +329,14 @@ Next 16 n'affiche plus le « First Load JS » : il se recalcule depuis
 `.next/diagnostics/route-bundle-stats.json` (somme des chunks de chaque
 route, brut et gzip -9). Mesures de septembre 2026 :
 
-| Route | Avant | Après |
-| --- | --- | --- |
-| `/users` | 1160,9 Kio / 282,9 gzip | 802,5 / 216,1 |
-| `/exercises` | 1169,9 / 285,4 | 813,5 / 218,7 |
-| `/login` | 1149,2 / 279,2 | 790,6 / 212,2 |
-| `/` | 873,7 / 217,3 | 781,1 / 209,2 |
-| `/reset-password` | 1147,1 / 279,1 | 565,9 / 164,3 |
-| `/verify-email` | 767,9 / 208,8 | 571,2 / 166,1 |
+| Route             | Avant                   | Après         |
+| ----------------- | ----------------------- | ------------- |
+| `/users`          | 1160,9 Kio / 282,9 gzip | 802,5 / 216,1 |
+| `/exercises`      | 1169,9 / 285,4          | 813,5 / 218,7 |
+| `/login`          | 1149,2 / 279,2          | 790,6 / 212,2 |
+| `/`               | 873,7 / 217,3           | 781,1 / 209,2 |
+| `/reset-password` | 1147,1 / 279,1          | 565,9 / 164,3 |
+| `/verify-email`   | 767,9 / 208,8           | 571,2 / 166,1 |
 
 Deux causes, deux règles, tenues par `src/app/bundle-weight.test.ts` :
 
@@ -377,7 +388,7 @@ la liste tardait, elle ne l'arrache pas à qui l'a posé ailleurs entre-temps.
 - `pnpm test` (dans `apps/admin`) ou `pnpm -r test` à la racine ; exécuté par
   le workflow `admin-ci` avec format, lint, typecheck et build — auxquels
   s'ajoute le lint des paquets partagés (`pnpm --filter "./packages/**"
-  lint`).
+lint`).
 
   L'admin n'a pas de bibliothèque de composants partagée : ses couleurs sont
   RECOPIÉES dans `apps/admin/src/app/globals.css` depuis
@@ -398,7 +409,7 @@ docker build -f apps/admin/Dockerfile \
 ```
 
 1. **build** : Node 22 alpine + corepack/pnpm, `pnpm install --frozen-lockfile
-   --filter "@carlys/admin..."` (packages partagés inclus), puis build Next.
+--filter "@carlys/admin..."` (packages partagés inclus), puis build Next.
    `NEXT_PUBLIC_API_BASE_URL` est un argument de build car inliné dans le
    bundle client.
 2. **runtime** : copie de `.next/standalone`, `.next/static` et `public`

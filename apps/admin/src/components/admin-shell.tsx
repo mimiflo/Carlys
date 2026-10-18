@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -32,8 +33,11 @@ export function AdminShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  // Jeton lu hors rendu serveur (instantané serveur : null → rien n'est
-  // affiché avant l'hydratation, puis redirection si non connecté).
+  const queryClient = useQueryClient();
+  // Jeton lu hors rendu serveur. Instantané serveur : null → la coquille
+  // (cadre, titre, description) est rendue, et pré-rendue au build, sans la
+  // navigation ni le contenu : ils attendent le jeton, et l'effet ci-dessous
+  // renvoie vers /login qui n'en a pas.
   const token = useSyncExternalStore(adminToken.subscribe, adminToken.get, () => null);
   const permissions = useAdminPermissions();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -48,9 +52,13 @@ export function AdminShell({
     // qui lit le vrai jeton : il renvoyait vers /login un administrateur
     // bel et bien connecté, à chaque rechargement.
     if (token === null && adminToken.get() === null) {
+      // Les données de la session partent avec elle : la coquille, rendue
+      // sans jeton, relirait sinon un instant les totaux en cache, et un
+      // autre administrateur dans cet onglet ceux du précédent.
+      queryClient.removeQueries({ queryKey: ['admin'] });
       router.replace('/login');
     }
-  }, [token, router]);
+  }, [token, router, queryClient]);
 
   // Le focus suit le tiroir : il y entre à l'ouverture (le contenu dessous
   // est `inert`), et revient au bouton du menu à la fermeture.
@@ -73,9 +81,15 @@ export function AdminShell({
     return () => window.removeEventListener('keydown', close);
   }, [drawerOpen]);
 
-  if (token === null) {
-    return null;
-  }
+  const brand = (
+    <>
+      <CarlysMark />
+      <span className="leading-tight">
+        <span className="block text-sm font-semibold">Carlys</span>{' '}
+        <span className="block text-xs text-muted">Admin</span>
+      </span>
+    </>
+  );
 
   return (
     <div className="flex min-h-full flex-1">
@@ -98,16 +112,16 @@ export function AdminShell({
           <div className="flex items-center justify-between px-2">
             {/* Le logo suit la même règle que la redirection après connexion :
               la première page que les permissions ouvrent vraiment. */}
-            <Link
-              href={firstAllowedRoute(permissions)}
-              className="flex items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <CarlysMark />
-              <span className="leading-tight">
-                <span className="block text-sm font-semibold">Carlys</span>{' '}
-                <span className="block text-xs text-muted">Admin</span>
-              </span>
-            </Link>
+            {token === null ? (
+              <span className="flex items-center gap-2.5">{brand}</span>
+            ) : (
+              <Link
+                href={firstAllowedRoute(permissions)}
+                className="flex items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                {brand}
+              </Link>
+            )}
             <button
               ref={closeButton}
               type="button"
@@ -121,7 +135,17 @@ export function AdminShell({
 
           <div className="mt-8 flex-1 overflow-y-auto">
             <p className="px-3 pb-2 text-xs font-medium text-muted">Gestion</p>
-            <AdminNav permissions={permissions} pathname={pathname} />
+            {/* Sans jeton, les permissions ne sont pas connues : un squelette
+                neutre, pas une navigation qu'il faudrait corriger ensuite. */}
+            {token === null ? (
+              <div aria-hidden className="flex flex-col gap-0.5">
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <div key={index} className="animate-skeleton h-9 rounded-lg bg-foreground/6" />
+                ))}
+              </div>
+            ) : (
+              <AdminNav permissions={permissions} pathname={pathname} />
+            )}
           </div>
 
           <button
@@ -165,7 +189,7 @@ export function AdminShell({
             </div>
             {actions}
           </div>
-          <div className="mt-8">{children}</div>
+          {token !== null && <div className="mt-8">{children}</div>}
         </main>
       </div>
     </div>

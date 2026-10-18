@@ -357,16 +357,17 @@ describe('Page Signalements', () => {
     expect(screen.getByRole('checkbox', { name: /Suspendre le compte/ })).toBeEnabled();
   });
 
-  // Comme sur les autres pages, la requête part quand même : le vrai garde
-  // est côté serveur (401 sans jeton), la coquille ne fait que ne rien montrer.
-  it('sans jeton, ne rend rien et renvoie vers la connexion', () => {
-    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([]));
+  // Sans jeton, la coquille et son titre seuls (le pré-rendu les peint) :
+  // ni contenu, ni requête qui partirait en 401.
+  it('sans jeton, ne demande ni ne rend aucun signalement et renvoie vers la connexion', () => {
+    const list = vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([]));
 
     renderPage();
 
     expect(routerReplace).toHaveBeenCalledWith('/login');
-    expect(screen.queryByRole('heading', { name: /signalements/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /signalements/i })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(list).not.toHaveBeenCalled();
   });
 
   describe('décision', () => {
