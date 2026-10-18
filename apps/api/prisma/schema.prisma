@@ -74,6 +74,10 @@ model User {
   communityReportsReceived CommunityReport[]        @relation("CommunityReportsReceived")
   deviceTokens             DeviceToken[]
   notificationPreferences  NotificationPreference[]
+
+  /// La liste des comptes du back-office se lit du plus récent au plus
+  /// ancien, par curseur : sans cet index, chaque page triait toute la table.
+  @@index([createdAt, id])
 }
 
 /// Sexe biologique — nécessaire aux formules métaboliques (Mifflin-St Jeor).
@@ -634,7 +638,6 @@ model WorkoutSessionPlanItem {
   exercise Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
 
   @@unique([sessionId, exercisePosition, setPosition])
-  @@index([sessionId])
   @@index([exerciseId])
 }
 
@@ -1271,7 +1274,6 @@ model CoachSessionProposalItem {
   exercise Exercise             @relation(fields: [exerciseId], references: [id])
 
   @@unique([proposalId, exercisePosition, setPosition])
-  @@index([proposalId])
   @@index([exerciseId])
 }
 
@@ -1657,7 +1659,6 @@ model LeagueMembership {
   /// période, et la recherche des périodes non réglées. (Le remplissage des
   /// groupes, lui, se lit dans `LeagueCohort`.)
   @@index([periodKey, division, cohort, score(sort: Desc)])
-  @@index([userId, periodKey(sort: Desc)])
 }
 
 /// L'EFFECTIF de chaque groupe de ligue, tenu par la BASE (déclencheur

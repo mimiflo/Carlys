@@ -150,9 +150,13 @@ export class ProgressRepository {
    * pourtant une règle : le serveur ne découpe jamais les journées à la place
    * du client.
    *
-   * Le double `AT TIME ZONE` est l'idiome PostgreSQL : le premier ramène
-   * l'instant à l'heure murale locale, le second renvoie le minuit local
-   * obtenu vers l'instant qui lui correspond. Le contrat est inchangé —
+   * `startedAt` est un horodatage SANS fuseau qui porte de l'UTC (Prisma) :
+   * `AT TIME ZONE 'UTC'` en fait d'abord l'instant qu'il est, puis
+   * `AT TIME ZONE <fuseau>` l'heure murale locale ; après le découpage, un
+   * dernier `AT TIME ZONE <fuseau>` renvoie le minuit local vers l'instant
+   * qui lui correspond. Sans le premier, PostgreSQL lisait l'heure UTC comme
+   * une heure LOCALE et décalait dans le mauvais sens : à Paris, toute séance
+   * entre 22 h et 2 h tombait la veille (corrigé le 18 octobre 2026). Le contrat est inchangé —
    * `bucketStart` reste un instant — mais il tombe désormais sur un vrai
    * minuit local.
    */
@@ -168,7 +172,7 @@ export class ProgressRepository {
       { bucket_start: Date; sessions: bigint; volume: number | null }[]
     >(Prisma.sql`
       SELECT
-        date_trunc(${bucket}, w."startedAt" AT TIME ZONE ${timeZone})
+        date_trunc(${bucket}, w."startedAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})
           AT TIME ZONE ${timeZone}                        AS bucket_start,
         COUNT(DISTINCT w."id")                            AS sessions,
         COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume
@@ -212,7 +216,7 @@ export class ProgressRepository {
   async lifetimeWeeks(userId: string, timeZone: string): Promise<RawLifetimeWeek[]> {
     const rows = await this.prisma.$queryRaw<{ monday: Date; sessions: bigint }[]>(Prisma.sql`
       SELECT
-        date_trunc('week', w."startedAt" AT TIME ZONE ${timeZone}) AS monday,
+        date_trunc('week', w."startedAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone}) AS monday,
         COUNT(*)                                                   AS sessions
       FROM "WorkoutSession" w
       WHERE w."userId" = ${userId}::uuid
