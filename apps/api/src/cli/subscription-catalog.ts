@@ -117,7 +117,7 @@ export function paymentVerdict(
 }
 
 async function main(): Promise<number> {
-  // Configuration invalide : runCli la dit en « Échec : … », code 1.
+  // Configuration invalide, comme tout échec : runCli le dit en « Échec : … », code 1.
   const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
 
   const products = productsFromConfig(config);
@@ -145,9 +145,6 @@ async function main(): Promise<number> {
       ].join('\n'),
     );
     return verdict.exitCode;
-  } catch (error) {
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
   } finally {
     await prisma.$disconnect();
   }

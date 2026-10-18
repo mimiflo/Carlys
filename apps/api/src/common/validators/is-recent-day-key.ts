@@ -1,4 +1,4 @@
-import { registerDecorator, type ValidationOptions } from 'class-validator';
+import { ValidateBy, type ValidationOptions } from 'class-validator';
 
 /** Marge, en jours, autour du jour UTC courant. */
 const TOLERANCE_DAYS = 1;
@@ -16,18 +16,13 @@ const TOLERANCE_DAYS = 1;
  * quota mensuel d'un groupe entier tombait en quelques minutes.
  */
 export function IsRecentDayKey(options?: ValidationOptions): PropertyDecorator {
-  return function (object: object, propertyName: string | symbol): void {
-    registerDecorator({
+  return ValidateBy(
+    {
       name: 'isRecentDayKey',
-      target: object.constructor,
-      propertyName: propertyName as string,
-      options: {
-        message:
+      validator: {
+        defaultMessage: () =>
           'Jour hors de la fenêtre acceptée : le jour local de l’appareil est attendu ' +
           '(un jour d’écart au maximum avec le serveur).',
-        ...options,
-      },
-      validator: {
         validate: (value: unknown) => {
           if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
             return false;
@@ -46,8 +41,9 @@ export function IsRecentDayKey(options?: ValidationOptions): PropertyDecorator {
           return Math.abs(day - todayUtc) <= toleranceMs;
         },
       },
-    });
-  };
+    },
+    options,
+  );
 }
 
 /**

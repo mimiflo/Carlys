@@ -5,6 +5,7 @@ import {
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
+import { CursorPageQuery } from '../../../../../common/dto/cursor-page.query';
 import { trimmed } from '../../../../../common/transforms/trimmed';
 import {
   IsBoolean,
@@ -88,7 +89,7 @@ export class SearchManagedUsersDto {
   limit: number = 20;
 }
 
-export class ListAdminExercisesQuery {
+export class ListAdminExercisesQuery extends CursorPageQuery {
   @ApiPropertyOptional({ description: 'Recherche sur le nom ou le slug' })
   @IsOptional()
   @IsString()
@@ -103,19 +104,6 @@ export class ListAdminExercisesQuery {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   includeDeleted: boolean = false;
-
-  @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
-  @IsOptional()
-  @IsUUID()
-  cursor?: string;
-
-  @ApiPropertyOptional({ default: 50, maximum: 200 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(200)
-  limit: number = 50;
 }
 
 export class SetUserStatusDto {
@@ -165,20 +153,7 @@ export class ManagedEntitlementParams {
   key!: EntitlementKey;
 }
 
-export class ListAuditLogsQuery {
-  @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
-  @IsOptional()
-  @IsUUID()
-  cursor?: string;
-
-  @ApiPropertyOptional({ default: 50, maximum: 200 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(200)
-  limit: number = 50;
-}
+export class ListAuditLogsQuery extends CursorPageQuery {}
 
 export class SetPublicationDto {
   @ApiProperty()

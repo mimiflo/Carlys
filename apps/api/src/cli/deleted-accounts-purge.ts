@@ -203,15 +203,9 @@ export async function runPurge(args: PurgeArgs, deps: PurgeDeps): Promise<number
 }
 
 async function main(argv: readonly string[]): Promise<number> {
-  let args: PurgeArgs;
-  try {
-    args = parseArgs(argv);
-  } catch (error) {
-    process.stderr.write(`${(error as Error).message}\n\n${usage()}\n`);
-    return 2;
-  }
+  const args = parseArgs(argv);
 
-  // Configuration invalide : runCli la dit en « Échec : … », code 1.
+  // Configuration invalide, comme tout échec : runCli le dit en « Échec : … », code 1.
   const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
   const prisma = new PrismaClient({ datasourceUrl: config.databaseUrl });
   const store = new S3PrivateObjectStore(config);
@@ -222,9 +216,6 @@ async function main(argv: readonly string[]): Promise<number> {
       io: { out: (text) => process.stdout.write(text), err: (text) => process.stderr.write(text) },
       withApp: withApplication,
     });
-  } catch (error) {
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
   } finally {
     store.onModuleDestroy();
     await prisma.$disconnect();
@@ -232,5 +223,5 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 if (require.main === module) {
-  runCli(main);
+  runCli(main, usage);
 }

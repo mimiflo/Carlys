@@ -8,8 +8,8 @@ import {
   communityReportStatusSchema,
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { CursorPageQuery } from '../../../../../common/dto/cursor-page.query';
 import { MaxCodePoints } from '../../../../../common/validators/max-code-points';
 
 export class CreateCommunityReportDto {
@@ -58,7 +58,7 @@ export class CreateCommunityReportDto {
   details?: string;
 }
 
-export class ListCommunityReportsQuery {
+export class ListCommunityReportsQuery extends CursorPageQuery {
   @ApiPropertyOptional({
     enum: communityReportStatusSchema.options,
     description: 'Absent : tous les statuts',
@@ -79,19 +79,6 @@ export class ListCommunityReportsQuery {
   @IsOptional()
   @IsUUID()
   reportedUserId?: string;
-
-  @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
-  @IsOptional()
-  @IsUUID()
-  cursor?: string;
-
-  @ApiPropertyOptional({ default: 50, maximum: 200 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(200)
-  limit: number = 50;
 }
 
 export class UpdateCommunityReportDto {

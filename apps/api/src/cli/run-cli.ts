@@ -4,16 +4,25 @@ import { parseArgs } from 'node:util';
 export class UsageError extends Error {}
 
 /**
- * Lance un script en ligne de commande : son code de sortie, ou 1 avec un
- * message lisible. Une configuration invalide (validateEnv) ne sort jamais
- * en rejet non géré à pile brute.
+ * Lance un script en ligne de commande : son code de sortie ; 2 avec le
+ * message et l'aide (`usage`) sur un `UsageError` ; sinon 1 avec un message
+ * lisible. Une configuration invalide (validateEnv) ne sort jamais en rejet
+ * non géré à pile brute.
  */
-export function runCli(main: (argv: readonly string[]) => Promise<number>): void {
+export function runCli(
+  main: (argv: readonly string[]) => Promise<number>,
+  usage?: () => string,
+): void {
   main(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;
     })
     .catch((error: unknown) => {
+      if (error instanceof UsageError) {
+        process.stderr.write(`${error.message}\n${usage === undefined ? '' : `\n${usage()}\n`}`);
+        process.exitCode = 2;
+        return;
+      }
       process.stderr.write(`Échec : ${(error as Error).message}\n`);
       process.exitCode = 1;
     });

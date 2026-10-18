@@ -1,4 +1,4 @@
-import { registerDecorator, type ValidationOptions } from 'class-validator';
+import { ValidateBy, type ValidationOptions } from 'class-validator';
 
 /**
  * Le champ ne porte pas plus de `decimals` décimales — jugé sur la VALEUR,
@@ -17,21 +17,17 @@ export function HasDecimalPrecision(
   options?: ValidationOptions,
 ): PropertyDecorator {
   const scale = 10 ** decimals;
-  return function (object: object, propertyName: string | symbol): void {
-    registerDecorator({
+  return ValidateBy(
+    {
       name: 'hasDecimalPrecision',
-      target: object.constructor,
-      propertyName: propertyName as string,
-      options: {
-        message: `Au plus ${decimals} décimale${decimals > 1 ? 's' : ''}.`,
-        ...options,
-      },
       validator: {
         validate: (value: unknown) =>
           typeof value === 'number' &&
           Number.isFinite(value) &&
           Math.abs(value * scale - Math.round(value * scale)) < 1e-9,
+        defaultMessage: () => `Au plus ${decimals} décimale${decimals > 1 ? 's' : ''}.`,
       },
-    });
-  };
+    },
+    options,
+  );
 }

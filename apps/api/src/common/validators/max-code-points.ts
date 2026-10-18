@@ -1,5 +1,5 @@
 import { codePointLength } from '@carlys/api-contracts';
-import { registerDecorator, type ValidationOptions } from 'class-validator';
+import { ValidateBy, type ValidationOptions } from 'class-validator';
 
 /**
  * Le texte tient en `max` POINTS DE CODE Unicode : la même unité que le
@@ -18,19 +18,15 @@ import { registerDecorator, type ValidationOptions } from 'class-validator';
  * quand le contrat découpe avant de mesurer.
  */
 export function MaxCodePoints(max: number, options?: ValidationOptions): PropertyDecorator {
-  return function (object: object, propertyName: string | symbol): void {
-    registerDecorator({
+  return ValidateBy(
+    {
       name: 'maxCodePoints',
-      target: object.constructor,
-      propertyName: propertyName as string,
       constraints: [max],
-      options: {
-        message: `${String(propertyName)} : ${max} caractères au plus.`,
-        ...options,
-      },
       validator: {
         validate: (value: unknown) => typeof value !== 'string' || codePointLength(value) <= max,
+        defaultMessage: (args) => `${args?.property ?? ''} : ${max} caractères au plus.`,
       },
-    });
-  };
+    },
+    options,
+  );
 }

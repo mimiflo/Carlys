@@ -125,13 +125,7 @@ export function formatReport(report: CiqualImportReport): string {
 }
 
 async function main(argv: readonly string[]): Promise<number> {
-  let args: CiqualImportArgs;
-  try {
-    args = parseArgs(argv);
-  } catch (error) {
-    process.stderr.write(`${(error as Error).message}\n\n${usage()}\n`);
-    return 2;
-  }
+  const args = parseArgs(argv);
 
   // Configuration invalide : runCli la dit en « Échec : … », code 1.
   const config = new AppConfigService(new ConfigService<Env, true>(validateEnv(process.env)));
@@ -153,5 +147,5 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 if (require.main === module) {
-  runCli(main);
+  runCli(main, usage);
 }

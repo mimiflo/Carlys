@@ -1,4 +1,4 @@
-import { registerDecorator, type ValidationOptions } from 'class-validator';
+import { ValidateBy, type ValidationOptions } from 'class-validator';
 import { isIanaTimeZone } from '../utilities/time-zone';
 
 /**
@@ -17,20 +17,16 @@ import { isIanaTimeZone } from '../utilities/time-zone';
  * dans une valeur parfaitement lisible.
  */
 export function IsIanaTimeZone(options?: ValidationOptions): PropertyDecorator {
-  return function (object: object, propertyName: string | symbol): void {
-    registerDecorator({
+  return ValidateBy(
+    {
       name: 'isIanaTimeZone',
-      target: object.constructor,
-      propertyName: propertyName as string,
-      options: {
-        message:
-          'Fuseau horaire invalide : un identifiant IANA est attendu (ex. Europe/Paris). ' +
-          'Un décalage seul (+05:30, -08:00) n’en est pas un.',
-        ...options,
-      },
       validator: {
         validate: (value: unknown) => isIanaTimeZone(value),
+        defaultMessage: () =>
+          'Fuseau horaire invalide : un identifiant IANA est attendu (ex. Europe/Paris). ' +
+          'Un décalage seul (+05:30, -08:00) n’en est pas un.',
       },
-    });
-  };
+    },
+    options,
+  );
 }

@@ -262,13 +262,7 @@ export async function totpEnrollmentText(secret: Buffer, email: string): Promise
 }
 
 async function main(argv: readonly string[]): Promise<number> {
-  let args: BootstrapArgs;
-  try {
-    args = parseArgs(argv);
-  } catch (error) {
-    process.stderr.write(`${(error as Error).message}\n\n${usage()}\n`);
-    return 2;
-  }
+  const args = parseArgs(argv);
   if (args.resetTotp) return issueTotpOnly(args.email);
 
   let password = readPasswordFromStdin();
@@ -323,12 +317,10 @@ async function main(argv: readonly string[]): Promise<number> {
     );
     return 0;
   } catch (error) {
-    if (error instanceof UsageError) {
-      process.stderr.write(`${error.message}\n`);
-      return 3;
-    }
-    process.stderr.write(`Échec : ${(error as Error).message}\n`);
-    return 1;
+    // Le reste, runCli le dit en « Échec : … », code 1.
+    if (!(error instanceof UsageError)) throw error;
+    process.stderr.write(`${error.message}\n`);
+    return 3;
   } finally {
     await prisma.$disconnect();
   }
@@ -353,5 +345,5 @@ async function issueTotpOnly(email: string): Promise<number> {
 }
 
 if (require.main === module) {
-  runCli(main);
+  runCli(main, usage);
 }

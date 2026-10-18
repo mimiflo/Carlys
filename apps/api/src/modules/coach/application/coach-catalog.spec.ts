@@ -8,6 +8,7 @@ import {
   type SeedExercise,
 } from '../../exercises/application/catalog-data';
 import { type ExercisesService } from '../../exercises/application/exercises.service';
+import { fold } from './coach-exercise-search';
 import { CoachTools } from './coach.tools';
 
 /**
@@ -94,8 +95,6 @@ async function search(input: Record<string, unknown>): Promise<Found[]> {
   return JSON.parse(result.content) as Found[];
 }
 
-const fold = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '');
-
 describe('le coach trouve tout le catalogue', () => {
   it('chaque exercice, par son nom tel qu’un modèle l’écrit', async () => {
     const missed: string[] = [];
@@ -104,7 +103,7 @@ describe('le coach trouve tout le catalogue', () => {
       const variants = [
         exercise.name,
         exercise.name.toLowerCase(),
-        fold(exercise.name).toLowerCase(),
+        fold(exercise.name),
         words.slice(0, 2).join(' '),
         [...words].reverse().join(' '),
       ];

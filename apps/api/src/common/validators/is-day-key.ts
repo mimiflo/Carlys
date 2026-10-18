@@ -1,4 +1,4 @@
-import { registerDecorator, type ValidationOptions } from 'class-validator';
+import { ValidateBy, type ValidationOptions } from 'class-validator';
 import { isDayKey } from '../utilities/civil-day';
 
 /**
@@ -17,18 +17,14 @@ import { isDayKey } from '../utilities/civil-day';
  * que sur les chaînes, `@IsOptional()` se charge du reste.
  */
 export function IsDayKey(options?: ValidationOptions): PropertyDecorator {
-  return function (object: object, propertyName: string | symbol): void {
-    registerDecorator({
+  return ValidateBy(
+    {
       name: 'isDayKey',
-      target: object.constructor,
-      propertyName: propertyName as string,
-      options: {
-        message: 'Jour attendu au format AAAA-MM-JJ, et réellement existant.',
-        ...options,
-      },
       validator: {
         validate: (value: unknown) => value === null || isDayKey(value),
+        defaultMessage: () => 'Jour attendu au format AAAA-MM-JJ, et réellement existant.',
       },
-    });
-  };
+    },
+    options,
+  );
 }

@@ -1,5 +1,5 @@
 import { WORKOUT_LIMITS } from '@carlys/api-contracts';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType, PickType } from '@nestjs/swagger';
 import { WorkoutSetKind } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
@@ -130,60 +130,16 @@ export class CreateWorkoutSetDto {
   completedAt!: Date;
 }
 
-export class UpdateWorkoutSetDto {
-  @ApiPropertyOptional({ enum: WorkoutSetKind })
-  @IsOptional()
-  @IsEnum(WorkoutSetKind)
-  kind?: WorkoutSetKind;
-
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.repsMax })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(WORKOUT_LIMITS.repsMax)
-  reps?: number;
-
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.weightKgMax })
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(WORKOUT_LIMITS.weightKgMax)
-  weightKg?: number;
-
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.durationSecondsMax })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(WORKOUT_LIMITS.durationSecondsMax)
-  durationSeconds?: number;
-
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.distanceMetersMax })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(WORKOUT_LIMITS.distanceMetersMax)
-  distanceMeters?: number;
-
-  @ApiPropertyOptional({ minimum: WORKOUT_LIMITS.rpeMin, maximum: WORKOUT_LIMITS.rpeMax })
-  @IsOptional()
-  @IsInt()
-  @Min(WORKOUT_LIMITS.rpeMin)
-  @Max(WORKOUT_LIMITS.rpeMax)
-  rpe?: number;
-
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.restSecondsMax })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(WORKOUT_LIMITS.restSecondsMax)
-  restSeconds?: number;
-
-  @ApiPropertyOptional({
-    description: 'Fin de la série, UTC (ISO 8601) — pas dans le futur',
-  })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  @MaxDate(nowWithClockSkew, { message: 'La date de la série est dans le futur.' })
-  completedAt?: Date;
-}
+/** La correction : les mesures et la date, jamais l'identité ni `planned*`. */
+export class UpdateWorkoutSetDto extends PartialType(
+  PickType(CreateWorkoutSetDto, [
+    'kind',
+    'reps',
+    'weightKg',
+    'durationSeconds',
+    'distanceMeters',
+    'rpe',
+    'restSeconds',
+    'completedAt',
+  ] as const),
+) {}
