@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/providers/carlys_profile_providers.dart';
@@ -7,6 +9,7 @@ import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestion
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/providers/coach_frame_providers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
+import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_greeting_bubble.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
@@ -300,6 +303,40 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('le texte qui s’écrit ne reconstruit que sa bulle', (
+    tester,
+  ) async {
+    // La réponse arrive mot après mot : la page relisait TOUT l'état à
+    // chaque morceau, et reconstruisait l'écran entier — en-tête, fil,
+    // composeur — des dizaines de fois par seconde.
+    final repository = _CoachQuiEcrit(threads: [thread]);
+    await pumpPage(tester, repository);
+    await tester.enterText(find.byType(TextField), 'Où j’en suis ?');
+    await tester.tap(find.bySemanticsLabel('Envoyer'));
+    await tester.pump();
+    repository.ecrit('Tu ');
+    await tester.pump();
+
+    var screenBuilds = 0;
+    debugOnRebuildDirtyWidget = (element, _) {
+      if (element.widget is CoachScreen) screenBuilds++;
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+
+    for (var i = 0; i < 10; i++) {
+      repository.ecrit('avances ');
+      await tester.pump();
+    }
+
+    expect(screenBuilds, 0);
+    // La bulle, elle, a suivi chaque morceau.
+    expect(find.textContaining('Tu avances avances'), findsOneWidget);
+
+    await repository.finit();
+    await tester.pumpAndSettle();
+    expect(find.text('Bien reçu.'), findsOneWidget);
+  });
+
   testWidgets(
     'au plafond du jour, le refus est expliqué et la question reste',
     (tester) async {
@@ -361,4 +398,37 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
     expect(find.textContaining('besoin d’une connexion'), findsNothing);
   });
+}
+
+/// Un coach qui écrit sa réponse au rythme du test, morceau par morceau.
+class _CoachQuiEcrit extends FakeCoachRepository {
+  _CoachQuiEcrit({super.threads});
+
+  final _morceaux = StreamController<String>();
+
+  void ecrit(String morceau) => _morceaux.add(morceau);
+
+  Future<void> finit() => _morceaux.close();
+
+  @override
+  Future<CoachReply> sendMessage({
+    required String conversationId,
+    required String messageId,
+    required String content,
+    void Function(String text)? onText,
+    void Function(int ahead)? onQueued,
+    void Function()? onStarted,
+    void Function(CoachStep step)? onStep,
+    Future<void>? cancel,
+  }) async {
+    await for (final morceau in _morceaux.stream) {
+      onText?.call(morceau);
+    }
+    return super.sendMessage(
+      conversationId: conversationId,
+      messageId: messageId,
+      content: content,
+      cancel: cancel,
+    );
+  }
 }

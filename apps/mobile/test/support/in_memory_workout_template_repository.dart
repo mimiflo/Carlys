@@ -267,7 +267,7 @@ class InMemoryWorkoutTemplateRepository implements WorkoutTemplateRepository {
   int refreshCount = 0;
 
   @override
-  Future<void> refreshTemplates() async {
+  Future<void> refreshTemplates({bool Function()? shouldContinue}) async {
     refreshCount += 1;
   }
 

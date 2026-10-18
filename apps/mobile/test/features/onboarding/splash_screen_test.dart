@@ -46,6 +46,8 @@ void main() {
   Widget app({
     bool storedSession = true,
     FakeProgressRepository? progress,
+    SyncLifecycle? sync,
+    AppRestore? restore,
   }) => ProviderScope(
     overrides: [
       appEnvironmentProvider.overrideWithValue(
@@ -70,8 +72,8 @@ void main() {
       nutritionRepositoryProvider.overrideWithValue(FakeNutritionRepository()),
       communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
-      syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-      appRestoreProvider.overrideWithValue(NoopAppRestore()),
+      syncLifecycleProvider.overrideWithValue(sync ?? NoopSyncLifecycle()),
+      appRestoreProvider.overrideWithValue(restore ?? NoopAppRestore()),
     ],
     child: const CarlysApp(),
   );
@@ -179,6 +181,39 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
   });
 
+  testWidgets('l’habitué connecté : la synchronisation et le rapatriement '
+      'partent PENDANT le plancher', (tester) async {
+    // L'accueil les démarrait à son premier `build`, 2,6 s après que la
+    // session était connue : les séances d'un téléphone neuf arrivaient
+    // donc après l'accueil, au lieu d'être déjà là.
+    final sync = _CountingSync();
+    final restore = _CountingRestore();
+    await tester.pumpWidget(app(sync: sync, restore: restore));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(sync.starts, 1);
+    expect(restore.starts, 1);
+
+    await letHoldElapse(tester);
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('sans session, rien ne part pendant le plancher', (tester) async {
+    final sync = _CountingSync();
+    final restore = _CountingRestore();
+    await tester.pumpWidget(
+      app(storedSession: false, sync: sync, restore: restore),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(sync.starts, 0);
+    expect(restore.starts, 0);
+    await letHoldElapse(tester);
+  });
+
   testWidgets('le plancher est un minimum, pas une addition', (tester) async {
     // Sans session stockée, la restauration finit sur « non connecté » : la
     // page de connexion s'ouvre au TERME du plancher, pas après le plancher
@@ -267,4 +302,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(finished, 1);
   });
+}
+
+class _CountingSync extends NoopSyncLifecycle {
+  int starts = 0;
+
+  @override
+  void ensureStarted() => starts++;
+}
+
+class _CountingRestore extends NoopAppRestore {
+  int starts = 0;
+
+  @override
+  void ensureRestored() => starts++;
 }

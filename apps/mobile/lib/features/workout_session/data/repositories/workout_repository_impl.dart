@@ -128,6 +128,18 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         .distinct(_memeHistorique);
   }
 
+  /// Les statuts d'une séance CLOSE — tous sauf « en cours » (le serveur
+  /// n'en connaît que trois, l'appareil n'en écrit pas d'autre).
+  ///
+  /// Une liste plutôt que `status <> 'IN_PROGRESS'` : SQLite ne cherche pas
+  /// une inégalité dans un index, il parcourait donc toutes les séances ;
+  /// `IN` se cherche dans l'index `(status, started_at)`
+  /// (`workout_query_plans_test.dart`).
+  static final List<String> _closedStatuses = [
+    for (final status in WorkoutStatus.values)
+      if (status != WorkoutStatus.inProgress) status.apiValue,
+  ];
+
   /// La jointure agrégée de l'historique : une ligne par séance close.
   JoinedSelectStatement<HasResultSet, dynamic> _requeteHistorique(
     Expression<int> setsCount,
@@ -143,7 +155,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         ),
       ])
       ..addColumns([setsCount, totalVolumeKg])
-      ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
+      ..where(sessions.status.isIn(_closedStatuses))
       ..groupBy([sessions.id])
       ..orderBy([OrderingTerm.desc(sessions.startedAt)]);
   }
@@ -220,7 +232,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     final sets = _db.localWorkoutSets;
     final recent = sessions.selectOnly()
       ..addColumns([sessions.id])
-      ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
+      ..where(sessions.status.isIn(_closedStatuses))
       ..orderBy([OrderingTerm.desc(sessions.startedAt)])
       ..limit(lookback);
     final row =

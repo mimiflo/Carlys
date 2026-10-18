@@ -3,9 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/restore/app_restore.dart';
+import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
+import '../../../../design_system/scenes/heart_engine.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../dashboard/presentation/providers/home_warmup.dart';
+import '../../../dashboard/presentation/widgets/home_brand_mark.dart';
 import '../../domain/first_run_step.dart';
 import '../controllers/first_run_controller.dart';
 import '../controllers/splash_gate.dart';
@@ -72,6 +76,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   /// L'habitué connecté va droit à l'accueil : ses lectures réseau partent
   /// PENDANT le plancher, et l'accueil s'ouvre sur des sections prêtes.
   /// Les écoutes tombent avec cet écran — l'accueil a pris le relais.
+  ///
+  /// La synchronisation et le rapatriement aussi : l'accueil les lançait à
+  /// son premier `build`, 2,6 s après que la session était connue. Les deux
+  /// ne partent qu'une fois par session (l'accueil les redemande sans
+  /// effet). De même l'isolate du cœur et le sceau de l'en-tête, prêts
+  /// avant la première image de l'accueil.
   void _warmHome() {
     if (_homeWarmed || !mounted) return;
     if (ref.read(authControllerProvider) is! AuthAuthenticated) return;
@@ -79,6 +89,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     for (final provider in homeWarmup) {
       ref.listenManual<Object?>(provider, (_, _) {});
     }
+    ref.read(syncLifecycleProvider).ensureStarted();
+    ref.read(appRestoreProvider).ensureRestored();
+    // Le cœur ne tourne pas sous réduction d'animations : rien à préparer.
+    if (!MediaQuery.disableAnimationsOf(context)) HeartEngine.prewarm();
+    unawaited(precacheImage(HomeBrandMark.imageFor(context), context));
   }
 
   @override

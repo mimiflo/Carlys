@@ -20,9 +20,7 @@ class HeartEngine {
   /// Dernière image prête. Le widget l'écoute et repeint à son arrivée.
   final ValueNotifier<HeartFrame?> latest = ValueNotifier<HeartFrame?>(null);
 
-  Isolate? _isolate;
   SendPort? _worker;
-  ReceivePort? _inbox;
   HeartFrameRequest? _pending;
   bool _busy = false;
   bool _spawning = false;
@@ -57,34 +55,45 @@ class HeartEngine {
     worker.send(pending);
   }
 
+  /// Un isolate lancé D'AVANCE, que le prochain moteur adopte : l'écran de
+  /// démarrage le lance pendant son plancher ([prewarm]). Sans lui, le cœur
+  /// de l'accueil lançait le sien à sa première image, et le peintre
+  /// calculait seul, sur le fil d'interface, le temps de la poignée de main.
+  static _Worker? _spare;
+
+  /// Lance l'isolate du prochain cœur, s'il n'y en a pas déjà un d'avance.
+  // ponytail: un isolate préparé qu'aucun cœur n'adopte (accueil jamais
+  // ouvert après le démarrage) reste au repos jusqu'à la fin du processus ;
+  // le tuer après un délai le jour où ce coût compterait.
+  static void prewarm() => _spare ??= _Worker.spawn();
+
+  /// Un isolate attend d'être adopté.
+  @visibleForTesting
+  static bool get hasSpare => _spare != null;
+
+  _Worker? _own;
+
   Future<void> _spawn() async {
-    if (_spawning || _isolate != null || _unavailable) {
+    if (_spawning || _own != null || _unavailable) {
       return;
     }
     _spawning = true;
-    final inbox = ReceivePort();
-    inbox.listen(_onMessage);
-    try {
-      _isolate = await Isolate.spawn(
-        _workerMain,
-        inbox.sendPort,
-        debugName: 'carlys-heart',
-      );
-    } on Object {
+    final worker = _own = _spare ?? _Worker.spawn();
+    _spare = null;
+    worker.onMessage = _onMessage;
+    final port = worker.port;
+    if (port != null) _onMessage(port);
+    final ok = await worker.ready;
+    _spawning = false;
+    if (!ok) {
       // Pas d'isolates ici (web) : repli synchrone du peintre, pour toujours.
-      inbox.close();
       _unavailable = true;
       _pending = null;
       return;
-    } finally {
-      _spawning = false;
     }
-    _inbox = inbox;
     if (_disposed) {
       // Libéré pendant le lancement : on éteint ce qui vient de naître.
-      inbox.close();
-      _isolate?.kill(priority: Isolate.immediate);
-      _isolate = null;
+      worker.kill();
     }
   }
 
@@ -121,11 +130,62 @@ class HeartEngine {
     }
     _disposed = true;
     _pending = null;
-    _inbox?.close();
-    _inbox = null;
-    _isolate?.kill(priority: Isolate.immediate);
-    _isolate = null;
+    _own?.kill();
+    _own = null;
     _worker = null;
     latest.dispose();
+  }
+}
+
+/// Un isolate de calcul et sa boîte aux lettres. Né avant d'avoir un
+/// moteur (voir [HeartEngine.prewarm]) : il garde la poignée de main
+/// ([port]) jusqu'à ce qu'un moteur l'adopte en posant [onMessage].
+class _Worker {
+  _Worker._(this._inbox) {
+    _inbox.listen((message) {
+      if (message is SendPort) port = message;
+      onMessage?.call(message);
+    });
+  }
+
+  factory _Worker.spawn() {
+    final worker = _Worker._(ReceivePort());
+    // `Future.sync` : sans isolates (web), `spawn` lève tout de suite — le
+    // refus doit arriver par [ready], pas casser l'appelant.
+    worker.ready =
+        Future.sync(
+          () => Isolate.spawn(
+            HeartEngine._workerMain,
+            worker._inbox.sendPort,
+            debugName: 'carlys-heart',
+          ),
+        ).then(
+          (isolate) {
+            worker._isolate = isolate;
+            return true;
+          },
+          onError: (Object _) {
+            worker._inbox.close();
+            return false;
+          },
+        );
+    return worker;
+  }
+
+  final ReceivePort _inbox;
+  Isolate? _isolate;
+
+  /// Vrai quand l'isolate est né ; faux sur une plateforme sans isolates.
+  late final Future<bool> ready;
+
+  SendPort? port;
+  void Function(Object? message)? onMessage;
+
+  void kill() {
+    _inbox.close();
+    onMessage = null;
+    _isolate?.kill(priority: Isolate.immediate);
+    // Né après la libération : éteint dès sa naissance.
+    unawaited(ready.then((_) => _isolate?.kill(priority: Isolate.immediate)));
   }
 }

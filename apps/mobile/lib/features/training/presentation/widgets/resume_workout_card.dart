@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/logging/app_logger.dart';
@@ -61,7 +63,7 @@ class ResumeWorkoutCard extends StatelessWidget {
                 right: 0,
                 width: photoWidth,
                 height: photoWidth / photoAspect,
-                child: _FadedPhoto(logger: _logger),
+                child: _FadedPhoto(logger: _logger, width: photoWidth),
               ),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
@@ -147,9 +149,13 @@ class _Wording extends StatelessWidget {
 }
 
 class _FadedPhoto extends StatelessWidget {
-  const _FadedPhoto({required this.logger});
+  const _FadedPhoto({required this.logger, required this.width});
 
   final AppLogger logger;
+
+  /// Largeur affichée, en points : la boîte a le rapport du fichier, donc
+  /// `cover` la remplit à cette largeur exacte.
+  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +179,14 @@ class _FadedPhoto extends StatelessWidget {
           ResumeWorkoutCard.photoAsset,
           fit: BoxFit.cover,
           alignment: Alignment.centerRight,
+          // Décodée à la largeur VUE (≈ 640 pixels à la densité ×3), pas à
+          // celle du fichier : 1 708 pixels pesaient 5,8 Mio de cache.
+          // Au moins 1 : une boîte de largeur nulle (mise en page d'essai)
+          // donnerait 0, que `cacheWidth` refuse.
+          cacheWidth: math.max(
+            1,
+            (width * MediaQuery.devicePixelRatioOf(context)).ceil(),
+          ),
           excludeFromSemantics: true,
           // Une photo absente laisse la carte nue — le texte et le bouton
           // suffisent — mais se DIT dans les journaux.

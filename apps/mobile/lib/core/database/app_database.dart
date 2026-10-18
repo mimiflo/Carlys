@@ -153,6 +153,14 @@ class LocalWorkoutTemplates extends Table {
 }
 
 /// Ligne d'exercice d'un modèle, ordonnée par [position] (contiguë depuis 0).
+///
+/// Index `template_id` : un modèle se lit, se réécrit et se purge toujours
+/// par ses lignes — sans lui, chaque lecture parcourait les lignes de TOUS
+/// les modèles.
+@TableIndex(
+  name: 'idx_local_template_exercises_template_id',
+  columns: {#templateId},
+)
 class LocalTemplateExercises extends Table {
   TextColumn get id => text()();
   TextColumn get templateId => text()();
@@ -168,6 +176,13 @@ class LocalTemplateExercises extends Table {
 }
 
 /// Série PRÉVUE d'une ligne d'exercice : des cibles, pas des mesures.
+///
+/// Index `template_exercise_id` : même raison, un cran plus bas — SQLite
+/// fabriquait sinon un index jetable à CHAQUE lecture d'un modèle.
+@TableIndex(
+  name: 'idx_local_template_sets_template_exercise_id',
+  columns: {#templateExerciseId},
+)
 class LocalTemplateSets extends Table {
   TextColumn get id => text()();
   TextColumn get templateExerciseId => text()();
@@ -345,8 +360,11 @@ class AppDatabase extends _$AppDatabase {
   /// 8. La RÉVISION serveur sur la séance : le rapatriement saute une séance
   ///    inchangée au lieu de relire et réécrire les 60 à chaque lancement.
   /// 9. L'ORIGINE du modèle : `fromCoach`, pour la catégorie « Coach ».
+  /// 10. Index sur les lignes et les séries des modèles (`template_id`,
+  ///     `template_exercise_id`) : la lecture d'un modèle ne parcourt plus
+  ///     les contenus de tous les autres.
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -490,6 +508,28 @@ class AppDatabase extends _$AppDatabase {
           localWorkoutTemplates,
           localWorkoutTemplates.fromCoach,
         );
+      }
+      // `createTable` (palier `from < 2`) ne crée pas les index d'une
+      // table : ils manquent donc à TOUTE base d'avant la v10, quel que soit
+      // son palier de départ. Un index ne touche pas aux lignes.
+      //
+      // `IF NOT EXISTS` : `onUpgrade` ne tourne pas dans une transaction, et
+      // une montée interrompue entre les deux index (appli tuée) laissait
+      // une base en v9 qui en porte déjà un — la reprise levait « index
+      // already exists » à chaque ouverture. SQLite range l'index sans la
+      // clause : la forme reste celle d'une base neuve.
+      if (from < 10) {
+        for (final index in [
+          idxLocalTemplateExercisesTemplateId,
+          idxLocalTemplateSetsTemplateExerciseId,
+        ]) {
+          await customStatement(
+            index.createStatementsByDialect[SqlDialect.sqlite]!.replaceFirst(
+              'CREATE INDEX ',
+              'CREATE INDEX IF NOT EXISTS ',
+            ),
+          );
+        }
       }
     },
   );

@@ -7,6 +7,7 @@ import 'package:carlys_mobile/design_system/scenes/heart_scene.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
 import 'package:carlys_mobile/features/dashboard/domain/entities/daily_quote.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/consistency_streak.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
@@ -445,6 +446,36 @@ void main() {
     // On ne lance pas une séance quand une autre est ouverte.
     expect(find.text('Lancer un modèle'), findsNothing);
   }, semanticsEnabled: true);
+
+  testWidgets('une série validée ne reconstruit pas tout l’accueil', (
+    tester,
+  ) async {
+    // L'accueil reste monté sous la séance (il ne quitte jamais la pile du
+    // shell). Il lisait la séance en cours EN ENTIER : chaque série validée
+    // reconstruisait toute la liste — cœur, série, journée, forme. Seule la
+    // carte de la séance dit ce qui a changé.
+    final workouts = FakeWorkoutRepository();
+    await pumpHome(tester, workouts: workouts);
+    final id = await workouts.startWorkout(name: 'Push force');
+    await tester.pump();
+
+    var homeBuilds = 0;
+    debugOnRebuildDirtyWidget = (element, _) {
+      if (element.widget is HomeScreen) homeBuilds++;
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+
+    for (var i = 0; i < 10; i++) {
+      await workouts.addSet(
+        AddSetInput(sessionId: id, exerciseName: 'Squat', reps: 5),
+      );
+      await tester.pump();
+    }
+
+    expect(homeBuilds, 0);
+    // La carte, elle, a suivi.
+    expect(find.textContaining('10 séries'), findsOneWidget);
+  });
 
   testWidgets('le mot du Mentor ouvre sa feuille, puis la visite guidée', (
     tester,

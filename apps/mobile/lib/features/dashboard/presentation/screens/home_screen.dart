@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/restore/app_restore.dart';
 import '../../../../app/router/app_routes.dart';
-import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/scene_scroll_activity.dart';
@@ -19,18 +18,16 @@ import '../../../mentor/presentation/providers/mentor_providers.dart';
 import '../../../mentor/presentation/widgets/mentor_sheet.dart';
 import '../../../notifications/presentation/providers/push_registration.dart';
 import '../../../nutrition/presentation/widgets/water_sheet.dart';
-import '../../../workout_session/presentation/controllers/workout_controllers.dart';
-import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../providers/form_reading_providers.dart';
 import '../providers/home_day_providers.dart';
 import '../widgets/consistency_streak.dart';
 import '../widgets/daily_form_block.dart';
 import '../widgets/for_you_card.dart';
 import '../widgets/home_hero.dart';
+import '../widgets/home_today_workout.dart';
 import '../widgets/section_title_bar.dart';
 import '../widgets/title_summary.dart';
 import '../widgets/today_section.dart';
-import '../widgets/today_workout_card.dart';
 
 /// ACCUEIL — ce que je fais aujourd'hui, et où j'en suis.
 ///
@@ -57,7 +54,6 @@ class HomeScreen extends ConsumerWidget {
     ref.watch(pushRegistrationProvider).ensureStarted();
 
     final user = ref.watch(authControllerProvider).user;
-    final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     final dailyLesson = ref.watch(dailyLessonProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
@@ -93,34 +89,7 @@ class HomeScreen extends ConsumerWidget {
                 onAddMeal: () => context.push(AppRoutes.newMeal()),
               ),
             ),
-            _Section(
-              child: TodayWorkoutCard(
-                activeWorkout: activeWorkout,
-                templateCount: ref
-                    .watch(workoutTemplatesProvider)
-                    .valueOrNull
-                    ?.length,
-                onOpenTemplates: () => context.push(AppRoutes.templates),
-                onStart: () async {
-                  // Même règle, même endroit que la fiche d'exercice : la
-                  // décision se prend sur la BASE, et l'échec se dit. Ce
-                  // bouton lisait `activeWorkout`, c'est-à-dire le cache du
-                  // provider, et appelait `start()` sans filet — sur un cache
-                  // en échec il partait ouvrir une séance alors qu'une séance
-                  // existait, et le `StateError` du domaine le laissait sur
-                  // place, sans message.
-                  final abouti = await runLocalGesture(
-                    context,
-                    ref.read(workoutActionsProvider).currentOrStart,
-                    scope: 'HomeScreen',
-                    echec: 'La séance n’a pas pu être ouverte. Réessaie.',
-                  );
-                  if (abouti && context.mounted) {
-                    await context.push(AppRoutes.activeWorkout);
-                  }
-                },
-              ),
-            ),
+            const _Section(child: HomeTodayWorkout()),
             const _Section(child: TitleSummary()),
             _ForYouSection(),
             if (dailyLesson != null)

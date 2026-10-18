@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../authentication/presentation/providers/keep_for_account.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../data/repositories/exercises_repository_impl.dart';
@@ -26,18 +27,35 @@ final exerciseCatalogueOpenProvider = StateProvider.autoDispose<bool>(
   (ref) => false,
 );
 
+/// Le catalogue ne bouge pas d'une ouverture à l'autre : ses lectures sont
+/// GARDÉES ce temps-là après avoir été lues ([keepForAccount]). En séance,
+/// la feuille « Choisir un exercice » s'ouvre à chaque mouvement ajouté —
+/// cinq ouvertures faisaient cinq requêtes, et cinq indicateurs de
+/// chargement (`exercise_catalog_keep_alive_test.dart`).
+const Duration catalogKeepAlive = Duration(minutes: 10);
+
 /// Référentiel des groupes musculaires (pour les filtres).
 final muscleGroupsProvider = FutureProvider.autoDispose<List<MuscleGroupRef>>((
   ref,
 ) {
-  return ref.watch(exercisesRepositoryProvider).muscleGroups();
+  final repository = ref.watch(exercisesRepositoryProvider);
+  return keepForAccount(
+    ref,
+    repository.muscleGroups,
+    duration: catalogKeepAlive,
+  );
 });
 
 /// Référentiel du matériel — filtres du catalogue ET matériel déclaré au
 /// profil d'entraînement : une seule taxonomie, jamais deux listes.
 final equipmentCatalogProvider = FutureProvider.autoDispose<List<EquipmentRef>>(
   (ref) {
-    return ref.watch(exercisesRepositoryProvider).equipment();
+    final repository = ref.watch(exercisesRepositoryProvider);
+    return keepForAccount(
+      ref,
+      repository.equipment,
+      duration: catalogKeepAlive,
+    );
   },
 );
 
@@ -59,13 +77,20 @@ final exerciseDetailProvider = FutureProvider.autoDispose
 /// depuis un widget » (CLAUDE.md, `features/README.md`). La feuille ne fait
 /// plus que l'observer.
 final exerciseSearchProvider = FutureProvider.autoDispose
-    .family<List<ExerciseSummary>, String>((ref, search) async {
-      final page = await ref
-          .watch(exercisesRepositoryProvider)
-          .list(
-            filters: ExercisesFilters(search: search.isEmpty ? null : search),
-          );
-      return page.items;
+    .family<List<ExerciseSummary>, String>((ref, search) {
+      final repository = ref.watch(exercisesRepositoryProvider);
+      Future<List<ExerciseSummary>> read() async {
+        final page = await repository.list(
+          filters: ExercisesFilters(search: search.isEmpty ? null : search),
+        );
+        return page.items;
+      }
+
+      // Seule la liste d'ouverture, sans recherche, est gardée : celle que
+      // chaque ouverture relit. Une recherche tapée reste jetée.
+      return search.isEmpty
+          ? keepForAccount(ref, read, duration: catalogKeepAlive)
+          : read();
     });
 
 /// Clé d'un exercice pour la sélection de ses records : l'API historique

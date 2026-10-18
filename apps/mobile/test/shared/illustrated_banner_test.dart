@@ -135,7 +135,9 @@ void main() {
         matching: find.byType(Image),
       ),
     );
-    expect((image.image as AssetImage).assetName, SummitIllustration.asset);
+    // Décodée à la taille de sa boîte (`decoded_illustrations_test.dart`).
+    final asset = (image.image as ResizeImage).imageProvider as AssetImage;
+    expect(asset.assetName, SummitIllustration.asset);
     expect(image.excludeFromSemantics, isTrue);
 
     // Le fondu : transparent au bord gauche, plein à 30 % de la boîte.

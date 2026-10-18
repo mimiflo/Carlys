@@ -40,6 +40,7 @@ class CoachThreadView extends StatelessWidget {
     this.busyCreatedId,
     this.greeting,
     this.replyFooter,
+    this.liveReply,
     super.key,
   });
 
@@ -48,6 +49,10 @@ class CoachThreadView extends StatelessWidget {
   /// Ce que la page pose sous chaque réponse du coach (« Écouter »).
   final Widget Function(CoachMessage reply)? replyFooter;
   final CoachLiveTurn? live;
+
+  /// La réponse qui s'écrit, quand la page la branche elle-même sur le
+  /// fil : seule cette bulle se reconstruit alors à chaque morceau.
+  final Widget Function(double maxWidth)? liveReply;
   final double maxBubbleWidth;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
   final ValueChanged<CoachProgramProposal> onOpenProgram;
@@ -87,15 +92,8 @@ class CoachThreadView extends StatelessWidget {
         }
         if (live != null && index < pending) {
           return index == 0
-              ? CoachLiveBubble(
-                  text: live.text,
-                  ahead: live.ahead,
-                  steps: live.steps,
-                  done: live.done,
-                  since: live.since,
-                  thoughtFor: live.thoughtFor,
-                  maxWidth: maxBubbleWidth,
-                )
+              ? liveReply?.call(maxBubbleWidth) ??
+                    CoachLiveBubble.turn(live, maxWidth: maxBubbleWidth)
               : CoachBubble(
                   isUser: true,
                   maxWidth: maxBubbleWidth,

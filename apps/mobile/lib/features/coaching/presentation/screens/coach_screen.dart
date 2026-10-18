@@ -33,6 +33,7 @@ class CoachScreen extends StatelessWidget {
     this.busyCreatedId,
     this.isOffline = false,
     this.live,
+    this.liveReply,
     this.notice,
     this.onUnlock,
     this.greeting,
@@ -74,6 +75,9 @@ class CoachScreen extends StatelessWidget {
 
   /// Le tour en cours d'écriture, s'il y en a un.
   final CoachLiveTurn? live;
+
+  /// La réponse qui s'écrit, branchée par la page (voir [CoachThreadView]).
+  final Widget Function(double maxWidth)? liveReply;
 
   /// Refus explicite du serveur (plafond du jour, coach coupé), avec sa
   /// nature. Jamais un message d'ambiance : s'il est là, c'est qu'un envoi a
@@ -139,6 +143,7 @@ class CoachScreen extends StatelessWidget {
                       builder: (context, constraints) => CoachThreadView(
                         messages: messages,
                         live: live,
+                        liveReply: liveReply,
                         maxBubbleWidth:
                             constraints.maxWidth * _bubbleWidthFactor,
                         onOpenProposal: onOpenProposal,

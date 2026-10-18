@@ -65,16 +65,31 @@ class AppRestore {
   }
 
   Future<void> _run() async {
+    // Pousser d'abord ; sans poussée, on ne tire pas (comme avant).
+    if (!await _guarded(_sync.syncNow) || _cancelled) {
+      return;
+    }
+    // Modèles et séances ENSEMBLE : aucune des deux lectures n'attend
+    // l'autre (pas de clé étrangère locale entre elles), et en file
+    // l'historique attendait le dernier modèle. `Future.wait` rend la main
+    // quand les DEUX ont fini : `cancelAndWait` ne revient donc jamais avec
+    // une écriture encore en vol. Chacune journalise son propre échec — un
+    // `Future.wait` nu n'aurait rendu que le premier.
+    bool shouldContinue() => !_cancelled;
+    await Future.wait([
+      _guarded(
+        () => _templates.refreshTemplates(shouldContinue: shouldContinue),
+      ),
+      _guarded(() => _workouts.restoreSessions(shouldContinue: shouldContinue)),
+    ]);
+  }
+
+  /// Une étape du rapatriement, dont l'échec se journalise sans remonter.
+  /// Rend `true` si elle a abouti.
+  Future<bool> _guarded(Future<void> Function() step) async {
     try {
-      await _sync.syncNow();
-      if (_cancelled) {
-        return;
-      }
-      await _templates.refreshTemplates();
-      if (_cancelled) {
-        return;
-      }
-      await _workouts.restoreSessions(shouldContinue: () => !_cancelled);
+      await step();
+      return true;
     } on Exception catch (exception) {
       // Hors ligne ou serveur indisponible : l'application vit sur son local,
       // le prochain démarrage réessaiera.
@@ -88,6 +103,7 @@ class AppRestore {
       // ici il finissait en erreur asynchrone non gérée.
       _logger.warning('Rapatriement interrompu par la purge', error: error);
     }
+    return false;
   }
 }
 

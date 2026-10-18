@@ -63,59 +63,69 @@ class _PaginatedRows extends ConsumerWidget {
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
     // Fondu de conteneur : le rognage se lit comme un défilement (2d).
-    return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        // Masque d'OPACITÉ (dstIn) : ces extrémités n'apportent aucune
-        // couleur, elles ouvrent puis ferment le fondu.
-        colors: [
-          AppColors.neutral0,
-          AppColors.neutral0,
-          AppColors.neutral0Clear,
-        ],
-        stops: [0.0, 0.86, 0.99],
-      ).createShader(bounds),
-      blendMode: BlendMode.dstIn,
-      child: ListView.separated(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.gutter,
-          0,
-          AppSpacing.gutter,
-          AppSpacing.md + bottomInset,
+    //
+    // PEINT par-dessus la liste, dans la couleur du fond : un `ShaderMask`
+    // (masque d'opacité sur toute la liste) la rendait dans une couche hors
+    // écran à chaque image de défilement, pour n'en fondre que le bas. Sur
+    // un fond uni, les deux donnent la même image.
+    final page = Theme.of(context).scaffoldBackgroundColor;
+    final fade = IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [page.withAlpha(0), page.withAlpha(0), page],
+            stops: const [0.0, 0.86, 0.99],
+          ),
         ),
-        itemCount: state.items.length + (state.hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.gapTile),
-        itemBuilder: (context, index) {
-          if (index >= state.items.length) {
-            // La page précédente a ÉCHOUÉ : on propose de réessayer plutôt
-            // que de redemander tout seul. La sentinelle est reconstruite à
-            // chaque image ; insister automatiquement lançait une requête par
-            // image, indéfiniment, sans qu'aucun écran ne le dise.
-            if (state.loadMoreFailed) {
-              return _SuiteIndisponible(
-                onRetry: () => ref
-                    .read(exerciseLibraryControllerProvider.notifier)
-                    .loadMore(force: true),
+      ),
+    );
+    return Stack(
+      children: [
+        ListView.separated(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            0,
+            AppSpacing.gutter,
+            AppSpacing.md + bottomInset,
+          ),
+          itemCount: state.items.length + (state.hasMore ? 1 : 0),
+          separatorBuilder: (_, __) =>
+              const SizedBox(height: AppSpacing.gapTile),
+          itemBuilder: (context, index) {
+            if (index >= state.items.length) {
+              // La page précédente a ÉCHOUÉ : on propose de réessayer plutôt
+              // que de redemander tout seul. La sentinelle est reconstruite à
+              // chaque image ; insister automatiquement lançait une requête par
+              // image, indéfiniment, sans qu'aucun écran ne le dise.
+              if (state.loadMoreFailed) {
+                return _SuiteIndisponible(
+                  onRetry: () => ref
+                      .read(exerciseLibraryControllerProvider.notifier)
+                      .loadMore(force: true),
+                );
+              }
+              // Sentinelle de fin de liste : la page suivante est demandée
+              // après le frame (jamais pendant le build).
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ref.read(exerciseLibraryControllerProvider.notifier).loadMore();
+              });
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: AppLoadingIndicator(size: 24),
               );
             }
-            // Sentinelle de fin de liste : la page suivante est demandée
-            // après le frame (jamais pendant le build).
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(exerciseLibraryControllerProvider.notifier).loadMore();
-            });
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: AppLoadingIndicator(size: 24),
+            final exercise = state.items[index];
+            return ExerciseCard(
+              exercise: exercise,
+              onTap: () =>
+                  context.push(AppRoutes.exerciseDetail(exercise.slug)),
             );
-          }
-          final exercise = state.items[index];
-          return ExerciseCard(
-            exercise: exercise,
-            onTap: () => context.push(AppRoutes.exerciseDetail(exercise.slug)),
-          );
-        },
-      ),
+          },
+        ),
+        Positioned.fill(child: fade),
+      ],
     );
   }
 }

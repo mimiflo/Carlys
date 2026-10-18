@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/scenes/dna_animation.dart';
 import '../../../../design_system/scenes/dna_scene.dart';
+import '../../../../design_system/scenes/scene_clock.dart';
 import '../../../../design_system/scenes/scene_scroll_activity.dart';
 
 /// Double hélice d'ADN — portage fidèle de `dna-helix.js` (mode « hero »).
@@ -27,35 +28,33 @@ class DnaHelix extends StatefulWidget {
   State<DnaHelix> createState() => _DnaHelixState();
 }
 
-class _DnaHelixState extends State<DnaHelix>
-    with SingleTickerProviderStateMixin {
-  /// Un tour complet, à la microseconde : la durée est DÉDUITE de la vitesse
-  /// de rotation, sinon l'arrondi rouvre par la petite porte le saut de
-  /// rebouclage qu'on vient de fermer.
-  static final _cycle = Duration(
-    microseconds: (DnaAnimation.cycleSeconds * 1000000).round(),
-  );
-
+class _DnaHelixState extends State<DnaHelix> {
   /// Cadence de rendu de la scène, comme le cœur (30 i/s) : au-delà, la
   /// rotation ne gagne rien de perceptible et chaque image coûte une hélice
   /// entière — sur un écran 120 Hz, c'est quatre fois moins de travail.
+  ///
+  /// L'horloge ne réveille la scène qu'à chaque pas : un `AnimationController`
+  /// demandait une image à chaque battement d'écran, même quand le pas de
+  /// 1/30 s n'avait pas changé (`scene_frame_requests_test.dart`).
   static const double _framesPerSecond = 30;
 
-  late final AnimationController _controller;
+  late final SceneClock _clock = SceneClock(
+    framesPerSecond: () => _framesPerSecond,
+    onStep: (_) {
+      if (mounted) setState(() {});
+    },
+  );
   bool _reduced = false;
+  bool _hidden = false;
   ValueListenable<bool>? _scrolling;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: _cycle);
-  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Préférence système : animation en boucle, ou pose figée à t = 0.
     _reduced = MediaQuery.disableAnimationsOf(context);
+    // Hors de l'écran (onglet caché, route recouverte), rien ne tourne.
+    _hidden = !TickerMode.valuesOf(context).enabled;
     // Et pause pendant le défilement de l'écran, comme le cœur : la scène
     // rend son budget au fil d'interface quand ça bouge.
     final scrolling = SceneScrollActivity.of(context);
@@ -71,28 +70,26 @@ class _DnaHelixState extends State<DnaHelix>
     if (!mounted) {
       return;
     }
-    if (_reduced) {
-      _controller.stop();
-      _controller.value = 0;
-      return;
-    }
-    if (_scrolling?.value ?? false) {
-      // stop() conserve la phase ; repeat() repart d'où l'on s'était arrêté.
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
+    // stop() conserve la phase ; start() repart d'où l'on s'était arrêté.
+    if (_reduced || _hidden || (_scrolling?.value ?? false)) {
+      _clock.stop();
+    } else {
+      _clock.start();
     }
   }
 
   @override
   void dispose() {
     _scrolling?.removeListener(_syncAnimation);
-    _controller.dispose();
+    _clock.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Le temps de scène, rebouclé sur un tour complet : la rotation ne
+    // saute pas, `DnaAnimation.cycleSeconds` est déduit de sa vitesse.
+    final time = _reduced ? 0.0 : _clock.seconds % DnaAnimation.cycleSeconds;
     return Semantics(
       label: 'Animation décorative : double hélice d’ADN',
       child: ExcludeSemantics(
@@ -100,17 +97,7 @@ class _DnaHelixState extends State<DnaHelix>
           child: SizedBox(
             height: widget.height,
             width: double.infinity,
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) {
-                // Quantifié : le peintre ne repeint que quand le pas de
-                // 1/30 s change (`shouldRepaint` compare le temps).
-                final time = _controller.value * DnaAnimation.cycleSeconds;
-                final quantized =
-                    (time * _framesPerSecond).floor() / _framesPerSecond;
-                return CustomPaint(painter: DnaScenePainter(time: quantized));
-              },
-            ),
+            child: CustomPaint(painter: DnaScenePainter(time: time)),
           ),
         ),
       ),

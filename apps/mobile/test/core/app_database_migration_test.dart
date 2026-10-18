@@ -57,6 +57,8 @@ const Set<String> _expectedIndexes = {
   'idx_local_workout_sets_session_id',
   'idx_local_session_plan_items_session_id',
   'idx_sync_operations_status_created_at',
+  'idx_local_template_exercises_template_id',
+  'idx_local_template_sets_template_exercise_id',
 };
 
 /// Index réellement présents dans la base ouverte.
@@ -454,6 +456,82 @@ void main() {
       final operation = await db.select(db.syncOperations).getSingle();
       expect(operation.ownerUserId, 'compte-1');
       expect(await indexNamesOf(db), containsAll(_expectedIndexes));
+    });
+  });
+
+  group('depuis la version 9', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = openLegacyDatabase(
+        legacySchemaV9,
+        seed: [
+          '''
+          INSERT INTO local_workout_templates
+            (id, name, updated_at, deleted, sync_status, from_coach)
+          VALUES ('modele-9', 'Push force', 1786000000, 0, 'synced', 1);
+          ''',
+          '''
+          INSERT INTO local_template_exercises
+            (id, template_id, exercise_name, position)
+          VALUES ('ligne-9', 'modele-9', 'Développé couché', 0);
+          ''',
+          '''
+          INSERT INTO local_template_sets
+            (id, template_exercise_id, position, kind, target_reps)
+          VALUES ('prevu-9', 'ligne-9', 0, 'NORMAL', 8);
+          ''',
+        ],
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test('les index des modèles arrivent, le contenu reste', () async {
+      expect(await indexNamesOf(db), containsAll(_expectedIndexes));
+      final template = await db.select(db.localWorkoutTemplates).getSingle();
+      expect(template.fromCoach, isTrue);
+      expect(
+        (await db.select(db.localTemplateExercises).getSingle()).templateId,
+        'modele-9',
+      );
+      expect((await db.select(db.localTemplateSets).getSingle()).targetReps, 8);
+    });
+
+    test(
+      'une montée interrompue entre les deux index reprend sans erreur',
+      () async {
+        // `onUpgrade` ne tourne pas en transaction : appli tuée après le
+        // premier index, la base reste en v9 AVEC lui. La reprise ne doit pas
+        // lever « index already exists » à chaque ouverture.
+        final interrompue = openLegacyDatabase(
+          legacySchemaV9,
+          seed: [
+            'CREATE INDEX idx_local_template_exercises_template_id '
+                'ON local_template_exercises (template_id);',
+          ],
+        );
+        addTearDown(interrompue.close);
+
+        expect(await indexNamesOf(interrompue), containsAll(_expectedIndexes));
+      },
+    );
+
+    test('la lecture d’un modèle ne parcourt plus les autres', () async {
+      // La requête de `WorkoutTemplateLocalDataSource` : le modèle, ses
+      // lignes, leurs séries. Sans index, SQLite parcourait toutes les
+      // lignes et fabriquait un index jetable pour les séries, à chaque
+      // lecture.
+      final plan = await queryPlanOf(
+        db,
+        'SELECT * FROM local_workout_templates t '
+        'LEFT JOIN local_template_exercises e ON e.template_id = t.id '
+        'LEFT JOIN local_template_sets s ON s.template_exercise_id = e.id '
+        "WHERE t.deleted = 0 AND t.id = 'modele-9'",
+      );
+      expect(plan, contains('idx_local_template_exercises_template_id'));
+      expect(plan, contains('idx_local_template_sets_template_exercise_id'));
+      expect(plan, isNot(contains('AUTOMATIC')));
     });
   });
 }

@@ -325,7 +325,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   // ── Rapatriement depuis le serveur ───────────────────────────────────────
 
   @override
-  Future<void> refreshTemplates() async {
+  Future<void> refreshTemplates({bool Function()? shouldContinue}) async {
     final remote = _remote;
     if (remote == null) {
       return; // aucune source distante (mode démo, tests hors ligne)
@@ -334,7 +334,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
       database: _db,
       local: _local,
       remote: remote,
-    ).run();
+    ).run(shouldContinue: shouldContinue);
   }
 
   // ── Interne ──────────────────────────────────────────────────────────────

@@ -12,11 +12,15 @@
 > - table locale `sync_operations` avec exactement les colonnes décrites plus
 >   bas ; **une opération réussie est supprimée** (l'état `synced` vit sur
 >   l'entité), `failed` est réservé aux refus définitifs du serveur (4xx) ;
-> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v9** : `fromCoach` sur les modèles)
->   sur les colonnes que les requêtes
+> - **index Drift** (posés au schéma local v5, complétés en **v10** par
+>   `template_id` des lignes de modèle et `template_exercise_id` de leurs
+>   séries) sur les colonnes que les requêtes
 >   réelles filtrent : `(status, started_at)` des séances, `session_id` des
 >   séries et du plan, `(status, created_at)` de la file — sans eux, chaque
->   émission de l'historique ou chaque drainage parcourait la table entière ;
+>   émission de l'historique ou chaque drainage parcourait la table entière.
+>   Une séance close se filtre par `status IN ('COMPLETED', 'ABANDONED')`,
+>   jamais par `status <> 'IN_PROGRESS'` : SQLite ne cherche pas une
+>   inégalité dans un index (`test/core/workout_query_plans_test.dart`) ;
 > - **FIFO strict** : la file est rejouée dans l'ordre d'écriture locale ; un
 >   échec réseau interrompt le drainage (aucune opération ne double une autre) ;
 > - **backoff exponentiel** par opération : 5 s, 10 s, 20 s… plafonné à 5 min ;

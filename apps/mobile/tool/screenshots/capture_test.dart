@@ -580,7 +580,14 @@ void main() {
 
   // Les scènes 3D bouclent en continu : pumps BORNÉS uniquement, calés
   // sur le pic de systole du battement (~80 ms) pour de belles captures.
+  //
+  // DEUX `pump()` d'abord : le banc ne dessine une image que si quelqu'un
+  // l'a demandée, et les scènes n'en demandent plus une à chaque battement
+  // d'écran (`SceneClock`). Le premier livre ce qui attendait (une popup
+  // reçue par un flux), le second dessine l'image qu'il a demandée — c'est
+  // elle qui lance les animations d'entrée, comme le faisait jadis la scène.
   Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pump(const Duration(milliseconds: 80));
@@ -842,6 +849,15 @@ void main() {
     required Finder shows,
   }) async {
     expect(shows, findsWidgets, reason: 'Mauvais écran pour « $name »');
+    // Toute image à l'écran, décodée pour de vrai avant la photo : une
+    // illustration décodée à la taille de sa boîte (`cacheWidth`) a sa
+    // PROPRE clé de cache, que précharger le fichier entier ne couvre pas.
+    await tester.runAsync(() async {
+      for (final element in find.byType(Image).evaluate()) {
+        await precacheImage((element.widget as Image).image, element);
+      }
+    });
+    await tester.pump();
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/$name.png'),

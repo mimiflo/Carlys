@@ -22,7 +22,11 @@ class TrainingHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final active = ref.watch(activeWorkoutProvider).valueOrNull;
+    // L'EXISTENCE d'une séance, seule : chaque série validée change la
+    // séance, pas la présence de la carte de reprise.
+    final hasActive = ref.watch(
+      activeWorkoutProvider.select((async) => async.valueOrNull != null),
+    );
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
@@ -43,7 +47,7 @@ class TrainingHubScreen extends ConsumerWidget {
             showBack: false,
           ),
           const SizedBox(height: AppSpacing.md),
-          if (active != null) ...[
+          if (hasActive) ...[
             ResumeWorkoutCard(
               onResume: () => context.push(AppRoutes.activeWorkout),
             ),

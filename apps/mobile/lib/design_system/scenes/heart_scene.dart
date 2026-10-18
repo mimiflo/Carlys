@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import 'heart_engine.dart';
 import 'heart_frame.dart';
 import 'heart_scene_painter.dart';
 import 'scene_cadence.dart';
+import 'scene_clock.dart';
 import 'scene_scroll_activity.dart';
 
 /// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
@@ -31,8 +31,7 @@ class HeartScene extends StatefulWidget {
   State<HeartScene> createState() => _HeartSceneState();
 }
 
-class _HeartSceneState extends State<HeartScene>
-    with SingleTickerProviderStateMixin {
+class _HeartSceneState extends State<HeartScene> {
   /// Cadence de rendu de la scène, indépendante de celle de l'écran :
   /// 30 i/s quand l'appareil suit, 20 puis 15 quand il peine — mesuré sur
   /// le coût réel de calcul d'une image. Même déporté sur un autre cœur du
@@ -55,13 +54,17 @@ class _HeartSceneState extends State<HeartScene>
   /// changeaient d'un coup entre la dernière image d'un tour et la première du
   /// suivant, dont 1 974 sur la silhouette même du cœur. Un temps monotone
   /// supprime la question au lieu d'accorder les fréquences une à une.
-  late final Ticker _ticker = createTicker(_onTick);
+  ///
+  /// L'horloge ne réveille la scène qu'à chaque pas de cadence : un `Ticker`
+  /// demandait une image à chaque battement d'écran, trois sur quatre pour
+  /// rien sur un écran 120 Hz (`scene_frame_requests_test.dart`).
+  late final SceneClock _clock = SceneClock(
+    framesPerSecond: () => _cadence.framesPerSecond,
+    onStep: _onStep,
+  );
   double _seconds = 0;
-
-  /// Temps accumulé AVANT la pause en cours : le Ticker repart de zéro à
-  /// chaque start(), le temps de scène, lui, ne revient jamais en arrière.
-  double _accumulated = 0;
   bool _reduced = false;
+  bool _hidden = false;
   ValueListenable<bool>? _scrolling;
 
   /// Dernière image livrée par l'isolate ; null tant qu'aucune n'est prête
@@ -82,43 +85,37 @@ class _HeartSceneState extends State<HeartScene>
     // La boucle ne doit JAMAIS tourner sous réduction d'animations : sinon la
     // scène empêche toute stabilisation (accessibilité, et tests de widgets).
     _reduced = MediaQuery.disableAnimationsOf(context);
+    // Ni hors de l'écran (onglet caché, route recouverte) : un `Ticker` s'y
+    // taisait tout seul, l'horloge doit le demander.
+    _hidden = !TickerMode.valuesOf(context).enabled;
     // Et elle se FIGE pendant le défilement de l'écran englobant : même
     // calculée ailleurs, chaque image finit dessinée sur le fil d'interface —
     // et une scène immobile pendant le geste, c'est aussi de la batterie.
     final scrolling = SceneScrollActivity.of(context);
     if (!identical(scrolling, _scrolling)) {
-      _scrolling?.removeListener(_syncTicker);
+      _scrolling?.removeListener(_syncClock);
       _scrolling = scrolling;
-      _scrolling?.addListener(_syncTicker);
+      _scrolling?.addListener(_syncClock);
     }
-    _syncTicker();
+    _syncClock();
   }
 
-  void _syncTicker() {
+  void _syncClock() {
     if (!mounted) {
       return;
     }
-    final paused = _reduced || (_scrolling?.value ?? false);
+    final paused = _reduced || _hidden || (_scrolling?.value ?? false);
     if (paused) {
-      if (_ticker.isActive) {
-        _accumulated = _seconds;
-        _ticker.stop();
-      }
-    } else if (!_ticker.isActive) {
-      _ticker.start();
+      _clock.stop();
+    } else {
+      _clock.start();
     }
   }
 
-  void _onTick(Duration elapsed) {
-    // Quantifié au pas de la cadence courante : au-delà de 30 i/s le
-    // battement ne gagne rien de perceptible, et chaque image coûte un
-    // maillage entier.
-    final fps = _cadence.framesPerSecond;
-    final seconds =
-        _accumulated + (elapsed.inMicroseconds * fps / 1000000).floor() / fps;
-    if (seconds == _seconds) {
-      return;
-    }
+  /// Un pas de cadence : au-delà de 30 i/s le battement ne gagne rien de
+  /// perceptible, et chaque image coûte un maillage entier.
+  void _onStep(double seconds) {
+    if (!mounted) return;
     _seconds = seconds;
     _requestFrame();
     // Tant que l'isolate n'a rien livré, c'est le temps qui pousse le repli
@@ -156,10 +153,10 @@ class _HeartSceneState extends State<HeartScene>
 
   @override
   void dispose() {
-    _scrolling?.removeListener(_syncTicker);
+    _scrolling?.removeListener(_syncClock);
     _engine.latest.removeListener(_onFrame);
     _engine.dispose();
-    _ticker.dispose();
+    _clock.dispose();
     super.dispose();
   }
 

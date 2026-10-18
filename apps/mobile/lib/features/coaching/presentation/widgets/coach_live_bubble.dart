@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../domain/entities/coach_thread_state.dart';
 import 'coach_message_bubble.dart';
 import 'coach_reflection.dart';
 
@@ -26,6 +27,18 @@ class CoachLiveBubble extends StatelessWidget {
     this.maxWidth = double.infinity,
     super.key,
   });
+
+  /// La bulle d'un tour en cours, tel que le fil le tient.
+  CoachLiveBubble.turn(
+    CoachLiveTurn live, {
+    this.maxWidth = double.infinity,
+    super.key,
+  }) : text = live.text,
+       ahead = live.ahead,
+       steps = live.steps,
+       done = live.done,
+       since = live.since,
+       thoughtFor = live.thoughtFor;
 
   /// La réponse reçue jusqu'ici ; vide tant que le coach réfléchit.
   final String text;

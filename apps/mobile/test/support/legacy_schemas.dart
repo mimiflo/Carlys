@@ -323,6 +323,42 @@ CREATE TABLE local_session_plan_items (
 );
 ''';
 
+/// Version 8 : la révision serveur de la séance, ajoutée en fin de table
+/// comme `ALTER TABLE` la pose.
+const String _sessionsV8 = '''
+CREATE TABLE local_workout_sessions (
+  id TEXT NOT NULL,
+  name TEXT NULL,
+  notes TEXT NULL,
+  status TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  ended_at INTEGER NULL,
+  duration_seconds INTEGER NULL,
+  template_id TEXT NULL,
+  template_name TEXT NULL,
+  program_day_id TEXT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  revision INTEGER NULL,
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 9 : l'origine du modèle (`from_coach`).
+const String _templatesV9 = '''
+CREATE TABLE local_workout_templates (
+  id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  notes TEXT NULL,
+  estimated_duration_minutes INTEGER NULL,
+  last_used_at INTEGER NULL,
+  updated_at INTEGER NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  from_coach INTEGER NOT NULL DEFAULT 0 CHECK (from_coach IN (0, 1)),
+  PRIMARY KEY (id)
+);
+''';
+
 /// Version 5 : les quatre index, inchangés depuis.
 const List<String> _indexesV5 = [
   'CREATE INDEX idx_local_workout_sessions_status_started_at '
@@ -394,6 +430,20 @@ const LegacySchema legacySchemaV7 = LegacySchema(7, [
   ..._indexesV5,
 ]);
 
+/// Version 9 : celle de tout appareil à jour avant les index des modèles
+/// (v10) — les lignes et séries des modèles sans index.
+const LegacySchema legacySchemaV9 = LegacySchema(9, [
+  _sessionsV8,
+  _setsV6,
+  _syncOperationsV5,
+  _templatesV9,
+  _templateExercisesV2,
+  _templateSetsV6,
+  _planItemsV6,
+  _waterIntakesV4,
+  ..._indexesV5,
+]);
+
 /// Tous les paliers historiques rejouables, du plus ancien au plus récent.
 ///
 /// C'est la liste sur laquelle boucle le test de forme
@@ -406,9 +456,10 @@ const List<LegacySchema> legacySchemas = [
   legacySchemaV3,
   legacySchemaV4,
   legacySchemaV7,
+  legacySchemaV9,
 ];
 
-/// Le plus haut palier historique couvert ici (aujourd'hui 7).
+/// Le plus haut palier historique couvert ici (aujourd'hui 9).
 ///
 /// `AppDatabase.schemaVersion` doit lui être STRICTEMENT supérieur : un
 /// palier figé ci-dessus est par définition une version révolue. C'est la

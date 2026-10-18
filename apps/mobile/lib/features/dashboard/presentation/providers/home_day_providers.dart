@@ -128,10 +128,17 @@ class TodayTraining {
 
 /// Entraînement du jour : séance en cours, séance déjà faite, ou rien encore.
 final todayTrainingProvider = Provider.autoDispose<TodayTraining>((ref) {
-  final active = ref.watch(activeWorkoutProvider).valueOrNull;
+  // Le NOM de la séance en cours, seul (le record dit « une séance est
+  // ouverte ») : chaque série validée change la séance, pas la tuile.
+  final active = ref.watch(
+    activeWorkoutProvider.select((async) {
+      final session = async.valueOrNull?.session;
+      return session == null ? null : (name: session.name);
+    }),
+  );
   if (active != null) {
     return TodayTraining(
-      value: active.session.name ?? 'Séance libre',
+      value: active.name ?? 'Séance libre',
       detail: 'en cours',
     );
   }
@@ -168,7 +175,9 @@ final todayTrainingProvider = Provider.autoDispose<TodayTraining>((ref) {
 /// Phrase d'état sous la salutation — toujours adossée à un fait : séance en
 /// cours, séance du jour déjà faite, ou temps de récupération écoulé.
 final homeSubtitleProvider = Provider.autoDispose<String>((ref) {
-  if (ref.watch(activeWorkoutProvider).valueOrNull != null) {
+  if (ref.watch(
+    activeWorkoutProvider.select((async) => async.valueOrNull != null),
+  )) {
     return 'Séance en cours.';
   }
   if (ref.watch(todayTrainingProvider).value != 'À faire') {

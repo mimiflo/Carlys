@@ -373,7 +373,14 @@ class WorkoutSessionWriter {
       // Le serveur fait pareil à l'arrivée de `set.delete` : aucun
       // marquage `pending` nécessaire, la convergence suit l'opération.
       await (_db.update(_db.localSessionPlanItems)
-            ..where((item) => item.doneSetId.equals(setId)))
+            // Par séance d'abord : l'index `session_id` borne la recherche
+            // au plan de CETTE séance, au lieu de parcourir tous les plans
+            // de l'historique rapatrié.
+            ..where(
+              (item) =>
+                  item.sessionId.equals(set.sessionId) &
+                  item.doneSetId.equals(setId),
+            ))
           .write(const LocalSessionPlanItemsCompanion(doneSetId: Value(null)));
       await enqueue(
         entityType: 'set',

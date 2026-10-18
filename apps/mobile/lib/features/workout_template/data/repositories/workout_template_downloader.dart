@@ -21,37 +21,74 @@ class WorkoutTemplateDownloader {
   final WorkoutTemplateLocalDataSource _local;
   final WorkoutTemplateRemoteDataSource _remote;
 
+  /// Détails demandés ensemble, comme pour les séances
+  /// (`WorkoutSessionDownloader`) : sur un téléphone neuf, chaque modèle
+  /// attendait la réponse du précédent.
+  static const _parallelDetails = 6;
+
   /// Parcourt toutes les pages (pagination par curseur) et écrit chaque modèle
   /// dans une transaction distincte : une coupure au milieu laisse une base
   /// cohérente, simplement incomplète — le prochain appel reprendra.
-  Future<void> run() async {
+  ///
+  /// Les détails se téléchargent par lots de [_parallelDetails] ; les
+  /// écritures restent une à une, dans l'ordre de la liste.
+  ///
+  /// [shouldContinue], consulté avant chaque lot et chaque écriture, arrête
+  /// la boucle dès qu'il rend faux (purge de compte en vol), comme pour les
+  /// séances.
+  Future<void> run({bool Function()? shouldContinue}) async {
+    bool stopped() => shouldContinue != null && !shouldContinue();
     String? cursor;
     do {
       final page = await _remote.list(cursor: cursor);
-      for (final summary in page.items) {
-        final local = await _local.headerOf(summary.id);
-        // Une modification locale non acquittée gagne toujours : l'appareil ne
-        // perd jamais sa propre saisie au profit d'un état serveur plus ancien.
-        if (local != null && local.syncStatus != 'synced') {
-          continue;
+      final items = page.items;
+      for (var start = 0; start < items.length; start += _parallelDetails) {
+        if (stopped()) return;
+        // Relu lot par lot, juste avant le téléchargement : une saisie
+        // locale ne peut croiser le rapatriement que le temps d'un lot,
+        // comme pour les séances.
+        final stale = [
+          for (final summary in items.skip(start).take(_parallelDetails))
+            if (await _needsDownload(summary)) summary.id,
+        ];
+        // Lancés ensemble, attendus dans l'ordre : un détail en échec
+        // n'empêche pas d'écrire ceux qui le précèdent. `ignore` : un échec
+        // laissé en vol ne remonte pas en erreur non traitée.
+        final details = [for (final id in stale) _remote.detail(id)..ignore()];
+        for (final pending in details) {
+          if (stopped()) return;
+          await _write(await pending);
         }
-        if (local != null && _unchanged(local, summary)) {
-          continue;
-        }
-        final detail = await _remote.detail(summary.id);
-        await _db.transaction(() async {
-          await _local.upsertHeader(
-            template: detail,
-            updatedAt: detail.info.updatedAt,
-            syncStatus: 'synced',
-            lastUsedAt: detail.info.lastUsedAt,
-            fromCoach: detail.info.fromCoach,
-          );
-          await _local.replaceContent(detail);
-        });
       }
       cursor = page.hasMore ? page.nextCursor : null;
     } while (cursor != null);
+  }
+
+  Future<bool> _needsDownload(WorkoutTemplateInfo summary) async {
+    final local = await _local.headerOf(summary.id);
+    // Une modification locale non acquittée gagne toujours : l'appareil ne
+    // perd jamais sa propre saisie au profit d'un état serveur plus ancien.
+    if (local != null && local.syncStatus != 'synced') return false;
+    return local == null || !_unchanged(local, summary);
+  }
+
+  Future<void> _write(WorkoutTemplateDetail detail) {
+    return _db.transaction(() async {
+      // Relu ICI, dans la transaction : entre la vérification du lot et
+      // l'arrivée du détail, l'utilisateur a pu supprimer ou retoucher le
+      // modèle. `upsertHeader` réécrirait `deleted: false` et `synced` — un
+      // modèle supprimé ressusciterait, pour toujours.
+      final local = await _local.headerOf(detail.info.id);
+      if (local != null && local.syncStatus != 'synced') return;
+      await _local.upsertHeader(
+        template: detail,
+        updatedAt: detail.info.updatedAt,
+        syncStatus: 'synced',
+        lastUsedAt: detail.info.lastUsedAt,
+        fromCoach: detail.info.fromCoach,
+      );
+      await _local.replaceContent(detail);
+    });
   }
 
   /// Le modèle local, déjà synchronisé, est-il celui que le serveur décrit ?

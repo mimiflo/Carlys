@@ -18,6 +18,7 @@ import '../controllers/coach_controllers.dart';
 import '../providers/coach_frame_providers.dart';
 import '../providers/coach_program_actions.dart';
 import '../providers/coach_saved_workouts.dart';
+import '../widgets/coach_live_reply.dart';
 import '../widgets/coach_page_states.dart';
 import '../widgets/coach_state_view.dart';
 import '../widgets/coach_training_frame.dart';
@@ -166,7 +167,8 @@ class _CoachPageState extends ConsumerState<CoachPage> {
 
   @override
   Widget build(BuildContext context) {
-    final thread = ref.watch(coachThreadProvider);
+    ref.watch(coachThreadProvider.select(coachPageKey));
+    final thread = ref.read(coachThreadProvider);
     keepCoachWorkoutsOnDevice(ref);
 
     return thread.when(
@@ -207,6 +209,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         onStop: () => ref.read(coachThreadProvider.notifier).stop(),
         isOffline: state.isOffline,
         live: state.live,
+        liveReply: (maxWidth) => CoachLiveReply(maxWidth: maxWidth),
         notice: state.notice,
         onUnlock: state.isReadOnly
             ? () => GoRouter.of(context).go(AppRoutes.subscription)

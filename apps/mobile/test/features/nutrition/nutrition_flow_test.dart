@@ -3,6 +3,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/design_system/scenes/dna_scene.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
@@ -376,12 +377,28 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: Scaffold(body: DnaHelix())),
     );
+    double time() =>
+        (tester
+                    .widget<CustomPaint>(
+                      find.descendant(
+                        of: find.byType(DnaHelix),
+                        matching: find.byType(CustomPaint),
+                      ),
+                    )
+                    .painter!
+                as DnaScenePainter)
+            .time;
     await tester.pump(const Duration(milliseconds: 300));
+    final first = time();
 
     expect(find.byType(DnaHelix), findsOneWidget);
-    expect(tester.hasRunningAnimations, isTrue);
+    // L'hélice tourne : son horloge de scène (30 i/s, sans `Ticker`) fait
+    // avancer le temps peint d'un pompage à l'autre.
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(time(), greaterThan(first));
     // Bounded pumps uniquement : l'animation ne « settle » jamais.
     await tester.pump(const Duration(seconds: 2));
+    expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
   testWidgets('hélice ADN : statique quand les animations sont réduites', (

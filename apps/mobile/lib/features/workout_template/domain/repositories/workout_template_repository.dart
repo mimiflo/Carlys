@@ -103,5 +103,8 @@ abstract interface class WorkoutTemplateRepository {
   /// Utile après une réinstallation ou un changement d'appareil. Ne touche
   /// jamais aux modèles dont des modifications locales n'ont pas encore été
   /// acquittées : l'appareil ne perd jamais sa propre saisie.
-  Future<void> refreshTemplates();
+  ///
+  /// [shouldContinue] rendu faux, le rapatriement s'arrête avant le lot ou
+  /// l'écriture suivante (purge de compte en vol).
+  Future<void> refreshTemplates({bool Function()? shouldContinue});
 }

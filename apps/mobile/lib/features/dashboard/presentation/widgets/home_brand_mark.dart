@@ -24,10 +24,18 @@ class HomeBrandMark extends StatelessWidget {
   /// Le flou d'un `drop-shadow` CSS de rayon r vaut un sigma de r / 2.
   static const double _glowSigma = 5;
 
+  /// Le sceau décodé à sa hauteur d'en-tête (45 pixels à la densité ×3),
+  /// pas aux 415 du fichier que la page de bienvenue montre en grand.
+  /// Public : l'écran de démarrage le décode d'avance, sous la même clé.
+  static ImageProvider imageFor(BuildContext context) => ResizeImage(
+    const AssetImage(BrandSignature.markAsset),
+    height: (height * MediaQuery.devicePixelRatioOf(context)).ceil(),
+  );
+
   @override
   Widget build(BuildContext context) {
-    const mark = Image(
-      image: AssetImage(BrandSignature.markAsset),
+    final mark = Image(
+      image: imageFor(context),
       height: height,
       fit: BoxFit.contain,
       excludeFromSemantics: true,

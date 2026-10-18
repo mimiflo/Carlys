@@ -91,6 +91,14 @@ class SummitIllustration extends StatelessWidget {
         Widget image = Image.asset(
           asset,
           fit: BoxFit.cover,
+          // `cover` la montre toujours à la largeur de sa boîte (voir plus
+          // bas) : décodée à cette largeur, pas aux 1 280 pixels du fichier.
+          // Au moins 1 : une boîte de largeur nulle (mise en page d'essai)
+          // donnerait 0, que `cacheWidth` refuse.
+          cacheWidth: math.max(
+            1,
+            (width * MediaQuery.devicePixelRatioOf(context)).ceil(),
+          ),
           excludeFromSemantics: true,
           // Une image manquante ou illisible laisse la carte nue — le texte
           // et le chevron suffisent à la porte — mais se DIT dans les

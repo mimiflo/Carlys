@@ -83,8 +83,8 @@ branches ; écartée au profit du point blanc, qui appartient à la scène.
 
 ### Le temps des scènes
 
-Le cœur avance désormais sur un **temps monotone** (`Ticker`), et non plus sur
-un `AnimationController` rebouclé. La boucle de trente secondes ramenait le
+Le cœur avance désormais sur un **temps monotone** (`SceneClock`), et non plus
+sur un `AnimationController` rebouclé. La boucle de trente secondes ramenait le
 temps à zéro alors qu'aucune période de la scène ne divise le tour — rotation
 (0,22 rad/s), ballant (0,45) et battement (57 bpm, soit 28,5 battements) :
 tout sautait ensemble une fois par tour. Mesuré sur la planche de contrôle
@@ -102,6 +102,20 @@ battement ne gagne rien de perceptible — mais sur un téléphone modeste, teni
 image ; si la scène déborde de son budget de temps (un quart du fil
 d'interface), la cadence descend à 20 puis 15 i/s, et remonte — avec marge —
 quand l'appareil respire. Sur un téléphone à l'aise, rien ne change jamais.
+
+**Une image demandée par image de scène** (`SceneClock`, cœur et hélice) :
+l'horloge est une minuterie au pas de la cadence, et non un `Ticker`, qui
+demandait une image à chaque battement d'écran — 120 par seconde sur un
+écran 120 Hz, dont trois sur quatre redisaient la même. Mesuré sur cinq
+secondes de battements à 120 Hz (`scene_frame_requests_test.dart`) : 601
+images demandées avant, 146 (cœur) et 152 (hélice) après. Une minuterie
+ne se tait pas seule là où le `Ticker` se taisait : l'horloge s'arrête donc
+d'elle-même hors de l'écran (`TickerMode` éteint : onglet caché, route
+recouverte) et application en arrière-plan ou écran éteint (cycle de vie
+`hidden`, `paused`, `detached`), puis repart au retour sans sauter le temps
+passé dehors (`scene_clock_test.dart`). Le cœur
+calculé dans son isolate ne repeint qu'à l'ARRIVÉE de l'image ; l'isolate
+lui-même est lancé pendant l'écran de démarrage (`HeartEngine.prewarm`).
 La boucle de sommets projette par ailleurs **sans allocation**
 (`SceneCamera.projectInto`) : la version précédente créait un objet par sommet,
 soit des centaines de milliers d'allocations par seconde offertes au

@@ -5,6 +5,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
 import 'package:carlys_mobile/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/presentation/providers/exercise_catalog_providers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
@@ -279,5 +280,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Objectif retenu : Hyrox.'), findsOneWidget);
     await tester.pumpAndSettle();
+    // Le matériel du catalogue est GARDÉ dix minutes : on laisse la garde
+    // expirer, le banc refuse qu'une minuterie survive au test.
+    await tester.pump(catalogKeepAlive);
   });
 }
