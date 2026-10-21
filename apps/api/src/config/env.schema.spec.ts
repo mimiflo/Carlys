@@ -418,7 +418,7 @@ describe('validateEnv en production', () => {
     expect(() =>
       validateEnv({
         ...productionEnv,
-        DATABASE_URL: 'postgresql://carlys:carlys_dev_password@postgres:5432/carlys',
+        DATABASE_URL: 'postgresql://carlys:carlys_dev_password@localhost:5432/carlys_dev',
       }),
     ).toThrow(/DATABASE_URL.*publiée/);
   });

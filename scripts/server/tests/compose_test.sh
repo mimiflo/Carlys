@@ -143,7 +143,7 @@ publiees="$TMP/publiees.env"
 cat > "$publiees" <<'ENV'
 JWT_ACCESS_SECRET=secret-jwt-de-developpement-a-remplacer-absolument
 # LOG_FINGERPRINT_SECRET=cle-empreintes-de-developpement-a-remplacer
-DATABASE_URL=postgresql://carlys:carlys_dev_password@postgres:5432/carlys
+DATABASE_URL=postgresql://carlys:carlys_dev_password@localhost:5432/carlys_dev
 METRICS_TOKEN=jeton-du-banc-0123456789abcdef
 ENV
 verifier "valeurs d'exemple publiées : repérées dans le .env, même dans une URL" 'DATABASE_URL JWT_ACCESS_SECRET ' \
