@@ -235,6 +235,39 @@ void main() {
     );
     // Le nom officiel se lit en entier, jamais coupé.
     expect(find.text('Galette de riz soufflé, nature'), findsOneWidget);
+
+    // Clavier ouvert : le champ reste en haut, et rien ne déborde encore.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 520);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AppSearchField), findsOneWidget);
+  });
+
+  // Signalé le 21 octobre 2026 : fermer le clavier le rouvrait aussitôt. Le
+  // clavier fermé rend de la hauteur à la feuille, qui changeait de mise en
+  // page ; le champ, recréé avec `autofocus`, redemandait le clavier.
+  testWidgets('fermer le clavier ne le rouvre pas', (tester) async {
+    tester.view.physicalSize = const Size(390, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await openMealEditor(tester, withFoods(), AppRoutes.newMeal());
+    await openSheet(tester);
+    await search(tester, 'riz');
+    // Le clavier sort : la feuille rétrécit.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await tester.pumpAndSettle();
+
+    // La personne le ferme (geste système : le champ garde le focus).
+    tester.testTextInput.log.clear();
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.testTextInput.log.map((call) => call.method),
+      isNot(contains('TextInput.show')),
+    );
+    expect(find.text('Riz basmati'), findsOneWidget);
   });
 
   testWidgets('une énergie CALCULÉE se lit « ≈ », et la mention dit pourquoi', (

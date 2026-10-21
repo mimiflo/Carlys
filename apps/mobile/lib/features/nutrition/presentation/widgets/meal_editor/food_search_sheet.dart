@@ -39,10 +39,16 @@ class _FoodSearchSheet extends ConsumerStatefulWidget {
 class _FoodSearchSheetState extends ConsumerState<_FoodSearchSheet> {
   final _query = TextEditingController();
 
-  /// La hauteur, en points de texte, sous laquelle l'en-tête et la mention
-  /// défilent AVEC les résultats plutôt que de rester fixes : sur un petit
-  /// écran, en grand texte et clavier ouvert, trois blocs fixes ne
-  /// laisseraient plus rien aux résultats.
+  /// La hauteur, en points de texte, sous laquelle la mention défile AVEC
+  /// les résultats plutôt que de rester en pied : sur un petit écran, en
+  /// grand texte et clavier ouvert, elle ne laisserait plus rien aux
+  /// résultats.
+  ///
+  /// L'en-tête, lui, reste toujours en haut, à la même place de l'arbre. Il
+  /// défilait aussi, et basculer d'une mise en page à l'autre RECRÉAIT le
+  /// champ : fermer le clavier rendait de la hauteur, la feuille basculait,
+  /// et le champ neuf, en `autofocus`, rouvrait aussitôt le clavier
+  /// (signalé le 21 octobre 2026).
   static const double _roomyHeight = 420;
 
   @override
@@ -121,26 +127,26 @@ class _FoodSearchSheetState extends ConsumerState<_FoodSearchSheet> {
             ),
           );
 
-    const padding = EdgeInsets.all(AppSpacing.md);
     return LayoutBuilder(
       builder: (context, constraints) {
         final roomy =
             constraints.maxHeight >=
             MediaQuery.textScalerOf(context).scale(_roomyHeight);
-        if (!roomy) {
-          return ListView(
-            padding: padding,
-            children: [...header, ...entries, ?mention],
-          );
-        }
         return Padding(
-          padding: padding,
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ...header,
-              Expanded(child: ListView(children: entries)),
-              ?mention,
+              Expanded(
+                child: ListView(
+                  children: [
+                    ...entries,
+                    if (!roomy && mention != null) mention,
+                  ],
+                ),
+              ),
+              if (roomy && mention != null) mention,
             ],
           ),
         );
