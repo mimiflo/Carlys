@@ -1048,6 +1048,11 @@ model AdminUser {
   totpLastStep       Int?
   /// Codes faux d'affilée : au plafond, la 2FA est gelée jusqu'à `--reset-2fa`.
   totpFailedAttempts Int             @default(0)
+  /// Époque de session : chaque jeton (et défi) porte celle de sa signature
+  /// (`ep`), et AdminAuthGuard refuse tout autre. L'incrémenter révoque
+  /// d'un coup toutes les sessions du compte : déconnexion,
+  /// `--reset-password`, `--reset-2fa`.
+  sessionEpoch       Int             @default(0)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 

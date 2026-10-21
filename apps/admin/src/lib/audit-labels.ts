@@ -29,6 +29,7 @@ const ACTIONS: Record<string, string> = {
   'admin.login': 'Connexion administrateur',
   'admin.login_blocked_lockout': 'Connexion admin bloquée (verrou)',
   'admin.login_failed': 'Connexion admin refusée',
+  'admin.logout': 'Déconnexion administrateur',
   'admin.media_deleted': 'Média supprimé',
   'admin.media_uploaded': 'Média téléversé',
   'admin.muscle_group_created': 'Catégorie créée',

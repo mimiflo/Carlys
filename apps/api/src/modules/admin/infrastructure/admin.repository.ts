@@ -91,6 +91,13 @@ export class AdminRepository {
       .then(({ count }) => count === 1);
   }
 
+  /** Avance l'époque de session : tous les jetons du compte cessent de valoir. */
+  revokeSessions(adminUserId: string): Promise<void> {
+    return this.prisma.adminUser
+      .update({ where: { id: adminUserId }, data: { sessionEpoch: { increment: 1 } } })
+      .then(() => undefined);
+  }
+
   markLogin(adminUserId: string): Promise<void> {
     return this.prisma.adminUser
       .update({ where: { id: adminUserId }, data: { lastLoginAt: new Date() } })

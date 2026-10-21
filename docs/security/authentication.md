@@ -343,6 +343,28 @@ d'authentification (TOTP, RFC 6238 : HMAC-SHA1, pas de 30 s, ±1 pas toléré �
    jeton porte `mfa: true`, et `AdminAuthGuard` l'**exige** : une session
    ouverte au seul mot de passe, d'avant la 2FA, est refusée. Le premier code
    juste confirme l'enrôlement (audit `admin.totp_enrolled`).
+3. `POST /admin/auth/logout` (jeton de session, `AdminAuthGuard`) répond
+   **204** et révoque TOUTES les sessions du compte (audit `admin.logout`).
+   Le back-office l'appelle au mieux au clic sur « Se déconnecter » : la
+   session locale (`sessionStorage`) s'efface sans attendre la réponse, un
+   serveur injoignable n'empêche jamais de partir.
+
+**Révocation : l'époque de session** (21 octobre 2026). Le jeton de session
+vit 12 h, sans refresh ; il ne se révoquait pas — ni à la déconnexion, qui
+ne vidait que l'onglet, ni par `--reset-password`. Chaque jeton (et chaque
+défi de première étape) porte désormais l'époque du compte à sa signature,
+`ep` = `AdminUser.sessionEpoch` ; `AdminAuthGuard` la relit en base avec le
+statut et refuse (401) tout jeton d'une autre époque, ou sans époque.
+L'époque **avance** à la déconnexion, à `--reset-password` et à
+`--reset-2fa` : tous les jetons signés avant tombent, ceux des autres
+onglets compris, et un défi obtenu avec l'ancien mot de passe n'ouvre plus
+de session. Pas de liste noire de jetons : une colonne entière, relue à la
+requête qui la lisait déjà. Les jetons d'avant le déploiement n'ont pas
+d'`ep` : chaque administrateur se reconnecte une fois. **Pendant la
+bascule progressive** (`CARLYS_SCALE_MIN=2`), les anciennes répliques
+ignorent `ep` : une déconnexion ou une réinitialisation faite PENDANT le
+déploiement ne vaut pleinement qu'une fois la dernière ancienne réplique
+arrêtée — la refaire après, au besoin.
 
 Garde-fous :
 
@@ -368,7 +390,8 @@ gelée** : sur le serveur, `carlysctl admin-create <env> <email> --reset-2fa`
 émet un NOUVEAU secret (l'ancien ne vaut plus rien ; ni mot de passe ni rôle
 touchés ; audit `admin.totp_issued`) et affiche son QR code. Pas de codes de
 secours : le serveur EST le secours, et seul son opérateur y accède. Les
-sessions déjà ouvertes vivent jusqu'à leur échéance (12 h au plus).
+sessions déjà ouvertes sont révoquées (époque de session, ci-dessus), comme
+après `--reset-password`.
 
 **Comptes mobiles** : pas de second facteur (non demandé à ce jour) ; le
 modèle ne l'empêche pas.

@@ -254,6 +254,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `POST /admin/auth/login` | **admin** | apps/admin (back-office) |
 | `POST /admin/auth/totp` | **admin** | apps/admin (back-office) |
 | `GET /admin/auth/me` | **admin** | apps/admin (back-office) |
+| `POST /admin/auth/logout` | **admin** | apps/admin (back-office) |
 | `GET /admin/community/reports` | **admin** | apps/admin (back-office) |
 | `PATCH /admin/community/reports/{id}` | **admin** | apps/admin (back-office) |
 | `POST /admin/community/reports/{id}/decision` | **admin** | apps/admin (back-office) |

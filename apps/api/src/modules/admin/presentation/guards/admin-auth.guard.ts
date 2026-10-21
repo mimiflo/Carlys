@@ -24,12 +24,15 @@ interface AdminTokenPayload {
   adm?: boolean;
   /** Ouverte par un code de double authentification juste. */
   mfa?: boolean;
+  /** Époque de session du compte à la signature (`AdminUser.sessionEpoch`). */
+  ep?: number;
 }
 
 /**
  * Authentification du back-office : jeton JWT à audience DÉDIÉE (jamais
  * interchangeable avec un jeton mobile), compte vérifié en base à chaque
- * requête — désactiver un admin invalide immédiatement ses jetons.
+ * requête — désactiver un admin invalide immédiatement ses jetons, avancer
+ * son époque de session (déconnexion, réinitialisations) aussi.
  */
 @Injectable()
 export class AdminAuthGuard implements CanActivate {
@@ -62,8 +65,15 @@ export class AdminAuthGuard implements CanActivate {
       throw new UnauthorizedException('Session administrateur expirée ou invalide.');
     }
 
+    // L'époque est relue en base comme le statut : la déconnexion,
+    // `--reset-password` et `--reset-2fa` l'avancent, et révoquent ainsi tous
+    // les jetons signés avant. Un jeton SANS époque date d'avant : refusé.
     const admin = await this.admins.findAdminById(payload.sub);
-    if (admin === null || admin.status !== AdminUserStatus.ACTIVE) {
+    if (
+      admin === null ||
+      admin.status !== AdminUserStatus.ACTIVE ||
+      payload.ep !== admin.sessionEpoch
+    ) {
       throw new UnauthorizedException('Session administrateur expirée ou invalide.');
     }
 

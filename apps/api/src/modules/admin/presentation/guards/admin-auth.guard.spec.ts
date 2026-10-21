@@ -21,6 +21,7 @@ function adminRow(status: AdminUserStatus = AdminUserStatus.ACTIVE): unknown {
     id: 'admin-1',
     email: 'support@carlys.local',
     status,
+    sessionEpoch: 3,
     roles: [
       {
         role: {
@@ -34,7 +35,9 @@ function adminRow(status: AdminUserStatus = AdminUserStatus.ACTIVE): unknown {
 
 function buildStubs(): Stubs {
   return {
-    jwt: { verifyAsync: jest.fn().mockResolvedValue({ sub: 'admin-1', adm: true, mfa: true }) },
+    jwt: {
+      verifyAsync: jest.fn().mockResolvedValue({ sub: 'admin-1', adm: true, mfa: true, ep: 3 }),
+    },
     admins: { findAdminById: jest.fn().mockResolvedValue(adminRow()) },
   };
 }
@@ -119,6 +122,26 @@ describe('AdminAuthGuard', () => {
     const guard = buildGuard(stubs);
 
     await expect(guard.canActivate(contextFor(bearer))).rejects.toThrow(UnauthorizedException);
+  });
+
+  // L'époque est la révocation : la déconnexion, `--reset-password` et
+  // `--reset-2fa` l'incrémentent, et tout jeton signé avant cesse de valoir.
+  it('refuse un jeton d’une AUTRE époque de session : déconnecté ou réinitialisé depuis', async () => {
+    const stubs = buildStubs();
+    stubs.jwt.verifyAsync.mockResolvedValue({ sub: 'admin-1', adm: true, mfa: true, ep: 2 });
+
+    await expect(buildGuard(stubs).canActivate(contextFor(bearer))).rejects.toThrow(
+      'Session administrateur expirée ou invalide.',
+    );
+  });
+
+  it('refuse un jeton SANS époque : signé avant la révocation possible', async () => {
+    const stubs = buildStubs();
+    stubs.jwt.verifyAsync.mockResolvedValue({ sub: 'admin-1', adm: true, mfa: true });
+
+    await expect(buildGuard(stubs).canActivate(contextFor(bearer))).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('nominal : attache le principal (identité et permissions relues en base)', async () => {

@@ -36,7 +36,8 @@ export class AdminTotpService {
   async challengeFor(admin: AdminWithAccess): Promise<{ challengeToken: string }> {
     if (admin.totpSecret === null) throw new ForbiddenException(TOTP_NOT_ISSUED_MESSAGE);
     const challengeToken = await this.jwt.signAsync(
-      { mfa: 'pending' },
+      // `ep` : un mot de passe réinitialisé entre les deux étapes rend le défi caduc.
+      { mfa: 'pending', ep: admin.sessionEpoch },
       {
         subject: admin.id,
         secret: this.config.jwtAccessSecret,
@@ -48,16 +49,25 @@ export class AdminTotpService {
     return { challengeToken };
   }
 
-  /** L'administrateur du jeton de première étape, ou 401. */
-  async adminIdOf(challengeToken: string): Promise<string> {
+  /** L'administrateur du jeton de première étape et son époque de session, ou 401. */
+  async challengeOf(challengeToken: string): Promise<{ adminUserId: string; epoch: number }> {
     try {
-      const payload = await this.jwt.verifyAsync<{ sub?: unknown; mfa?: unknown }>(challengeToken, {
-        secret: this.config.jwtAccessSecret,
-        algorithms: ['HS256'],
-        issuer: this.config.jwtIssuer,
-        audience: ADMIN_MFA_AUDIENCE,
-      });
-      if (payload.mfa === 'pending' && typeof payload.sub === 'string') return payload.sub;
+      const payload = await this.jwt.verifyAsync<{ sub?: unknown; mfa?: unknown; ep?: unknown }>(
+        challengeToken,
+        {
+          secret: this.config.jwtAccessSecret,
+          algorithms: ['HS256'],
+          issuer: this.config.jwtIssuer,
+          audience: ADMIN_MFA_AUDIENCE,
+        },
+      );
+      if (
+        payload.mfa === 'pending' &&
+        typeof payload.sub === 'string' &&
+        typeof payload.ep === 'number'
+      ) {
+        return { adminUserId: payload.sub, epoch: payload.ep };
+      }
     } catch {
       // Expiré, altéré ou d'une autre audience : même réponse.
     }

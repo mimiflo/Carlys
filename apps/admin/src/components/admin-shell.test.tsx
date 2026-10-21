@@ -213,6 +213,7 @@ describe('AdminShell', () => {
   it('la déconnexion efface AUSSI les permissions, pas seulement le jeton', () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(SUPER_ADMIN);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 
     render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
     fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
@@ -220,6 +221,26 @@ describe('AdminShell', () => {
     expect(adminToken.get()).toBeNull();
     expect(adminPermissions.get()).toEqual([]);
     expect(routerReplace).toHaveBeenCalledWith('/login');
+    vi.unstubAllGlobals();
+  });
+
+  // Le jeton vit 12 h : sans cet appel, il survivait à la déconnexion. La
+  // session locale, elle, n'attend pas la réponse : partir est immédiat.
+  it('la déconnexion demande au serveur de révoquer la session, sans l’attendre', () => {
+    adminToken.set('jeton-admin');
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => undefined));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+    fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/api/v1/admin/auth/logout',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(adminToken.get()).toBeNull();
+    expect(routerReplace).toHaveBeenCalledWith('/login');
+    vi.unstubAllGlobals();
   });
 });
 

@@ -20,12 +20,13 @@ interface Stubs {
     findAdminById: jest.Mock;
     markLogin: jest.Mock;
     reserveTotpAttempt: jest.Mock;
+    revokeSessions: jest.Mock;
   };
   passwords: { verify: jest.Mock; hash: jest.Mock };
   jwt: { signAsync: jest.Mock };
   audit: { record: jest.Mock };
   lockout: { reserveAttempt: jest.Mock; reset: jest.Mock };
-  totp: { challengeFor: jest.Mock; adminIdOf: jest.Mock; consumeCode: jest.Mock };
+  totp: { challengeFor: jest.Mock; challengeOf: jest.Mock; consumeCode: jest.Mock };
 }
 
 function adminRow(overrides: Record<string, unknown> = {}): unknown {
@@ -40,6 +41,7 @@ function adminRow(overrides: Record<string, unknown> = {}): unknown {
     totpEnabledAt: new Date('2026-10-01'),
     totpLastStep: null,
     totpFailedAttempts: 0,
+    sessionEpoch: 4,
     createdAt: new Date(),
     updatedAt: new Date(),
     roles: [
@@ -77,6 +79,7 @@ function buildStubs(): Stubs {
       findAdminById: jest.fn().mockResolvedValue(adminRow()),
       markLogin: jest.fn().mockResolvedValue(undefined),
       reserveTotpAttempt: jest.fn().mockResolvedValue(true),
+      revokeSessions: jest.fn().mockResolvedValue(undefined),
     },
     passwords: {
       verify: jest.fn().mockResolvedValue(true),
@@ -90,7 +93,7 @@ function buildStubs(): Stubs {
     },
     totp: {
       challengeFor: jest.fn().mockResolvedValue({ challengeToken: 'defi' }),
-      adminIdOf: jest.fn().mockResolvedValue('admin-1'),
+      challengeOf: jest.fn().mockResolvedValue({ adminUserId: 'admin-1', epoch: 4 }),
       consumeCode: jest.fn().mockResolvedValue(true),
     },
   };
@@ -146,12 +149,37 @@ describe('AdminAuthService', () => {
     expect(result.accessToken).toBe('jeton-admin');
     expect(result.admin.roles).toEqual(['support']);
     expect(result.admin.permissions).toEqual(['audit:read', 'user:read']);
+    // `ep` : l'époque de session du compte, que le garde compare à chaque requête.
     expect(stubs.jwt.signAsync).toHaveBeenCalledWith(
-      { adm: true, mfa: true },
+      { adm: true, mfa: true, ep: 4 },
       expect.objectContaining({ audience: 'carlys-admin', subject: 'admin-1' }),
     );
     expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin-totp:admin-1');
     expect(stubs.admins.markLogin).toHaveBeenCalledWith('admin-1');
+  });
+
+  it('défi d’une époque révolue (mot de passe ou 2FA réinitialisés depuis) : 401, aucune session', async () => {
+    const stubs = buildStubs();
+    stubs.totp.challengeOf.mockResolvedValue({ adminUserId: 'admin-1', epoch: 3 });
+
+    await expect(
+      buildService(stubs).verifySecondFactor({ challengeToken: 'defi', code: '123456' }, CLIENT),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(stubs.totp.consumeCode).not.toHaveBeenCalled();
+    expect(stubs.jwt.signAsync).not.toHaveBeenCalled();
+    // Un défi révolu ne rapproche pas le compte du gel : aucun essai consommé.
+    expect(stubs.admins.reserveTotpAttempt).not.toHaveBeenCalled();
+  });
+
+  it('déconnexion : l’époque avance (tous les jetons du compte tombent), et c’est audité', async () => {
+    const stubs = buildStubs();
+
+    await buildService(stubs).logout('admin-1', CLIENT);
+
+    expect(stubs.admins.revokeSessions).toHaveBeenCalledWith('admin-1');
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.logout', adminUserId: 'admin-1' }),
+    );
   });
 
   it('code faux ou déjà servi : 401, audité, aucune session', async () => {

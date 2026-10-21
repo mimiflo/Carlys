@@ -48,6 +48,19 @@ export class AdminAuthController {
     return this.adminAuth.verifySecondFactor(dto, clientContextOf(request));
   }
 
+  /**
+   * Révoque TOUTES les sessions de l'administrateur (époque de session) : le
+   * jeton présenté comme ceux d'autres onglets. 204, sans corps.
+   */
+  @Post('logout')
+  @UseGuards(AdminAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Déconnexion : révoque toutes les sessions de l’administrateur' })
+  logout(@CurrentAdmin() admin: AdminPrincipal, @Req() request: RequestWithId): Promise<void> {
+    return this.adminAuth.logout(admin.adminUserId, clientContextOf(request));
+  }
+
   @Get('me')
   @UseGuards(AdminAuthGuard)
   @ApiBearerAuth()

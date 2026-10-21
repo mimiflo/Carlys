@@ -81,6 +81,65 @@ describe('parsePage', () => {
  * attache le jeton, qui lit (ou non) le corps, et qui traduit un refus du
  * serveur en erreur exploitable par l'interface.
  */
+/**
+ * Déconnexion AU MIEUX : le serveur révoque les sessions du compte (le jeton
+ * vit 12 h, et sans cet appel il survivait à la déconnexion), mais la session
+ * locale s'efface quoi qu'il réponde — un serveur injoignable n'empêche
+ * jamais de partir.
+ */
+describe('adminApi.logout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    adminToken.clear();
+  });
+
+  it('appelle POST /admin/auth/logout AVEC le jeton, puis efface la session locale', async () => {
+    adminToken.set('jeton-admin');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await adminApi.logout();
+
+    const [url, init] = requestOf(fetchMock);
+    expect(url).toBe('http://localhost:3000/api/v1/admin/auth/logout');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jeton-admin');
+    expect(adminToken.get()).toBeNull();
+    expect(adminToken.wasExpired()).toBe(false);
+  });
+
+  it('serveur injoignable : la session locale s’efface quand même, sans lever', async () => {
+    adminToken.set('jeton-admin');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(adminApi.logout()).resolves.toBeUndefined();
+
+    expect(adminToken.get()).toBeNull();
+  });
+
+  it('jeton déjà refusé (401) : déconnecté, sans la marque « session expirée »', async () => {
+    adminToken.set('jeton-admin');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(respond({ error: { message: 'x' } }, 401)));
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await adminApi.logout();
+
+    expect(adminToken.get()).toBeNull();
+    expect(adminToken.wasExpired()).toBe(false);
+  });
+
+  it('sans jeton : aucun appel', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await adminApi.logout();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('transport JSON', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

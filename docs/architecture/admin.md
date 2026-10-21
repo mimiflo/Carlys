@@ -194,6 +194,13 @@ ramenait à la connexion. Désormais :
   expiré » ; une nouvelle connexion efface la marque ;
 - la connexion part **sans** jeton (`requestJson(..., null)`) : un mot de
   passe faux (401) n'est jamais lu comme une fin de session ;
+- **« Se déconnecter » révoque côté serveur** (octobre 2026) :
+  `adminApi.logout` envoie `POST /admin/auth/logout` avec le jeton, puis
+  efface la session locale SANS attendre la réponse. La route avance
+  l'époque de session du compte : ce jeton et ceux des autres onglets
+  reçoivent 401. Un échec réseau est journalisé en console, jamais bloquant ;
+  hors de `call`, un 401 ici n'affiche pas « session expirée »
+  (`docs/security/authentication.md` §4.7) ;
 - la garde de la coquille consulte le STOCKAGE, pas la valeur rendue : à
   l'hydratation d'une page statique, l'instantané serveur vaut `null`, et
   l'effet renvoyait vers `/login` un administrateur connecté à chaque

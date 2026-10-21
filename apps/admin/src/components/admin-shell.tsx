@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { adminToken } from '@/lib/admin-api';
+import { adminApi, adminToken } from '@/lib/admin-api';
 import { AdminNav, firstAllowedRoute } from './admin-nav';
 import { CarlysMark, CloseIcon, LogoutIcon, MenuIcon } from './ui/icons';
 import { useAdminPermissions } from './use-admin-permissions';
@@ -151,7 +151,8 @@ export function AdminShell({
           <button
             type="button"
             onClick={() => {
-              adminToken.clear();
+              // Révocation côté serveur au mieux ; la session locale part tout de suite.
+              void adminApi.logout();
               router.replace('/login');
             }}
             className="flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-150 hover:bg-danger/8 hover:text-danger-ink"

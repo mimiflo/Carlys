@@ -182,7 +182,9 @@ export async function bootstrapAdmin(
         })
       : await prisma.adminUser.update({
           where: { id: existing.id },
-          data: { passwordHash, status: 'ACTIVE' },
+          // L'époque avance : les sessions ouvertes avec l'ancien mot de passe
+          // (12 h) tombent avec lui — le dépannage d'un compte volé l'exige.
+          data: { passwordHash, status: 'ACTIVE', sessionEpoch: { increment: 1 } },
         });
 
   // LES RÔLES NE SE TOUCHENT PAS À LA LÉGÈRE.
@@ -219,7 +221,8 @@ export async function bootstrapAdmin(
 /**
  * Émet un NOUVEAU secret de double authentification, chiffré, et le rend
  * pour l'affichage : l'ancien cesse aussitôt de valoir, les codes faux
- * repartent de zéro. L'audit en garde la trace.
+ * repartent de zéro, les sessions ouvertes sont révoquées (époque). L'audit
+ * en garde la trace.
  */
 export async function issueAdminTotp(
   email: string,
@@ -237,6 +240,8 @@ export async function issueAdminTotp(
         totpEnabledAt: null,
         totpLastStep: null,
         totpFailedAttempts: 0,
+        // Téléphone perdu ou volé : les sessions qu'il a ouvertes tombent aussi.
+        sessionEpoch: { increment: 1 },
       },
     }),
     prisma.auditLog.create({

@@ -28,7 +28,10 @@ import { AdminTotpService, EXPIRED_CHALLENGE_MESSAGE } from './admin-totp.servic
 
 /** Audience JWT dédiée : un jeton admin n'est JAMAIS accepté côté mobile (et inversement). */
 export const ADMIN_JWT_AUDIENCE = 'carlys-admin';
-/** Durée de vie du jeton admin — pas de refresh : reconnexion quotidienne. */
+/**
+ * Durée de vie du jeton admin — pas de refresh : reconnexion quotidienne.
+ * Révocable avant l'échéance par l'époque de session (`ep`, voir `logout`).
+ */
 const ADMIN_TOKEN_TTL_SECONDS = 12 * 3_600;
 
 const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou mot de passe incorrect.';
@@ -144,7 +147,7 @@ export class AdminAuthService {
     input: { challengeToken: string; code: string },
     client: { ipAddress?: string; userAgent?: string },
   ): Promise<AdminLoginResult> {
-    const adminUserId = await this.totp.adminIdOf(input.challengeToken);
+    const { adminUserId, epoch } = await this.totp.challengeOf(input.challengeToken);
     const lock = await this.lockout.reserveAttempt(totpLockoutIdentifier(adminUserId));
     if (lock.locked) {
       this.audit.record({
@@ -154,6 +157,12 @@ export class AdminAuthService {
         ...client,
       });
       throw new HttpException(lockoutMessage(lock), HttpStatus.TOO_MANY_REQUESTS);
+    }
+    const admin = await this.admins.findAdminById(adminUserId);
+    // Une autre époque : mot de passe ou 2FA réinitialisés depuis le défi. Avant
+    // l'essai en base : un défi révolu ne rapproche pas le compte du gel.
+    if (admin === null || admin.status !== AdminUserStatus.ACTIVE || admin.sessionEpoch !== epoch) {
+      throw new UnauthorizedException(EXPIRED_CHALLENGE_MESSAGE);
     }
     // Le verrou Redis RALENTIT (et cède si Redis tombe) ; celui-ci, en base,
     // PLAFONNE : au-delà, plus aucun code n'est vérifié avant `--reset-2fa`.
@@ -165,10 +174,6 @@ export class AdminAuthService {
         ...client,
       });
       throw new ForbiddenException(FROZEN_TOTP_MESSAGE);
-    }
-    const admin = await this.admins.findAdminById(adminUserId);
-    if (admin === null || admin.status !== AdminUserStatus.ACTIVE) {
-      throw new UnauthorizedException(EXPIRED_CHALLENGE_MESSAGE);
     }
     const enrolling = admin.totpEnabledAt === null;
     if (!(await this.totp.consumeCode(admin, input.code))) {
@@ -201,7 +206,9 @@ export class AdminAuthService {
     const accessToken = await this.jwt.signAsync(
       // `mfa` : la session vient d'un code juste. Le garde l'EXIGE, et refuse
       // donc les sessions ouvertes au seul mot de passe, d'avant la 2FA.
-      { adm: true, mfa: true },
+      // `ep` : l'époque de session du compte. Le garde refuse tout jeton d'une
+      // autre époque : c'est ainsi qu'une session de 12 h se révoque.
+      { adm: true, mfa: true, ep: admin.sessionEpoch },
       {
         subject: admin.id,
         secret: this.config.jwtAccessSecret,
@@ -216,6 +223,20 @@ export class AdminAuthService {
       expiresInSeconds: ADMIN_TOKEN_TTL_SECONDS,
       admin: presentAdmin(admin),
     };
+  }
+
+  /**
+   * Déconnexion : l'époque de session avance, et TOUS les jetons du compte
+   * cessent de valoir — cet onglet comme ceux restés ouverts ailleurs. Un
+   * jeton sans état ne se révoque pas un par un ; c'est le prix d'une
+   * révocation sans liste noire, et une reconnexion le paie.
+   */
+  async logout(
+    adminUserId: string,
+    client: { ipAddress?: string; userAgent?: string },
+  ): Promise<void> {
+    await this.admins.revokeSessions(adminUserId);
+    this.audit.record({ action: 'admin.logout', actorType: 'ADMIN', adminUserId, ...client });
   }
 
   async me(adminUserId: string): Promise<AdminMe> {

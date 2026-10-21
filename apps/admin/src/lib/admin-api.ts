@@ -31,7 +31,15 @@ import {
   type MediaKind,
 } from '@carlys/api-contracts';
 import { z } from 'zod';
-import { call, callUpload, parseData, parsePage, query, type Page } from './admin-api-client';
+import {
+  adminToken,
+  call,
+  callUpload,
+  parseData,
+  parsePage,
+  query,
+  type Page,
+} from './admin-api-client';
 import { communityApi } from './admin-community-api';
 import { ApiError, requestJson } from './api-transport';
 
@@ -101,6 +109,28 @@ export const adminApi = {
       null,
     );
     return parseData(body, adminLoginResultSchema);
+  },
+
+  /**
+   * Déconnexion AU MIEUX. Le serveur avance l'époque de session du compte :
+   * ce jeton (12 h) et ceux des autres onglets cessent de valoir. La session
+   * locale s'efface aussitôt la requête partie, sans attendre sa réponse : un
+   * serveur injoignable n'empêche jamais de partir. Hors de `call` : un 401
+   * ici n'est pas une « session expirée » à annoncer.
+   */
+  logout(): Promise<void> {
+    const token = adminToken.get();
+    if (token === null) return Promise.resolve();
+    const revoked = requestJson('/admin/auth/logout', { method: 'POST', keepalive: true }, token);
+    adminToken.clear();
+    return revoked.then(
+      () => undefined,
+      (cause: unknown) => {
+        // Rien à montrer : la personne est déjà déconnectée ici. Le jeton
+        // reste valable côté serveur jusqu'à son échéance (12 h au plus).
+        console.warn('Déconnexion : la révocation côté serveur a échoué.', cause);
+      },
+    );
   },
 
   async me(): Promise<AdminMe> {
