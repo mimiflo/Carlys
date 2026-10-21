@@ -136,8 +136,10 @@ celle de la chaîne réelle, le 12 octobre 2026 : rtr1 ajoute, et c'est sûr) so
   environnement : c'est l'API qui doit refuser un fichier trop lourd, avec son
   enveloppe d'erreur, et Nginx qui ne doit jamais couper avant elle. Même
   règle pour la photo d'un repas : `6m` sur
-  `~ ^/api/v1/nutrition/meals/[^/]+/photo$`, au-dessus des 5 Mio de
-  `MEAL_PHOTO_MAX_BYTES` et de l'enveloppe multipart. (Le reverse proxy
+  `~ ^/api/v1/nutrition/meals/[^/]+/photo$` et sur
+  `= /api/v1/nutrition/meal-scans` (le scan d'assiette, même borne),
+  au-dessus des 5 Mio de `MEAL_PHOTO_MAX_BYTES` et de l'enveloppe multipart ;
+  `tests/nginx_test.sh` envoie 3 et 7 Mio sur les deux. (Le reverse proxy
   réseau en tête, rtr1, doit laisser passer au moins autant.)
 - **`/metrics` refusé** publiquement : le collecteur l'interroge sur la boucle
   locale.

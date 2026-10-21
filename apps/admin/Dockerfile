@@ -2,7 +2,14 @@
 # Contexte de build attendu : la RACINE du monorepo.
 #   docker build -f apps/admin/Dockerfile .
 
-FROM node:22-alpine AS base
+# IMAGE DE BASE ÉPINGLÉE PAR EMPREINTE, comme infrastructure/minio/Dockerfile :
+# `node:22-alpine` est une étiquette mobile — chaque build pouvait tirer une
+# autre image, et un registre compromis y substituer la sienne. L'empreinte
+# est celle de l'INDEX multi-architecture (amd64 et arm64 y résolvent chacun
+# leur image). Dependabot (.github/dependabot.yml, écosystème docker) ouvre
+# la montée de version ; scripts/ci/verifier_dockerfiles.py refuse un FROM
+# externe sans empreinte. Les deux FROM de ce fichier portent la même.
+FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -51,7 +58,7 @@ ENV LEGAL_PLACEHOLDERS=$LEGAL_PLACEHOLDERS
 RUN pnpm --filter "@carlys/admin..." run build
 
 # ── Image d'exécution ─────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runtime
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3001

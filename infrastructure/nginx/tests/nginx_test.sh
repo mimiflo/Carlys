@@ -12,7 +12,9 @@
 #   - le JSON de l'API part compressé, y compris relayé en HTTP/1.0 par un
 #     proxy (rtr1), mais pas les petites réponses ni celles
 #     d'authentification ;
-#   - le flux SSE du coach passe évènement par évènement, sans être retenu.
+#   - le flux SSE du coach passe évènement par évènement, sans être retenu ;
+#   - les photos (photo d'un repas, scan d'assiette) passent jusqu'à 6 Mio,
+#     quand tout autre corps reste coupé à 1 Mio.
 #
 # Aucun droit root n'est requis : nginx tourne sur un port haut de la boucle
 # locale, avec ses fichiers dans un dossier jetable. Sans nginx sur la
@@ -63,7 +65,18 @@ class Gestion(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(corps)))
         self.end_headers()
         self.wfile.write(corps)
+    def do_PUT(self):
+        # Un envoi de photo : le corps est lu en entier, puis acquitté.
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        corps = b'{"data":{"recu":true}}'
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(corps)))
+        self.end_headers()
+        self.wfile.write(corps)
     def do_POST(self):
+        if "/coach/" not in self.path:
+            return self.do_PUT()
         # Un flux SSE comme celui du coach : un évènement, une pause, un autre.
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -190,6 +203,23 @@ for hote in api.carlys.example api-staging.carlys.example; do
   e="$(curl -s -D - -o /dev/null -X POST -H "Host: $hote" "http://127.0.0.1:$PORT/api/v1/coach/conversations/c/messages/stream" | tr -d '\r')"
   verifier "$hote : X-Accel-Buffering transmis à rtr1" oui \
     "$(grep -qi '^x-accel-buffering: no' <<< "$e" && echo oui || echo non)"
+done
+
+echo
+echo "taille des envois : 6 Mio pour une photo, 1 Mio pour le reste"
+# 3 Mio : sous les 5 Mio de MEAL_PHOTO_MAX_BYTES, au-dessus du 1 Mio général.
+head -c 3145728 /dev/zero > "$T/photo-3m.jpg"
+head -c 7340032 /dev/zero > "$T/photo-7m.jpg"
+envoi() { curl -s -o /dev/null -w '%{http_code}' -H 'Expect:' -H "Host: $1" -X "$2" --data-binary "@$T/$3" "http://127.0.0.1:$PORT$4"; }
+for hote in api.carlys.example api-staging.carlys.example; do
+  verifier "$hote : scan d'assiette de 3 Mio transmis à l'API" 200 \
+    "$(envoi "$hote" POST photo-3m.jpg /api/v1/nutrition/meal-scans)"
+  verifier "$hote : photo d'un repas de 3 Mio transmise à l'API" 200 \
+    "$(envoi "$hote" PUT photo-3m.jpg /api/v1/nutrition/meals/m/photo)"
+  verifier "$hote : scan d'assiette de 7 Mio coupé par nginx" 413 \
+    "$(envoi "$hote" POST photo-7m.jpg /api/v1/nutrition/meal-scans)"
+  verifier "$hote : 3 Mio ailleurs dans l'API restent coupés à 1 Mio" 413 \
+    "$(envoi "$hote" POST photo-3m.jpg /api/v1/nutrition/meals)"
 done
 
 echo

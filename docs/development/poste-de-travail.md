@@ -176,7 +176,23 @@ flutter run \
   --dart-define=CARLYS_API_BASE_URL=http://192.168.1.10:3000
 ```
 
-Le pare-feu du poste doit laisser entrer le port 3000.
+Le pare-feu du poste doit laisser entrer le port 3000. `pnpm dev:api` écoute
+sur toutes les interfaces. L'API conteneurisée (`docker compose --profile
+app`), elle, reste sur la boucle locale tant que `API_BIND=0.0.0.0` n'est pas
+posé dans le `.env` racine — avec alors un `JWT_ACCESS_SECRET` à soi : la
+valeur par défaut est publiée dans le dépôt, et permettrait à quiconque sur le
+même Wi-Fi de forger des jetons.
+
+**Les photos du catalogue**, elles, viennent de MinIO (port 9000), que
+`docker-compose.yml` ne publie que sur la boucle locale : ses identifiants
+root par défaut sont écrits dans le dépôt. Pour les voir sur le téléphone,
+le temps de l'essai : `MINIO_S3_BIND=0.0.0.0` dans le `.env` racine, puis
+`docker compose up -d minio` ; et l'IP du poste dans `S3_PUBLIC_BASE_URL`
+(`http://192.168.1.10:9000/carlys-media`) — dans `apps/api/.env` pour
+`pnpm dev:api`, dans le `.env` racine pour l'API conteneurisée —, puis
+redémarrer l'API. À retirer après l'essai : c'est l'API S3 entière qui
+s'ouvre au réseau local. PostgreSQL, Redis, Mailpit et la console MinIO
+restent, eux, sur la boucle locale.
 
 ## 5. Les pièges qui coûtent une soirée
 

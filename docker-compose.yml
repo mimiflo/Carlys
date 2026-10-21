@@ -5,6 +5,16 @@
 #
 # En développement quotidien, l'API et l'admin se lancent plutôt en local
 # (`pnpm dev`) pour bénéficier du rechargement à chaud.
+#
+# PORTS SUR LA BOUCLE LOCALE (`127.0.0.1:`) : publié sans adresse, un port
+# s'ouvre sur TOUTES les interfaces du poste — Wi-Fi d'un café compris — et
+# ces services ont des identifiants par défaut écrits dans ce fichier
+# (PostgreSQL, MinIO root), Redis et Mailpit n'en ont aucun. Les outils du
+# poste (`pnpm dev`, psql, navigateur) n'y voient aucune différence.
+# Deux exceptions, pour le téléphone RÉEL qui joint le poste par son IP sur
+# le Wi-Fi (docs/development/poste-de-travail.md, § « Sur un vrai
+# téléphone ») : l'API du profil `app` et l'API S3 de MinIO s'ouvrent sur
+# demande seulement (API_BIND et MINIO_S3_BIND, ci-dessous).
 
 name: carlys
 
@@ -17,7 +27,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carlys_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-carlys_dev}
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infrastructure/database/init:/docker-entrypoint-initdb.d:ro
@@ -32,7 +42,7 @@ services:
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis-data:/data
     healthcheck:
@@ -45,8 +55,8 @@ services:
     image: axllent/mailpit:latest
     restart: unless-stopped
     ports:
-      - '1025:1025' # SMTP
-      - '8025:8025' # Interface web
+      - '127.0.0.1:1025:1025' # SMTP
+      - '127.0.0.1:8025:8025' # Interface web
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8025/livez']
       interval: 10s
@@ -82,8 +92,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-carlys-dev}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-carlys-dev-secret}
     ports:
-      - '9000:9000' # API S3
-      - '9001:9001' # Console
+      # Le téléphone réel charge les photos ICI, par S3_PUBLIC_BASE_URL : pour
+      # lui, MINIO_S3_BIND=0.0.0.0 dans .env, le temps de l'essai — c'est
+      # alors l'API S3 entière, identifiants root par défaut compris, qui
+      # s'ouvre au réseau local. La console, elle, ne quitte jamais le poste.
+      - '${MINIO_S3_BIND:-127.0.0.1}:9000:9000' # API S3
+      - '127.0.0.1:9001:9001' # Console
     volumes:
       - minio-data:/data
     healthcheck:
@@ -156,8 +170,13 @@ services:
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-carlys-dev}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-carlys-dev-secret}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/carlys-media}
+    # Boucle locale par défaut, comme le reste : ses jetons se signent avec
+    # JWT_ACCESS_SECRET, dont la valeur par défaut est publiée ci-dessus —
+    # ouverte au réseau, quiconque sur le même Wi-Fi pourrait en forger. Un
+    # téléphone réel qui la joint par l'IP du poste : API_BIND=0.0.0.0 dans
+    # .env, le temps de l'essai, avec un JWT_ACCESS_SECRET à soi.
     ports:
-      - '3000:3000'
+      - '${API_BIND:-127.0.0.1}:3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -177,7 +196,7 @@ services:
         LEGAL_PLACEHOLDERS: allow
     restart: unless-stopped
     ports:
-      - '3001:3001'
+      - '127.0.0.1:3001:3001'
     depends_on:
       - api
 

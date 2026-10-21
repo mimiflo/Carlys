@@ -11,9 +11,17 @@
 # ouvre donc une pull request par montée de version — le nouveau SHA s'y
 # relit avant fusion, et la CI passe dessus comme sur tout commit.
 #
-# Uniquement l'écosystème des actions : les dépendances JS ont `pnpm audit`
-# (security-ci.yml) et un lockfile, Dart a son pubspec.lock contraignant —
-# on ne double pas ces canaux ici.
+# Les actions, et les IMAGES DE BASE Node de l'API et de l'admin (même
+# raisonnement : `FROM node:…@sha256:…` est épinglé, donc gelé — Dependabot
+# propose la nouvelle version ET sa nouvelle empreinte d'index). Les
+# dépendances JS ont `pnpm audit` (security-ci.yml) et un lockfile, Dart a son
+# pubspec.lock contraignant et osv-scanner (security-ci.yml) — on ne double
+# pas ces canaux ici.
+#
+# PAS infrastructure/minio : sa version de golang DOIT égaler
+# CARLYS_MINIO_GO_VERSION (versions.env), que construire.sh vérifie ; une PR
+# Dependabot qui ne monterait que le FROM casserait la construction. Ses
+# épingles se montent à la main, avec versions.env.
 #
 # UNE SEULE PULL REQUEST PAR SEMAINE, groupée. Le dépôt avance par poussées
 # directes, pas par fusions : les PR séparées s'accumulaient sans suite (six
@@ -32,5 +40,23 @@ updates:
       interval: weekly
     groups:
       actions-github:
+        patterns:
+          - '*'
+
+  # Les deux Dockerfile portent la même image Node : qu'elle monte dans les
+  # deux à la fois, ou pas du tout. Les correctifs et mineures de Node 22
+  # seulement : une majeure se décide avec la CI (`node-version: 22` d'api-ci,
+  # admin-ci, security-ci), pas par une PR d'image.
+  - package-ecosystem: docker
+    directories:
+      - /apps/api
+      - /apps/admin
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
+    groups:
+      images-node:
         patterns:
           - '*'

@@ -172,7 +172,9 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `POSTGRES_DB` | Base de développement | `carlys_dev` |
 | `MINIO_ROOT_USER` | Identifiant MinIO | `carlys-dev` |
 | `MINIO_ROOT_PASSWORD` | Secret MinIO | `carlys-dev-secret` |
-| `S3_PUBLIC_BASE_URL` | Adresse des médias telle que le CLIENT la voit — mettre l'IP du poste pour tester depuis un téléphone | `http://localhost:9000/carlys-media` |
+| `S3_PUBLIC_BASE_URL` | Adresse des médias telle que le CLIENT la voit — mettre l'IP du poste pour tester depuis un téléphone (avec `MINIO_S3_BIND`) | `http://localhost:9000/carlys-media` |
+| `API_BIND` | Interface où l'API conteneurisée (profil `app`) publie son port 3000. Boucle locale par défaut ; `0.0.0.0` le temps d'un essai sur téléphone réel, avec un `JWT_ACCESS_SECRET` à soi | `127.0.0.1` |
+| `MINIO_S3_BIND` | Interface où MinIO publie son API S3 (9000). Boucle locale par défaut ; `0.0.0.0` le temps d'un essai sur téléphone réel, qui ouvre alors l'API S3 et ses identifiants root au réseau local | `127.0.0.1` |
 | `JWT_ACCESS_SECRET` | Signature des jetons d'accès du profil `api` de compose | `openssl rand -base64 48` |
 
 Ce tableau ne liste **que** ce que `docker-compose.yml` interpole réellement.
@@ -340,6 +342,12 @@ docker compose --profile app up      # infrastructure + API + Admin conteneuris�
 docker compose down                  # arrêt (ajouter -v pour purger les volumes)
 ```
 
+Tous les ports sont publiés sur la **boucle locale** (`127.0.0.1`), jamais sur
+le réseau du poste : ces services ont des identifiants par défaut, publiés
+dans `docker-compose.yml`. Seules exceptions, pour un téléphone réel sur le
+même Wi-Fi : l'API conteneurisée (3000), ouverte, et l'API S3 de MinIO (9000),
+sur demande (`MINIO_S3_BIND=0.0.0.0` dans `.env`).
+
 | Service | Image | Ports | Rôle |
 | --- | --- | --- | --- |
 | `postgres` | `postgres:17-alpine` | 5432 | Base de données (init : extension `citext` + base `carlys_test`) |
@@ -347,7 +355,7 @@ docker compose down                  # arrêt (ajouter -v pour purger les volume
 | `mailpit` | `axllent/mailpit` | 1025 (SMTP), 8025 (UI) | Réception des e-mails de dev |
 | `minio` | build `infrastructure/minio/Dockerfile`, cible `minio` — construit depuis les sources officielles (AGPLv3), aucun registre MinIO | 9000 (S3), 9001 (console) | Stockage compatible S3 |
 | `minio-init` | build `infrastructure/minio/Dockerfile`, cible `mc` | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement), puis le bucket PRIVÉ `carlys-private` (photos de repas), sans aucune politique d'accès |
-| `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 | API conteneurisée |
+| `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 (toutes interfaces) | API conteneurisée |
 | `admin` (profil `app`) | build `apps/admin/Dockerfile` | 3001 | Admin conteneurisé (output standalone) |
 
 **Pourquoi MinIO se construit sur place.** Ses images officielles ont disparu de

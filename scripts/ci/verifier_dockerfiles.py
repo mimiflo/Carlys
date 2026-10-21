@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Les Dockerfile de l'API et de l'admin installent AVANT de copier les sources.
+"""Les Dockerfile de l'API et de l'admin installent AVANT de copier les sources,
+et toute image de base externe du dépôt est épinglée par empreinte.
 
     python3 scripts/ci/verifier_dockerfiles.py [racine du dépôt]
 
@@ -19,6 +20,14 @@ Il échoue si :
   - une source est copiée AVANT l'installation (le cache serait perdu) ;
   - `packages` est copié en entier ;
   - pour l'admin, un argument de build est posé avant l'installation.
+
+ÉPINGLAGE. Un `FROM` qui ne désigne pas un étage du même fichier doit porter
+`@sha256:<64 hex>` : une étiquette (`node:22-alpine`) se déplace, une
+empreinte non — un build ne tire alors jamais une image qu'on n'a pas relue.
+Vaut pour CHAQUE Dockerfile versionné (API, admin, MinIO…), pas seulement
+les deux ci-dessus. Dependabot (écosystème docker) monte celles de Node ;
+MinIO les monte à la main, avec versions.env.
+
 Rend 0 si tout va bien, 1 sinon, en nommant chaque écart.
 """
 import json
@@ -107,16 +116,42 @@ def verifier(app: str, nom: str, tous: dict[str, str]) -> list[str]:
     return ecarts
 
 
+def images_non_epinglees(fichier: Path) -> list[str]:
+    """Les `FROM` d'image externe sans empreinte (un étage déjà nommé n'en est pas une)."""
+    ecarts, etages = [], set()
+    for ligne in fichier.read_text(encoding="utf-8").splitlines():
+        mots = ligne.split()
+        if not mots or mots[0].upper() != "FROM":
+            continue
+        mots = [m for m in mots[1:] if not m.startswith("--")]  # --platform=…
+        image = mots[0] if mots else ""
+        externe = image.lower() not in etages and image != "scratch"
+        if len(mots) >= 3 and mots[1].upper() == "AS":
+            etages.add(mots[2].lower())
+        if externe and not re.search(r"@sha256:[0-9a-f]{64}$", image):
+            ecarts.append(f"{fichier.relative_to(RACINE)} : `FROM {image}` n'est pas épinglé par empreinte "
+                          "(attendu image:version@sha256:<index multi-architecture>)")
+    return ecarts
+
+
+def dockerfiles() -> list[Path]:
+    return sorted(f for f in RACINE.rglob("Dockerfile")
+                  if not {"node_modules", ".git", "graphify-out"} & set(f.relative_to(RACINE).parts))
+
+
 def main() -> int:
     tous = paquets_du_workspace()
     ecarts = []
     for app, nom in APPLICATIONS.items():
         ecarts += verifier(app, nom, tous)
+    for fichier in dockerfiles():
+        ecarts += images_non_epinglees(fichier)
     for ecart in ecarts:
         print(f"ÉCART  {ecart}", file=sys.stderr)
     if not ecarts:
         print("ok  les Dockerfile de l'API et de l'admin installent avant de copier leurs sources, "
-              "et copient exactement les paquets de workspace qu'ils utilisent")
+              "et copient exactement les paquets de workspace qu'ils utilisent ; "
+              f"les images de base des {len(dockerfiles())} Dockerfile sont épinglées par empreinte")
     return 1 if ecarts else 0
 
 

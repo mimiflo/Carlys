@@ -113,6 +113,19 @@ server {
         proxy_pass http://carlys_api_staging;
     }
 
+    # ── Scan d'assiette : même photo, mêmes 5 Mio (MEAL_PHOTO_MAX_BYTES) ───
+    #
+    # POST /api/v1/nutrition/meal-scans reçoit un JPEG sous la même borne que
+    # la photo d'un repas : même plafond Nginx, pour la même raison. Sans
+    # cette location, le préfixe /api/ le coupait à 1 Mio — une page 413 de
+    # Nginx, illisible pour l'appli, au lieu de la réponse de l'API.
+    # Correspondance exacte : le chemin n'a pas de segment variable, et la
+    # relecture GET …/meal-scans/:id, sans corps, reste sous le préfixe /api/.
+    location = /api/v1/nutrition/meal-scans {
+        client_max_body_size 6m;
+        proxy_pass http://carlys_api_staging;
+    }
+
     location /api/ {
         proxy_pass http://carlys_api_staging;
     }

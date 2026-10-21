@@ -13,12 +13,13 @@ name: security-ci
 #
 # L'arbitrage coûte ici beaucoup moins cher qu'ailleurs : ce workflow n'a aucun
 # filtre `paths` (un secret peut apparaître dans n'importe quel fichier, la
-# porte doit donc s'ouvrir à chaque poussée), mais ses deux jobs sont légers —
+# porte doit donc s'ouvrir à chaque poussée), mais ses trois jobs sont légers —
 # le scan de tout l'historique se compte en SECONDES, sur quelques milliers de
 # fragments et une poignée de mégaoctets. Les trois nombres exacts grossissent
 # à chaque commit : les graver ici les périmerait, TruffleHog imprime lui-même
 # son bilan (fragments, octets, durée) à la fin du job, et c'est là qu'il faut
-# les relire. L'audit, lui, se résume à une installation pnpm. Le `concurrency`
+# les relire. L'audit, lui, se résume à une installation pnpm, et celui de
+# Dart à la lecture d'un seul lockfile. Le `concurrency`
 # borne le reste : son `cancel-in-progress` ne garde qu'une exécution par
 # rafale de poussées. Le `schedule` hebdomadaire, lui, sert autre chose que les
 # poussées : il rattrape les vulnérabilités publiées APRÈS le dernier commit.
@@ -137,3 +138,44 @@ jobs:
 
       - name: Audit (vulnérabilités high et critical)
         run: pnpm audit --audit-level high
+
+  # `pnpm audit` ne voit que le JavaScript : l'application mobile, la seule
+  # installée chez les gens, n'avait AUCUN contrôle d'avis de sécurité. Le
+  # pubspec.lock est contraignant (aucune version ne bouge sans commit) — ce
+  # qui fige aussi les versions vulnérables. osv-scanner confronte chacun de
+  # ses paquets à la base OSV (osv.dev, qui reprend les avis GitHub de
+  # l'écosystème Pub) et échoue au premier avis connu, quelle que soit sa
+  # gravité : l'outil n'a pas de seuil, et l'écosystème Pub en publie peu.
+  # Le `schedule` du lundi rattrape, ici aussi, les avis publiés après le
+  # dernier commit du lockfile.
+  #
+  # Un avis à écarter faute de correctif (même règle que
+  # docs/security/dependances.md) s'écrit dans apps/mobile/osv-scanner.toml
+  # (`[[IgnoredVulns]]`, `id`, `reason`, `ignoreUntil`), qu'osv-scanner lit
+  # à côté du lockfile — jamais en retirant ce job.
+  #
+  # L'action OFFICIELLE de Google, sous-action `osv-scanner-action` (le
+  # scanner seul), pas le workflow réutilisable : celui-ci téléverse un
+  # rapport SARIF et demande `security-events: write`. Ici, le jeton reste en
+  # lecture seule (permissions du workflow, ci-dessus). Épinglée par SHA de
+  # commit, comme toute action tierce. Sa limite, la même que l'action
+  # TruffleHog avant son épingle d'image : elle lance
+  # `ghcr.io/google/osv-scanner-action:v2.6.0` (son action.yml), une
+  # ÉTIQUETTE, qu'aucune entrée de l'action ne permet de remplacer par une
+  # empreinte.
+  dart:
+    name: Avis de sécurité Dart (osv-scanner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Le dépôt est monté dans le conteneur du scanner, .git compris :
+          # le jeton n'a rien à y faire, il ne lit qu'un fichier.
+          persist-credentials: false
+
+      - name: osv-scanner (apps/mobile/pubspec.lock)
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        with:
+          scan-args: |-
+            --lockfile=apps/mobile/pubspec.lock
