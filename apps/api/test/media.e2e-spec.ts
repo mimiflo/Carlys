@@ -23,6 +23,8 @@ import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import request from 'supertest';
 import { adminSession } from './support/admin-session';
 import { type App } from 'supertest/types';
@@ -58,6 +60,7 @@ describe('Médias (e2e)', () => {
   const memberEmail = `e2e-media-membre-${randomUUID()}@carlys.test`;
   const imageId = randomUUID();
   const meshId = randomUUID();
+  const jpegId = randomUUID();
 
   const data = <T>(body: unknown): T => (body as ApiSuccessEnvelope<T>).data;
 
@@ -139,7 +142,7 @@ describe('Médias (e2e)', () => {
 
   afterAll(async () => {
     await prisma.exercise.deleteMany({ where: { slug: 'e2e-media-illustre' } });
-    await prisma.mediaAsset.deleteMany({ where: { id: { in: [imageId, meshId] } } });
+    await prisma.mediaAsset.deleteMany({ where: { id: { in: [imageId, meshId, jpegId] } } });
     await prisma.adminUser.deleteMany({ where: { email: { in: [mediaEmail, readOnlyEmail] } } });
     await prisma.adminRole.deleteMany({
       where: { slug: { in: ['e2e-media-editeur', 'e2e-media-lecteur'] } },
@@ -175,6 +178,29 @@ describe('Médias (e2e)', () => {
 
     expect(response.status).toBe(200);
     expect(Buffer.from(await response.arrayBuffer())).toEqual(PNG_1X1);
+  });
+
+  // Le bucket des médias est PUBLIC : l'EXIF d'une photo dirait où, quand et
+  // avec quel appareil elle a été prise. Ce qui sort est ce qui a été stocké.
+  it('un JPEG porteur d’un EXIF GPS ressort SANS ses métadonnées', async () => {
+    const photo = readFileSync(join(__dirname, 'fixtures', 'jpeg', 'repas-exif-gps.jpg'));
+    expect(photo.includes(Buffer.from('Exif\0', 'latin1'))).toBe(true);
+
+    const asset = data<MediaAsset>(
+      (
+        await asAdmin(mediaToken)
+          .post('/api/v1/admin/media')
+          .field('id', jpegId)
+          .field('kind', 'IMAGE')
+          .attach('file', photo, { filename: 'IMG_0042.jpg', contentType: 'image/jpeg' })
+          .expect(201)
+      ).body,
+    );
+    const served = Buffer.from(await (await fetch(asset.url)).arrayBuffer());
+
+    expect(served.includes(Buffer.from('Exif\0', 'latin1'))).toBe(false);
+    expect(served.toString('latin1')).not.toMatch(/iPhone|GPSLatitude|Lilas/);
+    expect(asset).toMatchObject({ width: 48, height: 32, byteSize: served.length });
   });
 
   it('dépôt rejoué avec le même identifiant : un seul média, pas de doublon', async () => {

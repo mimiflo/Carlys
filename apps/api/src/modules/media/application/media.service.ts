@@ -14,6 +14,7 @@ import {
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type MediaAsset } from '@prisma/client';
 import { createHash } from 'node:crypto';
+import { ImageRejectedError, stripImageMetadata } from '../../../common/images/image-metadata';
 import { AppConfigService } from '../../../config/app-config.service';
 import { StorageService } from '../../../infrastructure/storage/storage.service';
 import { type AdminActor, AuditService } from '../../audit/audit.service';
@@ -21,12 +22,14 @@ import { ExercisesService } from '../../exercises/application/exercises.service'
 import { MediaRepository } from '../infrastructure/media.repository';
 import { readImageSize } from './image-size';
 
+/** Plafond par côté : au-delà, rien d'utile au catalogue, et `width`/`height` restent dans un `Int`. */
+const MAX_IMAGE_SIDE = 16_384;
+
 /** Extension déduite du type MIME — jamais du nom déposé. */
 const EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
   'image/png': 'png',
   'image/jpeg': 'jpg',
-  'image/avif': 'avif',
   'model/gltf-binary': 'glb',
   'model/gltf+json': 'gltf',
   'video/mp4': 'mp4',
@@ -68,22 +71,31 @@ export class MediaService {
     }
 
     this.assertAcceptable(input.kind, input.mimeType, input.content);
+    const content =
+      input.kind === 'IMAGE' ? this.withoutMetadata(input.mimeType, input.content) : input.content;
 
     const extension = EXTENSIONS[input.mimeType] ?? '';
     const key = StorageService.keyFor(input.kind, input.id, extension);
-    const size = input.kind === 'IMAGE' ? readImageSize(input.content) : null;
+    const size = input.kind === 'IMAGE' ? readImageSize(content) : null;
+    // Un IHDR à 4 294 967 295 débordait l'`Int` de Prisma APRÈS l'écriture
+    // dans le bucket : refusé ici, avant elle.
+    if (size !== null && Math.max(size.width, size.height) > MAX_IMAGE_SIDE) {
+      throw new UnsupportedMediaTypeException(
+        `Image refusée : plus de ${MAX_IMAGE_SIDE} pixels de côté.`,
+      );
+    }
 
-    await this.storage.put(key, input.content, input.mimeType);
+    await this.storage.put(key, content, input.mimeType);
 
     const created = await this.repository.create({
       id: input.id,
       kind: input.kind,
       storageKey: key,
       mimeType: input.mimeType,
-      byteSize: input.content.byteLength,
+      byteSize: content.byteLength,
       width: size?.width ?? null,
       height: size?.height ?? null,
-      checksum: createHash('sha256').update(input.content).digest('hex'),
+      checksum: createHash('sha256').update(content).digest('hex'),
       originalName: input.originalName,
       uploadedById: input.actor.adminUserId,
     });
@@ -190,6 +202,22 @@ export class MediaService {
     }
     if (!MEDIA_ALLOWED_MIME_TYPES[kind].includes(mimeType)) {
       throw new UnsupportedMediaTypeException(`Type « ${mimeType} » refusé pour un média ${kind}.`);
+    }
+  }
+
+  /**
+   * Une image du back-office est PUBLIQUE (bucket lisible sans jeton) : son
+   * EXIF dirait où, quand et avec quel appareil elle a été prise. Stockés :
+   * les octets NETTOYÉS ; illisibles, ils sont refusés plutôt que publiés.
+   */
+  private withoutMetadata(mimeType: string, content: Buffer): Buffer {
+    try {
+      return stripImageMetadata(mimeType, content);
+    } catch (error) {
+      if (error instanceof ImageRejectedError) {
+        throw new UnsupportedMediaTypeException(`Image refusée : ${error.message}`);
+      }
+      throw error;
     }
   }
 

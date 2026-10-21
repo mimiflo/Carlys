@@ -6,6 +6,10 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { type MediaAsset } from '@prisma/client';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { crc32 } from 'node:zlib';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type StorageService } from '../../../infrastructure/storage/storage.service';
 import { type AuditService } from '../../audit/audit.service';
@@ -14,6 +18,21 @@ import { type MediaRepository } from '../infrastructure/media.repository';
 import { MediaService } from './media.service';
 
 const ID = '11111111-1111-4111-8111-111111111111';
+
+/** WebP sans perte minimal (RIFF, VP8L 1×1) : de vrais octets, que le filtre sait lire. */
+const WEBP = Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==', 'base64');
+
+/** PNG réel redimensionné dans son IHDR (8×4 par défaut), somme de contrôle recalculée. */
+function pngSized(width = 8, height = 4): Buffer {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  png.writeUInt32BE(width, 16);
+  png.writeUInt32BE(height, 20);
+  png.writeUInt32BE(crc32(png.subarray(12, 29)), 29);
+  return png;
+}
 const ADMIN = '22222222-2222-4222-8222-222222222222';
 
 function row(overrides: Partial<MediaAsset> = {}): MediaAsset {
@@ -90,7 +109,7 @@ function upload(
     kind: 'IMAGE',
     mimeType: 'image/webp',
     originalName: 'photo.webp',
-    content: Buffer.from('des octets'),
+    content: WEBP,
     actor: { adminUserId: ADMIN },
     ...overrides,
   };
@@ -168,16 +187,68 @@ describe('MediaService', () => {
 
   it('les dimensions d’une image sont lues à l’entrée', async () => {
     const stubs = buildStubs();
-    // En-tête PNG minimal : signature, longueur + type du chunk, 8×4.
-    const png = Buffer.alloc(24);
-    png.writeUInt32BE(0x89504e47, 0);
-    png.writeUInt32BE(8, 16);
-    png.writeUInt32BE(4, 20);
+    const png = pngSized();
 
     const asset = await buildService(stubs).upload(upload({ mimeType: 'image/png', content: png }));
 
     expect(asset.width).toBe(8);
     expect(asset.height).toBe(4);
+  });
+
+  // Une photo d'exercice est PUBLIQUE (lisible sans jeton) : son EXIF dirait
+  // où et avec quel appareil elle a été prise. Stockés : les octets nettoyés,
+  // et c'est sur EUX que se calculent la taille et la somme de contrôle.
+  it('un JPEG porteur d’un EXIF GPS est stocké SANS ses métadonnées', async () => {
+    const stubs = buildStubs();
+    const photo = readFileSync(
+      join(__dirname, '..', '..', '..', '..', 'test', 'fixtures', 'jpeg', 'repas-exif-gps.jpg'),
+    );
+
+    await buildService(stubs, 1_000_000).upload(
+      upload({ mimeType: 'image/jpeg', originalName: 'IMG_0042.jpg', content: photo }),
+    );
+
+    const stored = (stubs.storage.put.mock.calls[0] as [string, Buffer, string])[1];
+    expect(stored.includes(Buffer.from('Exif\0', 'latin1'))).toBe(false);
+    expect(stored.toString('latin1')).not.toMatch(/iPhone|GPSLatitude|Lilas/);
+    expect(stored.length).toBeLessThan(photo.length);
+    expect(stubs.repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        byteSize: stored.length,
+        checksum: createHash('sha256').update(stored).digest('hex'),
+        width: 48,
+        height: 32,
+      }),
+    );
+  });
+
+  it('une image que le filtre ne sait pas lire est refusée, rien n’est stocké', async () => {
+    const stubs = buildStubs();
+
+    await expect(
+      buildService(stubs).upload(upload({ content: Buffer.from('pas un webp') })),
+    ).rejects.toThrow(UnsupportedMediaTypeException);
+    expect(stubs.storage.put).not.toHaveBeenCalled();
+  });
+
+  // 4 294 967 295 dans l'IHDR débordait l'`Int` de Prisma : 500 APRÈS
+  // `storage.put`, et l'objet restait orphelin dans le bucket.
+  it('une image de plus de 16 384 px de côté est refusée avant toute écriture', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    for (const content of [pngSized(0xffffffff, 1), pngSized(1, 16_385)]) {
+      await expect(
+        service.upload(upload({ mimeType: 'image/png', originalName: 'x.png', content })),
+      ).rejects.toThrow(UnsupportedMediaTypeException);
+    }
+    expect(stubs.storage.put).not.toHaveBeenCalled();
+    expect(stubs.repository.create).not.toHaveBeenCalled();
+
+    await service.upload(
+      upload({ mimeType: 'image/png', originalName: 'x.png', content: pngSized(16_384, 1) }),
+    );
+    expect(stubs.storage.put).toHaveBeenCalledTimes(1);
   });
 
   it('un maillage n’est pas passé au lecteur d’images', async () => {

@@ -39,6 +39,15 @@ aucune version antérieure ne reçoit de correctif.
   par Git (`.gitignore`) ; seuls les `.env.example` sont versionnés et ne
   contiennent **que des valeurs factices** (`.env.example` racine,
   `apps/api/.env.example`, `apps/admin/.env.example`).
+- **Une valeur factice publiée ne démarre jamais une production.** Les
+  gabarits `CHANGE_MOI_…` et les secrets d'exemple de DÉVELOPPEMENT
+  (`secret-jwt-de-developpement-a-remplacer-absolument`, mot de passe
+  PostgreSQL de `docker-compose.yml`…), listés une seule fois dans
+  `apps/api/src/config/published-secrets.ts`, sont refusés par l'API au
+  démarrage (`NODE_ENV=production`), où qu'ils apparaissent dans une valeur,
+  et signalés par `carlysctl doctor`, qui lit la même liste.
+  `env.schema.spec.ts` échoue si un exemple publie un secret absent de la
+  liste.
 - **Réglages versionnés, secrets au serveur** (ADR 0017) : la configuration
   du serveur vit dans `infrastructure/server/config/` sans AUCUN secret (la
   CI le vérifie par le gabarit, par le nom de la clé et par l'allure de la
@@ -73,7 +82,15 @@ aucune version antérieure ne reçoit de correctif.
   main**, en même temps que l'action. Le jeton du dépôt n'est plus laissé dans
   `.git/config` pendant le scan (`persist-credentials: false`).
 - **Audit de dépendances en CI** : `pnpm audit --audit-level high` dans le même
-  workflow (vulnérabilités `high` et `critical` bloquantes).
+  workflow (vulnérabilités `high` et `critical` bloquantes) ; pour Dart,
+  `osv-scanner` sur `apps/mobile/pubspec.lock` (job `dart`, action officielle
+  `google/osv-scanner-action` épinglée par SHA), bloquant au premier avis
+  connu. Un avis sans correctif s'écarte dans `apps/mobile/osv-scanner.toml`,
+  avec sa raison et une date de revue.
+- **Images de base épinglées par empreinte** : chaque `FROM` externe des
+  Dockerfile (`node:22.x.y-alpine@sha256:…` pour l'API et l'admin, `golang` et
+  `alpine` pour MinIO) ; `scripts/ci/verifier_dockerfiles.py` (infra-ci)
+  refuse une étiquette seule, Dependabot monte celles de Node.
 - **Forçages de versions transitives** : quand une dépendance vulnérable est
   imposée par un paquet intermédiaire qui l'épingle, la correction passe par
   `pnpm.overrides` dans le `package.json` racine, avec la borne d'origine
@@ -280,6 +297,11 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   expirée ne reçoit plus rien (`listTokens` ne sert que les sessions
   vivantes). Côté mobile, le jeton FCM est effacé de l'appareil à chaque
   déconnexion et à chaque expiration de session.
+- **Back-office : jeton de 12 h RÉVOCABLE.** Il porte l'époque de session
+  du compte (`ep`, `AdminUser.sessionEpoch`), relue en base à chaque
+  requête : « Se déconnecter » (`POST /admin/auth/logout`, 204),
+  `--reset-password` et `--reset-2fa` l'avancent et révoquent tous les
+  jetons du compte, défis de seconde étape compris.
 - **Connexion Apple et Google** (`POST /auth/social`) : jeton d'identité
   vérifié (signature JWKS, `iss`, `aud`, `sub`/`iat`/`exp` exigés, âge
   maximal), sans nonce — risque accepté, écrit dans
@@ -315,6 +337,13 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   réservé à des comptes admin), JPEG **prouvé par les octets** pour la
   photo d'un repas, débarrassée de ses métadonnées (EXIF, GPS, XMP, IPTC)
   avant stockage.
+- **Images du back-office nettoyées elles aussi** (le bucket est PUBLIC) :
+  JPEG par le même filtre, PNG sans `eXIf`/`tEXt`/`zTXt`/`iTXt`/`tIME`,
+  WebP sans `EXIF`/`XMP` (drapeaux VP8X baissés) —
+  `src/common/images/image-metadata.ts`, liste blanche. Les octets STOCKÉS
+  sont les octets nettoyés (taille et somme de contrôle comprises) ; une
+  image que le filtre ne sait pas lire est refusée (415). L'AVIF n'est plus
+  accepté : son EXIF ne s'ôte pas sans réécrire le fichier.
 - **Noms d'objets générés** — jamais le nom fourni par le client.
 - En développement, MinIO local (`docker-compose.yml`) reproduit ce modèle.
 
@@ -479,8 +508,9 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | --- | --- |
 | Secrets hors dépôt, `.env` ignorés, `.env.example` factices | En place |
 | Configuration du serveur versionnée sans secret, `.env` réduit aux secrets (ADR 0017) | En place |
-| TruffleHog + `pnpm audit --audit-level high` en CI | En place |
-| Config Zod bloquante au démarrage | En place |
+| TruffleHog + `pnpm audit --audit-level high` + `osv-scanner` (Dart) en CI | En place |
+| Images de base Docker épinglées par empreinte, vérifiées en CI | En place |
+| Config Zod bloquante au démarrage, valeurs factices publiées refusées en production | En place |
 | Validation `whitelist` + `forbidNonWhitelisted`, Helmet, CORS restreint | En place |
 | Rate limiting 100 req/60 s (600 sur les serveurs), routes sensibles strictes, corps limité à 1 Mo (multipart : 5 Mio et `MEDIA_MAX_UPLOAD_BYTES`) | En place |
 | Enveloppes d'erreur sans fuite (5xx génériques, sauf le 503 écrit pour la personne) | En place |
@@ -493,6 +523,8 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | Catalogue en bucket public, photos de repas en bucket privé servies par l'API | En place |
 | Webhooks signés idempotents, entitlements côté serveur | En place (Étape 6) |
 | Rôles/permissions/audit admin | En place (Étape 7) |
+| Jeton du back-office révocable (époque de session : déconnexion, réinitialisations) | En place |
+| Métadonnées (EXIF, GPS, XMP) retirées de toute photo stockée, repas et back-office | En place |
 | Suppression de compte : abonnement Stripe résilié d'abord, identité libérée et communauté quittée en une transaction, réinscription possible | En place |
 | Purge différée des comptes supprimés (`deleted-accounts-purge`, quotidienne), événements de paiement anonymes effacés à 90 jours | En place |
 | Effacement immédiat sur demande écrite, compte actif compris (`--compte-actif`), après un code renvoyé depuis l'adresse du compte | En place (preuve procédurale) |

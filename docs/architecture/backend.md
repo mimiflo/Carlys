@@ -407,6 +407,11 @@ par un port, `PRIVATE_OBJECT_STORE`
   position GPS, XMP, IPTC, commentaires, octets après la fin d'image. Liste
   blanche : ce qui décode l'image, JFIF (sans vignette), le profil ICC et le
   segment Adobe de douze octets. Aucune dépendance de traitement d'image.
+  Les images du back-office (bucket public) passent par le même principe,
+  `src/common/images/image-metadata.ts` : JPEG par ce filtre, PNG et WebP
+  par un parcours de leurs blocs (liste blanche, drapeaux VP8X recalculés) ;
+  taille et somme de contrôle se calculent sur les octets nettoyés ; une
+  image illisible est refusée (415), et l'AVIF n'est plus accepté.
 - **Ordre des écritures** : l'objet neuf AVANT la ligne `MealPhoto`, l'ancien
   effacé APRÈS. La ligne s'écrit sous le verrou du compte et du repas, après
   avoir revérifié qu'aucun des deux n'a été supprimé pendant l'envoi (sinon

@@ -12,9 +12,16 @@ import { z } from 'zod';
 export const mediaKindSchema = z.enum(['IMAGE', 'MESH_3D', 'VIDEO']);
 export type MediaKind = z.infer<typeof mediaKindSchema>;
 
-/** Types acceptés par genre. Ce qui n'y figure pas est refusé au dépôt. */
+/**
+ * Types acceptés par genre. Ce qui n'y figure pas est refusé au dépôt.
+ *
+ * Une image n'est acceptée que si l'API sait lui retirer ses métadonnées
+ * (EXIF, GPS, XMP) avant de la publier : JPEG, PNG, WebP. L'AVIF en est sorti
+ * le 21 octobre 2026 — son EXIF est un « item » adressé par décalages, qu'il
+ * faudrait réécrire, et aucune photo du catalogue n'était en AVIF.
+ */
 export const MEDIA_ALLOWED_MIME_TYPES: Record<MediaKind, readonly string[]> = {
-  IMAGE: ['image/webp', 'image/png', 'image/jpeg', 'image/avif'],
+  IMAGE: ['image/webp', 'image/png', 'image/jpeg'],
   MESH_3D: ['model/gltf-binary', 'model/gltf+json'],
   VIDEO: ['video/mp4', 'video/webm'],
 };
