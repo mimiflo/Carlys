@@ -32,6 +32,9 @@
 #     SEULEMENT : `COMPOSE_PROFILES=` est vide exprès en production ;
 #   - un `CHANGE_MOI_` resté en place : les exemples documentent ce contrôle
 #     depuis toujours, personne ne l'exécutait ;
+#   - un secret d'exemple de DÉVELOPPEMENT publié dans le dépôt
+#     (`published-secrets.ts`, la liste que l'API refuse aussi) ;
+#   - un worker du coach hors du réseau compose, en clair ou sans clé ;
 #   - une clé active de l'exemple ABSENTE du fichier réel ;
 #   - et l'inverse : une clé du SCHÉMA que l'exemple ne porte NI active NI
 #     commentée. Celui-là ferme le trou par lequel GOOGLE_OAUTH_CLIENT_IDS et
@@ -149,6 +152,65 @@ envcheck_cles_api() {
 envcheck_change_moi() {
   [ -r "$1" ] || return 1
   sed -n 's/^[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}\([A-Za-z_][A-Za-z_0-9]*\)[[:space:]]*=.*CHANGE_MOI_.*/\2/p' "$1"
+}
+
+# Les secrets d'exemple PUBLIÉS dans le dépôt, une valeur par ligne.
+#
+# CHANGE_MOI_ n'en couvre qu'une partie : les exemples de DÉVELOPPEMENT
+# (apps/api/.env.example, .env.example, docker-compose.yml) publient d'autres
+# valeurs, assez longues elles aussi pour passer Zod —
+# `secret-jwt-de-developpement-a-remplacer-absolument` en tête. Un .env de
+# serveur amorcé depuis le mauvais exemple démarrait donc sans un mot.
+#
+# La liste n'est pas recopiée ici : elle est LUE dans la constante de l'API,
+# qui la refuse aussi au démarrage — une source, deux gardes.
+envcheck_publiees() {
+  local source="$CARLYS_REPO_DIR/apps/api/src/config/published-secrets.ts"
+  [ -r "$source" ] || return 1
+  sed -n "s/^[[:space:]]*'\([^']*\)',\{0,1\}[[:space:]]*$/\1/p" "$source"
+}
+
+# Les clés actives dont la valeur CONTIENT un secret publié : le mot de passe
+# PostgreSQL de développement se cache au milieu de DATABASE_URL.
+envcheck_valeurs_publiees() {
+  local valeurs
+  [ -r "$1" ] || return 1
+  valeurs="$(envcheck_publiees)" || return 1
+  [ -n "$valeurs" ] || return 1
+  # `grep` sort en 1 quand il ne trouve rien — le cas d'un .env SAIN : sous
+  # `pipefail`, le tube entier échouait et passait pour « liste illisible ».
+  { grep -F -f <(printf '%s\n' "$valeurs") "$1" || [ $? -eq 1 ]; } \
+    | sed -n 's/^[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}\([A-Za-z_][A-Za-z_0-9]*\)[[:space:]]*=.*/\2/p'
+}
+
+# Les workers du coach qui enfreignent la règle que l'API applique au
+# démarrage (`env.production.ts`) : le coach leur envoie la clé et
+# l'historique, des données de santé. Hors du réseau compose (hôte à point,
+# IP, `localhost`), https:// ET COACH_API_KEY ; un nom de service
+# (`http://ollama:11434/v1`) reste permis en clair, sans clé. Lu dans les
+# couches : les adresses sont des réglages versionnés, la clé un secret.
+# Une ligne par clé fautive : `CLÉ<TAB>raison`.
+envcheck_coach_workers() {
+  local cle url hote dehors cle_api
+  local -a urls clair
+  cle_api="$(env_value COACH_API_KEY "$1" '')"
+  for cle in COACH_API_BASE_URL COACH_WORKER_URLS; do
+    dehors=0 clair=()
+    IFS=',' read -ra urls <<< "$(env_value "$cle" "$1" '')"
+    for url in ${urls[@]+"${urls[@]}"}; do
+      url="${url//[[:space:]]/}"
+      [ -n "$url" ] || continue
+      hote="${url#*://}" && hote="${hote%%[/:?#]*}" && hote="${hote,,}"
+      if [[ "$hote" =~ ^[a-z0-9][a-z0-9_-]*$ && "$hote" != localhost ]]; then continue; fi
+      dehors=1
+      [[ "$url" == https://* ]] || clair+=("$url")
+    done
+    if [ "${#clair[@]}" -gt 0 ]; then
+      printf '%s\ten clair hors du réseau compose : %s\n' "$cle" "${clair[*]}"
+    elif [ "$dehors" = 1 ] && [ -z "$cle_api" ]; then
+      printf '%s\thors du réseau compose sans COACH_API_KEY\n' "$cle"
+    fi
+  done
 }
 
 # Les clés d'un fichier d'exemple, ACTIVES OU COMMENTÉES.
@@ -281,6 +343,28 @@ envcheck_env() {
     warn "        $(envsync_conseil "$cle" "$env_name")"
     defaut=1
   done < <(envcheck_change_moi "$file")
+
+  # 4 bis. Les secrets d'exemple PUBLIÉS, recopiés d'un exemple de
+  # développement : l'API refuserait de démarrer, autant le dire avant.
+  if sortie="$(envcheck_valeurs_publiees "$file")"; then
+    while read -r cle; do
+      [ -n "$cle" ] || continue
+      warn "  $cle porte une valeur d'EXEMPLE publiée dans le dépôt — l'API refusera de démarrer"
+      warn "        en poser une neuve : openssl rand -hex 32"
+      defaut=1
+    done <<< "$sortie"
+  else
+    warn "  liste des valeurs publiées illisible — contrôle NON EXÉCUTÉ"
+    warn "        attendue : $CARLYS_REPO_DIR/apps/api/src/config/published-secrets.ts"
+  fi
+
+  # 4 ter. Les workers du coach : l'API refuserait de démarrer.
+  while IFS=$'\t' read -r cle sortie; do
+    [ -n "$cle" ] || continue
+    warn "  $cle : worker du coach $sortie — l'API refusera de démarrer"
+    warn "        https:// et COACH_API_KEY (dans le .env), ou un service compose (http://ollama:11434/v1)"
+    defaut=1
+  done < <(envcheck_coach_workers "$file")
 
   # 5. Ce que l'exemple porte en clair et que ce fichier n'a pas.
   while read -r cle; do

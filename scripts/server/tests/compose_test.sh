@@ -136,6 +136,48 @@ cles() { sed -n 's/^[[:space:]]*#\{0,1\}[[:space:]]*\([A-Z_][A-Z0-9_]*\)=.*/\1/p
 actives() { sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$@" | sort -u; }
 # shellcheck disable=SC1091 # chargé pour ses lecteurs de schéma, sans effet de bord
 api="$(CARLYS_REPO_DIR="$DEPOT" bash -c '. "$1/scripts/server/_common.sh"; envcheck_cles_api' _ "$DEPOT")"
+# Les secrets d'exemple PUBLIÉS (apps/api/src/config/published-secrets.ts),
+# repérés dans un .env comme l'API les refuse : même au milieu d'une valeur,
+# jamais sur une ligne commentée.
+publiees="$TMP/publiees.env"
+cat > "$publiees" <<'ENV'
+JWT_ACCESS_SECRET=secret-jwt-de-developpement-a-remplacer-absolument
+# LOG_FINGERPRINT_SECRET=cle-empreintes-de-developpement-a-remplacer
+DATABASE_URL=postgresql://carlys:carlys_dev_password@postgres:5432/carlys
+METRICS_TOKEN=jeton-du-banc-0123456789abcdef
+ENV
+verifier "valeurs d'exemple publiées : repérées dans le .env, même dans une URL" 'DATABASE_URL JWT_ACCESS_SECRET ' \
+  "$(CARLYS_REPO_DIR="$DEPOT" bash -c '. "$1/scripts/server/_common.sh"; envcheck_valeurs_publiees "$2"' _ "$DEPOT" "$publiees" | sort | tr '\n' ' ')"
+verifier "valeurs d'exemple publiées : lues dans la constante de l'API" oui \
+  "$(CARLYS_REPO_DIR="$DEPOT" bash -c '. "$1/scripts/server/_common.sh"; envcheck_publiees' _ "$DEPOT" | grep -qx 'cle-empreintes-de-developpement-a-remplacer' && echo oui || echo non)"
+# Un .env SAIN, sous `pipefail` comme `doctor` : `grep` qui ne trouve rien
+# sort en 1, et le tube entier passait pour « liste illisible ».
+sain="$TMP/sain.env"
+printf 'JWT_ACCESS_SECRET=%s\n' 0123456789abcdef0123456789abcdef > "$sain"
+verifier "valeurs d'exemple publiées : un .env sain rend 0 et rien, sous pipefail" '0[]' \
+  "$(CARLYS_REPO_DIR="$DEPOT" bash -c 'set -euo pipefail; . "$1/scripts/server/_common.sh"
+     if s="$(envcheck_valeurs_publiees "$2")"; then printf "0[%s]" "$s"; else printf 1; fi' _ "$DEPOT" "$sain")"
+
+# Les workers du coach : la règle que l'API applique au démarrage
+# (env.production.ts), annoncée par `doctor` avant le déploiement. Lue dans
+# les couches, configuration versionnée comprise : un nom de service compose
+# reste permis en clair et sans clé.
+coach() {
+  mkdir -p "$TMP/coach/staging"
+  printf '%s\n' "$@" > "$TMP/coach/staging/.env"
+  CARLYS_REPO_DIR="$DEPOT" bash -c 'set -euo pipefail; . "$1/scripts/server/_common.sh"
+    envcheck_coach_workers "$2"' _ "$DEPOT" "$TMP/coach/staging/.env" | cut -f1 | tr '\n' ' '
+}
+verifier "coach : la configuration de recette (ollama interne, sans clé) passe" '' "$(coach '')"
+verifier "coach : un worker hors compose en http:// est signalé" 'COACH_WORKER_URLS ' \
+  "$(coach 'COACH_WORKER_URLS=http://ollama:11434/v1,http://gpu-2.carlys.example/v1' 'COACH_API_KEY=cle-du-worker-123')"
+verifier "coach : un worker hors compose sans COACH_API_KEY est signalé" 'COACH_API_BASE_URL ' \
+  "$(coach 'COACH_API_BASE_URL=https://gpu.carlys.example/v1')"
+verifier "coach : localhost n'est pas le réseau compose" 'COACH_API_BASE_URL ' \
+  "$(coach 'COACH_API_BASE_URL=http://localhost:11434/v1')"
+verifier "coach : https:// et clé hors compose passent" '' \
+  "$(coach 'COACH_WORKER_URLS=http://ollama:11434/v1,https://gpu-2.carlys.example/v1' 'COACH_API_KEY=cle-du-worker-123')"
+
 for env_name in staging production; do
   conf=("$CONFIG/commun.conf" "$CONFIG/$env_name.conf")
   # Le format STRICT d'abord : il rend les gardes suivantes exactes. Compose

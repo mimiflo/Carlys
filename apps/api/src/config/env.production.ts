@@ -1,4 +1,5 @@
 import { type z } from 'zod';
+import { PUBLISHED_DEVELOPMENT_SECRETS } from './published-secrets';
 
 /**
  * Valeurs de DÉVELOPPEMENT des variables qui n'ont de sens qu'explicites en
@@ -70,8 +71,8 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
     return;
   }
 
-  const refused = new Set<ProductionKey>();
-  const refuse = (key: ProductionKey, message: string): void => {
+  const refused = new Set<string>();
+  const refuse = (key: string, message: string): void => {
     refused.add(key);
     ctx.addIssue({ code: 'custom', path: [key], message });
   };
@@ -144,27 +145,65 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
     }
   }
 
-  // Le coach envoie `Authorization: Bearer <clé>` et l'historique (données de
-  // santé) à cette adresse : en clair, les deux voyageraient lisibles. Un
-  // Ollama interne sans clé (`http://ollama:11434/v1`) reste permis.
-  if (env.COACH_API_KEY !== undefined && env.COACH_API_BASE_URL?.startsWith('https://') === false) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['COACH_API_BASE_URL'],
-      message: 'doit être une URL https:// en production quand COACH_API_KEY est posée',
-    });
+  // Les secrets d'exemple PUBLIÉS (`published-secrets.ts`), où qu'ils
+  // apparaissent : le mot de passe PostgreSQL de développement vit au milieu
+  // de DATABASE_URL. Une clé déjà refusée plus haut (S3_SECRET_ACCESS_KEY à
+  // son défaut) ne reçoit pas un second message.
+  for (const [key, value] of Object.entries(env as Record<string, unknown>)) {
+    if (
+      !refused.has(key) &&
+      typeof value === 'string' &&
+      PUBLISHED_DEVELOPMENT_SECRETS.some((published) => value.includes(published))
+    ) {
+      refuse(key, 'valeur d’exemple publiée dans le dépôt refusée en production : à remplacer');
+    }
   }
-  // Même règle pour chaque worker de la passerelle (ADR 0013) : la clé et le
-  // contexte partent aussi vers eux.
+
+  // Le coach envoie `Authorization: Bearer <clé>` et l'historique (données de
+  // santé) à chaque worker (ADR 0013) : COACH_API_BASE_URL et chaque entrée
+  // de COACH_WORKER_URLS. La règle est celle qu'annonce commun.conf : un
+  // worker HORS du réseau compose exige https:// ET COACH_API_KEY ; un Ollama
+  // interne (`http://ollama:11434/v1`) reste permis en clair, sans clé — ce
+  // trafic ne quitte pas la machine.
   const workers = (env.COACH_WORKER_URLS ?? '')
     .split(',')
     .map((url) => url.trim())
     .filter((url) => url !== '');
-  if (env.COACH_API_KEY !== undefined && workers.some((url) => !url.startsWith('https://'))) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['COACH_WORKER_URLS'],
-      message: 'chaque worker doit être en https:// en production quand COACH_API_KEY est posée',
-    });
+  const targets = [
+    ['COACH_API_BASE_URL', env.COACH_API_BASE_URL === undefined ? [] : [env.COACH_API_BASE_URL]],
+    ['COACH_WORKER_URLS', workers],
+  ] as const;
+  for (const [key, urls] of targets) {
+    const outside = urls.filter((url) => !isComposeService(url));
+    const enClair = outside.filter((url) => !url.startsWith('https://'));
+    if (enClair.length > 0) {
+      refuse(
+        key,
+        `hors du réseau compose, chaque worker doit être en https:// en production (en clair : ${enClair.join(', ')})`,
+      );
+    } else if (outside.length > 0 && env.COACH_API_KEY === undefined) {
+      refuse(key, 'un worker hors du réseau compose exige COACH_API_KEY en production');
+    }
+  }
+}
+
+/**
+ * L'adresse désigne-t-elle un service du réseau compose ? Une seule étiquette
+ * DNS, sans point : c'est la forme des noms de service (`ollama`,
+ * `ollama-2`), que seul le DNS interne de Docker résout. Un domaine ou une
+ * IPv4 ont un point, une IPv6 des crochets : ils sortent de la machine, ou
+ * peuvent en sortir. `localhost` est exclu : dans le conteneur de l'API, il
+ * désigne l'API elle-même — c'est la valeur de développement recopiée.
+ *
+ * ponytail: un nom court résolu par un domaine de recherche (resolv.conf de
+ * l'hôte) passerait pour interne ; le serveur n'en déclare aucun.
+ */
+function isComposeService(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return /^[a-z0-9][a-z0-9_-]*$/.test(host) && host !== 'localhost';
+  } catch {
+    // Illisible : Zod le refuse déjà ; ici, on ne le tient pas pour interne.
+    return false;
   }
 }

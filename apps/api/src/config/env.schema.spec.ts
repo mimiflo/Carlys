@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { envSchema, validateEnv } from './env.schema';
+import { PUBLISHED_DEVELOPMENT_SECRETS } from './published-secrets';
 
 const validEnv = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/carlys_dev',
@@ -195,7 +196,7 @@ describe('validateEnv en production', () => {
 
   // Le coach envoie `Authorization: Bearer <clé>` et des données de santé à
   // cette adresse : en clair, une faute de frappe les ferait voyager lisibles.
-  it('exige https:// pour COACH_API_BASE_URL quand une clé est posée, pas pour un Ollama interne sans clé', () => {
+  it('exige https:// pour COACH_API_BASE_URL hors du réseau compose, pas pour un Ollama interne sans clé', () => {
     const coach = { COACH_MODEL: 'mistral-small-latest', COACH_API_KEY: 'cle-factice-de-test' };
     expect(() =>
       validateEnv({ ...productionEnv, ...coach, COACH_API_BASE_URL: 'http://api.mistral.ai/v1' }),
@@ -215,7 +216,7 @@ describe('validateEnv en production', () => {
 
   // La passerelle (ADR 0013) envoie la même clé et le même contexte à CHAQUE
   // worker : la règle vaut pour toute la liste, pas pour sa seule tête.
-  it('exige https:// pour CHAQUE worker de COACH_WORKER_URLS quand une clé est posée', () => {
+  it('exige https:// pour CHAQUE worker de COACH_WORKER_URLS hors du réseau compose', () => {
     const coach = {
       COACH_MODEL: 'qwen3:4b',
       COACH_API_KEY: 'cle-factice-de-test',
@@ -244,6 +245,78 @@ describe('validateEnv en production', () => {
       }).COACH_WORKER_URLS,
     ).toContain('ollama-2');
   });
+
+  // Règle d'infrastructure/server/config/commun.conf : un worker HORS du
+  // réseau compose demande https:// ET COACH_API_KEY. Hors du réseau compose,
+  // c'est tout ce qui n'est pas un nom de service : un hôte à point (domaine,
+  // IPv4), une IPv6, ou localhost (dans le conteneur de l'API, c'est l'API).
+  it('worker hors du réseau compose : https:// exigé, même sans clé', () => {
+    for (const url of [
+      'http://gpu-2.carlys.example:11434/v1',
+      'http://10.0.0.5:11434/v1',
+      'http://[fd00::5]:11434/v1',
+      'http://localhost:11434/v1',
+    ]) {
+      expect(() =>
+        validateEnv({ ...productionEnv, COACH_MODEL: 'qwen3:4b', COACH_WORKER_URLS: url }),
+      ).toThrow(/COACH_WORKER_URLS.*https/);
+    }
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'qwen3:4b',
+        COACH_API_BASE_URL: 'http://127.0.0.1:11434/v1',
+      }),
+    ).toThrow(/COACH_API_BASE_URL.*https/);
+  });
+
+  it('worker hors du réseau compose : COACH_API_KEY exigée, même en https://', () => {
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'qwen3:4b',
+        COACH_WORKER_URLS: 'http://ollama:11434/v1,https://gpu-2.carlys.example/v1',
+      }),
+    ).toThrow(/COACH_WORKER_URLS.*COACH_API_KEY/);
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'qwen3:4b',
+        COACH_API_BASE_URL: 'https://gpu-1.carlys.example/v1',
+      }),
+    ).toThrow(/COACH_API_BASE_URL.*COACH_API_KEY/);
+  });
+
+  it('le mélange documenté (ollama interne + worker externe en https, clé posée) passe', () => {
+    // L'exemple commenté de commun.conf, tel quel : la clé ne circule en
+    // clair que sur le réseau compose, interne à la machine.
+    expect(
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'qwen3:4b',
+        COACH_API_KEY: 'cle-factice-de-test',
+        COACH_API_BASE_URL: 'http://ollama:11434/v1',
+        COACH_WORKER_URLS: 'http://ollama:11434/v1,https://gpu-2.carlys.example/v1',
+      }).COACH_WORKER_URLS,
+    ).toContain('gpu-2');
+  });
+
+  // La configuration VERSIONNÉE doit passer la garde : sinon c'est la
+  // production qui refuserait de démarrer au prochain déploiement.
+  it.each(['staging', 'production'])(
+    'les réglages du coach de infrastructure/server/config (%s) passent',
+    (name) => {
+      const config = join(__dirname, '..', '..', '..', '..', 'infrastructure', 'server', 'config');
+      const coach: Record<string, string> = {};
+      for (const file of ['commun.conf', `${name}.conf`]) {
+        const text = readFileSync(join(config, file), 'utf8');
+        for (const [, key, value] of text.matchAll(/^(COACH_[A-Z_]+)=(.*)$/gm)) {
+          coach[key!] = value!;
+        }
+      }
+      expect(() => validateEnv({ ...productionEnv, ...coach })).not.toThrow();
+    },
+  );
 
   it('refuse un worker qui n’est pas en http(s)', () => {
     expect(() => validateEnv({ ...validEnv, COACH_WORKER_URLS: 'ftp://gpu.interne/v1' })).toThrow(
@@ -316,6 +389,95 @@ describe('validateEnv en production', () => {
     expect(() =>
       validateEnv({ ...productionEnv, METRICS_TOKEN: 'CHANGE_MOI_JETON_METRIQUES' }),
     ).toThrow(/METRICS_TOKEN.*gabarit/);
+  });
+
+  // Le gabarit `CHANGE_MOI_` n'est pas la seule valeur publiée : les exemples
+  // de développement (apps/api/.env.example, .env.example, docker-compose.yml)
+  // en portent d'autres, assez longues pour passer Zod. Avec celle du secret
+  // JWT, n'importe qui forge une session à n'importe quel compte.
+  it('refuse toute valeur de secret publiée dans le dépôt, JWT et empreintes en tête', () => {
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        JWT_ACCESS_SECRET: 'secret-jwt-de-developpement-a-remplacer-absolument',
+      }),
+    ).toThrow(/JWT_ACCESS_SECRET.*publiée/);
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        LOG_FINGERPRINT_SECRET: 'cle-empreintes-de-developpement-a-remplacer',
+      }),
+    ).toThrow(/LOG_FINGERPRINT_SECRET.*publiée/);
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        STRIPE_SECRET_KEY: 'sk_test_valeur_factice_de_developpement',
+      }),
+    ).toThrow(/STRIPE_SECRET_KEY.*publiée/);
+    // Le mot de passe PostgreSQL publié, recopié dans l'URL de connexion.
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        DATABASE_URL: 'postgresql://carlys:carlys_dev_password@postgres:5432/carlys',
+      }),
+    ).toThrow(/DATABASE_URL.*publiée/);
+  });
+
+  // Les secrets d'un fichier .env d'exemple, lignes commentées comprises. La
+  // valeur s'arrête au premier blanc ou guillemet : un commentaire en fin de
+  // ligne, une espace de trop ou des guillemets ne la cachent pas.
+  const secret = /(SECRET|PASSWORD|TOKEN|_KEY)$/;
+  function exampleSecrets(text: string): Map<string, string> {
+    const found = new Map<string, string>();
+    for (const [, key, value] of text.matchAll(
+      /^#?[ \t]*(?:export[ \t]+)?([A-Z_][A-Z0-9_]*)[ \t]*=[ \t]*["']?([^\s"']+)/gm,
+    )) {
+      if (secret.test(key!) && !value!.includes('CHANGE_MOI')) found.set(key!, value!);
+    }
+    return found;
+  }
+
+  it('la lecture des exemples voit une valeur suivie d’un commentaire, d’espaces ou entre guillemets', () => {
+    const found = exampleSecrets(
+      [
+        'JWT_ACCESS_SECRET=valeur-un   # à remplacer',
+        '# STRIPE_SECRET_KEY=valeur-deux ',
+        'export METRICS_TOKEN = "valeur-trois"',
+        'COACH_API_KEY=',
+        'LOG_LEVEL=debug',
+      ].join('\n'),
+    );
+    expect([...found]).toEqual([
+      ['JWT_ACCESS_SECRET', 'valeur-un'],
+      ['STRIPE_SECRET_KEY', 'valeur-deux'],
+      ['METRICS_TOKEN', 'valeur-trois'],
+    ]);
+  });
+
+  // La liste se tient seule : chaque secret que les exemples publient doit y
+  // être. Une valeur changée dans un exemple sans la liste fait échouer ici.
+  it('chaque secret publié par un exemple du dépôt figure dans la liste de refus', () => {
+    const root = join(__dirname, '..', '..', '..', '..');
+    const read = (path: string) => readFileSync(join(root, path), 'utf8');
+    const published = new Map<string, string>([
+      ...exampleSecrets(read('apps/api/.env.example')),
+      ...exampleSecrets(read('.env.example')),
+    ]);
+    for (const [, key, value] of read('docker-compose.yml').matchAll(
+      /\$\{([A-Z_][A-Z0-9_]*):-([^}]+)\}/g,
+    )) {
+      if (secret.test(key!)) published.set(key!, value!);
+    }
+    // Garde du garde : la lecture trouve bien les secrets annoncés.
+    expect(published.get('JWT_ACCESS_SECRET')).toBe(
+      'secret-jwt-de-developpement-a-remplacer-absolument',
+    );
+    expect(published.has('LOG_FINGERPRINT_SECRET')).toBe(true);
+    expect(published.has('POSTGRES_PASSWORD')).toBe(true);
+    const missing = [...published].filter(
+      ([, value]) => !PUBLISHED_DEVELOPMENT_SECRETS.includes(value),
+    );
+    expect(missing).toEqual([]);
   });
 
   it('hors production, les défauts de développement restent acceptés', () => {

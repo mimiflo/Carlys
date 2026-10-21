@@ -952,7 +952,7 @@ démarrage.
 | `COACH_MESSAGES_PER_MINUTE` | Messages par personne et par minute, en plus du plafond du jour (6) |
 | `COACH_MAX_MESSAGE_CHARS` | Taille d'un message ; le contrat en borne déjà 2 000 (2 000) |
 | `COACH_HISTORY_MESSAGES` | Messages relus tels quels, au plus ; au-delà, la mémoire résumée absorbe les plus anciens et en garde la moitié (20) |
-| `COACH_WORKER_URLS` | Adresses `…/v1` des workers, séparées par des virgules ; absente, le seul worker est `COACH_API_BASE_URL` |
+| `COACH_WORKER_URLS` | Adresses `…/v1` des workers, séparées par des virgules ; absente, le seul worker est `COACH_API_BASE_URL`. En production, un worker HORS du réseau compose (hôte à point, IP, `localhost`) exige `https://` ET `COACH_API_KEY` — même règle pour `COACH_API_BASE_URL` ; un nom de service (`http://ollama:11434/v1`) reste permis en clair, sans clé ; `carlysctl doctor` l'annonce avant le déploiement |
 | `COACH_WORKER_COOLDOWN_MS` | Mise à l'écart d'un worker en panne (30 000) |
 
 ## État au 3 octobre 2026

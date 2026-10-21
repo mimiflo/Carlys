@@ -661,6 +661,8 @@ nomme, et tout ce qui traverse `env_file` lui est opaque.
 | `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse        | supprimer les lignes en trop ; c'est la **dernière** qui gagne                                                                                                                                  |
 | `<CLÉ> est déclarée VIDE`           | **bloquant** — l'API ne démarrera pas   | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut. Ne porte que sur les variables du schéma de l'API — `COMPOSE_PROFILES=` est vide **exprès** en production |
 | `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique  | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main                                                                                                                     |
+| `<CLÉ> porte une valeur d'EXEMPLE publiée` | **bloquant** — l'API refusera de démarrer | une valeur neuve (`openssl rand -hex 32`) : la liste vient de `apps/api/src/config/published-secrets.ts`, des exemples de développement |
+| `COACH_… : worker du coach … hors du réseau compose` | **bloquant** — l'API refusera de démarrer | un worker externe (hôte à point, IP, `localhost`) : `https://` ET `COACH_API_KEY` dans le `.env` ; sinon un service compose (`http://ollama:11434/v1`) |
 | `<CLÉ> absente`                     | **bloquant**                            | `carlysctl env-sync <env> --appliquer` (voir ci-dessous)                                                                                                                                        |
 
 Hors des `.env`, `doctor` réclame aussi, à chaque passage, la **copie hors
