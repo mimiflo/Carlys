@@ -1,0 +1,19 @@
+# Faux positifs de TruffleHog, relus un par un (scripts/ci/secrets_connus.py).
+#
+# Une ligne = UNE découverte : <commit> <détecteur> <fichier>:<ligne>, puis
+# la raison. `<message>` désigne le message du commit. Le scan du lundi relit
+# tout l'historique, et ces commits publiés ne se réécrivent pas : sans cette
+# liste, security-ci restait rouge chaque semaine. N'y ajouter QUE des
+# valeurs factices, jamais un vrai secret : un vrai secret se révoque, puis se
+# retire de l'historique.
+
+# Adresses PostgreSQL de test (mot de passe de développement publié, hôte
+# « postgres ») ; corrigées vers localhost dans a93e85e9.
+8bb12bd0e2c054f8c1c17976a2f35e1a82e4b25c Postgres apps/api/src/config/env.schema.spec.ts:421  # test des secrets publiés
+8bb12bd0e2c054f8c1c17976a2f35e1a82e4b25c Postgres scripts/server/tests/compose_test.sh:146  # test des secrets publiés
+
+# Adresses d'exemple à identifiant d'un worker du coach (domaines .exemple et
+# .interne, qui n'existent pas).
+8095106953f72eee1ffecbba95e2d241d8260729 URI <message>:5  # message de commit qui cite l'adresse factice
+16aaf57e52c46aaa2f60d1d908de099aeced82fb URI scripts/server/tests/supervision_test.sh:227  # adresse factice gpu.exemple
+1a156d5f0d412c7e9e59917adea99b409fe3e945 URI apps/api/src/modules/coach/infrastructure/coach-worker-pool.spec.ts:60  # adresse factice gpu.interne

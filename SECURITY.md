@@ -74,13 +74,19 @@ aucune version antérieure ne reçoit de correctif.
   une clé révoquée reste une identité publiée, souvent réutilisée ailleurs.
   Révoquer répare la fuite, cela n'efface pas le commit : la reprise
   d'historique reste nécessaire.
-  **Deux épingles, dont une que Dependabot ne voit pas** : l'action est fixée
-  par SHA de commit, et l'IMAGE qu'elle exécute par tag et empreinte
-  (`version: 3.97.9@sha256:…`) — sans cette seconde épingle, l'action lançait
-  `trufflehog:latest`, le dernier binaire publié par un tiers, sur tout
-  l'historique. Dependabot ne suit que les `uses:` : l'image se monte **à la
-  main**, en même temps que l'action. Le jeton du dépôt n'est plus laissé dans
-  `.git/config` pendant le scan (`persist-credentials: false`).
+  **L'image, épinglée par empreinte, que Dependabot ne voit pas** : le job
+  lance `ghcr.io/trufflesecurity/trufflehog:3.97.9@sha256:…` par
+  `docker run` (l'ancienne action lançait `trufflehog:latest`, le dernier
+  binaire publié par un tiers, sur tout l'historique) ; elle se monte **à la
+  main**. Le jeton du dépôt n'est pas laissé dans `.git/config` pendant le
+  scan (`persist-credentials: false`).
+  **Faux positifs relus** : le scan du lundi relit tout l'historique, où
+  restent des valeurs factices de test qu'un commit publié ne permet pas
+  d'effacer. `scripts/ci/secrets_connus.py` n'écarte que les découvertes
+  listées dans `.github/trufflehog-faux-positifs.txt`, chacune désignée par
+  commit, détecteur, fichier et ligne, avec sa raison : la même valeur ailleurs
+  fait toujours échouer. Un vrai secret ne s'y ajoute jamais : il se révoque,
+  puis se retire de l'historique.
 - **Audit de dépendances en CI** : `pnpm audit --audit-level high` dans le même
   workflow (vulnérabilités `high` et `critical` bloquantes) ; pour Dart,
   `osv-scanner` sur `apps/mobile/pubspec.lock` (job `dart`, action officielle

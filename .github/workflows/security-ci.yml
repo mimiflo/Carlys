@@ -30,6 +30,9 @@ on:
   schedule:
     # Chaque lundi à 06:00 UTC.
     - cron: '0 6 * * 1'
+  # À la demande : le même scan que le lundi (tout l'historique), pour
+  # vérifier une correction sans attendre une semaine.
+  workflow_dispatch:
 
 concurrency:
   group: security-ci-${{ github.ref }}
@@ -77,42 +80,62 @@ jobs:
       #   --results=verified,unknown             → code 0, AUCUN résultat ;
       #   --results=verified,unknown,unverified  → code 183, « Found unverified
       #                                            result », détecteur AWS.
-      # Épinglé par SHA DE COMMIT, comme toute action tierce de ce dépôt — et
-      # ici plus qu'ailleurs : ce workflow lit TOUT l'historique du dépôt
-      # (fetch-depth: 0). Il a longtemps pointé `@main`, une branche mouvante :
-      # chaque exécution faisait tourner le dernier commit d'un dépôt tiers,
-      # quel qu'il soit. Un SHA est immuable ; .github/dependabot.yml propose
-      # les montées de version en pull request, où le nouveau SHA se relit.
+      # L'image est épinglée par EMPREINTE, pas par étiquette : ce job lit
+      # TOUT l'historique du dépôt (fetch-depth: 0). L'ancienne action
+      # TruffleHog lançait `trufflehog:latest` par défaut, et le journal du
+      # job 108059432597 le montrait : « Downloaded newer image for
+      # …:latest », la 3.97.9 sous une épingle qui annonçait la 3.97.4. Le
+      # binaire qui lisait l'historique était donc le dernier publié par un
+      # tiers, à chaque exécution.
       #
-      # L'ÉPINGLE DE L'ACTION NE SUFFISAIT PAS, et l'audit du 25/09 l'a montré.
-      # L'action n'est qu'un script : il lance `docker run
-      # ghcr.io/trufflesecurity/trufflehog:${version}`, et `version` vaut
-      # `latest` par défaut (action.yml au SHA ci-dessous). Le journal du job
-      # 108059432597 le dit sans détour : « Downloaded newer image for
-      # …:latest », puis `"trufflehog_version": "3.97.9"`, sous une épingle
-      # qui annonçait la 3.97.4. Le binaire qui lisait tout l'historique était
-      # donc le dernier publié par un tiers, à chaque exécution : exactement
-      # la porte que le paragraphe ci-dessus disait fermée.
-      #
-      # D'où `version: <tag>@sha256:<empreinte>` : l'action forme
-      # `image:tag@digest`, que `docker run` résout par l'EMPREINTE (le tag
-      # n'est plus qu'une étiquette lisible). Empreinte de l'index
-      # multi-architecture de 3.97.9, relevée dans le registre le 25/09 :
+      # D'où `IMAGE: …:<tag>@sha256:<empreinte>`, que `docker run` résout par
+      # l'EMPREINTE (le tag n'est plus qu'une étiquette lisible). Empreinte de
+      # l'index multi-architecture de 3.97.9, relevée dans le registre le 25/09 :
       #   curl -sI -H "Authorization: Bearer <jeton anonyme>" \
       #     -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
       #     https://ghcr.io/v2/trufflesecurity/trufflehog/manifests/3.97.9
       # (en-tête docker-content-digest ; le jeton anonyme se demande à
       # https://ghcr.io/token?scope=repository:trufflesecurity/trufflehog:pull).
       #
-      # DEPENDABOT NE VOIT PAS CETTE LIGNE : il suit les `uses:`, pas les
-      # entrées d'une action. Cette épingle se monte À LA MAIN, en même temps
-      # que celle de l'action, et SECURITY.md le rappelle.
+      # DEPENDABOT NE VOIT PAS CETTE LIGNE : il suit les `uses:`, pas une
+      # image lancée par `docker run`. Elle se monte À LA MAIN, et SECURITY.md
+      # le rappelle.
+      #
+      # PLUS D'ACTION, l'image seule (3 novembre 2026). L'action passait
+      # toujours `--fail` : la moindre découverte faisait échouer, sans
+      # moyen de dire « celle-ci est relue ». Or le scan du LUNDI relit tout
+      # l'historique, où restent cinq fausses adresses d'exemple (tests, et un
+      # message de commit) qu'un commit publié ne permet pas d'effacer :
+      # security-ci était rouge chaque semaine depuis le 19 octobre. Le
+      # découpage de l'action est repris tel quel (poussée : ses commits ;
+      # pull request : les siens ; lundi : tout), puis
+      # scripts/ci/secrets_connus.py retire les SEULES découvertes listées
+      # dans .github/trufflehog-faux-positifs.txt (commit, détecteur, fichier,
+      # ligne) : la même valeur ailleurs fait toujours échouer.
       - name: TruffleHog (tout secret, même révoqué)
-        uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
-        with:
-          path: ./
-          version: 3.97.9@sha256:52e67fef4d054ecff5c2ce4b4ae376626d1ef54aa0898b53cac19c25e92e14db
-          extra_args: --results=verified,unknown,unverified
+        env:
+          IMAGE: ghcr.io/trufflesecurity/trufflehog:3.97.9@sha256:52e67fef4d054ecff5c2ce4b4ae376626d1ef54aa0898b53cac19c25e92e14db
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          portee=()
+          case "$EVENT" in
+            push)
+              if [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
+                portee=(--since-commit "$BEFORE")
+              fi
+              portee+=(--branch "$AFTER")
+              ;;
+            pull_request) portee=(--since-commit "$PR_BASE" --branch "$PR_HEAD") ;;
+          esac
+          docker run --rm -v "$PWD:/tmp/depot" -w /tmp/depot "$IMAGE" \
+            git file:///tmp/depot --results=verified,unknown,unverified \
+            --json --no-update "${portee[@]}" > "$RUNNER_TEMP/trufflehog.jsonl"
+          python3 scripts/ci/secrets_connus.py "$RUNNER_TEMP/trufflehog.jsonl" \
+            .github/trufflehog-faux-positifs.txt
 
   dependencies:
     name: Audit des dépendances
