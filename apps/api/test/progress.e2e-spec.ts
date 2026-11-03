@@ -5,6 +5,7 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
 import {
+  type ApiErrorEnvelope,
   type ApiSuccessEnvelope,
   type AuthResult,
   type BodyMetric,
@@ -12,6 +13,7 @@ import {
   type LifetimeStats,
   type PersonalRecord,
   type ProgressOverview,
+  type ProgressTimeline,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -521,6 +523,116 @@ describe('Progression (e2e)', () => {
       (await authed(accessToken).get('/api/v1/nutrition/metabolism').expect(200)).body,
     );
     expect(apres.profile.weightKg).toBe(74);
+  });
+
+  /**
+   * Les mensurations vivent dans la même table que le poids : le risque
+   * n'est pas qu'elles manquent, c'est qu'elles se MÉLANGENT au poids. Ce
+   * test place donc un tour de taille PLUS RÉCENT que la dernière pesée, et
+   * exige que le rapport métabolique l'ignore.
+   */
+  describe('les mensurations', () => {
+    const zones = [
+      ['WAIST_CM', 82.5],
+      ['HIPS_CM', 98],
+      ['CHEST_CM', 104.2],
+      ['ARM_CM', 36.5],
+      ['THIGH_CM', 58],
+      ['CALF_CM', 38.4],
+      ['NECK_CM', 39],
+    ] as const;
+    const waistId = randomUUID();
+
+    it('s’enregistrent pour chaque zone, et se filtrent par zone', async () => {
+      for (const [metricType, value] of zones) {
+        const id = metricType === 'WAIST_CM' ? waistId : randomUUID();
+        const created = data<BodyMetric>(
+          (
+            await authed(accessToken)
+              .post('/api/v1/body-metrics')
+              .send({ id, metricType, value, measuredAt: at(0.5) })
+              .expect(201)
+          ).body,
+        );
+        expect(created).toMatchObject({ metricType, value });
+      }
+
+      for (const [metricType, value] of zones) {
+        const listed = data<BodyMetric[]>(
+          (
+            await authed(accessToken)
+              .get(`/api/v1/body-metrics?metricType=${metricType}`)
+              .expect(200)
+          ).body,
+        );
+        expect(listed.map((metric) => [metric.metricType, metric.value])).toEqual([
+          [metricType, value],
+        ]);
+      }
+    });
+
+    it('ne touchent ni au poids listé, ni au rapport métabolique', async () => {
+      const weights = data<BodyMetric[]>(
+        (await authed(accessToken).get('/api/v1/body-metrics').expect(200)).body,
+      );
+      expect(weights.every((metric) => metric.metricType === 'WEIGHT_KG')).toBe(true);
+
+      const metabolism = data<{ profile: { weightKg: number | null } }>(
+        (await authed(accessToken).get('/api/v1/nutrition/metabolism').expect(200)).body,
+      );
+      expect(metabolism.profile.weightKg).toBe(74);
+    });
+
+    it('refusent une valeur hors de la plage de LEUR zone, ou au centième', async () => {
+      const refuse = (metricType: string, value: number) =>
+        authed(accessToken)
+          .post('/api/v1/body-metrics')
+          .send({ id: randomUUID(), metricType, value, measuredAt: at(1) })
+          .expect(400);
+
+      // 300 kg est un poids possible, pas un tour de taille.
+      const tropGrand = ((await refuse('WAIST_CM', 300)).body as ApiErrorEnvelope).error;
+      expect(tropGrand.code).toBe('VALIDATION_ERROR');
+      expect(tropGrand.details.map((detail) => detail.field)).toEqual(['value']);
+      expect(tropGrand.details[0]?.message).toContain('40 et 250 cm');
+      // 150 cm est un tour de taille possible, pas un tour de bras.
+      await refuse('ARM_CM', 150);
+      await refuse('NECK_CM', 9);
+      // Un mètre ruban ne lit pas le centième.
+      await refuse('CALF_CM', 38.45);
+
+      // La correction applique les bornes de la zone STOCKÉE, que le corps
+      // de la requête ne porte pas.
+      await authed(accessToken)
+        .patch(`/api/v1/body-metrics/${waistId}`)
+        .send({ value: 300 })
+        .expect(400);
+      const corrigee = data<BodyMetric>(
+        (
+          await authed(accessToken)
+            .patch(`/api/v1/body-metrics/${waistId}`)
+            .send({ value: 81.5 })
+            .expect(200)
+        ).body,
+      );
+      expect(corrigee).toMatchObject({ metricType: 'WAIST_CM', value: 81.5 });
+    });
+
+    it('paraissent dans la frise avec leur type', async () => {
+      const frise = data<ProgressTimeline>(
+        (await authed(accessToken).get('/api/v1/progress/timeline?kinds=MEASURE').expect(200)).body,
+      );
+      const waist = frise.items.find((item) => item.id === `MEASURE:${waistId}`);
+      expect(waist?.payload).toMatchObject({ metricType: 'WAIST_CM', value: 81.5 });
+    });
+
+    it('un type inconnu est refusé', async () => {
+      await authed(accessToken)
+        .post('/api/v1/body-metrics')
+        .send({ id: randomUUID(), metricType: 'WRIST_CM', value: 17, measuredAt: at(1) })
+        .expect(400);
+      await authed(accessToken).get('/api/v1/body-metrics?metricType=WRIST_CM').expect(400);
+    });
   });
 
   /**

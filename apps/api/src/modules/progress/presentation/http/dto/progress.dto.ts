@@ -36,6 +36,12 @@ export class OverviewQuery {
   period: ProgressPeriodValue = 'week';
 }
 
+const BODY_METRIC_VALUE_DESCRIPTION =
+  'Kg pour WEIGHT_KG, % pour BODY_FAT_PERCENT (1 à 500, deux décimales), cm pour les ' +
+  'mensurations, à une décimale et dans les bornes de leur zone : taille 40–250, ' +
+  'hanches et poitrine 50–250, bras 10–100, cuisse 20–150, mollet 15–100, cou 20–80 ' +
+  '(`BODY_METRIC_BOUNDS`, appliquées par le service — une correction ne porte pas le type).';
+
 export class CreateBodyMetricDto {
   @ApiProperty({ description: 'UUID généré côté client (création idempotente)' })
   @IsUUID()
@@ -45,7 +51,7 @@ export class CreateBodyMetricDto {
   @IsEnum(BodyMetricType)
   metricType!: BodyMetricType;
 
-  @ApiProperty({ minimum: 1, maximum: 500 })
+  @ApiProperty({ minimum: 1, maximum: 500, description: BODY_METRIC_VALUE_DESCRIPTION })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
   @Max(500)
@@ -74,7 +80,11 @@ export class CreateBodyMetricDto {
  * refusé par le service : ce n'est pas une correction.
  */
 export class UpdateBodyMetricDto {
-  @ApiPropertyOptional({ minimum: 1, maximum: 500 })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 500,
+    description: BODY_METRIC_VALUE_DESCRIPTION,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)

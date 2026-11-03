@@ -616,7 +616,11 @@ recalculé en transaction lors de l'ingestion d'une séance.
 > **clôture** de la séance et ne peut jamais la faire échouer (erreur
 > journalisée, rattrapage à la séance suivante). `BodyMetric` est livré avec
 > `metricType` (`WEIGHT_KG | BODY_FAT_PERCENT`) et sans colonne `unit` (tout
-> est stocké en unités métriques). `ProgressGoal` et `ProgressSnapshot` sont
+> est stocké en unités métriques). Les **mensurations** s'y sont ajoutées le
+> 3 novembre 2026 (migration `20261103110000_mensurations`) : `WAIST_CM`,
+> `HIPS_CM`, `CHEST_CM`, `ARM_CM`, `THIGH_CM`, `CALF_CM`, `NECK_CM`, des tours
+> en centimètres dans la même table — l'unité se lit dans le type, toujours
+> sans colonne `unit`. `ProgressGoal` et `ProgressSnapshot` sont
 > **différés** : les agrégats (totaux et volume par intervalle `date_trunc`
 > whitelisté) se calculent à la volée sur les index existants, largement
 > suffisant à cette échelle.
