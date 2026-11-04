@@ -491,6 +491,12 @@ abstract final class AppIcons {
   static const IconData scanTipLight = Icons.wb_sunny_rounded;
   static const IconData scanTipVisible = Icons.visibility_rounded;
 
+  /// Scanner le code-barres d'un produit emballé.
+  static const IconData scanBarcode = Icons.barcode_reader;
+
+  /// Taper un code à la main, quand la caméra ne le lit pas.
+  static const IconData typeCode = Icons.dialpad_rounded;
+
   /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
   /// la saisie à la main reste possible.
   static const IconData foodDatabasePending = Icons.hourglass_top_rounded;

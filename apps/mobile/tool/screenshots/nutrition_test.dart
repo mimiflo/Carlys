@@ -7,6 +7,7 @@
 // montrée est plausible, aucune n'est celle d'une personne réelle.
 //
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+import 'dart:async';
 import 'dart:io';
 
 import 'package:carlys_mobile/app/app.dart';
@@ -20,11 +21,15 @@ import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_rep
 import 'package:carlys_mobile/features/nutrition/data/services/image_picker_meal_photo_picker.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/scanned_product_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../test/support/fake_auth_repository.dart';
+import '../../test/support/fake_camera.dart';
 import '../../test/support/fake_meal_photo_picker.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_water_store.dart';
@@ -197,6 +202,76 @@ void main() {
     await tester.tap(find.text('Mes besoins'));
     await tester.pumpAndSettle();
     await capture(tester, 'nutrition-03-metabolisme');
+    await purge(tester);
+  });
+
+  testWidgets('code-barres : la feuille du produit, et la caméra', (
+    tester,
+  ) async {
+    telephone(tester);
+    final camera = FakeCamera()..authorized = true;
+    MobileScannerPlatform.instance = camera;
+    final nutrition = journee();
+    nutrition.products['3017620422003'] = const PackagedFood(
+      barcode: '3017620422003',
+      name: 'Pâte à tartiner aux noisettes',
+      brand: 'Nutella',
+      per100g: FoodPer100g(kcal: 539, proteinG: 6.3, carbsG: 57.5, fatG: 30.9),
+      servingQuantity: 15,
+    );
+    await tester.pumpWidget(app(nutrition));
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pumpAndSettle();
+    // Les octets se décodent hors de l'horloge du test : un vrai instant.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-11-raccourcis');
+    unawaited(
+      showAppSheet<bool>(
+        tester.element(find.byType(NutritionScreen)),
+        builder: (_) =>
+            ScannedProductSheet(barcode: '3017620422003', day: DateTime.now()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-12-produit-scanne');
+
+    Navigator.of(tester.element(find.byType(ScannedProductSheet))).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Code-barres'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-13-code-barres');
+
+    // Caméra refusée : l'état le dit, la saisie du code reste.
+    camera.authorized = false;
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Code-barres'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-14-code-barres-refuse');
+    await purge(tester);
+  });
+
+  testWidgets('code-barres : un produit inconnu de la base', (tester) async {
+    telephone(tester);
+    await tester.pumpWidget(app(journee()));
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    unawaited(
+      showAppSheet<bool>(
+        tester.element(find.byType(NutritionScreen)),
+        builder: (_) =>
+            ScannedProductSheet(barcode: '3017620422003', day: DateTime.now()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-15-produit-inconnu');
     await purge(tester);
   });
 

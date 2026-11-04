@@ -314,6 +314,34 @@ class FakeNutritionRepository implements NutritionRepository {
   Future<MealScanResult> mealScan(String id) async =>
       (scan: _scanAt(id, ++_scanReads), source: _ciqual);
 
+  /// Les produits du « serveur », par code-barres ; absent : inconnu.
+  final Map<String, PackagedFood> products = {};
+
+  /// Chaque code demandé, dans l'ordre.
+  final List<String> productReads = [];
+
+  /// L'échec opposé à la prochaine recherche de produit ; consommé.
+  Object? productFailure;
+
+  @override
+  Future<PackagedFoodResult?> productByBarcode(String barcode) async {
+    productReads.add(barcode);
+    final failure = productFailure;
+    productFailure = null;
+    if (failure != null) throw failure;
+    final food = products[barcode];
+    return food == null
+        ? null
+        : (
+            food: food,
+            source: const FoodAttribution(
+              attribution: 'Source : Open Food Facts',
+              license: 'Open Database License (ODbL)',
+              url: 'https://world.openfoodfacts.org/',
+            ),
+          );
+  }
+
   @override
   Future<Uint8List?> mealPhoto(String id) async {
     photoReads.add(id);
