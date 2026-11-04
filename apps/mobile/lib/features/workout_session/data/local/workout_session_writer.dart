@@ -335,6 +335,56 @@ class WorkoutSessionWriter {
     });
   }
 
+  /// Donne l'effort perçu d'une séance (Borg CR10), ou le retire avec
+  /// `null`, localement puis en file : `session.update`, le PATCH de la
+  /// séance.
+  ///
+  /// Le chemin de [correctSet], appliqué à la séance : une séance CLOSE se
+  /// corrige par un PATCH en file, sur la voie de sa séance — derrière sa
+  /// création et sa clôture, hors ligne compris. Le corps porte la valeur
+  /// entière, donc rejouer aboutit au même état ; une évaluation encore en
+  /// attente est REMPLACÉE par la suivante, comme `template.save`, plutôt
+  /// que d'empiler un PATCH par toucher.
+  ///
+  /// Une séance inconnue ne met rien en file (PATCH voué au 404).
+  Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
+    if (effort != null) RangeError.checkValueInInterval(effort, 1, 10);
+    await _db.transaction(() async {
+      final session = await (_db.select(
+        _db.localWorkoutSessions,
+      )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
+      if (session == null) return;
+      await (_db.update(
+        _db.localWorkoutSessions,
+      )..where((row) => row.id.equals(sessionId))).write(
+        LocalWorkoutSessionsCompanion(
+          perceivedEffort: Value(effort),
+          // `pending` pour que le rapatriement n'écrase pas la saisie — mais
+          // seulement depuis `synced` : un conflit ou un échec en cours doit
+          // rester visible, sa carte en dépend.
+          syncStatus: session.syncStatus == 'synced'
+              ? const Value('pending')
+              : const Value.absent(),
+        ),
+      );
+      await (_db.delete(_db.syncOperations)..where(
+            (operation) =>
+                operation.entityId.equals(sessionId) &
+                operation.operationType.equals('session.update') &
+                operation.status.equals('pending'),
+          ))
+          .go();
+      await enqueue(
+        entityType: 'session',
+        entityId: sessionId,
+        operationType: 'session.update',
+        payload: {
+          'body': {'perceivedEffort': effort},
+        },
+      );
+    });
+  }
+
   /// Efface une série : pierre tombale locale, prévision rendue au plan, et
   /// `set.delete` en file.
   ///

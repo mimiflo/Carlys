@@ -77,6 +77,7 @@ class WorkoutInfo {
     this.durationSeconds,
     this.templateId,
     this.templateName,
+    this.perceivedEffort,
   });
 
   final String id;
@@ -92,6 +93,10 @@ class WorkoutInfo {
   /// Nom du modèle au moment du lancement — provenance immuable, à distinguer
   /// de [name] qui reste le titre modifiable de CETTE séance.
   final String? templateName;
+
+  /// Effort perçu de la séance entière, Borg CR10 (1 à 10) ; nul tant qu'il
+  /// n'est pas donné au bilan.
+  final int? perceivedEffort;
 
   final LocalSyncState syncState;
 }

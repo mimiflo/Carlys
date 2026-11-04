@@ -60,11 +60,20 @@
 
 ## Opérations de la file
 
+`session.update` corrige une séance, close comprise — aujourd'hui son
+**effort perçu** (Borg CR10), donné au bilan. C'est le chemin de
+`set.update` appliqué à la séance : la ligne locale d'abord (passée
+`pending` si elle était `synced`, sans toucher un `conflict` ou un `failed`
+dont la carte doit rester), puis le PATCH en file sur la voie de la séance.
+Le corps porte la valeur entière, et une évaluation encore `pending` est
+remplacée par la suivante.
+
 | `operationType`    | `entityType` | Appel HTTP                             |
 | ------------------ | ------------ | -------------------------------------- |
 | `session.create`   | `session`    | `POST /workout-sessions`               |
 | `session.complete` | `session`    | `POST /workout-sessions/{id}/complete` |
 | `session.abandon`  | `session`    | `POST /workout-sessions/{id}/abandon`  |
+| `session.update`   | `session`    | `PATCH /workout-sessions/{id}`         |
 | `set.upsert`       | `set`        | `POST /workout-sessions/{id}/sets`     |
 | `set.delete`       | `set`        | `DELETE /workout-sets/{id}`            |
 | `plan.skip`        | `plan`       | `POST /workout-sessions/{id}/plan/skip`|

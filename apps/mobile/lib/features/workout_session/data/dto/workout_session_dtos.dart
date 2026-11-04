@@ -22,11 +22,15 @@ class RemoteWorkoutSession {
     this.templateName,
     this.programDayId,
     this.revision,
+    this.perceivedEffort,
   });
 
   final String id;
   final String? name;
   final String? notes;
+
+  /// Effort perçu (Borg CR10), absent d'un serveur antérieur : nul.
+  final int? perceivedEffort;
 
   /// IN_PROGRESS | COMPLETED | ABANDONED (valeurs API, écrites telles quelles).
   final String status;
@@ -142,6 +146,7 @@ RemoteWorkoutSession sessionFromJson(Map<String, dynamic> json) {
     id: json['id'] as String,
     name: json['name'] as String?,
     notes: json['notes'] as String?,
+    perceivedEffort: json['perceivedEffort'] as int?,
     status: json['status'] as String,
     startedAt: DateTime.parse(json['startedAt'] as String).toUtc(),
     endedAt: endedAt == null ? null : DateTime.parse(endedAt).toUtc(),

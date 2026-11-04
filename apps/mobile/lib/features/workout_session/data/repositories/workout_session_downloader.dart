@@ -222,6 +222,7 @@ class WorkoutSessionDownloader {
               id: session.id,
               name: Value(session.name),
               notes: Value(session.notes),
+              perceivedEffort: Value(session.perceivedEffort),
               status: session.status,
               startedAt: session.startedAt,
               endedAt: Value(session.endedAt),

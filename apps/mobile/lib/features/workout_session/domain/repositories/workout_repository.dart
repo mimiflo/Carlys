@@ -63,6 +63,11 @@ abstract interface class WorkoutRepository {
 
   Future<void> deleteSet(String setId);
 
+  /// Donne l'effort perçu de la séance entière (Borg CR10, 1 à 10), ou le
+  /// retire avec `null`. Écrit d'abord en local, puis en file
+  /// (`session.update`) : modifiable après la clôture, hors ligne compris.
+  Future<void> ratePerceivedEffort(String sessionId, int? effort);
+
   Future<void> completeWorkout(String sessionId);
 
   Future<void> abandonWorkout(String sessionId);

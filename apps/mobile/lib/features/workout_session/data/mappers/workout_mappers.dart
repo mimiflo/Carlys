@@ -49,6 +49,7 @@ class WorkoutRowMapper {
     durationSeconds: row.durationSeconds,
     templateId: row.templateId,
     templateName: row.templateName,
+    perceivedEffort: row.perceivedEffort,
     syncState: LocalSyncState.fromDb(row.syncStatus),
   );
 

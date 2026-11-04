@@ -85,6 +85,16 @@ class FakeSyncApi implements SyncApi {
   }
 
   @override
+  Future<void> updateSession(
+    String sessionId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  }) async {
+    await _guard(sessionId, idempotencyKey);
+    log.add('session.update:$sessionId:${jsonEncode(body)}');
+  }
+
+  @override
   Future<void> upsertSet(
     String sessionId,
     Map<String, dynamic> body, {

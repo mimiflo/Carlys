@@ -185,6 +185,36 @@ class FakeWorkoutRepository implements WorkoutRepository {
     );
   }
 
+  /// Efforts donnés au bilan, dans l'ordre : `(séance, effort)`.
+  final List<(String, int?)> ratedEfforts = [];
+
+  @override
+  Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
+    ratedEfforts.add((sessionId, effort));
+    final current = active;
+    if (current == null || current.session.id != sessionId) {
+      return;
+    }
+    final session = current.session;
+    _publish(
+      WorkoutWithSets(
+        session: WorkoutInfo(
+          id: session.id,
+          name: session.name,
+          status: session.status,
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          durationSeconds: session.durationSeconds,
+          templateId: session.templateId,
+          templateName: session.templateName,
+          syncState: session.syncState,
+          perceivedEffort: effort,
+        ),
+        sets: current.sets,
+      ),
+    );
+  }
+
   @override
   Future<void> completeWorkout(String sessionId) async {
     completed.add(sessionId);

@@ -82,6 +82,11 @@ class LocalWorkoutSessions extends Table {
   /// monter la révision du serveur, et la séance est relue une fois.
   IntColumn get revision => integer().nullable()();
 
+  /// Effort perçu de la séance entière, échelle de Borg CR10 (1 à 10),
+  /// déclaré au bilan. Nul tant qu'il n'est pas donné. Il se corrige APRÈS
+  /// la clôture, hors ligne compris, par l'opération `session.update`.
+  IntColumn get perceivedEffort => integer().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -363,8 +368,10 @@ class AppDatabase extends _$AppDatabase {
   /// 10. Index sur les lignes et les séries des modèles (`template_id`,
   ///     `template_exercise_id`) : la lecture d'un modèle ne parcourt plus
   ///     les contenus de tous les autres.
+  /// 11. L'EFFORT PERÇU de la séance (`perceivedEffort`, Borg CR10), donné
+  ///     au bilan.
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -530,6 +537,16 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
         }
+      }
+      // `localWorkoutSessions` existe depuis la v1 et n'est jamais recréée
+      // (même raisonnement que `from < 7`) : `from < 11` est juste. Les
+      // séances déjà là reçoivent un effort nul — « pas encore évalué », ce
+      // qui est exact.
+      if (from < 11) {
+        await migrator.addColumn(
+          localWorkoutSessions,
+          localWorkoutSessions.perceivedEffort,
+        );
       }
     },
   );

@@ -40,6 +40,15 @@ abstract interface class SyncApi {
     required String idempotencyKey,
   });
 
+  /// `PATCH /workout-sessions/{sessionId}` : corriger une séance, close
+  /// comprise — aujourd'hui son effort perçu. Le corps porte la valeur
+  /// entière : rejouer aboutit au même état.
+  Future<void> updateSession(
+    String sessionId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  });
+
   /// `PATCH /workout-sets/{setId}` : corriger le FAIT réalisé.
   ///
   /// Distinct de [upsertSet], et ce n'en est pas un doublon : le POST est un
@@ -114,6 +123,17 @@ class DioSyncApi implements SyncApi {
     required String idempotencyKey,
   }) => _dio.post<void>(
     '/workout-sessions/$sessionId/abandon',
+    data: body,
+    options: _options(idempotencyKey),
+  );
+
+  @override
+  Future<void> updateSession(
+    String sessionId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  }) => _dio.patch<void>(
+    '/workout-sessions/$sessionId',
     data: body,
     options: _options(idempotencyKey),
   );

@@ -444,6 +444,24 @@ const LegacySchema legacySchemaV9 = LegacySchema(9, [
   ..._indexesV5,
 ]);
 
+/// Version 10 : celle de tout appareil à jour avant l'effort perçu (v11) —
+/// les index des modèles posés, la séance sans `perceived_effort`.
+const LegacySchema legacySchemaV10 = LegacySchema(10, [
+  _sessionsV8,
+  _setsV6,
+  _syncOperationsV5,
+  _templatesV9,
+  _templateExercisesV2,
+  _templateSetsV6,
+  _planItemsV6,
+  _waterIntakesV4,
+  ..._indexesV5,
+  'CREATE INDEX idx_local_template_exercises_template_id '
+      'ON local_template_exercises (template_id);',
+  'CREATE INDEX idx_local_template_sets_template_exercise_id '
+      'ON local_template_sets (template_exercise_id);',
+]);
+
 /// Tous les paliers historiques rejouables, du plus ancien au plus récent.
 ///
 /// C'est la liste sur laquelle boucle le test de forme
@@ -457,9 +475,10 @@ const List<LegacySchema> legacySchemas = [
   legacySchemaV4,
   legacySchemaV7,
   legacySchemaV9,
+  legacySchemaV10,
 ];
 
-/// Le plus haut palier historique couvert ici (aujourd'hui 9).
+/// Le plus haut palier historique couvert ici (aujourd'hui 10).
 ///
 /// `AppDatabase.schemaVersion` doit lui être STRICTEMENT supérieur : un
 /// palier figé ci-dessus est par définition une version révolue. C'est la

@@ -7,7 +7,8 @@ import '../support/legacy_schemas.dart';
 
 /// Migrations locales 1 → 2 (modèles de séance), 2 → 3 (plan
 /// synchronisable, pour la reprise multi-appareil), 3 → 4 (hydratation du
-/// jour), 4 → 5 (index) et 7 → 8 (révision serveur de la séance).
+/// jour), 4 → 5 (index), 7 → 8 (révision serveur de la séance) et 10 → 11
+/// (effort perçu de la séance).
 ///
 /// Chaque test part d'une base **réellement créée avec le schéma d'alors**
 /// et la laisse monter jusqu'à la version courante. La règle est la même à
@@ -532,6 +533,62 @@ void main() {
       expect(plan, contains('idx_local_template_exercises_template_id'));
       expect(plan, contains('idx_local_template_sets_template_exercise_id'));
       expect(plan, isNot(contains('AUTOMATIC')));
+    });
+  });
+
+  group('depuis la version 10', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = openLegacyDatabase(
+        legacySchemaV10,
+        seed: [
+          // Une séance close et acquittée, sa série, et une correction en file.
+          '''
+          INSERT INTO local_workout_sessions
+            (id, name, status, started_at, ended_at, sync_status, revision)
+          VALUES ('session-v10', 'Push A', 'COMPLETED', 1786000000,
+                  1786003600, 'synced', 4);
+          ''',
+          '''
+          INSERT INTO local_workout_sets
+            (id, session_id, exercise_name, position, kind, reps, weight_kg,
+             completed_at, deleted, sync_status)
+          VALUES ('set-v10', 'session-v10', 'Développé couché', 0, 'NORMAL',
+                  8, 70.0, 1786000600, 0, 'pending');
+          ''',
+          '''
+          INSERT INTO sync_operations
+            (id, entity_type, entity_id, operation_type, payload, created_at,
+             idempotency_key, owner_user_id)
+          VALUES ('op-v10', 'set', 'set-v10', 'set.update', '{}', 1786000000,
+                  'set-v10', 'compte-1');
+          ''',
+        ],
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test('l’effort arrive nul, la séance et sa file restent', () async {
+      final session = await db.select(db.localWorkoutSessions).getSingle();
+      // Nul : « pas encore évalué ». Une valeur inventée serait un faux fait.
+      expect(session.perceivedEffort, isNull);
+      expect(session.revision, 4);
+      expect(session.endedAt, isNotNull);
+      expect((await db.select(db.localWorkoutSets).getSingle()).reps, 8);
+      final operation = await db.select(db.syncOperations).getSingle();
+      expect(operation.operationType, 'set.update');
+      expect(await indexNamesOf(db), containsAll(_expectedIndexes));
+
+      // La colonne s'écrit : c'est le premier geste du bilan.
+      await (db.update(
+        db.localWorkoutSessions,
+      )).write(const LocalWorkoutSessionsCompanion(perceivedEffort: Value(7)));
+      expect(
+        (await db.select(db.localWorkoutSessions).getSingle()).perceivedEffort,
+        7,
+      );
     });
   });
 }

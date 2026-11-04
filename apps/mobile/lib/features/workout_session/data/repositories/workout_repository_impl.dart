@@ -333,6 +333,12 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   @override
+  Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
+    await _writer.ratePerceivedEffort(sessionId, effort);
+    _poke();
+  }
+
+  @override
   Future<void> completeWorkout(String sessionId) =>
       _closeWorkout(sessionId, WorkoutStatus.completed, 'session.complete');
 

@@ -34,6 +34,12 @@ class SyncDispatcher {
           payload['body'] as Map<String, dynamic>,
           idempotencyKey: key,
         );
+      case 'session.update':
+        await _api.updateSession(
+          operation.entityId,
+          payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
+        );
       case 'set.upsert':
         await _api.upsertSet(
           payload['sessionId'] as String,
