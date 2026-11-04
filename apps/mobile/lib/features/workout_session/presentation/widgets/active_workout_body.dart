@@ -8,6 +8,7 @@ import '../../../workout_template/presentation/providers/session_guidance.dart';
 import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/entities/workout.dart';
 import '../controllers/workout_controllers.dart';
+import '../providers/previous_performance.dart';
 import 'active_workout_bottom_bar.dart';
 import 'active_workout_choices.dart';
 import 'active_workout_header.dart';

@@ -30,22 +30,6 @@ final workoutDetailProvider = FutureProvider.autoDispose
       return ref.watch(workoutRepositoryProvider).workoutDetail(sessionId);
     });
 
-/// Nombre de séances passées inspectées pour retrouver une performance :
-/// au-delà, le rappel « PRÉCÉDENT … » n'a plus de valeur d'entraînement.
-const int _inspectedPastSessions = 8;
-
-/// Dernière performance enregistrée pour un exercice, séances passées
-/// comprises. `null` quand l'exercice n'a jamais été chargé/répété.
-///
-/// L'historique n'est lu que pour se recalculer quand une séance se clôt.
-final previousPerformanceProvider = FutureProvider.autoDispose
-    .family<WorkoutSetEntry?, String>((ref, exerciseName) async {
-      await ref.watch(workoutHistoryProvider.future);
-      return ref
-          .watch(workoutRepositoryProvider)
-          .previousPerformance(exerciseName, lookback: _inspectedPastSessions);
-    });
-
 /// Actions de séance — unique point d'entrée des écrans vers le domaine.
 class WorkoutActions {
   const WorkoutActions(this._ref);
