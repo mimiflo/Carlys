@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
-import 'add_weight_action.dart';
-import 'body_weight_chart.dart';
-import 'body_weight_history_sheet.dart';
-import 'body_weight_latest.dart';
+import 'body_metric_chart.dart';
+import 'body_metric_gestures.dart';
+import 'body_metric_history_sheet.dart';
+import 'body_metric_latest.dart';
 
 /// Suivi du poids corporel : la dernière mesure et sa courbe ; l'ajout dans
 /// l'en-tête, la correction et le retrait dans la feuille des mesures.
@@ -73,10 +73,10 @@ class _BodyWeightContent extends StatelessWidget {
         children: [
           // Une courbe demande deux points : avant, la mesure est un fait
           // qui se lit seul, pas un graphique vide.
-          if (entries.length < BodyWeightChart.minimumEntries)
-            BodyWeightFirstMeasure(entry: entries.last)
+          if (entries.length < BodyMetricChart.minimumEntries)
+            BodyMetricFirstMeasure(entry: entries.last)
           else
-            BodyWeightChart(entries: entries),
+            BodyMetricChart(entries: entries),
           const SizedBox(height: AppSpacing.sm),
           // L'historique — et la correction ou le retrait d'une mesure — vit
           // dans sa feuille.
@@ -84,7 +84,7 @@ class _BodyWeightContent extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: AppLinkButton(
               label: 'Voir mes mesures',
-              onPressed: () => showBodyWeightHistory(context),
+              onPressed: () => showBodyMetricHistory(context),
             ),
           ),
         ],

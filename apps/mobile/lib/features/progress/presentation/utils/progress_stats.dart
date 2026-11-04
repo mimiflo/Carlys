@@ -92,3 +92,26 @@ String volumeBarsSemantics(List<ProgressPoint> points, ProgressBucket bucket) {
   final maxY = (maxValue / step + epsilon).floor() * step + step;
   return (minY: minY, maxY: maxY, step: step);
 }
+
+/// Ce qu'une zone a parcouru depuis sa PREMIÈRE mesure : « −3,5 cm depuis
+/// le 12 août », « Stable depuis le 12 août », ou, seule, « Première mesure
+/// · 12 août ». [entries] va du plus ancien au plus récent, non vide.
+///
+/// L'écart est écrit sans jugement — ni vert ni rouge : un tour de taille
+/// qui baisse et un tour de bras qui monte sont deux bonnes nouvelles, et
+/// l'écran ne sait pas laquelle la personne cherche.
+String measurementTrend(List<BodyMetricEntry> entries) {
+  final first = entries.first;
+  final depuis = formatDayMonth(first.measuredAt);
+  if (entries.length == 1) {
+    return 'Première mesure · $depuis';
+  }
+  // Au dixième, comme la saisie : 82,3 − 80,1 vaut 2,1999… en flottants.
+  final delta = ((entries.last.value - first.value) * 10).round() / 10;
+  if (delta == 0) {
+    return 'Stable depuis le $depuis';
+  }
+  final signe = delta > 0 ? '+' : '−';
+  return '$signe${formatDecimal(delta.abs())} ${first.kind.unit} '
+      'depuis le $depuis';
+}

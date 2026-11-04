@@ -102,20 +102,66 @@ class PersonalRecordEntry {
   }
 }
 
+/// Ce qu'une mesure corporelle mesure, et dans quelle unité.
+///
+/// Les sept MENSURATIONS (`*_CM`) sont des tours, en centimètres, à une
+/// décimale. Leurs bornes ([min], [max]) sont celles que l'API applique
+/// (`BODY_METRIC_BOUNDS` de `@carlys/api-contracts`) : la feuille refuse
+/// avant l'envoi ce que le serveur refuserait après.
 enum BodyMetricKind {
-  weightKg('WEIGHT_KG', 'Poids (kg)'),
-  bodyFatPercent('BODY_FAT_PERCENT', 'Masse grasse (%)');
+  weightKg('WEIGHT_KG', 'Poids', 'kg', 1, 500),
+  bodyFatPercent('BODY_FAT_PERCENT', 'Masse grasse', '%', 1, 500),
+  waistCm('WAIST_CM', 'Tour de taille', 'cm', 40, 250),
+  hipsCm('HIPS_CM', 'Hanches', 'cm', 50, 250),
+  chestCm('CHEST_CM', 'Poitrine', 'cm', 50, 250),
+  armCm('ARM_CM', 'Bras', 'cm', 10, 100),
+  thighCm('THIGH_CM', 'Cuisse', 'cm', 20, 150),
+  calfCm('CALF_CM', 'Mollet', 'cm', 15, 100),
+  neckCm('NECK_CM', 'Cou', 'cm', 20, 80);
 
-  const BodyMetricKind(this.apiValue, this.label);
+  const BodyMetricKind(
+    this.apiValue,
+    this.label,
+    this.unit,
+    this.min,
+    this.max,
+  );
 
   final String apiValue;
+
+  /// « Tour de taille », « Poids » : ce que la ligne écrit.
   final String label;
+  final String unit;
+  final double min;
+  final double max;
+
+  /// Les zones de la section « Mensurations », dans l'ordre où elles
+  /// s'affichent : de haut en bas du corps, comme on les prend.
+  static const List<BodyMetricKind> measurements = [
+    neckCm,
+    chestCm,
+    armCm,
+    waistCm,
+    hipsCm,
+    thighCm,
+    calfCm,
+  ];
+
+  bool get isMeasurement => unit == 'cm';
+
+  /// `null` pour un type que cette version ne connaît pas : le lire comme
+  /// un poids (l'ancien repli) ferait d'un tour de taille une pesée.
+  static BodyMetricKind? tryFromApi(String? value) {
+    for (final kind in BodyMetricKind.values) {
+      if (kind.apiValue == value) {
+        return kind;
+      }
+    }
+    return null;
+  }
 
   static BodyMetricKind fromApi(String value) =>
-      BodyMetricKind.values.firstWhere(
-        (kind) => kind.apiValue == value,
-        orElse: () => BodyMetricKind.weightKg,
-      );
+      tryFromApi(value) ?? BodyMetricKind.weightKg;
 }
 
 /// Mesure corporelle datée (poids, masse grasse…).

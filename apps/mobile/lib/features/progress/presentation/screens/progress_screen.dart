@@ -7,6 +7,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
+import '../widgets/body_measurements_section.dart';
 import '../widgets/body_weight_section.dart';
 import '../widgets/progress_first_steps.dart';
 import '../widgets/progress_header.dart';
@@ -15,12 +16,13 @@ import '../widgets/records_section.dart';
 import '../widgets/volume_card.dart';
 
 /// Progrès (maquette d'octobre 2026) : volume de la période, tuiles de
-/// synthèse, porte du parcours, records personnels puis poids corporel.
+/// synthèse, porte du parcours, records personnels, poids corporel puis
+/// mensurations.
 ///
 /// Il a DEUX visages, et c'est la seule décision qu'il prend : quand les
-/// trois sources ont répondu et n'ont rien (aucune séance sur la période,
-/// aucun record, aucune mesure), il rend l'amorçage du premier jour à la
-/// place de trois états vides empilés. Un compte neuf n'a rien à mesurer, il
+/// sources ont répondu et n'ont rien (aucune séance sur la période, aucun
+/// record, aucune pesée, aucune mensuration), il rend l'amorçage du premier
+/// jour à la place d'états vides empilés. Un compte neuf n'a rien à mesurer, il
 /// a une porte à ouvrir.
 class ProgressScreen extends ConsumerWidget {
   const ProgressScreen({super.key});
@@ -32,6 +34,7 @@ class ProgressScreen extends ConsumerWidget {
       overview: overview,
       records: ref.watch(personalRecordsProvider),
       metrics: ref.watch(bodyWeightMetricsProvider),
+      measurements: ref.watch(bodyMeasurementsProvider),
     );
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
@@ -74,6 +77,8 @@ class ProgressScreen extends ConsumerWidget {
               const RecordsSection(),
               const SizedBox(height: AppSpacing.gapSection),
               const BodyWeightSection(),
+              const SizedBox(height: AppSpacing.gapSection),
+              const BodyMeasurementsSection(),
             ],
           ],
         ),
@@ -81,20 +86,24 @@ class ProgressScreen extends ConsumerWidget {
     );
   }
 
-  /// Le premier jour, et lui seul : les TROIS sources ont répondu, et
-  /// aucune n'a rien. Une source encore en chargement ou en erreur ne
+  /// Le premier jour, et lui seul : TOUTES les sources ont répondu, et
+  /// aucune n'a rien. Un tour de taille sans pesée n'est pas un compte neuf :
+  /// l'amorçage cacherait la section qui le montre. Une source encore en chargement ou en erreur ne
   /// suffit pas — un compte qui a des records mais aucune séance cette
   /// semaine n'est pas un compte neuf, et une panne n'est pas un vide.
   static bool isFirstDay({
     required AsyncValue<ProgressOverviewEntity> overview,
     required AsyncValue<List<PersonalRecordEntry>> records,
     required AsyncValue<List<BodyMetricEntry>> metrics,
+    required AsyncValue<Map<BodyMetricKind, List<BodyMetricEntry>>>
+    measurements,
   }) {
     bool empty<T>(AsyncValue<T> source, bool Function(T value) isEmpty) =>
         source.hasValue && !source.hasError && isEmpty(source.value as T);
     return empty(overview, (value) => value.points.isEmpty) &&
         empty(records, (value) => value.isEmpty) &&
-        empty(metrics, (value) => value.isEmpty);
+        empty(metrics, (value) => value.isEmpty) &&
+        empty(measurements, (value) => value.values.every((v) => v.isEmpty));
   }
 }
 

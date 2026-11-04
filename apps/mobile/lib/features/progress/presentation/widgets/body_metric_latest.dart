@@ -5,9 +5,9 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 
 /// « 78,4 kg · Dernière mesure · 21 sept. » (maquette d'octobre 2026) : la
-/// valeur en grand, sa date à côté.
-class BodyWeightLatest extends StatelessWidget {
-  const BodyWeightLatest({required this.entry, super.key});
+/// valeur en grand, dans l'unité de son type, sa date à côté.
+class BodyMetricLatest extends StatelessWidget {
+  const BodyMetricLatest({required this.entry, super.key});
 
   final BodyMetricEntry entry;
 
@@ -18,7 +18,7 @@ class BodyWeightLatest extends StatelessWidget {
       spacing: AppSpacing.lg,
       children: [
         Text(
-          '${formatDecimal(entry.value)} kg',
+          '${formatDecimal(entry.value)} ${entry.kind.unit}',
           style: AppTypography.pageTitle.copyWith(
             color: AppColors.darkTextPrimary,
           ),
@@ -41,8 +41,8 @@ class BodyWeightLatest extends StatelessWidget {
 /// rectangle vide de 104 points sous un balayage qui n'animait aucun tracé,
 /// et une date orpheline. Après le geste que l'écran vient d'inviter, on
 /// reçoit un fait et une promesse tenue, pas un grand vide.
-class BodyWeightFirstMeasure extends StatelessWidget {
-  const BodyWeightFirstMeasure({required this.entry, super.key});
+class BodyMetricFirstMeasure extends StatelessWidget {
+  const BodyMetricFirstMeasure({required this.entry, super.key});
 
   final BodyMetricEntry entry;
 
@@ -54,7 +54,7 @@ class BodyWeightFirstMeasure extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BodyWeightLatest(entry: entry),
+        BodyMetricLatest(entry: entry),
         const SizedBox(height: AppSpacing.md),
         Text(
           note,

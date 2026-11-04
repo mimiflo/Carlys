@@ -5,15 +5,16 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../utils/progress_stats.dart';
-import 'body_weight_latest.dart';
+import 'body_metric_latest.dart';
 
 const double _chartHeight = 150;
 
-/// Courbe du poids corporel (maquette d'octobre 2026) : la dernière mesure
+/// Courbe d'une mesure corporelle (maquette d'octobre 2026, dessinée pour le
+/// poids, reprise telle quelle par chaque mensuration) : la dernière mesure
 /// en tête, puis la courbe avec son échelle, ses dates et un point par
 /// mesure — la plus récente cerclée.
-class BodyWeightChart extends StatelessWidget {
-  const BodyWeightChart({required this.entries, super.key})
+class BodyMetricChart extends StatelessWidget {
+  const BodyMetricChart({required this.entries, super.key})
     : assert(
         entries.length >= minimumEntries,
         'une courbe demande au moins deux mesures',
@@ -41,13 +42,13 @@ class BodyWeightChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BodyWeightLatest(entry: entries.last),
+        BodyMetricLatest(entry: entries.last),
         const SizedBox(height: AppSpacing.md),
         Semantics(
           label:
-              'Évolution du poids corporel, de '
+              'Évolution : ${entries.last.kind.label}, de '
               '${formatDecimal(entries.first.value)} à '
-              '${formatDecimal(entries.last.value)} kilos '
+              '${formatDecimal(entries.last.value)} ${entries.last.kind.unit} '
               'sur ${entries.length} mesures',
           excludeSemantics: true,
           // Isole le rendu du graphique : ses repeints restent locaux.

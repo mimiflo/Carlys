@@ -72,6 +72,7 @@ import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/exercise_progression_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/timeline_screen.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_measurements_section.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/manifesto_tile.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
@@ -405,8 +406,35 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
           Duration(days: (6 - index) * 6 + 1),
         ),
       ),
+    ...measurementsSample(),
   ],
 );
+
+/// Des mensurations comme on en prend : la taille et les bras chaque
+/// semaine, les hanches et la poitrine plus rarement, la cuisse une seule
+/// fois — de quoi montrer une courbe, des écarts dans les deux sens et une
+/// première mesure. Le cou et le mollet restent sans ligne, comme une zone
+/// qu'on ne mesure pas.
+List<BodyMetricEntry> measurementsSample() => [
+  for (final (kind, values) in const [
+    (BodyMetricKind.waistCm, [86.0, 85.2, 84.5, 84.1, 83.0, 82.4]),
+    (BodyMetricKind.chestCm, [102.0, 102.8, 103.5]),
+    (BodyMetricKind.armCm, [35.5, 35.9, 36.4, 36.8]),
+    (BodyMetricKind.hipsCm, [99.5, 98.6, 98.0]),
+    (BodyMetricKind.thighCm, [58.0]),
+  ])
+    for (final (index, value) in values.indexed)
+      BodyMetricEntry(
+        id: '${kind.apiValue}-$index',
+        kind: kind,
+        value: value,
+        // La plus récente il y a deux jours, les autres de semaine en
+        // semaine : relatives à maintenant, comme toute date rendue.
+        measuredAt: startOfToday().toUtc().subtract(
+          Duration(days: (values.length - 1 - index) * 7 + 2),
+        ),
+      ),
+];
 
 /// Deux mois d'histoire : la vitrine de la FRISE.
 ///
@@ -709,6 +737,10 @@ void main() {
     /// Le dépôt d'authentification, quand la scène règle ce que le
     /// « serveur » répond (suppression du compte refusée, par exemple).
     FakeAuthRepository? auth,
+
+    /// La progression, quand la scène en montre une autre que la vitrine
+    /// (les mensurations encore vides, par exemple).
+    FakeProgressRepository? progress,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -735,7 +767,7 @@ void main() {
             workouts ?? FakeWorkoutRepository(),
           ),
           progressRepositoryProvider.overrideWithValue(
-            progressOf()..lifetime = lifetime,
+            (progress ?? progressOf())..lifetime = lifetime,
           ),
           nutritionRepositoryProvider.overrideWithValue(
             nutrition ?? nutritionOf(),
@@ -2045,6 +2077,63 @@ void main() {
       tester,
       '07-progression-poids',
       shows: find.byType(BodyWeightSection),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Cuisse'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '07b-progression-mensurations',
+      shows: find.byType(BodyMeasurementsSection),
+    );
+
+    // L'histoire d'une zone : la courbe du poids, reprise, puis les mesures.
+    await tester.tap(find.text('Tour de taille'));
+    await settle(tester);
+    await tester.pump(AppMotion.deliberate);
+    await tester.pump();
+    await capture(
+      tester,
+      '07c-mensuration-historique',
+      shows: find.text('Tour de taille · 6 mesures'),
+    );
+    await tester.tap(find.text('AJOUTER').last);
+    await settle(tester);
+    await capture(
+      tester,
+      '07d-mensuration-saisie',
+      shows: find.text('Date de la mesure'),
+    );
+  });
+
+  testWidgets('progression — mensurations encore vides', (tester) async {
+    // Des pesées, des records, des séances — mais aucun tour pris : la
+    // section invite à commencer, sous la courbe du poids.
+    final progress = progressOf();
+    for (final entry in measurementsSample()) {
+      await progress.deleteBodyMetric(entry.id);
+    }
+    await pumpApp(tester, progress: progress);
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(
+      find.text('Aucune mensuration'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Prendre une mesure'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '07e-mensurations-vides',
+      shows: find.text('Aucune mensuration'),
     );
   });
 

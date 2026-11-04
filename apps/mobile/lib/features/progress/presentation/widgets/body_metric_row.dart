@@ -5,22 +5,27 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
-import 'add_weight_action.dart';
+import 'body_metric_gestures.dart';
 
 /// Ligne de mesure : date en mono, valeur à droite, correction et suppression.
 ///
-/// Publique parce qu'elle sert à DEUX endroits : les trois dernières mesures
-/// sous la courbe, et la liste complète de la feuille d'historique. Les
-/// recopier aurait fait diverger la confirmation de suppression, qui est
-/// justement ce qu'on ne veut pas voir diverger.
-class WeightRow extends ConsumerWidget {
-  const WeightRow({required this.entry, required this.isLatest, super.key});
+/// Une seule ligne pour le poids ET les mensurations, dans la feuille
+/// d'historique de chacun : les recopier aurait fait diverger la
+/// confirmation de suppression, qui est justement ce qu'on ne veut pas voir
+/// diverger. Ce qui change d'un type à l'autre — l'unité, l'icône, la
+/// feuille de correction, la conséquence d'une suppression — se lit dans
+/// [BodyMetricEntry.kind].
+class BodyMetricRow extends ConsumerWidget {
+  const BodyMetricRow({required this.entry, required this.isLatest, super.key});
 
   final BodyMetricEntry entry;
 
-  /// La plus récente porte l'accent : c'est elle qui nourrit le rapport
-  /// métabolique.
+  /// La plus récente porte l'accent. Pour le poids, c'est aussi elle qui
+  /// nourrit le rapport métabolique.
   final bool isLatest;
+
+  bool get _feedsMetabolism =>
+      isLatest && entry.kind == BodyMetricKind.weightKg;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,7 +33,7 @@ class WeightRow extends ConsumerWidget {
     final value = formatDecimal(entry.value);
 
     return Semantics(
-      label: 'Poids du $date : $value kg',
+      label: '${entry.kind.label} du $date : $value ${entry.kind.unit}',
       child: Container(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -46,7 +51,9 @@ class WeightRow extends ConsumerWidget {
         child: Row(
           children: [
             Icon(
-              AppIcons.bodyMetrics,
+              entry.kind.isMeasurement
+                  ? AppIcons.bodyMeasurements
+                  : AppIcons.bodyMetrics,
               size: 22,
               color: isLatest ? AppColors.accent : AppColors.primaryLight,
             ),
@@ -87,7 +94,7 @@ class WeightRow extends ConsumerWidget {
                 ).copyWith(color: AppColors.darkTextPrimary),
                 children: [
                   TextSpan(
-                    text: 'kg',
+                    text: entry.kind.unit,
                     style: AppTypography.resized(
                       AppTypography.metricS,
                       11,
@@ -97,13 +104,7 @@ class WeightRow extends ConsumerWidget {
               ),
             ),
             IconButton(
-              onPressed: () => correctBodyWeight(
-                context,
-                ref,
-                metricId: entry.id,
-                valueKg: entry.value,
-                measuredAt: entry.measuredAt,
-              ),
+              onPressed: () => correctBodyMetric(context, ref, entry),
               tooltip: 'Corriger la mesure du $date',
               icon: const Icon(
                 AppIcons.editOutline,
@@ -135,7 +136,7 @@ class WeightRow extends ConsumerWidget {
     final confirme = await showAppConfirm(
       context,
       title: 'Supprimer la mesure du $date ?',
-      message: isLatest
+      message: _feedsMetabolism
           ? 'C’est ta mesure la plus récente : ton métabolisme de base, '
                 'ta cible calorique et tes macros seront recalculés sur '
                 'la précédente.'
@@ -149,7 +150,7 @@ class WeightRow extends ConsumerWidget {
     }
 
     try {
-      await ref.read(bodyMetricActionsProvider).remove(entry.id);
+      await ref.read(bodyMetricActionsProvider).remove(entry);
     } on Exception {
       if (context.mounted) {
         AppNotices.of(

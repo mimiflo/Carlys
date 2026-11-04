@@ -53,6 +53,12 @@ abstract final class AppIcons {
   static const IconData record = Icons.emoji_events_rounded;
   static const IconData bodyMetrics = Icons.monitor_weight_rounded;
 
+  /// Les mensurations : le mètre ruban, et non la balance de [bodyMetrics]
+  /// — un tour de taille ne se pèse pas. Une seule icône pour les sept
+  /// zones : la banque n'a pas de glyphe par partie du corps, et sept
+  /// pictogrammes approximatifs diraient moins que le nom de la zone.
+  static const IconData bodyMeasurements = Icons.straighten_rounded;
+
   /// Protéines — et non la BALANCE de `bodyMetrics`, qui parlait de pesée
   /// corporelle au milieu d'un résumé nutritionnel.
   static const IconData protein = Icons.egg_alt_rounded;
