@@ -116,20 +116,33 @@ hanches et poitrine 50–250, bras 10–100, cuisse 20–150, mollet 15–100, c
 (`@carlys/api-contracts`) et c'est le SERVICE qui les applique, pas le DTO :
 une correction ne porte pas le type, seule la ligne stockée le connaît. Le
 refus est un `VALIDATION_ERROR` sur le champ `value`, comme ceux du DTO. La
-feuille mobile applique les mêmes bornes (`BodyMetricKind.min`/`max`) avant
-l'envoi ; un test les compare à la liste de l'API.
+feuille mobile applique les mêmes bornes (`BodyMetricKind.min`, `max` et
+`decimals`) avant l'envoi. `measurements_test.dart` lit `bodyMetricTypeSchema`
+et `BODY_METRIC_BOUNDS` DANS `packages/api-contracts/src/progress.ts` et
+exige, type par type, le même minimum, le même maximum et le même nombre de
+décimales : régler une borne côté API sans la régler côté appli fait rougir
+le test. La description Swagger de `value` est construite depuis la même
+constante.
 
 **Elles ne se mélangent pas au poids.** Le rapport métabolique ne lit que
 `WEIGHT_KG` : un tour de taille plus récent que la dernière pesée ne le
 déplace pas (test e2e). La suppression d'une mensuration ne parle donc pas
 de cible calorique, et la frise écrit « Tour de taille · 82,4 cm », pas
-« Pesée » — un type que la version installée ne connaît pas s'y lit
-« Mesure », sans unité inventée.
+« Pesée ». À partir de cette version, un type que l'appli installée ne
+connaît pas s'y lit « Mesure », sans unité inventée.
+
+**La limite, pour les versions d'AVANT.** Elles lisent tout type autre que
+`WEIGHT_KG` comme une masse grasse : un tour de taille de 82,5 cm s'y écrit
+« Masse grasse · 82,5 % » dans la frise. Aucune rustine serveur n'est
+posée : tant que l'appli n'est pas publiée, seules les applis de test
+(recette) sont concernées, et elles se mettent à jour.
 
 **L'écran.** Sous le poids, la section « Mensurations » liste une ligne par
 zone déjà mesurée : son nom, sa dernière valeur, et son écart depuis la
-PREMIÈRE mesure (« −3,6 cm depuis le 27 sept. », « Stable… », ou
-« Première mesure · … »). L'écart s'écrit sans couleur : un tour de taille
+plus ancienne des mesures CHARGÉES (« −3,6 cm depuis le 27 sept. »,
+« Stable… », ou « Première mesure · … »). Chargées : `/body-metrics` sert
+les 90 mesures les plus récentes d'une zone, donc au-delà de 90 tours,
+l'écart part de la 90ᵉ plus récente — et la date affichée est la sienne. L'écart s'écrit sans couleur : un tour de taille
 qui baisse et un tour de bras qui monte sont deux bonnes nouvelles, l'écran
 ne sait pas laquelle on cherche. Une zone jamais mesurée n'a pas de ligne ;
 sans aucune zone, un seul état vide invite à « Prendre une mesure ».
@@ -159,6 +172,9 @@ sans aucune zone, un seul état vide invite à « Prendre une mesure ».
   l'amorçage tient compte des mensurations.
 - **Données personnelles** : la suppression d'un compte efface ces lignes
   par la même cascade que le poids.
+- **Retour arrière** : la migration est irréversible (pas de `DROP VALUE`
+  dans PostgreSQL) ; voir `docs/database/schema.md`. Déployer l'API
+  d'abord, l'appli ensuite.
 
 ## Courbe par exercice
 

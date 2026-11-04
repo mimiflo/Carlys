@@ -620,7 +620,16 @@ recalculé en transaction lors de l'ingestion d'une séance.
 > 3 novembre 2026 (migration `20261103110000_mensurations`) : `WAIST_CM`,
 > `HIPS_CM`, `CHEST_CM`, `ARM_CM`, `THIGH_CM`, `CALF_CM`, `NECK_CM`, des tours
 > en centimètres dans la même table — l'unité se lit dans le type, toujours
-> sans colonne `unit`. `ProgressGoal` et `ProgressSnapshot` sont
+> sans colonne `unit`. Cette migration est **irréversible** : PostgreSQL n'a
+> pas de `ALTER TYPE … DROP VALUE`. Le retour arrière se fait par l'image
+> seule, et les valeurs restent (dans le type comme dans les lignes déjà
+> saisies). Tant que l'ancienne image tourne sur une base qui contient des
+> `*_CM`, son client Prisma refuse de lire ces lignes (« Value 'WAIST_CM' not
+> found in enum 'BodyMetricType' », vérifié avec le client généré du schéma
+> d'avant) : `PATCH` et `DELETE /body-metrics/:id` d'une mensuration
+> répondent 500 ; `GET /body-metrics` (filtré sur le poids) et la frise
+> (SQL brut) répondent. Ordre de déploiement : l'API d'abord, l'appli
+> ensuite. `ProgressGoal` et `ProgressSnapshot` sont
 > **différés** : les agrégats (totaux et volume par intervalle `date_trunc`
 > whitelisté) se calculent à la volée sur les index existants, largement
 > suffisant à cette échelle.
