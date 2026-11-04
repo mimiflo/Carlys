@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 10 octobre 2026.
+Dernière mise à jour : 3 novembre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -110,7 +110,9 @@ profil et de ta dernière pesée : métabolisme de base, dépense estimée,
 objectif calorique, macronutriments, indice de masse corporelle et
 hydratation. Chercher un aliment n’envoie que les mots tapés : ils ne sont
 pas enregistrés avec ton compte, seulement dans les journaux techniques
-décrits plus bas, comme toute requête.
+décrits plus bas, comme toute requête. Scanner le code-barres d’un produit
+n’envoie que ses chiffres, de la même façon ; l’appareil photo ne sert qu’à
+les lire, aucune image ne part.
 
 ### La photo de tes repas (facultative)
 
@@ -438,6 +440,11 @@ soient envoyés.
 - **E-mails de service : [À COMPLÉTER : prestataire d’envoi d’e-mails].** Il
   reçoit ton adresse e-mail et le contenu des e-mails de vérification et de
   réinitialisation.
+- **Produits emballés : Open Food Facts.** Quand tu scannes le code-barres
+  d’un produit, le serveur de Carlys (jamais ton téléphone) demande à cette base
+  collaborative les valeurs du produit, avec ses seuls chiffres de
+  code-barres : ni ton compte, ni ton adresse IP, ni rien de toi ne lui est
+  transmis.
 - **Hébergement : serveur dédié de l’éditeur**, situé
   [À COMPLÉTER : pays d’hébergement du serveur]. La base de données, les
   journaux et les sauvegardes y résident.
