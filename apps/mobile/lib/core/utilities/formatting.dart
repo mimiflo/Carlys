@@ -314,6 +314,11 @@ String formatNumericDate(DateTime date) {
   return '$day/$month/${date.year}';
 }
 
+/// « jeudi » : le jour de la semaine en toutes lettres. Le jour est lu tel
+/// quel : à l'appelant de passer une date LOCALE.
+String formatWeekdayName(DateTime date) =>
+    _weekdaysLong[date.weekday - 1].toLowerCase();
+
 /// L'heure en 24 h, comme partout ailleurs dans l'application : « 08h24 ».
 String formatClock(DateTime moment) {
   final hours = moment.hour.toString().padLeft(2, '0');

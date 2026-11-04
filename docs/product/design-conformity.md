@@ -729,7 +729,11 @@ Deux maquettes fournies le 7 octobre 2026, traduites avec le design system :
   volume, puis une carte par exercice (`breakdownByExercise`), la première
   dépliée. Le **crayon** passe la carte en correction : toucher une série la
   corrige, l'appui long la supprime — hors correction, le tableau se lit
-  seulement. « Retour à l'entraînement » mène à l'onglet Training.
+  seulement. En bas, avant « Retour à l'entraînement » (qui mène à l'onglet
+  Training), la carte **« Comment c'était ? »** (`SessionEffortCard`,
+  novembre 2026) : cinq pastilles d'effort perçu (`AppChoicePills`), et le
+  repos conseillé une fois l'une choisie (voir
+  [ajouts-novembre-2026.md](ajouts-novembre-2026.md), section B).
 
 Écarts :
 

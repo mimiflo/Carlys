@@ -9,6 +9,7 @@ import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/services/exercise_breakdown.dart';
 import '../widgets/exercise_summary_card.dart';
+import '../widgets/session_effort_card.dart';
 import '../widgets/workout_conflict_card.dart';
 import '../widgets/workout_retry_sync_card.dart';
 import '../widgets/workout_summary_hero.dart';
@@ -164,6 +165,12 @@ class _SummaryBody extends StatelessWidget {
             color: AppColors.darkTextSecondary,
           ),
         ),
+        // L'effort se juge APRÈS avoir relu la séance, et sur une séance
+        // CLOSE : c'est sa fin qui fait partir le repos conseillé.
+        if (session.status != WorkoutStatus.inProgress) ...[
+          const SizedBox(height: AppSpacing.md),
+          SessionEffortCard(workout: workout),
+        ],
         const SizedBox(height: AppSpacing.md),
         AppCtaButton(
           label: 'Retour à l’entraînement',

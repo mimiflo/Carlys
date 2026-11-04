@@ -134,6 +134,14 @@ class WorkoutActions {
     _ref.invalidate(personalRecordsProvider);
   }
 
+  /// Effort perçu donné (ou retiré) au bilan, puis le bilan relu.
+  Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
+    await _ref
+        .read(workoutRepositoryProvider)
+        .ratePerceivedEffort(sessionId, effort);
+    _ref.invalidate(workoutDetailProvider(sessionId));
+  }
+
   Future<void> abandon(String sessionId) =>
       _ref.read(workoutRepositoryProvider).abandonWorkout(sessionId);
 

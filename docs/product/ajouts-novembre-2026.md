@@ -52,6 +52,31 @@ Rien pour la séance entière.
 **Hors champ.** Une récupération calculée à partir du sommeil ou de la
 fréquence cardiaque.
 
+**Réalisé (3 novembre 2026).**
+- *Donnée.* `WorkoutSession.perceivedEffort` (entier nullable, `CHECK` 1..10
+  en base, migration `20261103100000_effort_percu_seance`), servi dans le
+  détail de séance (`WorkoutSessionDetail.perceivedEffort`). Il s'écrit par
+  `PATCH /workout-sessions/{id}` : l'écriture fait monter la révision, donc
+  un autre appareil le rapatrie ; un rejeu à valeur égale ne touche aucune
+  ligne. Côté appareil, colonne Drift `perceived_effort` (schéma local v11).
+- *Synchronisation.* Le chemin des corrections de série, appliqué à la
+  séance : nouvelle opération `session.update`, sur la voie de la séance,
+  derrière sa création et sa clôture — donc modifiable après la clôture,
+  hors ligne compris. Une évaluation encore en attente est remplacée par la
+  suivante (un seul PATCH, comme `template.save`).
+- *Bilan.* Carte « Comment c'était ? » en bas du bilan (`SessionEffortCard`),
+  donc aussi sur toute séance ouverte depuis l'historique. Très facile = 2,
+  Facile = 4, Modéré = 5, Difficile = 7, À fond = 9 ; toucher la réponse
+  choisie la retire. Une valeur venue d'ailleurs retombe sur la réponse de sa
+  bande (`EffortChoice.fromBorg`).
+- *Repos conseillé.* `recoveryAdvice` (domaine, pur) : ≤ 4 → 24 h, 5–6 →
+  48 h, ≥ 7 → 72 h, à partir de la fin de séance. Les muscles sont les
+  groupes PRINCIPAUX des fiches du catalogue (`ExerciseDetail.muscles`) ;
+  hors ligne ou exercice libre, la phrase se dit sans eux. L'échéance est
+  dite en heure locale, arrondie à l'heure supérieure, et tue une fois
+  passée (séance relue plus tard). La mention ACSM « pas un avis médical »
+  l'accompagne toujours.
+
 ## C. Mensurations
 
 **Existant.** Le poids et le taux de masse grasse (`BodyMetric`), dans

@@ -257,10 +257,17 @@ WorkoutWithSets completedWorkoutOf() {
     const Duration(minutes: 50),
   );
   var position = 0;
-  List<WorkoutSetEntry> sets(String name, int count, int reps, double kg) => [
+  List<WorkoutSetEntry> sets(
+    String exerciseId,
+    String name,
+    int count,
+    int reps,
+    double kg,
+  ) => [
     for (var i = 0; i < count; i++)
       WorkoutSetEntry(
         id: 'fin-${position++}',
+        exerciseId: exerciseId,
         exerciseName: name,
         position: position,
         kind: SetKind.normal,
@@ -281,12 +288,20 @@ WorkoutWithSets completedWorkoutOf() {
       syncState: LocalSyncState.synced,
     ),
     sets: [
-      ...sets('Développé couché', 4, 8, 80),
-      ...sets('Développé épaules', 3, 10, 40),
-      ...sets('Extension triceps à la poulie', 3, 10, 25),
+      ...sets('fin-dc', 'Développé couché', 4, 8, 80),
+      ...sets('fin-de', 'Développé épaules', 3, 10, 40),
+      ...sets('fin-tri', 'Extension triceps à la poulie', 3, 10, 25),
     ],
   );
 }
+
+/// Les fiches des exercices du bilan : ce qui nomme les muscles du repos
+/// conseillé (« pectoraux, épaules et triceps »).
+FakeExercisesRepository completedCatalogOf() => FakeExercisesRepository([
+  summary('fin-dc', 'Développé couché', group: 'Pectoraux'),
+  summary('fin-de', 'Développé épaules', group: 'Épaules'),
+  summary('fin-tri', 'Extension triceps à la poulie', group: 'Triceps'),
+], pageSize: 10);
 
 /// Cinq séances récentes, datées RELATIVEMENT à aujourd'hui.
 ///
@@ -1652,7 +1667,7 @@ void main() {
 
   testWidgets('bilan de séance', (tester) async {
     final workouts = FakeWorkoutRepository()..active = completedWorkoutOf();
-    await pumpApp(tester, workouts: workouts);
+    await pumpApp(tester, workouts: workouts, exercises: completedCatalogOf());
     final context = tester.element(find.byType(AppBottomBar));
     await tester.runAsync(
       () => precacheImage(const AssetImage(SummitIllustration.asset), context),
@@ -1676,15 +1691,33 @@ void main() {
     await capture(
       tester,
       '41b-bilan-seance-bas',
-      shows: find.text('Retour à l’entraînement'),
+      shows: find.text('Comment c’était ?'),
     );
 
-    // Le crayon : la carte passe en correction.
+    // « Comment c'était ? » : un effort choisi, et le repos qu'il conseille.
+    await tester.tap(find.text('Modéré'));
+    await settle(tester);
     await tester.scrollUntilVisible(
-      find.byTooltip('Corriger'),
-      -200,
+      find.text('Retour à l’entraînement'),
+      200,
       scrollable: find.byType(Scrollable).last,
     );
+    await settle(tester);
+    await capture(
+      tester,
+      '41d-bilan-seance-effort',
+      shows: find.textContaining('Repos conseillé : 48 h pour pectoraux'),
+    );
+
+    // Le crayon : la carte passe en correction. Retour en haut d'abord, la
+    // carte de l'effort a allongé le bilan.
+    tester
+        .state<ScrollableState>(find.byType(Scrollable).last)
+        .position
+        .jumpTo(0);
+    await settle(tester);
+    await tester.ensureVisible(find.byTooltip('Corriger'));
+    await settle(tester);
     await tester.tap(find.byTooltip('Corriger'));
     await settle(tester);
     await capture(
