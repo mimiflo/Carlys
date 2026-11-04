@@ -24,13 +24,16 @@ class MeasuredOnRow extends StatelessWidget {
 
   Future<void> _choisir(BuildContext context) async {
     final maintenant = DateTime.now();
+    // Deux ans en arrière : de quoi rattraper un historique, sans ouvrir un
+    // calendrier infini — ou plus loin, jusqu'à la date d'une mesure plus
+    // ancienne qu'on corrige : le calendrier refuse de s'ouvrir avant sa
+    // première date permise. Aucune date future — on ne se mesure pas
+    // demain, et l'API le refuse.
+    final deuxAns = DateTime(maintenant.year - 2);
     final choisie = await showDatePicker(
       context: context,
       initialDate: value,
-      // Deux ans en arrière : de quoi rattraper un historique, sans ouvrir un
-      // calendrier infini. Aucune date future — on ne se mesure pas demain,
-      // et l'API le refuse.
-      firstDate: DateTime(maintenant.year - 2),
+      firstDate: value.isBefore(deuxAns) ? value : deuxAns,
       lastDate: maintenant,
       helpText: title,
     );

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
@@ -93,8 +95,8 @@ class _AddMeasurementFormState extends State<_AddMeasurementForm> {
       return 'Entre ${formatDecimal(_kind.min)} et '
           '${formatDecimal(_kind.max)} cm.';
     }
-    final dixiemes = valeur * 10;
-    if ((dixiemes - dixiemes.round()).abs() > 1e-6) {
+    final echelle = valeur * math.pow(10, _kind.decimals);
+    if ((echelle - echelle.round()).abs() > 1e-6) {
       return 'Une décimale au plus, par exemple 82,5.';
     }
     return null;

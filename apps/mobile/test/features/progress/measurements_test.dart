@@ -1,14 +1,18 @@
 import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/progress/data/dto/progress_dtos.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/utils/progress_stats.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/add_measurement_sheet.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_measurements_section.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_metric_chart.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_first_steps.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/timeline_row.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/api_contract.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/first_run_prefs.dart';
 import 'progress_flow_test.dart' show appWith, openProgressTab, reveal;
@@ -34,24 +38,30 @@ void main() {
   );
 
   group('domaine', () {
-    test('les bornes des zones sont celles de l’API', () {
-      // BODY_METRIC_BOUNDS de @carlys/api-contracts : la feuille refuse
-      // avant l'envoi ce que le serveur refuserait après.
-      expect(
-        {
-          for (final kind in BodyMetricKind.measurements)
-            kind.apiValue: (kind.min, kind.max),
-        },
-        {
-          'WAIST_CM': (40, 250),
-          'HIPS_CM': (50, 250),
-          'CHEST_CM': (50, 250),
-          'ARM_CM': (10, 100),
-          'THIGH_CM': (20, 150),
-          'CALF_CM': (15, 100),
-          'NECK_CM': (20, 80),
-        },
+    test('types et bornes sont ceux du contrat de l’API', () {
+      // Lus dans `packages/api-contracts/src/progress.ts`, jamais recopiés :
+      // la feuille refuse avant l'envoi ce que le serveur refuserait après.
+      final types = contractStrings(
+        'progress.ts',
+        RegExp(r'bodyMetricTypeSchema = z\.enum\(\[([\s\S]*?)\]\)'),
       );
+      expect(BodyMetricKind.values.map((k) => k.apiValue), types);
+
+      final bornes = {
+        for (final m in RegExp(
+          r'(\w+): \{ min: ([\d.]+), max: ([\d.]+), decimals: (\d+) \}',
+        ).allMatches(contractSource('progress.ts')))
+          m.group(1)!: (
+            double.parse(m.group(2)!),
+            double.parse(m.group(3)!),
+            int.parse(m.group(4)!),
+          ),
+      };
+      expect(bornes.keys, types, reason: 'BODY_METRIC_BOUNDS illisible');
+      expect({
+        for (final kind in BodyMetricKind.values)
+          kind.apiValue: (kind.min, kind.max, kind.decimals),
+      }, bornes);
       expect(BodyMetricKind.measurements.every((k) => k.unit == 'cm'), isTrue);
       expect(BodyMetricKind.weightKg.isMeasurement, isFalse);
     });
@@ -59,6 +69,16 @@ void main() {
     test('un type inconnu ne devient pas un poids', () {
       expect(BodyMetricKind.tryFromApi('WAIST_CM'), BodyMetricKind.waistCm);
       expect(BodyMetricKind.tryFromApi('WRIST_CM'), isNull);
+      // Le DTO décide : une réponse au type inconnu est illisible.
+      expect(
+        () => bodyMetricFromJson({
+          'id': 'm-1',
+          'metricType': 'WRIST_CM',
+          'value': 17,
+          'measuredAt': '2026-11-02T08:00:00.000Z',
+        }),
+        throwsFormatException,
+      );
     });
 
     test('l’écart se dit depuis la première mesure, au dixième', () {
@@ -82,6 +102,91 @@ void main() {
         measurementTrend([premiere, tour(BodyMetricKind.waistCm, 85, 1)]),
         'Stable $depuis',
       );
+    });
+  });
+
+  group('lecteur d’écran', () {
+    Future<SemanticsNode> courbe(
+      WidgetTester tester,
+      List<BodyMetricEntry> entries,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(body: BodyMetricChart(entries: entries)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return tester.getSemantics(find.byType(RepaintBoundary).last);
+    }
+
+    testWidgets('la courbe du poids se dit comme avant, en kilos', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final noeud = await courbe(tester, [
+        tour(BodyMetricKind.weightKg, 80, 10),
+        tour(BodyMetricKind.weightKg, 78, 1),
+      ]);
+      expect(
+        noeud.label,
+        'Évolution du poids corporel, de 80 à 78 kilos sur 2 mesures',
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('celle d’une zone se dit en centimètres', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final noeud = await courbe(tester, [
+        tour(BodyMetricKind.waistCm, 85, 10),
+        tour(BodyMetricKind.waistCm, 81.5, 1),
+      ]);
+      expect(
+        noeud.label,
+        'Évolution : tour de taille, de 85 à 81,5 centimètres sur 2 mesures',
+      );
+      semantics.dispose();
+    });
+
+    test('chaque unité a sa forme parlée', () {
+      expect(BodyMetricKind.weightKg.spokenUnit, 'kilos');
+      expect(BodyMetricKind.bodyFatPercent.spokenUnit, 'pour cent');
+      expect(BodyMetricKind.armCm.spokenUnit, 'centimètres');
+    });
+  });
+
+  group('feuille de saisie', () {
+    testWidgets('corriger une mesure de plus de deux ans ouvre le calendrier', (
+      tester,
+    ) async {
+      final ancienne = DateTime.now().subtract(const Duration(days: 365 * 3));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showAddMeasurementSheet(
+                  context,
+                  initialKind: BodyMetricKind.waistCm,
+                  initialValue: 90,
+                  initialDate: ancienne,
+                  correction: true,
+                ),
+                child: const Text('ouvrir'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+      // Le calendrier refusait de s'ouvrir sur une date antérieure à sa
+      // première date permise (`initialDate >= firstDate`).
+      await tester.tap(find.text('Date de la mesure'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DatePickerDialog), findsOneWidget);
     });
   });
 
@@ -259,6 +364,30 @@ void main() {
         ('taille-1', 85.0),
         ('taille-2', 81.0),
       ]);
+    });
+
+    testWidgets('au lecteur d’écran, activer une zone ouvre son histoire', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final progress = FakeProgressRepository(
+        bodyMetrics: [
+          tour(BodyMetricKind.weightKg, 80, 2),
+          tour(BodyMetricKind.waistCm, 85, 30),
+          tour(BodyMetricKind.waistCm, 81.5, 1),
+        ],
+      );
+      await ouvrir(tester, progress);
+      await reveal(tester, dansLaSection(find.text('Tour de taille')));
+
+      // Le double appui du lecteur d'écran : l'action SÉMANTIQUE, pas un
+      // toucher à l'écran.
+      final noeud = tester.getSemantics(dansLaSection(find.byType(AppListRow)));
+      expect(noeud.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      noeud.owner!.performAction(noeud.id, SemanticsAction.tap);
+      await tester.pumpAndSettle();
+      expect(find.text('Tour de taille · 2 mesures'), findsOneWidget);
+      semantics.dispose();
     });
 
     testWidgets('indisponibles : un état d’erreur, et le réessai', (

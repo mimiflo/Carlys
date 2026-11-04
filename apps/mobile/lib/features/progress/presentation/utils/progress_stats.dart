@@ -93,9 +93,15 @@ String volumeBarsSemantics(List<ProgressPoint> points, ProgressBucket bucket) {
   return (minY: minY, maxY: maxY, step: step);
 }
 
-/// Ce qu'une zone a parcouru depuis sa PREMIÈRE mesure : « −3,5 cm depuis
-/// le 12 août », « Stable depuis le 12 août », ou, seule, « Première mesure
-/// · 12 août ». [entries] va du plus ancien au plus récent, non vide.
+/// Ce qu'une zone a parcouru depuis la plus ancienne des mesures CHARGÉES :
+/// « −3,5 cm depuis le 12 août », « Stable depuis le 12 août », ou, seule,
+/// « Première mesure · 12 août ». [entries] va du plus ancien au plus
+/// récent, non vide.
+///
+/// Chargées, pas « la première de toutes » : `/body-metrics` sert les 90
+/// mesures les plus récentes d'une zone (`limit` par défaut). Au-delà de
+/// 90 tours d'une même zone, l'écart part donc de la 90ᵉ plus récente, et
+/// la date affichée le dit.
 ///
 /// L'écart est écrit sans jugement — ni vert ni rouge : un tour de taille
 /// qui baisse et un tour de bras qui monte sont deux bonnes nouvelles, et

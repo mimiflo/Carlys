@@ -10,7 +10,8 @@ import 'body_metric_gestures.dart';
 import 'body_metric_history_sheet.dart';
 
 /// Les MENSURATIONS, sous le poids : une ligne par zone déjà mesurée — sa
-/// dernière valeur et son écart depuis la première —, l'ajout dans
+/// dernière valeur et son écart depuis la plus ancienne des mesures
+/// chargées (90 au plus, voir `measurementTrend`) —, l'ajout dans
 /// l'en-tête, l'histoire de la zone (courbe, correction, retrait) dans sa
 /// feuille.
 ///
@@ -98,18 +99,21 @@ class _ZoneRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final latest = entries.last;
     final kind = latest.kind;
+    void ouvrir() => showBodyMetricHistory(context, kind: kind);
     return Semantics(
       button: true,
       label:
-          '${kind.label} : ${formatDecimal(latest.value)} centimètres, '
+          '${kind.label} : ${formatDecimal(latest.value)} ${kind.spokenUnit}, '
           '${measurementTrend(entries)}. Voir l’historique.',
+      // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+      onTap: ouvrir,
       excludeSemantics: true,
       child: AppListRow(
         title: kind.label,
         subtitle: measurementTrend(entries),
         leading: AppIcons.bodyMeasurements,
         trailingText: '${formatDecimal(latest.value)} cm',
-        onTap: () => showBodyMetricHistory(context, kind: kind),
+        onTap: ouvrir,
       ),
     );
   }

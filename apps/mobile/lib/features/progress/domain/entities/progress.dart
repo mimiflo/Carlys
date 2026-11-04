@@ -105,35 +105,52 @@ class PersonalRecordEntry {
 /// Ce qu'une mesure corporelle mesure, et dans quelle unité.
 ///
 /// Les sept MENSURATIONS (`*_CM`) sont des tours, en centimètres, à une
-/// décimale. Leurs bornes ([min], [max]) sont celles que l'API applique
-/// (`BODY_METRIC_BOUNDS` de `@carlys/api-contracts`) : la feuille refuse
-/// avant l'envoi ce que le serveur refuserait après.
+/// décimale. Les bornes ([min], [max], [decimals]) sont celles que l'API
+/// applique (`BODY_METRIC_BOUNDS` de `@carlys/api-contracts`, qu'un test lit
+/// à la source) : la feuille refuse avant l'envoi ce que le serveur
+/// refuserait après.
 enum BodyMetricKind {
-  weightKg('WEIGHT_KG', 'Poids', 'kg', 1, 500),
-  bodyFatPercent('BODY_FAT_PERCENT', 'Masse grasse', '%', 1, 500),
-  waistCm('WAIST_CM', 'Tour de taille', 'cm', 40, 250),
-  hipsCm('HIPS_CM', 'Hanches', 'cm', 50, 250),
-  chestCm('CHEST_CM', 'Poitrine', 'cm', 50, 250),
-  armCm('ARM_CM', 'Bras', 'cm', 10, 100),
-  thighCm('THIGH_CM', 'Cuisse', 'cm', 20, 150),
-  calfCm('CALF_CM', 'Mollet', 'cm', 15, 100),
-  neckCm('NECK_CM', 'Cou', 'cm', 20, 80);
+  weightKg('WEIGHT_KG', 'Poids', 'kg', 'kilos', 1, 500, 2),
+  bodyFatPercent(
+    'BODY_FAT_PERCENT',
+    'Masse grasse',
+    '%',
+    'pour cent',
+    1,
+    500,
+    2,
+  ),
+  waistCm('WAIST_CM', 'Tour de taille', 'cm', 'centimètres', 40, 250, 1),
+  hipsCm('HIPS_CM', 'Hanches', 'cm', 'centimètres', 50, 250, 1),
+  chestCm('CHEST_CM', 'Poitrine', 'cm', 'centimètres', 50, 250, 1),
+  armCm('ARM_CM', 'Bras', 'cm', 'centimètres', 10, 100, 1),
+  thighCm('THIGH_CM', 'Cuisse', 'cm', 'centimètres', 20, 150, 1),
+  calfCm('CALF_CM', 'Mollet', 'cm', 'centimètres', 15, 100, 1),
+  neckCm('NECK_CM', 'Cou', 'cm', 'centimètres', 20, 80, 1);
 
   const BodyMetricKind(
     this.apiValue,
     this.label,
     this.unit,
+    this.spokenUnit,
     this.min,
     this.max,
+    this.decimals,
   );
 
   final String apiValue;
 
   /// « Tour de taille », « Poids » : ce que la ligne écrit.
   final String label;
+
+  /// « kg », « cm » : ce que l'écran écrit.
   final String unit;
+
+  /// « kilos », « centimètres » : ce que le lecteur d'écran dit.
+  final String spokenUnit;
   final double min;
   final double max;
+  final int decimals;
 
   /// Les zones de la section « Mensurations », dans l'ordre où elles
   /// s'affichent : de haut en bas du corps, comme on les prend.
@@ -149,8 +166,9 @@ enum BodyMetricKind {
 
   bool get isMeasurement => unit == 'cm';
 
-  /// `null` pour un type que cette version ne connaît pas : le lire comme
-  /// un poids (l'ancien repli) ferait d'un tour de taille une pesée.
+  /// `null` pour un type que cette version ne connaît pas : c'est à
+  /// l'appelant de décider quoi en faire. Le lire comme un poids (l'ancien
+  /// repli) ferait d'un tour de taille une pesée.
   static BodyMetricKind? tryFromApi(String? value) {
     for (final kind in BodyMetricKind.values) {
       if (kind.apiValue == value) {
@@ -159,9 +177,6 @@ enum BodyMetricKind {
     }
     return null;
   }
-
-  static BodyMetricKind fromApi(String value) =>
-      tryFromApi(value) ?? BodyMetricKind.weightKg;
 }
 
 /// Mesure corporelle datée (poids, masse grasse…).
