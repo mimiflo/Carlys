@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { CreateWorkoutSetDto, UpdateWorkoutSetDto } from './workout-set.dto';
-import { CreateWorkoutSessionDto } from './workout.dto';
+import { CreateWorkoutSessionDto, UpdateWorkoutSessionDto } from './workout.dto';
 
 /**
  * CE QUE CE FICHIER PROTÈGE : une horloge d'appareil remise à une date
@@ -50,5 +50,21 @@ describe('Dates posées par l’appareil', () => {
       'completedAt',
     ]);
     expect(champsFautifs(UpdateWorkoutSetDto, { completedAt: FUTUR })).toEqual(['completedAt']);
+  });
+});
+
+describe('Effort perçu de la séance (Borg CR10)', () => {
+  it('accepte un entier de 1 à 10, et null pour effacer', () => {
+    for (const perceivedEffort of [1, 5, 10, null]) {
+      expect(champsFautifs(UpdateWorkoutSessionDto, { perceivedEffort })).toEqual([]);
+    }
+  });
+
+  it('refuse hors échelle et non entier', () => {
+    for (const perceivedEffort of [0, 11, 5.5, '7']) {
+      expect(champsFautifs(UpdateWorkoutSessionDto, { perceivedEffort })).toEqual([
+        'perceivedEffort',
+      ]);
+    }
   });
 });

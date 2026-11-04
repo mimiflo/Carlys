@@ -111,7 +111,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `GET /workout-sessions` | **mobile** | apps/mobile |
 | `POST /workout-sessions` | **mobile** | apps/mobile |
 | `GET /workout-sessions/{id}` | **mobile** | apps/mobile |
-| `PATCH /workout-sessions/{id}` | **aucun** (constaté le 7 septembre 2026) | La file de synchronisation n’écrit une séance qu’à la création, à la clôture ou à l’abandon : aucune correction partielle n’existe côté application. |
+| `PATCH /workout-sessions/{id}` | **mobile** | apps/mobile — opération `session.update` (effort perçu donné au bilan, novembre 2026) |
 | `POST /workout-sessions/{id}/abandon` | **mobile** | apps/mobile |
 | `POST /workout-sessions/{id}/complete` | **mobile** | apps/mobile |
 | `POST /workout-sessions/{id}/plan/skip` | **mobile** | apps/mobile |

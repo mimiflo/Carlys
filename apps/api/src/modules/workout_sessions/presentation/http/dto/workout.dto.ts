@@ -175,6 +175,23 @@ export class UpdateWorkoutSessionDto {
   @IsString()
   @MaxLength(WORKOUT_LIMITS.notesMax)
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Effort perçu de la séance entière, échelle de Borg CR10. `null` efface ' +
+      'l’évaluation ; absent, elle reste telle quelle. Modifiable après la clôture.',
+    type: Number,
+    nullable: true,
+    minimum: WORKOUT_LIMITS.perceivedEffortMin,
+    maximum: WORKOUT_LIMITS.perceivedEffortMax,
+  })
+  // `@IsOptional` laisse passer `null` comme l'absence : c'est voulu, `null`
+  // est la valeur « pas d'évaluation » que le bilan permet de remettre.
+  @IsOptional()
+  @IsInt()
+  @Min(WORKOUT_LIMITS.perceivedEffortMin)
+  @Max(WORKOUT_LIMITS.perceivedEffortMax)
+  perceivedEffort?: number | null;
 }
 
 export class CloseWorkoutSessionDto {

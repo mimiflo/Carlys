@@ -103,6 +103,12 @@ export type WorkoutSessionPlanItem = z.infer<typeof workoutSessionPlanItemSchema
 
 export const workoutSessionDetailSchema = workoutSessionSummarySchema.extend({
   notes: z.string().nullable(),
+  /**
+   * Effort perçu de la séance entière, échelle de Borg CR10 (1 à 10), déclaré
+   * au bilan. `null` tant que personne ne l'a donné ; modifiable après la
+   * clôture (`PATCH /workout-sessions/{id}`), ce qui fait monter la révision.
+   */
+  perceivedEffort: z.number().int().min(1).max(10).nullable(),
   sets: z.array(workoutSetSchema),
   /** Vide pour une séance libre (lancée sans modèle). */
   plan: z.array(workoutSessionPlanItemSchema),
@@ -117,6 +123,9 @@ export const WORKOUT_LIMITS = {
   distanceMetersMax: 1_000_000,
   rpeMin: 1,
   rpeMax: 10,
+  /** Effort perçu de la SÉANCE (Borg CR10) — même échelle que le RPE. */
+  perceivedEffortMin: 1,
+  perceivedEffortMax: 10,
   restSecondsMax: 3_600,
   nameMax: 120,
   notesMax: 2_000,

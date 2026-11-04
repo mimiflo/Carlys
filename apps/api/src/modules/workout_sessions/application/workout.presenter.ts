@@ -73,6 +73,7 @@ export function presentSessionDetail(session: SessionWithSets): WorkoutSessionDe
   return {
     ...presentSessionSummary(session),
     notes: session.notes,
+    perceivedEffort: session.perceivedEffort,
     sets: session.sets.map(presentSet),
     plan: session.planItems.map(presentPlanItem),
   };

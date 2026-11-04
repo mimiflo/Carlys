@@ -32,6 +32,7 @@ function sessionRow(overrides: Partial<SessionWithSets> = {}): SessionWithSets {
     templateName: null,
     programDayId: null,
     revision: 1,
+    perceivedEffort: null,
     sets: [],
     planItems: [],
     ...overrides,
@@ -556,6 +557,54 @@ describe('WorkoutsService', () => {
       const [, patch] = stubs.updateSet.mock.calls[0] as [string, Record<string, unknown>];
       expect(patch).not.toHaveProperty('plannedReps');
       expect(patch).not.toHaveProperty('plannedWeightKg');
+    });
+  });
+
+  describe('updateSession — effort perçu', () => {
+    const closed = { status: WorkoutSessionStatus.COMPLETED, perceivedEffort: 5 };
+
+    it('enregistre l’effort après la clôture et le sert dans le détail', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(sessionRow(closed));
+      stubs.updateSession.mockResolvedValue(sessionRow({ ...closed, perceivedEffort: 7 }));
+      const service = buildService(stubs);
+
+      const detail = await service.updateSession(USER, 'session-1', { perceivedEffort: 7 });
+
+      expect(stubs.updateSession).toHaveBeenCalledWith('session-1', { perceivedEffort: 7 });
+      expect(detail.perceivedEffort).toBe(7);
+    });
+
+    it('null efface l’évaluation', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(sessionRow(closed));
+      const service = buildService(stubs);
+
+      await service.updateSession(USER, 'session-1', { perceivedEffort: null });
+
+      expect(stubs.updateSession).toHaveBeenCalledWith('session-1', { perceivedEffort: null });
+    });
+
+    it('un rejeu ne touche aucune ligne : la révision ne bouge pas', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(sessionRow(closed));
+      const service = buildService(stubs);
+
+      const detail = await service.updateSession(USER, 'session-1', { perceivedEffort: 5 });
+
+      expect(stubs.updateSession).not.toHaveBeenCalled();
+      expect(detail.perceivedEffort).toBe(5);
+    });
+
+    it('la séance d’autrui reste invisible', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(sessionRow({ userId: OTHER_USER }));
+      const service = buildService(stubs);
+
+      await expect(
+        service.updateSession(USER, 'session-1', { perceivedEffort: 7 }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(stubs.updateSession).not.toHaveBeenCalled();
     });
   });
 

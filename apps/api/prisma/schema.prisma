@@ -542,6 +542,12 @@ model WorkoutSession {
   updatedAt       DateTime             @updatedAt
   deletedAt       DateTime?
 
+  /// Effort perçu de la SÉANCE ENTIÈRE, sur l'échelle de Borg CR10 (1 à 10),
+  /// déclaré au bilan (« Comment c'était ? »). Facultatif, modifiable après
+  /// la clôture par `PATCH /workout-sessions/{id}`. Distinct du RPE d'une
+  /// série (`WorkoutSet.rpe`) : l'un juge une série, l'autre la séance.
+  perceivedEffort Int?
+
   /// Révision servie au rapatriement mobile : +1, EN BASE et dans la même
   /// transaction, à chaque écriture qui change ce que le détail sert — la
   /// séance, l'une de ses séries (suppression comprise) ou son plan. Ce sont

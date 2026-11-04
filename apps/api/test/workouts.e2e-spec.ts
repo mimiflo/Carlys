@@ -194,6 +194,38 @@ describe('Séances (e2e)', () => {
       .expect(409);
   });
 
+  it('évalue l’effort APRÈS la clôture : révision montée, rejeu sans effet, hors échelle refusé', async () => {
+    const url = `/api/v1/workout-sessions/${sessionId}`;
+    const before = data<WorkoutSessionDetail>(
+      (await authed(accessToken).get(url).expect(200)).body,
+    );
+    expect(before.perceivedEffort).toBeNull();
+
+    const rated = data<WorkoutSessionDetail>(
+      (await authed(accessToken).patch(url).send({ perceivedEffort: 7 }).expect(200)).body,
+    );
+    expect(rated.status).toBe('COMPLETED');
+    expect(rated.perceivedEffort).toBe(7);
+    // La révision monte : c'est elle qui fait rapatrier l'effort ailleurs.
+    expect(rated.revision).toBeGreaterThan(before.revision);
+
+    // Rejeu de la file : même valeur, aucune ligne touchée.
+    const replay = data<WorkoutSessionDetail>(
+      (await authed(accessToken).patch(url).send({ perceivedEffort: 7 }).expect(200)).body,
+    );
+    expect(replay.revision).toBe(rated.revision);
+
+    await authed(accessToken).patch(url).send({ perceivedEffort: 11 }).expect(400);
+    await authed(accessToken).patch(url).send({ perceivedEffort: 0 }).expect(400);
+    await authed(otherAccessToken).patch(url).send({ perceivedEffort: 3 }).expect(404);
+
+    const cleared = data<WorkoutSessionDetail>(
+      (await authed(accessToken).patch(url).send({ perceivedEffort: null }).expect(200)).body,
+    );
+    expect(cleared.perceivedEffort).toBeNull();
+    await authed(accessToken).patch(url).send({ perceivedEffort: 7 }).expect(200);
+  });
+
   it('liste l’historique paginé, invisible pour un autre utilisateur', async () => {
     const list = await authed(accessToken).get('/api/v1/workout-sessions?limit=10').expect(200);
     const sessions = data<WorkoutSessionSummary[]>(list.body);

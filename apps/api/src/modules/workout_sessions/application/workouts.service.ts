@@ -179,17 +179,32 @@ export class WorkoutsService {
     return presentSessionDetail(await this.ownedSession(userId, sessionId));
   }
 
+  /**
+   * Nom, notes et effort perçu — ce qui se corrige APRÈS la clôture, depuis
+   * la file de synchronisation de l'appareil (`session.update`).
+   *
+   * Un champ absent reste tel quel ; `perceivedEffort: null` efface
+   * l'évaluation. Un rejeu (mêmes valeurs) ne touche AUCUNE ligne : sinon le
+   * déclencheur ferait monter la révision, et chaque appareil relirait la
+   * séance pour rien.
+   */
   async updateSession(
     userId: string,
     sessionId: string,
-    data: { name?: string; notes?: string },
+    data: { name?: string; notes?: string; perceivedEffort?: number | null },
   ): Promise<WorkoutSessionDetail> {
-    await this.ownedSession(userId, sessionId);
-    const updated = await this.workouts.updateSession(sessionId, {
-      ...(data.name === undefined ? {} : { name: data.name }),
-      ...(data.notes === undefined ? {} : { notes: data.notes }),
-    });
-    return presentSessionDetail(updated);
+    const session = await this.ownedSession(userId, sessionId);
+    const changed = <K extends keyof typeof data>(key: K) =>
+      data[key] !== undefined && data[key] !== session[key];
+    const changes = {
+      ...(changed('name') ? { name: data.name } : {}),
+      ...(changed('notes') ? { notes: data.notes } : {}),
+      ...(changed('perceivedEffort') ? { perceivedEffort: data.perceivedEffort } : {}),
+    };
+    if (Object.keys(changes).length === 0) {
+      return presentSessionDetail(session); // rejeu
+    }
+    return presentSessionDetail(await this.workouts.updateSession(sessionId, changes));
   }
 
   /** Idempotent : re-clôturer une séance déjà terminée renvoie son état. */
