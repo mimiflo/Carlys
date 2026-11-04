@@ -31,6 +31,9 @@ python3 scripts/ci/verifier_dockerfiles.py
 echo "── Porte de CI (verdict_ci.sh) ─────────────────────────────────────"
 bash scripts/ci/tests/verdict_ci_test.sh
 
+echo "── Faux positifs de TruffleHog (secrets_connus.py) ─────────────────"
+bash scripts/ci/tests/secrets_connus_test.sh
+
 echo "── Migrations publiées (migrations_publiees.sh) ────────────────────"
 bash scripts/ci/tests/migrations_publiees_test.sh
 

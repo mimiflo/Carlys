@@ -49,14 +49,14 @@
     "ioredis": "^5.4.2",
     "jose": "^5.10.0",
     "nestjs-pino": "^4.3.0",
-    "nodemailer": "^10.0.13",
+    "nodemailer": "^10.1.7",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "prom-client": "^15.1.3",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "zod": "^4.0.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@carlys/eslint-config": "workspace:*",
