@@ -1,4 +1,5 @@
 import {
+  BODY_METRIC_BOUNDS,
   MILESTONES_IMPORT_MAX,
   TIMELINE_MAX_PAGE_SIZE,
   progressEventKindSchema,
@@ -36,11 +37,18 @@ export class OverviewQuery {
   period: ProgressPeriodValue = 'week';
 }
 
-const BODY_METRIC_VALUE_DESCRIPTION =
-  'Kg pour WEIGHT_KG, % pour BODY_FAT_PERCENT (1 à 500, deux décimales), cm pour les ' +
-  'mensurations, à une décimale et dans les bornes de leur zone : taille 40–250, ' +
-  'hanches et poitrine 50–250, bras 10–100, cuisse 20–150, mollet 15–100, cou 20–80 ' +
-  '(`BODY_METRIC_BOUNDS`, appliquées par le service — une correction ne porte pas le type).';
+/**
+ * La description Swagger de `value`, construite depuis `BODY_METRIC_BOUNDS` :
+ * les bornes annoncées sont celles que le service applique, jamais une copie.
+ */
+export const BODY_METRIC_VALUE_DESCRIPTION =
+  'Kg pour WEIGHT_KG, % pour BODY_FAT_PERCENT, cm pour les mensurations (*_CM), ' +
+  'dans les bornes de son type, appliquées par le service — une correction ne porte ' +
+  'pas le type : ' +
+  Object.entries(BODY_METRIC_BOUNDS)
+    .map(([type, { min, max, decimals }]) => `${type} ${min}–${max} (${decimals} déc.)`)
+    .join(', ') +
+  '.';
 
 export class CreateBodyMetricDto {
   @ApiProperty({ description: 'UUID généré côté client (création idempotente)' })
