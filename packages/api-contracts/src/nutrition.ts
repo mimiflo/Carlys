@@ -140,6 +140,7 @@ export const foodAttributionSchema = z.object({
   license: z.string(),
   url: z.string(),
 });
+export type FoodAttribution = z.infer<typeof foodAttributionSchema>;
 
 /** La mention, et la version de la table chargée. */
 export const foodSourceSchema = foodAttributionSchema.extend({
@@ -176,6 +177,29 @@ export const mealScanSchema = z.object({
 });
 export type MealScan = z.infer<typeof mealScanSchema>;
 export type MealScanItem = z.infer<typeof mealScanItemSchema>;
+
+/**
+ * Un produit emballé, trouvé par son code-barres (/api/v1/nutrition/products)
+ * dans Open Food Facts : base collaborative, licence ODbL, servie par l'API
+ * (l'appareil ne contacte jamais le tiers). `meta.source` porte la mention à
+ * afficher près des valeurs.
+ */
+export const packagedFoodSchema = z.object({
+  /** Le code GTIN lu (EAN-13, EAN-8, UPC-A), chiffre de contrôle vérifié. */
+  barcode: z.string(),
+  name: z.string(),
+  brand: z.string().nullable(),
+  /** Valeurs pour 100 g — pour 100 ml quand `liquid`. Macros `null` : inconnues. */
+  per100g: foodPer100gSchema,
+  liquid: z.boolean(),
+  /** Une portion selon l'emballage (g ou ml), `null` si elle n'est pas donnée. */
+  servingQuantity: z.number().nullable(),
+});
+export type PackagedFood = z.infer<typeof packagedFoodSchema>;
+
+/** `meta` de /nutrition/products : la mention de la base Open Food Facts. */
+export const packagedFoodMetaSchema = z.object({ source: foodAttributionSchema });
+export type PackagedFoodMeta = z.infer<typeof packagedFoodMetaSchema>;
 
 /**
  * Bornes d'une composition : 30 aliments au plus, 1 à 5 000 g chacun (deux
