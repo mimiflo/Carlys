@@ -54,7 +54,7 @@ fréquence cardiaque.
 
 **Réalisé (3 novembre 2026).**
 - *Donnée.* `WorkoutSession.perceivedEffort` (entier nullable, `CHECK` 1..10
-  en base, migration `20261103100000_effort_percu_seance`), servi dans le
+  en base, migration `20261105120000_effort_percu_seance`), servi dans le
   détail de séance (`WorkoutSessionDetail.perceivedEffort`). Il s'écrit par
   `PATCH /workout-sessions/{id}` : l'écriture fait monter la révision, donc
   un autre appareil le rapatrie ; un rejeu à valeur égale ne touche aucune
