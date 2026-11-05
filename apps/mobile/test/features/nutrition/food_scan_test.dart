@@ -70,6 +70,15 @@ void main() {
       );
       expect(packagedMeal(long, 100, DateTime(2026)).name.length, 120);
     });
+
+    test('la coupe ne casse jamais un emoji, teint compris', () {
+      final long = PackagedFood(
+        barcode: '1',
+        name: '${'x' * 118}👍🏽 fin',
+        per100g: const FoodPer100g(kcal: 100),
+      );
+      expect(packagedMeal(long, 100, DateTime(2026)).name, 'x' * 118);
+    });
   });
 
   group('la feuille du produit', () {

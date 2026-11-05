@@ -135,7 +135,7 @@ class _ScannedProductFormState extends ConsumerState<ScannedProductForm> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           suffixText: unit,
           errorText: quantity == null
-              ? 'De 1 à ${formatThousands(5000)} $unit, deux décimales au plus.'
+              ? 'De 1 à ${formatThousands(MealBounds.componentMaxG)} $unit, deux décimales au plus.'
               : null,
           onChanged: (_) => setState(() {}),
         ),

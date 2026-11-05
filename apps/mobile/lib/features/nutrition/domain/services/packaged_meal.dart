@@ -1,3 +1,5 @@
+import 'package:characters/characters.dart';
+
 import '../entities/nutrition.dart';
 import '../meal_bounds.dart';
 
@@ -29,9 +31,7 @@ MealWrite packagedMeal(PackagedFood food, double quantity, DateTime eatenAt) {
       : '${food.name} · $brand';
   return MealWrite(
     // Borné comme tout nom de repas : la marque ne fait pas refuser l'envoi.
-    name: name.length <= MealBounds.nameMaxLength
-        ? name
-        : name.substring(0, MealBounds.nameMaxLength).trimRight(),
+    name: _bounded(name),
     eatenAt: eatenAt,
     moment: MealMoment.suggestFor(eatenAt.toLocal()),
     content: ManualMealContent(
@@ -45,4 +45,17 @@ MealWrite packagedMeal(PackagedFood food, double quantity, DateTime eatenAt) {
           : MealQuantityUnit.gram,
     ),
   );
+}
+
+/// Au plus [MealBounds.nameMaxLength] unités UTF-16 (la mesure du serveur),
+/// coupées entre deux caractères PERÇUS : un emoji, son teint compris,
+/// entre entier ou pas du tout.
+String _bounded(String name) {
+  if (name.length <= MealBounds.nameMaxLength) return name;
+  final kept = StringBuffer();
+  for (final character in name.characters) {
+    if (kept.length + character.length > MealBounds.nameMaxLength) break;
+    kept.write(character);
+  }
+  return kept.toString().trimRight();
 }
