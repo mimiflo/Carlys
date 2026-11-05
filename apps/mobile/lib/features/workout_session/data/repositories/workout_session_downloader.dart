@@ -163,6 +163,46 @@ class WorkoutSessionDownloader {
     return refs;
   }
 
+  /// La ligne de la séance, à la version du serveur — SAUF l'effort perçu
+  /// quand un `session.update` attend encore dans la file (quel que soit
+  /// son état) : même règle que les séries non acquittées, la valeur locale
+  /// est une vérité que le serveur n'a pas encore reçue, l'opération la lui
+  /// portera. La séance reste alors `pending` : marquée `synced`, le
+  /// rapatriement suivant aurait pu écraser l'effort avant son envoi.
+  Future<void> _writeSessionRow(RemoteWorkoutSession session) async {
+    final effortQueued =
+        await (_db.select(_db.syncOperations)
+              ..where(
+                (op) =>
+                    op.entityId.equals(session.id) &
+                    op.operationType.equals('session.update'),
+              )
+              ..limit(1))
+            .get();
+    final keepEffort = effortQueued.isNotEmpty;
+    await _db
+        .into(_db.localWorkoutSessions)
+        .insertOnConflictUpdate(
+          LocalWorkoutSessionsCompanion.insert(
+            id: session.id,
+            name: Value(session.name),
+            notes: Value(session.notes),
+            perceivedEffort: keepEffort
+                ? const Value.absent()
+                : Value(session.perceivedEffort),
+            status: session.status,
+            startedAt: session.startedAt,
+            endedAt: Value(session.endedAt),
+            durationSeconds: Value(session.durationSeconds),
+            templateId: Value(session.templateId),
+            templateName: Value(session.templateName),
+            programDayId: Value(session.programDayId),
+            syncStatus: Value(keepEffort ? 'pending' : 'synced'),
+            revision: Value(session.revision),
+          ),
+        );
+  }
+
   /// La séance locale porte-t-elle une saisie non acquittée ?
   Future<bool> _touchedLocally(String sessionId) async {
     final local = await (_db.select(
@@ -215,25 +255,7 @@ class WorkoutSessionDownloader {
   }) {
     return _db.transaction(() async {
       if (untouchedOnly && await _touchedLocally(session.id)) return false;
-      await _db
-          .into(_db.localWorkoutSessions)
-          .insertOnConflictUpdate(
-            LocalWorkoutSessionsCompanion.insert(
-              id: session.id,
-              name: Value(session.name),
-              notes: Value(session.notes),
-              perceivedEffort: Value(session.perceivedEffort),
-              status: session.status,
-              startedAt: session.startedAt,
-              endedAt: Value(session.endedAt),
-              durationSeconds: Value(session.durationSeconds),
-              templateId: Value(session.templateId),
-              templateName: Value(session.templateName),
-              programDayId: Value(session.programDayId),
-              syncStatus: const Value('synced'),
-              revision: Value(session.revision),
-            ),
-          );
+      await _writeSessionRow(session);
 
       // Le serveur ne sert que les séries vivantes : remplacer d'un bloc
       // celles qu'il connaît reproduit exactement son état, suppressions

@@ -2,6 +2,7 @@ import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
 import 'package:carlys_mobile/features/workout_session/data/datasources/workout_session_remote_data_source.dart';
 import 'package:carlys_mobile/features/workout_session/data/dto/workout_session_dtos.dart';
+import 'package:carlys_mobile/features/workout_session/data/local/workout_conflict_actions.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:drift/drift.dart' show Value;
@@ -105,19 +106,86 @@ void main() {
     expect(api.log.last, 'session.update:$sessionId:{"perceivedEffort":null}');
   });
 
-  test('une séance en conflit le reste : sa carte en dépend', () async {
+  // La clôture refusée (`failed`) ne retient PAS sa voie : l'effort part,
+  // et son succès marquait la séance `synced`. La carte « Réessayer »
+  // disparaissait, puis le rapatriement réécrivait la séance EN COURS.
+  for (final refus in ['failed', 'conflict']) {
+    test('clôture en $refus : l’effort parti, la séance le reste', () async {
+      final sessionId = await closedSessionOffline();
+      api.networkDown = false;
+      await (db.update(db.syncOperations)
+            ..where((op) => op.operationType.equals('session.complete')))
+          .write(SyncOperationsCompanion(status: Value(refus)));
+      await engine.syncNow();
+      await (db.update(db.localWorkoutSessions)
+            ..where((session) => session.id.equals(sessionId)))
+          .write(LocalWorkoutSessionsCompanion(syncStatus: Value(refus)));
+
+      await repository.ratePerceivedEffort(sessionId, 9);
+      expect((await row(sessionId)).syncStatus, refus);
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
+
+      final session = await row(sessionId);
+      expect(session.perceivedEffort, 9);
+      expect(session.syncStatus, refus, reason: 'sa carte en dépend');
+      final ops = await db.select(db.syncOperations).get();
+      expect(ops.map((op) => op.operationType), contains('session.complete'));
+    });
+  }
+
+  test('envoi en vol : son succès ne marque pas synced l’évaluation qui '
+      'l’a remplacé', () async {
     final sessionId = await closedSessionOffline();
-    await (db.update(
-      db.localWorkoutSessions,
-    )..where((session) => session.id.equals(sessionId))).write(
-      const LocalWorkoutSessionsCompanion(syncStatus: Value('conflict')),
-    );
+    api.networkDown = false;
+    await engine.syncNow();
+    await repository.ratePerceivedEffort(sessionId, 7);
 
-    await repository.ratePerceivedEffort(sessionId, 9);
+    // Le PATCH de 7 est en vol quand on choisit 9. Au départ du PATCH de 9,
+    // on relève l'état de la séance : le succès de 7 ne devait pas la
+    // marquer `synced`, 9 n'était pas encore parti.
+    var calls = 0;
+    String? statusWhileNineInFlight;
+    api.beforeCall = () async {
+      calls++;
+      if (calls == 1) {
+        await repository.ratePerceivedEffort(sessionId, 9);
+      } else {
+        statusWhileNineInFlight = (await row(sessionId)).syncStatus;
+      }
+    };
+    clock = clock.add(const Duration(minutes: 10));
+    await engine.syncNow();
+    if (calls < 2) {
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
+    }
+    api.beforeCall = null;
 
-    final session = await row(sessionId);
-    expect(session.perceivedEffort, 9);
-    expect(session.syncStatus, 'conflict');
+    expect(statusWhileNineInFlight, 'pending');
+    expect(api.log.last, 'session.update:$sessionId:{"perceivedEffort":9}');
+    expect((await row(sessionId)).syncStatus, 'synced');
+  });
+
+  test('une ancienne évaluation refusée ne revient pas écraser la '
+      'nouvelle', () async {
+    final sessionId = await closedSessionOffline();
+    api.networkDown = false;
+    await engine.syncNow();
+    api.rejectedIds.add(sessionId);
+    await repository.ratePerceivedEffort(sessionId, 3);
+    clock = clock.add(const Duration(minutes: 10));
+    await engine.syncNow();
+    api.rejectedIds.clear();
+
+    await repository.ratePerceivedEffort(sessionId, 8);
+    await engine.retryRejected();
+    clock = clock.add(const Duration(minutes: 10));
+    await engine.syncNow();
+
+    final updates = api.log.where((l) => l.startsWith('session.update'));
+    expect(updates, ['session.update:$sessionId:{"perceivedEffort":8}']);
+    expect(await db.select(db.syncOperations).get(), isEmpty);
   });
 
   test('séance inconnue ou valeur hors échelle : rien en file', () async {
@@ -151,6 +219,36 @@ void main() {
     await restoring.restoreSessions();
 
     expect((await row('session-ailleurs')).perceivedEffort, 7);
+  });
+
+  test('« Prendre la version du serveur » garde l’effort encore en file, '
+      'qui part ensuite', () async {
+    final sessionId = await closedSessionOffline();
+    await repository.ratePerceivedEffort(sessionId, 8);
+    final serveur = RemoteWorkoutSession(
+      id: sessionId,
+      status: 'ABANDONED',
+      startedAt: DateTime.utc(2026, 11, 3, 9),
+      endedAt: DateTime.utc(2026, 11, 3, 9, 30),
+      revision: 5,
+      sets: const [],
+      plan: const [],
+    );
+
+    await WorkoutConflictActions(
+      database: db,
+      remote: _Remote(serveur),
+    ).takeServer(sessionId);
+
+    final session = await row(sessionId);
+    expect(session.status, 'ABANDONED', reason: 'la version du serveur');
+    expect(session.perceivedEffort, 8, reason: 'pas encore reçu là-bas');
+    expect(session.syncStatus, 'pending');
+
+    api.networkDown = false;
+    clock = clock.add(const Duration(minutes: 10));
+    await engine.syncNow();
+    expect(api.log.last, 'session.update:$sessionId:{"perceivedEffort":8}');
   });
 
   test('le DTO lit l’effort, et son absence (serveur plus ancien)', () {

@@ -23,10 +23,31 @@ class SyncOperationStates {
   final SyncEntityMarker _marker;
   final DateTime Function() _now;
 
+  /// L'opération est acquittée : supprimée, et l'entité passe `synced`
+  /// SEULEMENT s'il ne lui reste aucune autre opération, quel qu'en soit
+  /// l'état.
+  ///
+  /// Sans cette garde, deux défauts. Une clôture refusée (`failed`) ne
+  /// retient pas sa voie : l'effort perçu donné ensuite partait, et son
+  /// succès marquait la séance `synced` — la carte « Réessayer »
+  /// disparaissait, et le rapatriement réécrivait la séance EN COURS, la
+  /// clôture perdue. Et un envoi en vol acquitté après qu'une saisie plus
+  /// récente l'a remplacé marquait `synced` ce qui ne l'était pas encore.
+  /// L'entité garde alors son état ; c'est la dernière opération qui le
+  /// tranche. Le plan, lui, suit toujours son transporteur.
   Future<void> succeeded(SyncOperation operation) async {
     await _db.transaction(() async {
       await _delete(operation);
-      await _marker.mark(operation, 'synced');
+      final others =
+          await (_db.select(_db.syncOperations)
+                ..where(
+                  (op) =>
+                      op.entityType.equals(operation.entityType) &
+                      op.entityId.equals(operation.entityId),
+                )
+                ..limit(1))
+              .get();
+      await _marker.mark(operation, 'synced', entity: others.isEmpty);
     });
   }
 

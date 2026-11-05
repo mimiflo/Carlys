@@ -98,7 +98,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
       // Le `PUT` décrit l'état COMPLET : une sauvegarde encore en attente est
       // périmée dès qu'une nouvelle arrive. On la remplace au lieu d'empiler
       // N opérations pendant l'édition.
-      await _dropPending(template.id, 'template.save');
+      await _sessions.dropQueued(template.id, 'template.save');
       await _sessions.enqueue(
         entityType: 'template',
         entityId: template.id,
@@ -122,7 +122,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
       await _local.markDeleted(templateId);
       // Un enregistrement jamais parti n'a plus de destinataire : `DELETE` sur
       // un modèle inconnu du serveur répond 204, la file reste cohérente.
-      await _dropPending(templateId, 'template.save');
+      await _sessions.dropQueued(templateId, 'template.save');
       await _sessions.enqueue(
         entityType: 'template',
         entityId: templateId,
@@ -338,16 +338,6 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   }
 
   // ── Interne ──────────────────────────────────────────────────────────────
-
-  Future<void> _dropPending(String templateId, String operationType) {
-    return (_db.delete(_db.syncOperations)..where(
-          (operation) =>
-              operation.entityId.equals(templateId) &
-              operation.operationType.equals(operationType) &
-              operation.status.equals('pending'),
-        ))
-        .go();
-  }
 
   /// Notifie le moteur, toujours **après le commit** : un drainage lancé dans
   /// la transaction s'exécuterait sur un exécuteur refermé entre-temps.

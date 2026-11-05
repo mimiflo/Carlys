@@ -65,8 +65,20 @@
 `set.update` appliqué à la séance : la ligne locale d'abord (passée
 `pending` si elle était `synced`, sans toucher un `conflict` ou un `failed`
 dont la carte doit rester), puis le PATCH en file sur la voie de la séance.
-Le corps porte la valeur entière, et une évaluation encore `pending` est
-remplacée par la suivante.
+Le corps porte la valeur entière, et une évaluation encore en file est
+remplacée par la suivante — `pending`, mais aussi `failed` et `exhausted` :
+sinon « Réessayer la synchronisation » (`retryRejected`) ranimait l'ancienne,
+qui arrivait au serveur APRÈS la nouvelle.
+
+« Prendre la version du serveur » (conflit de clôture) garde l'effort local
+tant qu'un `session.update` attend encore, quel que soit son état, et laisse
+la séance `pending` : même règle que les séries non acquittées, l'opération
+portera la valeur au serveur ensuite (`WorkoutSessionDownloader.write`).
+
+**Retour arrière du déploiement.** Une API d'avant l'effort perçu refuse le
+champ (`400`, `forbidNonWhitelisted`) : l'opération passe `failed` et y
+reste jusqu'au geste manuel « Réessayer la synchronisation », une fois l'API
+remise à niveau. La séance s'affiche en échec entre-temps, sans rien perdre.
 
 | `operationType`    | `entityType` | Appel HTTP                             |
 | ------------------ | ------------ | -------------------------------------- |
@@ -218,7 +230,14 @@ stateDiagram-v2
   l'opération `pending` et incrémente `attemptCount` ; une réponse 5xx
   incrémente aussi `serverErrorCount`.
 - **succès** : l'opération est **supprimée** et l'entité locale passe
-  `synced` — c'est sur l'entité, pas sur la file, que l'état s'affiche.
+  `synced` — c'est sur l'entité, pas sur la file, que l'état s'affiche —
+  **seulement s'il ne lui reste aucune autre opération**, quel qu'en soit
+  l'état (`SyncOperationStates.succeeded`). Sans quoi une clôture refusée
+  (`failed`, qui ne retient pas sa voie) disparaissait de l'écran dès que
+  l'effort perçu donné ensuite était acquitté, et le rapatriement réécrivait
+  la séance en cours ; de même, un envoi en vol acquitté après qu'une saisie
+  plus récente l'a remplacé marquait `synced` ce qui ne l'était pas. Le plan
+  transporté, lui, suit toujours son opération.
 - `failed` : erreur **définitive** (ex. `VALIDATION_ERROR`, `FORBIDDEN`).
   Le drainage ne la ramasse plus et l'ouverture suivante ne la ranime pas ;
   `error` est conservé et l'entité est marquée `failed`.
@@ -590,6 +609,11 @@ sa tablette (en ligne) pour la même séance. À la synchronisation du télépho
   d'aucun appareil n'est perdue ;
 - un champ scalaire modifié des deux côtés (ex. note de séance) est résolu en
   last-write-wins ;
+- l'**effort perçu** de la séance aussi, mais au sens du serveur : c'est le
+  DERNIER ARRIVÉ au serveur qui gagne, pas le dernier écrit. Une évaluation
+  donnée hors ligne la veille, envoyée ce matin, remplace celle donnée hier
+  soir sur la tablette en ligne. Le corps ne porte pas d'horodatage : le
+  champ n'a pas d'enjeu qui justifie d'en ajouter un ;
 - si la séance a été **clôturée** des deux côtés avec une issue différente
   (terminée ici, abandonnée là-bas), l'API répond `CONFLICT` : le moteur lit
   la version serveur, et si l'issue diffère vraiment, la séance passe en

@@ -12,7 +12,18 @@ class SyncEntityMarker {
 
   final AppDatabase _db;
 
-  Future<void> mark(SyncOperation operation, String syncStatus) async {
+  /// [entity] faux : l'entité garde son état (une autre opération le
+  /// tranchera), seul le plan transporté suit.
+  Future<void> mark(
+    SyncOperation operation,
+    String syncStatus, {
+    bool entity = true,
+  }) async {
+    if (entity) await _markEntity(operation, syncStatus);
+    await _markPlanItems(operation, syncStatus);
+  }
+
+  Future<void> _markEntity(SyncOperation operation, String syncStatus) async {
     switch (operation.entityType) {
       case 'session':
         await (_db.update(
@@ -31,7 +42,6 @@ class SyncEntityMarker {
           LocalWorkoutTemplatesCompanion(syncStatus: Value(syncStatus)),
         );
     }
-    await _markPlanItems(operation, syncStatus);
   }
 
   /// Le plan n'a pas d'opération à lui seul : il voyage AVEC autre chose.

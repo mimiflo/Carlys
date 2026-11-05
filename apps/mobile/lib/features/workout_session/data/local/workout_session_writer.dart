@@ -343,8 +343,10 @@ class WorkoutSessionWriter {
   /// corrige par un PATCH en file, sur la voie de sa séance — derrière sa
   /// création et sa clôture, hors ligne compris. Le corps porte la valeur
   /// entière, donc rejouer aboutit au même état ; une évaluation encore en
-  /// attente est REMPLACÉE par la suivante, comme `template.save`, plutôt
-  /// que d'empiler un PATCH par toucher.
+  /// file est REMPLACÉE par la suivante, comme `template.save`, plutôt que
+  /// d'empiler un PATCH par toucher. Refusée ou mise de côté comprise : sans
+  /// quoi « Réessayer la synchronisation » (`retryRejected`) la ranimait, et
+  /// une ancienne valeur arrivait au serveur APRÈS la nouvelle.
   ///
   /// Une séance inconnue ne met rien en file (PATCH voué au 404).
   Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
@@ -367,13 +369,11 @@ class WorkoutSessionWriter {
               : const Value.absent(),
         ),
       );
-      await (_db.delete(_db.syncOperations)..where(
-            (operation) =>
-                operation.entityId.equals(sessionId) &
-                operation.operationType.equals('session.update') &
-                operation.status.equals('pending'),
-          ))
-          .go();
+      await dropQueued(
+        sessionId,
+        'session.update',
+        statuses: const ['pending', 'failed', 'exhausted'],
+      );
       await enqueue(
         entityType: 'session',
         entityId: sessionId,
@@ -442,6 +442,23 @@ class WorkoutSessionWriter {
         payload: {'id': setId, 'sessionId': set.sessionId},
       );
     });
+  }
+
+  /// Retire de la file les opérations [operationType] de [entityId] dans
+  /// l'un des [statuses] : celles qu'une nouvelle, portant l'état COMPLET,
+  /// rend périmées (`template.save`, `session.update`).
+  Future<void> dropQueued(
+    String entityId,
+    String operationType, {
+    List<String> statuses = const ['pending'],
+  }) {
+    return (_db.delete(_db.syncOperations)..where(
+          (operation) =>
+              operation.entityId.equals(entityId) &
+              operation.operationType.equals(operationType) &
+              operation.status.isIn(statuses),
+        ))
+        .go();
   }
 
   /// Insère une opération dans la file, dans la transaction courante.
