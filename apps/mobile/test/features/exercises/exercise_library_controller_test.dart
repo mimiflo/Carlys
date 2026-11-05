@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/controllers/exercise_library_controller.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -81,18 +82,29 @@ void main() {
         exerciseLibraryControllerProvider.notifier,
       );
 
-      controller.setSearch('S');
-      controller.setSearch('Sq');
-      controller.setSearch('Squat');
-      await Future<void>.delayed(
-        ExerciseLibraryController.searchDebounce +
-            const Duration(milliseconds: 50),
-      );
+      // Temps SIMULÉ : le test attendait 350 ms + 50 ms de vraie horloge, et
+      // le rechargement qui suit le debounce devait tenir dans ces 50 ms —
+      // sous la charge de la suite complète, il ne les tenait pas toujours.
+      fakeAsync((async) {
+        controller.setSearch('S');
+        controller.setSearch('Sq');
+        controller.setSearch('Squat');
 
-      final state = container.read(exerciseLibraryControllerProvider).value!;
-      expect(state.items.map((item) => item.name), ['Squat']);
-      // 1 chargement initial + 1 seul rechargement malgré 3 frappes.
-      expect(repository.listCalls, 2);
+        // Juste avant l'échéance : aucune requête n'est partie.
+        async.elapse(
+          ExerciseLibraryController.searchDebounce -
+              const Duration(milliseconds: 1),
+        );
+        expect(repository.listCalls, 1);
+
+        async.elapse(const Duration(milliseconds: 1));
+        async.flushMicrotasks();
+
+        final state = container.read(exerciseLibraryControllerProvider).value!;
+        expect(state.items.map((item) => item.name), ['Squat']);
+        // 1 chargement initial + 1 seul rechargement malgré 3 frappes.
+        expect(repository.listCalls, 2);
+      });
     },
   );
 
