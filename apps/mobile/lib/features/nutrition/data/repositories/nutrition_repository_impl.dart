@@ -173,8 +173,9 @@ class NutritionRepositoryImpl implements NutritionRepository {
         );
       });
     } on ServerException catch (error) {
-      // Inconnu de la base : une réponse, pas une panne.
-      if (error.statusCode == 404) return null;
+      // Inconnu de la base : une réponse, pas une panne. Seul le code dédié
+      // le dit — un 404 de routage (API plus ancienne, proxy) reste une erreur.
+      if (error.code == 'PRODUCT_NOT_FOUND') return null;
       rethrow;
     }
   }
