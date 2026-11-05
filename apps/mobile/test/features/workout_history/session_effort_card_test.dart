@@ -15,13 +15,24 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_workout_repository.dart';
 
-/// Le catalogue hors ligne : aucune fiche ne répond.
+/// Le catalogue hors ligne : les fiches de [offline] ne répondent pas
+/// (toutes, par défaut).
 class _OfflineCatalog extends FakeExercisesRepository {
-  _OfflineCatalog() : super(const []);
+  _OfflineCatalog({this.offline})
+    : super([
+        summary('dc', 'Développé couché', group: 'Pectoraux'),
+        summary('tri', 'Extension triceps', group: 'Triceps'),
+      ]);
+
+  final Set<String>? offline;
 
   @override
-  Future<ExerciseDetail> byIdOrSlug(String idOrSlug) async =>
+  Future<ExerciseDetail> byIdOrSlug(String idOrSlug) async {
+    if (offline == null || offline!.contains(idOrSlug)) {
       throw const NetworkException('Hors ligne');
+    }
+    return super.byIdOrSlug(idOrSlug);
+  }
 }
 
 /// « Comment c'était ? » sur le bilan : cinq réponses, facultatives,
@@ -43,11 +54,14 @@ void main() {
         syncState: LocalSyncState.synced,
       );
 
-  WorkoutWithSets push({int? effort}) => WorkoutWithSets(
+  WorkoutWithSets push({
+    int? effort,
+    WorkoutStatus status = WorkoutStatus.completed,
+  }) => WorkoutWithSets(
     session: WorkoutInfo(
       id: 'push',
       name: 'Push force',
-      status: WorkoutStatus.completed,
+      status: status,
       startedAt: endedAt.subtract(const Duration(minutes: 48)),
       endedAt: endedAt,
       durationSeconds: 48 * 60,
@@ -144,6 +158,22 @@ void main() {
     expect(find.textContaining('Repos conseillé'), findsNothing);
   });
 
+  testWidgets('une panne de la base locale se voit, jamais en silence', (
+    tester,
+  ) async {
+    final workouts = await monter(tester, push());
+    // Une base fermée signale par une `Error`, pas une `AppException`.
+    workouts.effortFailure = StateError('base fermée');
+
+    await tester.tap(find.text('Difficile'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Impossible d’enregistrer pour le moment'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('hors ligne : le repos se dit sans muscles, sans erreur', (
     tester,
   ) async {
@@ -153,6 +183,30 @@ void main() {
       find.textContaining('Repos conseillé : 24 h, jusqu’à '),
       findsOneWidget,
     );
+  });
+
+  testWidgets('une fiche sur deux illisible : la durée seule, jamais une '
+      'liste de muscles tronquée', (tester) async {
+    await monter(
+      tester,
+      push(effort: 7),
+      exercises: _OfflineCatalog(offline: {'tri'}),
+    );
+
+    expect(
+      find.textContaining('Repos conseillé : 72 h, jusqu’à '),
+      findsOneWidget,
+    );
+    expect(find.textContaining('pectoraux'), findsNothing);
+  });
+
+  testWidgets('séance abandonnée : ni « Comment c’était ? » ni repos', (
+    tester,
+  ) async {
+    await monter(tester, push(effort: 7, status: WorkoutStatus.abandoned));
+
+    expect(find.text('Comment c’était ?'), findsNothing);
+    expect(find.textContaining('Repos conseillé'), findsNothing);
   });
 
   testWidgets('accessible : choix exclusifs annoncés, cibles tactiles', (

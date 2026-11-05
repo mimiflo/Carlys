@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -22,7 +23,7 @@ Future<void> correctFinishedSet(
   if (correction == null || !context.mounted) {
     return;
   }
-  await _write(
+  await writeFinishedSession(
     context,
     () => ref
         .read(workoutActionsProvider)
@@ -56,7 +57,7 @@ Future<void> deleteFinishedSet(
   if (!confirmed || !context.mounted) {
     return;
   }
-  await _write(
+  await writeFinishedSession(
     context,
     () => ref
         .read(workoutActionsProvider)
@@ -65,18 +66,31 @@ Future<void> deleteFinishedSet(
   );
 }
 
-/// L'écriture est LOCALE puis mise en file : elle aboutit hors ligne. Seule
+const _logger = AppLogger('FinishedSession');
+
+/// Une écriture sur une séance TERMINÉE (série corrigée ou supprimée, effort
+/// perçu). Elle est LOCALE puis mise en file : elle aboutit hors ligne. Seule
 /// une panne de la base locale peut échouer, et elle doit se voir.
-Future<void> _write(
+///
+/// Attrape TOUT, comme `WorkoutRetrySyncCard` : une base fermée signale par
+/// une `Error`, qu'un `on AppException` laissait passer en silence.
+/// [success] nul : le geste se voit déjà à l'écran, rien à annoncer.
+Future<void> writeFinishedSession(
   BuildContext context,
   Future<void> Function() action, {
-  required String success,
+  String? success,
 }) async {
   final notices = AppNotices.of(context);
   try {
     await action();
-    notices.show(success, tone: AppNoticeTone.success);
+    if (success != null) notices.show(success, tone: AppNoticeTone.success);
   } on AppException catch (error) {
     notices.show(error.message, tone: AppNoticeTone.error);
+  } catch (error) {
+    _logger.error('Écriture locale impossible', error: error);
+    notices.show(
+      'Impossible d’enregistrer pour le moment. Réessaie dans un instant.',
+      tone: AppNoticeTone.error,
+    );
   }
 }

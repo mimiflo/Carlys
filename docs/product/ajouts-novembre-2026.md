@@ -65,14 +65,16 @@ fréquence cardiaque.
   hors ligne compris. Une évaluation encore en attente est remplacée par la
   suivante (un seul PATCH, comme `template.save`).
 - *Bilan.* Carte « Comment c'était ? » en bas du bilan (`SessionEffortCard`),
-  donc aussi sur toute séance ouverte depuis l'historique. Très facile = 2,
+  donc aussi sur toute séance ouverte depuis l'historique — séance TERMINÉE
+  seulement : une séance abandonnée n'a ni carte ni repos. Très facile = 2,
   Facile = 4, Modéré = 5, Difficile = 7, À fond = 9 ; toucher la réponse
   choisie la retire. Une valeur venue d'ailleurs retombe sur la réponse de sa
   bande (`EffortChoice.fromBorg`).
 - *Repos conseillé.* `recoveryAdvice` (domaine, pur) : ≤ 4 → 24 h, 5–6 →
   48 h, ≥ 7 → 72 h, à partir de la fin de séance. Les muscles sont les
   groupes PRINCIPAUX des fiches du catalogue (`ExerciseDetail.muscles`) ;
-  hors ligne ou exercice libre, la phrase se dit sans eux. L'échéance est
+  hors ligne, ou dès qu'UNE fiche manque, la phrase se dit sans eux (jamais
+  une liste tronquée), et l'échec est journalisé. L'échéance est
   dite en heure locale, arrondie à l'heure supérieure, et tue une fois
   passée (séance relue plus tard). La mention ACSM « pas un avis médical »
   l'accompagne toujours.

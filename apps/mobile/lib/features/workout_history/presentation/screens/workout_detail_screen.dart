@@ -166,8 +166,9 @@ class _SummaryBody extends StatelessWidget {
           ),
         ),
         // L'effort se juge APRÈS avoir relu la séance, et sur une séance
-        // CLOSE : c'est sa fin qui fait partir le repos conseillé.
-        if (session.status != WorkoutStatus.inProgress) ...[
+        // TERMINÉE : c'est sa fin qui fait partir le repos conseillé. Une
+        // séance abandonnée n'en conseille aucun.
+        if (session.status == WorkoutStatus.completed) ...[
           const SizedBox(height: AppSpacing.md),
           SessionEffortCard(workout: workout),
         ],

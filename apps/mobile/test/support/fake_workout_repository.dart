@@ -188,8 +188,13 @@ class FakeWorkoutRepository implements WorkoutRepository {
   /// Efforts donnés au bilan, dans l'ordre : `(séance, effort)`.
   final List<(String, int?)> ratedEfforts = [];
 
+  /// Ce que jette le prochain `ratePerceivedEffort` (panne de la base…).
+  Object? effortFailure;
+
   @override
   Future<void> ratePerceivedEffort(String sessionId, int? effort) async {
+    final failure = effortFailure;
+    if (failure != null) throw failure;
     ratedEfforts.add((sessionId, effort));
     final current = active;
     if (current == null || current.session.id != sessionId) {

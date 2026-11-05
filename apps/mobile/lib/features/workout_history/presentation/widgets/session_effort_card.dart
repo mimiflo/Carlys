@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/perceived_effort.dart';
 import '../../../workout_session/domain/entities/workout.dart';
@@ -9,6 +8,7 @@ import '../../../workout_session/domain/services/recovery_advice.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../providers/session_muscle_groups.dart';
 import '../utils/recovery_sentence.dart';
+import 'finished_set_actions.dart';
 
 /// « Comment c'était ? » : l'effort perçu de la séance entière, en cinq
 /// réponses posées sur l'échelle de Borg CR10, puis le repos conseillé.
@@ -66,11 +66,14 @@ class SessionEffortCard extends ConsumerWidget {
                 AppChoice(choice, choice.label),
             ],
             selected: selected,
-            onSelected: (choice) => _rate(
+            onSelected: (choice) => writeFinishedSession(
               context,
-              ref,
-              session.id,
-              choice == selected ? null : choice?.borg,
+              () => ref
+                  .read(workoutActionsProvider)
+                  .ratePerceivedEffort(
+                    session.id,
+                    choice == selected ? null : choice?.borg,
+                  ),
             ),
           ),
           if (advice != null) ...[
@@ -80,24 +83,6 @@ class SessionEffortCard extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-/// L'écriture est LOCALE puis mise en file : elle aboutit hors ligne. Seule
-/// une panne de la base locale peut échouer, et elle doit se voir.
-Future<void> _rate(
-  BuildContext context,
-  WidgetRef ref,
-  String sessionId,
-  int? effort,
-) async {
-  final notices = AppNotices.of(context);
-  try {
-    await ref
-        .read(workoutActionsProvider)
-        .ratePerceivedEffort(sessionId, effort);
-  } on AppException catch (error) {
-    notices.show(error.message, tone: AppNoticeTone.error);
   }
 }
 

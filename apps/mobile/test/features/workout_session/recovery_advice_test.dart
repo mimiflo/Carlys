@@ -143,10 +143,39 @@ void main() {
       );
     });
 
-    test('l’heure affichée est LOCALE même pour une fin en UTC', () {
-      final utc = endedAt.toUtc();
-      final sentence = recoverySentence(advice(const [], end: utc), now: utc);
-      expect(sentence, endsWith('mercredi 18 h'));
+    // La CI tourne en UTC : `toLocal()` n'y décale rien, et un test qui s'y
+    // fie ne prouve rien. Le fuseau est donc INJECTÉ — Paris en hiver.
+    DateTime paris(DateTime moment) =>
+        moment.toUtc().add(const Duration(hours: 1));
+
+    test('l’heure dite est LOCALE : fin à 17 h UTC, 18 h à Paris', () {
+      final end = DateTime.utc(2026, 11, 2, 17);
+      expect(
+        recoverySentence(
+          advice(const [], end: end),
+          now: end,
+          toLocal: paris,
+        ),
+        'Repos conseillé : 48 h, jusqu’à mercredi 18 h',
+      );
     });
+
+    test(
+      'passage de minuit : fin à 23 h 20, 24 h plus tard → mercredi 0 h',
+      () {
+        // Lundi 23 h 20 à Paris = 22 h 20 UTC ; mardi 23 h 20 arrondi à
+        // l'heure supérieure tombe le lendemain.
+        final end = DateTime.utc(2026, 11, 2, 22, 20);
+        final facile = recoveryAdvice(
+          perceivedEffort: 2,
+          endedAt: end,
+          muscleGroups: const ['Dos'],
+        )!;
+        expect(
+          recoverySentence(facile, now: end, toLocal: paris),
+          'Repos conseillé : 24 h pour dos, jusqu’à mercredi 0 h',
+        );
+      },
+    );
   });
 }
