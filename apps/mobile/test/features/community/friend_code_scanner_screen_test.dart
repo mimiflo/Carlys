@@ -104,6 +104,56 @@ void main() {
     expect(camera.starts, 2);
   });
 
+  /// L'écran par-dessus une page : ce qu'il dépile, dans l'ordre.
+  Future<List<String?>> ouvrirParDessus(WidgetTester tester) async {
+    final popped = <String?>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => popped.add(
+              await Navigator.of(context).push<String>(
+                MaterialPageRoute(
+                  builder: (_) => const FriendCodeScannerScreen(),
+                ),
+              ),
+            ),
+            child: const Text('ouvrir'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('ouvrir'));
+    await tester.pumpAndSettle();
+    return popped;
+  }
+
+  testWidgets('un QR étranger est ignoré ; seul le premier code Carlys '
+      'compte', (tester) async {
+    camera.authorized = true;
+    final popped = await ouvrirParDessus(tester);
+    expect(find.text('Vise le QR du profil de ton ami.'), findsOneWidget);
+
+    camera.show(['https://menu.example/plat-du-jour']);
+    await tester.pumpAndSettle();
+    expect(popped, isEmpty);
+
+    // La caméra détecte en rafale : deux codes dans l'image, puis encore un.
+    camera.show(['carlys:friend:ac23de45', 'carlys:friend:XY234567']);
+    camera.show(['carlys:friend:XY234567']);
+    await tester.pumpAndSettle();
+    expect(popped, ['AC23DE45']);
+  });
+
+  testWidgets('caméra refusée : pas de « vise le QR » sous l’état', (
+    tester,
+  ) async {
+    await ouvrir(tester);
+    expect(find.text('Caméra non autorisée'), findsOneWidget);
+    expect(find.text('Vise le QR du profil de ton ami.'), findsNothing);
+  });
+
   testWidgets('« Réessayer » redemande l’autorisation', (tester) async {
     await ouvrir(tester);
     camera.authorized = true;

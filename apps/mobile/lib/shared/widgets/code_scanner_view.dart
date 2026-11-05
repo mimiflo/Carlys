@@ -21,6 +21,7 @@ class CodeScannerView extends StatefulWidget {
     required this.accept,
     required this.onCode,
     required this.icon,
+    required this.hint,
     this.overlay,
     super.key,
   });
@@ -36,6 +37,10 @@ class CodeScannerView extends StatefulWidget {
 
   /// L'icône de l'état d'erreur : celle du geste de l'écran.
   final IconData icon;
+
+  /// Ce qu'il faut viser, sous l'image — et seulement quand la caméra
+  /// tourne : sous « Caméra non autorisée », il ne dirait rien de vrai.
+  final String hint;
 
   /// Posé sur l'image de la caméra (un cadre de visée), et seulement quand
   /// elle tourne : jamais sur l'état d'erreur.
@@ -106,6 +111,30 @@ class _CodeScannerViewState extends State<CodeScannerView>
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _scanner()),
+        ValueListenableBuilder<MobileScannerState>(
+          valueListenable: _controller,
+          builder: (context, state, _) => state.error != null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.all(AppSpacing.gutter),
+                  child: Text(
+                    widget.hint,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _scanner() {
     return MobileScanner(
       controller: _controller,
       onDetect: _onDetect,

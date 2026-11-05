@@ -86,31 +86,25 @@ class _FoodBarcodeScannerScreenState extends State<FoodBarcodeScannerScreen> {
               accept: _accept,
               onCode: _finish,
               icon: AppIcons.scanBarcode,
+              hint: 'Vise le code-barres de l’emballage.',
               // Le cadre de visée : où poser le code-barres. Il ne prend
               // aucun toucher, la caméra lit toute l'image.
               overlay: const IgnorePointer(child: Center(child: _Viewfinder())),
             ),
           ),
+          // Toujours là, caméra refusée comprise : le code se tape aussi.
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.gutter),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Vise le code-barres de l’emballage.',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppButton(
-                  label: 'Taper le code',
-                  icon: AppIcons.typeCode,
-                  variant: AppButtonVariant.secondary,
-                  onPressed: _typeCode,
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              0,
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+            ),
+            child: AppButton(
+              label: 'Taper le code',
+              icon: AppIcons.typeCode,
+              variant: AppButtonVariant.secondary,
+              onPressed: _typeCode,
             ),
           ),
         ],

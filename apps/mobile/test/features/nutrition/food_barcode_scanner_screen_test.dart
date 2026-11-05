@@ -61,6 +61,51 @@ void main() {
     expect(popped, ['3017620422003']);
   });
 
+  testWidgets('caméra refusée : pas de « vise le code-barres » sous l’état', (
+    tester,
+  ) async {
+    await ouvrir(tester);
+    expect(find.text('Vise le code-barres de l’emballage.'), findsNothing);
+    expect(find.text('Taper le code'), findsOneWidget);
+  });
+
+  testWidgets('la caméra : un chiffre faux est ignoré, seul le premier bon '
+      'code compte', (tester) async {
+    camera.authorized = true;
+    final popped = await ouvrir(tester);
+    expect(find.text('Vise le code-barres de l’emballage.'), findsOneWidget);
+
+    camera.show(['3017620422004']);
+    await tester.pumpAndSettle();
+    expect(popped, isEmpty);
+
+    camera.show(['3017620422003', '5449000000996']);
+    camera.show(['5449000000996']);
+    await tester.pumpAndSettle();
+    expect(popped, ['3017620422003']);
+  });
+
+  testWidgets('la saisie au clavier n’est pas court-circuitée par la caméra', (
+    tester,
+  ) async {
+    camera.authorized = true;
+    final popped = await ouvrir(tester);
+    await tester.tap(find.text('Taper le code'));
+    await tester.pumpAndSettle();
+
+    // Pendant la saisie, la caméra voit un autre produit : elle n'y touche pas.
+    camera.show(['5449000000996']);
+    await tester.pumpAndSettle();
+    expect(find.text('Chercher'), findsOneWidget);
+    expect(popped, isEmpty);
+
+    await tester.enterText(find.byType(TextField), '3017620422003');
+    await tester.pump();
+    await tester.tap(find.text('Chercher'));
+    await tester.pumpAndSettle();
+    expect(popped, ['3017620422003']);
+  });
+
   testWidgets('un chiffre de contrôle faux ne part pas', (tester) async {
     final popped = await ouvrir(tester);
     await tester.tap(find.text('Taper le code'));

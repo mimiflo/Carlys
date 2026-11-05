@@ -32,29 +32,14 @@ class FriendCodeScannerScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            // Les QR étrangers (menu de restaurant compris) sont ignorés sans
-            // bruit : seul un code Carlys est accepté.
-            child: CodeScannerView(
-              formats: const [BarcodeFormat.qrCode],
-              accept: normalizeFriendCode,
-              onCode: (code) => Navigator.of(context).pop(code),
-              icon: AppIcons.qrScan,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.gutter),
-            child: Text(
-              'Vise le QR du profil de ton ami.',
-              style: AppTypography.body.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      // Les QR étrangers (menu de restaurant compris) sont ignorés sans
+      // bruit : seul un code Carlys est accepté.
+      body: CodeScannerView(
+        formats: const [BarcodeFormat.qrCode],
+        accept: normalizeFriendCode,
+        onCode: (code) => Navigator.of(context).pop(code),
+        icon: AppIcons.qrScan,
+        hint: 'Vise le QR du profil de ton ami.',
       ),
     );
   }
