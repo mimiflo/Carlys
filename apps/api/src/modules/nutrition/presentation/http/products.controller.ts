@@ -6,6 +6,8 @@ import {
 import { Controller, Get, Param, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
 import { ProductsService } from '../../application/products.service';
@@ -26,15 +28,17 @@ export class ProductsController {
     summary: 'Un produit emballé par son code-barres (valeurs pour 100 g ou 100 ml)',
     description:
       'EAN-13, EAN-8, UPC-A ou GTIN-14, chiffre de contrôle vérifié (400 sinon). Lu dans ' +
-      'Open Food Facts par l’API et gardé en cache ; 404 si la base ne le connaît ' +
-      'pas ou ne donne pas son énergie, 503 si elle ne répond pas. ' +
+      'Open Food Facts par l’API et gardé en cache ; 404 `PRODUCT_NOT_FOUND` si la base ' +
+      'ne le connaît pas ou ne donne pas son énergie, 429 au-delà de 10 codes jamais vus ' +
+      'par minute et par personne, 503 si elle ne répond pas. ' +
       'meta.source = mention ODbL à afficher près des valeurs.',
   })
   async byBarcode(
     @Param('barcode') barcode: string,
+    @CurrentUser() user: AuthenticatedPrincipal,
     @Req() request: RequestWithId,
   ): Promise<ApiSuccessEnvelope<PackagedFood, PackagedFoodMeta>> {
-    const result = await this.products.byBarcode(barcode);
+    const result = await this.products.byBarcode(barcode, user.userId);
     return enveloped(result.product, { source: result.source }, request);
   }
 }

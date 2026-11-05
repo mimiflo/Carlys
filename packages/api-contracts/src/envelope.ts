@@ -13,6 +13,8 @@ export const apiErrorCodeSchema = z.enum([
   'UNAUTHORIZED',
   'FORBIDDEN',
   'NOT_FOUND',
+  /** Code-barres inconnu d'Open Food Facts (ou sans énergie) : saisir à la main. */
+  'PRODUCT_NOT_FOUND',
   'CONFLICT',
   /**
    * Identifiant né sur l'appareil déjà porté par un AUTRE contenu : renvoyer

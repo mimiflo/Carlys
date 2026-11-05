@@ -51,7 +51,7 @@ describe('Nutrition : produits par code-barres (e2e)', () => {
       if (!url.startsWith('https://world.openfoodfacts.org/')) return realFetch(input, init);
       calls.push(url);
       agents.push(new Headers(init?.headers).get('User-Agent'));
-      if (url.includes(DOWN)) return Promise.resolve(new Response('', { status: 502 }));
+      if (url.includes(DOWN)) return Promise.resolve(new Response('', { status: 503 }));
       if (url.includes(UNKNOWN)) {
         return Promise.resolve(Response.json({ status: 0 }, { status: 404 }));
       }
@@ -117,12 +117,12 @@ describe('Nutrition : produits par code-barres (e2e)', () => {
 
   it('inconnu : 404, et l’inconnu aussi se garde', async () => {
     const response = await get(`/api/v1/nutrition/products/${UNKNOWN}`).expect(404);
-    expect((response.body as ApiErrorEnvelope).error.code).toBe('NOT_FOUND');
+    expect((response.body as ApiErrorEnvelope).error.code).toBe('PRODUCT_NOT_FOUND');
     await get(`/api/v1/nutrition/products/${UNKNOWN}`).expect(404);
     expect(calls.filter((url) => url.includes(UNKNOWN))).toHaveLength(1);
   });
 
-  it('la base qui ne répond pas : 503 avec un message pour la personne, puis une pause', async () => {
+  it('la base saturée (503) : 503 avec un message pour la personne, puis une pause', async () => {
     const response = await get(`/api/v1/nutrition/products/${DOWN}`).expect(503);
     expect((response.body as ApiErrorEnvelope).error.message).toContain('saisis le repas');
     // Pendant la pause, même un code jamais vu n'appelle pas la base.
