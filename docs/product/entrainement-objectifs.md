@@ -74,7 +74,8 @@ Chaque matériel a son glyphe : la police d'icônes `CarlysEquipment`
 (`assets/fonts/`, 3 Ko), construite par `apps/mobile/tools/equipment_icons/build_font.py`
 depuis `tools/equipment_icons/svg/*.svg` — cinq glyphes Tabler Icons (MIT), les
 dix autres dessinés dans leur style ; Material n'avait ni kettlebell, ni poulie,
-ni banc.
+ni banc. La même police porte aussi le code-barres du scan d'un produit
+(`barcode` de Tabler, U+E00F) : Material n'en a qu'un pistolet de caisse.
 
 ## La génération (tranche 3)
 
