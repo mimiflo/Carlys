@@ -1,4 +1,5 @@
 import {
+  BODY_METRIC_BOUNDS,
   MILESTONES_IMPORT_MAX,
   TIMELINE_MAX_PAGE_SIZE,
   progressEventKindSchema,
@@ -36,6 +37,19 @@ export class OverviewQuery {
   period: ProgressPeriodValue = 'week';
 }
 
+/**
+ * La description Swagger de `value`, construite depuis `BODY_METRIC_BOUNDS` :
+ * les bornes annoncées sont celles que le service applique, jamais une copie.
+ */
+export const BODY_METRIC_VALUE_DESCRIPTION =
+  'Kg pour WEIGHT_KG, % pour BODY_FAT_PERCENT, cm pour les mensurations (*_CM), ' +
+  'dans les bornes de son type, appliquées par le service — une correction ne porte ' +
+  'pas le type : ' +
+  Object.entries(BODY_METRIC_BOUNDS)
+    .map(([type, { min, max, decimals }]) => `${type} ${min}–${max} (${decimals} déc.)`)
+    .join(', ') +
+  '.';
+
 export class CreateBodyMetricDto {
   @ApiProperty({ description: 'UUID généré côté client (création idempotente)' })
   @IsUUID()
@@ -45,7 +59,7 @@ export class CreateBodyMetricDto {
   @IsEnum(BodyMetricType)
   metricType!: BodyMetricType;
 
-  @ApiProperty({ minimum: 1, maximum: 500 })
+  @ApiProperty({ minimum: 1, maximum: 500, description: BODY_METRIC_VALUE_DESCRIPTION })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)
   @Max(500)
@@ -74,7 +88,11 @@ export class CreateBodyMetricDto {
  * refusé par le service : ce n'est pas une correction.
  */
 export class UpdateBodyMetricDto {
-  @ApiPropertyOptional({ minimum: 1, maximum: 500 })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 500,
+    description: BODY_METRIC_VALUE_DESCRIPTION,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(1)

@@ -39,13 +39,24 @@ PersonalRecordEntry personalRecordFromJson(Map<String, dynamic> json) =>
       achievedAt: DateTime.parse(json['achievedAt'] as String),
     );
 
-BodyMetricEntry bodyMetricFromJson(Map<String, dynamic> json) =>
-    BodyMetricEntry(
-      id: json['id'] as String,
-      kind: BodyMetricKind.fromApi(json['metricType'] as String),
-      value: (json['value'] as num).toDouble(),
-      measuredAt: DateTime.parse(json['measuredAt'] as String),
-    );
+/// Une mesure servie par `/body-metrics`.
+///
+/// Un type inconnu est une réponse illisible (`FormatException`), pas un
+/// poids : la route ne sert que le type demandé, donc ce cas ne se produit
+/// que si le serveur dit autre chose que ce que l'appli a demandé.
+BodyMetricEntry bodyMetricFromJson(Map<String, dynamic> json) {
+  final type = json['metricType'] as String?;
+  final kind = BodyMetricKind.tryFromApi(type);
+  if (kind == null) {
+    throw FormatException('Type de mesure inconnu : $type');
+  }
+  return BodyMetricEntry(
+    id: json['id'] as String,
+    kind: kind,
+    value: (json['value'] as num).toDouble(),
+    measuredAt: DateTime.parse(json['measuredAt'] as String),
+  );
+}
 
 ExerciseProgressionPoint exerciseProgressionPointFromJson(
   Map<String, dynamic> json,

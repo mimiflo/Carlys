@@ -1,4 +1,8 @@
-import { type BodyMetric as BodyMetricContract, type BodyMetricType } from '@carlys/api-contracts';
+import {
+  BODY_METRIC_BOUNDS,
+  type BodyMetric as BodyMetricContract,
+  type BodyMetricType,
+} from '@carlys/api-contracts';
 import {
   BadRequestException,
   ConflictException,
@@ -9,7 +13,7 @@ import { ProgressRepository } from '../infrastructure/progress.repository';
 import { presentBodyMetric } from './progress.presenter';
 
 /**
- * LES MESURES CORPORELLES : poids et taux de masse grasse.
+ * LES MESURES CORPORELLES : poids, taux de masse grasse et mensurations.
  *
  * Un service à part de `ProgressService` — qui porte les records, les
  * statistiques et la frise — parce que c'est le seul bloc de ce module qui
@@ -26,6 +30,7 @@ export class BodyMetricsService {
     userId: string,
     input: { id: string; metricType: BodyMetricType; value: number; measuredAt: Date },
   ): Promise<BodyMetricContract> {
+    assertPlausible(input.metricType, input.value);
     const created = await this.progress.createBodyMetric({ userId, ...input });
     const stored = await this.progress.findBodyMetricById(input.id);
     if (stored === null || stored.userId !== userId) {
@@ -77,6 +82,10 @@ export class BodyMetricsService {
     if (metric === null || metric.userId !== userId || metric.deletedAt !== null) {
       throw new NotFoundException('Mesure introuvable.');
     }
+    if (input.value !== undefined) {
+      // Les bornes de la zone STOCKÉE : le corps ne porte pas le type.
+      assertPlausible(metric.metricType, input.value);
+    }
     const updated = await this.progress.updateBodyMetric(id, input);
     return presentBodyMetric(updated);
   }
@@ -95,4 +104,24 @@ export class BodyMetricsService {
     }
     await this.progress.softDeleteBodyMetric(id);
   }
+}
+
+/**
+ * Les bornes de `BODY_METRIC_BOUNDS`, que le DTO ne peut pas appliquer : il
+ * valide le corps seul, et une correction ne porte pas le type. Le refus a
+ * la forme d'une erreur de validation (`VALIDATION_ERROR`, champ `value`),
+ * comme celles du DTO, pour que le client le place sous le même champ.
+ */
+function assertPlausible(metricType: BodyMetricType, value: number): void {
+  const { min, max, decimals } = BODY_METRIC_BOUNDS[metricType];
+  const scaled = value * 10 ** decimals;
+  // Tolérance flottante : 38.4 * 10 vaut 383.99999999999994.
+  const precise = Math.abs(scaled - Math.round(scaled)) < 1e-6;
+  if (value >= min && value <= max && precise) {
+    return;
+  }
+  const unit = metricType.endsWith('_CM') ? ' cm' : '';
+  const places = decimals > 1 ? `${decimals} décimales` : 'une décimale';
+  const message = `La valeur doit être comprise entre ${min} et ${max}${unit}, à ${places} au plus.`;
+  throw new BadRequestException({ message, details: [{ field: 'value', message }] });
 }
