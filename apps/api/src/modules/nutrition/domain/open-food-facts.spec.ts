@@ -48,6 +48,22 @@ describe('toPackagedFood', () => {
     expect(product?.servingQuantity).toBeNull();
   });
 
+  it('une portion compte au moins 1 g, arrondie au centième', () => {
+    const serving = (serving_quantity: number) =>
+      toPackagedFood(code, { serving_quantity, nutriments: { 'energy-kcal_100g': 1 } })
+        ?.servingQuantity;
+    expect(serving(0.4)).toBeNull();
+    expect(serving(33.3333)).toBe(33.33);
+  });
+
+  it('un nom trop long se coupe à 120 unités sans casser un emoji', () => {
+    const name = toPackagedFood(code, {
+      product_name: `${'a'.repeat(119)}👍🏽 fin`,
+      nutriments: { 'energy-kcal_100g': 1 },
+    })?.name;
+    expect(name).toBe('a'.repeat(119));
+  });
+
   it('sans énergie lisible, le produit n’est pas utilisable', () => {
     expect(toPackagedFood(code, { product_name: 'Mystère', nutriments: {} })).toBeNull();
     expect(

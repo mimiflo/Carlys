@@ -67,8 +67,24 @@ const text = (value: string | undefined): string | null => {
     ?.replace(/[\p{Cc}\p{Cf}]/gu, ' ')
     .trim()
     .replace(/\s+/g, ' ');
-  return trimmed ? trimmed.slice(0, NAME_MAX) : null;
+  return trimmed ? cut(trimmed, NAME_MAX) : null;
 };
+
+const graphemes = new Intl.Segmenter('fr', { granularity: 'grapheme' });
+
+/**
+ * Au plus [max] unités UTF-16 (la mesure de la borne d'un nom de repas),
+ * coupées entre deux CARACTÈRES perçus : un emoji, son teint compris, entre
+ * entier ou pas du tout.
+ */
+function cut(value: string, max: number): string {
+  let kept = '';
+  for (const { segment } of graphemes.segment(value)) {
+    if (kept.length + segment.length > max) break;
+    kept += segment;
+  }
+  return kept.trimEnd();
+}
 
 /** La fiche Open Food Facts, en produit Carlys — ou `null` si inutilisable. */
 export function toPackagedFood(barcode: string, raw: unknown): PackagedFood | null {
@@ -94,7 +110,10 @@ export function toPackagedFood(barcode: string, raw: unknown): PackagedFood | nu
       fatG: within(n.fat_100g, MACRO_PER_100_MAX),
     },
     liquid: product.product_quantity_unit?.trim().toLowerCase() === 'ml',
+    // Au moins 1 g (ou ml), au centième : la règle d'une quantité au journal.
     servingQuantity:
-      serving !== undefined && serving > 0 && serving <= SERVING_MAX ? serving : null,
+      serving !== undefined && serving >= 1 && serving <= SERVING_MAX
+        ? Math.round(serving * 100) / 100
+        : null,
   };
 }
