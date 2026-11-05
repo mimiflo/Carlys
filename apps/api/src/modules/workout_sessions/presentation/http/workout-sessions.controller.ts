@@ -74,7 +74,9 @@ export class WorkoutSessionsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Modifier nom/notes d’une séance' })
+  @ApiOperation({
+    summary: 'Modifier nom, notes ou effort perçu (Borg CR10) d’une séance, close comprise',
+  })
   update(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', new ParseUUIDPipe()) sessionId: string,

@@ -226,6 +226,16 @@ describe('Séances (e2e)', () => {
     await authed(accessToken).patch(url).send({ perceivedEffort: 7 }).expect(200);
   });
 
+  it('la base elle-même refuse un effort hors échelle (CHECK), quel que soit l’écrivain', async () => {
+    for (const perceivedEffort of [0, 11]) {
+      await expect(
+        prisma.workoutSession.update({ where: { id: sessionId }, data: { perceivedEffort } }),
+      ).rejects.toThrow(/WorkoutSession_perceivedEffort_check/);
+    }
+    const stored = await prisma.workoutSession.findUniqueOrThrow({ where: { id: sessionId } });
+    expect(stored.perceivedEffort).toBe(7);
+  });
+
   it('liste l’historique paginé, invisible pour un autre utilisateur', async () => {
     const list = await authed(accessToken).get('/api/v1/workout-sessions?limit=10').expect(200);
     const sessions = data<WorkoutSessionSummary[]>(list.body);
