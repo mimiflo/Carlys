@@ -5,15 +5,16 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../utils/progress_stats.dart';
-import 'body_weight_latest.dart';
+import 'body_metric_latest.dart';
 
 const double _chartHeight = 150;
 
-/// Courbe du poids corporel (maquette d'octobre 2026) : la dernière mesure
+/// Courbe d'une mesure corporelle (maquette d'octobre 2026, dessinée pour le
+/// poids, reprise telle quelle par chaque mensuration) : la dernière mesure
 /// en tête, puis la courbe avec son échelle, ses dates et un point par
 /// mesure — la plus récente cerclée.
-class BodyWeightChart extends StatelessWidget {
-  const BodyWeightChart({required this.entries, super.key})
+class BodyMetricChart extends StatelessWidget {
+  const BodyMetricChart({required this.entries, super.key})
     : assert(
         entries.length >= minimumEntries,
         'une courbe demande au moins deux mesures',
@@ -30,6 +31,7 @@ class BodyWeightChart extends StatelessWidget {
     final maxValue = values.reduce((a, b) => a > b ? a : b);
     final (:minY, :maxY, :step) = weightAxis(minValue, maxValue);
     final last = entries.length - 1;
+    final kind = entries.last.kind;
     final scaler = MediaQuery.textScalerOf(context);
     // En texte agrandi, quatre dates ne tiennent plus côte à côte : la
     // première et la dernière suffisent.
@@ -41,13 +43,13 @@ class BodyWeightChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BodyWeightLatest(entry: entries.last),
+        BodyMetricLatest(entry: entries.last),
         const SizedBox(height: AppSpacing.md),
         Semantics(
           label:
-              'Évolution du poids corporel, de '
+              '${_spokenSubject(kind)}, de '
               '${formatDecimal(entries.first.value)} à '
-              '${formatDecimal(entries.last.value)} kilos '
+              '${formatDecimal(entries.last.value)} ${kind.spokenUnit} '
               'sur ${entries.length} mesures',
           excludeSemantics: true,
           // Isole le rendu du graphique : ses repeints restent locaux.
@@ -154,6 +156,13 @@ class BodyWeightChart extends StatelessWidget {
       ],
     );
   }
+
+  /// « Évolution du poids corporel » — l'énoncé d'avant les mensurations,
+  /// gardé mot pour mot —, « Évolution : tour de taille » pour une zone.
+  static String _spokenSubject(BodyMetricKind kind) =>
+      kind == BodyMetricKind.weightKg
+      ? 'Évolution du poids corporel'
+      : 'Évolution : ${kind.label.toLowerCase()}';
 
   static FlLine _dashed(double _) => const FlLine(
     color: AppColors.darkBorder,

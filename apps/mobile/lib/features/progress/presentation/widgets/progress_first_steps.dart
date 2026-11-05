@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import 'add_weight_action.dart';
+import 'body_metric_gestures.dart';
 
 /// AMORÇAGE : ce qui tient lieu de page tant qu'il n'y a rien à mesurer.
 ///

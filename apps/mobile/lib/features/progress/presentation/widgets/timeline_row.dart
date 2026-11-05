@@ -99,13 +99,25 @@ class TimelineRow extends StatelessWidget {
               '${volume.value} ${volume.unit}',
         );
       case ProgressEventKind.measure:
-        final valeur = (event.number('value') ?? 0).toDouble();
-        final poids = event.text('metricType') == 'WEIGHT_KG';
-        return (
-          AppIcons.bodyMetrics,
-          poids ? 'Pesée' : 'Masse grasse',
-          poids ? '${formatDecimal(valeur)} kg' : '${formatDecimal(valeur)} %',
-        );
+        final valeur = formatDecimal((event.number('value') ?? 0).toDouble());
+        final kind = BodyMetricKind.tryFromApi(event.text('metricType'));
+        // Un type que cette version ne connaît pas reste une mesure, sans
+        // unité inventée : le lire comme un poids ferait d'un tour une pesée.
+        return switch (kind) {
+          BodyMetricKind.weightKg => (
+            AppIcons.bodyMetrics,
+            'Pesée',
+            '$valeur kg',
+          ),
+          null => (AppIcons.bodyMetrics, 'Mesure', valeur),
+          _ => (
+            kind.isMeasurement
+                ? AppIcons.bodyMeasurements
+                : AppIcons.bodyMetrics,
+            kind.label,
+            '$valeur ${kind.unit}',
+          ),
+        };
       case ProgressEventKind.lesson:
         final lecons = event.number('lessons')?.toInt() ?? 0;
         return (

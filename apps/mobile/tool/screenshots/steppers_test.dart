@@ -30,7 +30,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/add_weight_sheet.dart';
-import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_chart.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_metric_chart.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/widgets/exercise_set_row.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/widgets/set_input_sheet.dart';
@@ -102,7 +102,7 @@ List<Widget> _decorPoids() {
   const poids = [77.8, 77.1, 76.9, 76.2, 75.8, 75.4, 75.1, 74.5];
   final maintenant = DateTime.now().toUtc();
   return [
-    BodyWeightChart(
+    BodyMetricChart(
       entries: [
         for (final (index, valeur) in poids.indexed)
           BodyMetricEntry(

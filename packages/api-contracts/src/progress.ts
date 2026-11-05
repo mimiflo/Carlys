@@ -140,8 +140,46 @@ export const exerciseProgressionSchema = z.object({
 });
 export type ExerciseProgression = z.infer<typeof exerciseProgressionSchema>;
 
-export const bodyMetricTypeSchema = z.enum(['WEIGHT_KG', 'BODY_FAT_PERCENT']);
+/**
+ * Le poids, le taux de masse grasse, puis les sept MENSURATIONS (des tours,
+ * en centimètres) : taille, hanches, poitrine, bras, cuisse, mollet, cou.
+ */
+export const bodyMetricTypeSchema = z.enum([
+  'WEIGHT_KG',
+  'BODY_FAT_PERCENT',
+  'WAIST_CM',
+  'HIPS_CM',
+  'CHEST_CM',
+  'ARM_CM',
+  'THIGH_CM',
+  'CALF_CM',
+  'NECK_CM',
+]);
 export type BodyMetricType = z.infer<typeof bodyMetricTypeSchema>;
+
+/**
+ * Bornes PLAUSIBLES d'une mesure, par type : au-delà, c'est une faute de
+ * frappe, pas une mesure. Le poids et la masse grasse gardent les bornes
+ * qu'ils ont depuis l'Étape 5 (1 à 500, deux décimales) ; chaque tour a les
+ * siennes, en cm, à une décimale — un mètre ruban ne lit pas mieux.
+ *
+ * Les bornes hautes laissent passer les morphologies extrêmes (un tour de
+ * taille de 250 cm existe) : refuser une mesure vraie serait pire que
+ * laisser passer une valeur rare.
+ */
+export const BODY_METRIC_BOUNDS: Readonly<
+  Record<BodyMetricType, { min: number; max: number; decimals: number }>
+> = {
+  WEIGHT_KG: { min: 1, max: 500, decimals: 2 },
+  BODY_FAT_PERCENT: { min: 1, max: 500, decimals: 2 },
+  WAIST_CM: { min: 40, max: 250, decimals: 1 },
+  HIPS_CM: { min: 50, max: 250, decimals: 1 },
+  CHEST_CM: { min: 50, max: 250, decimals: 1 },
+  ARM_CM: { min: 10, max: 100, decimals: 1 },
+  THIGH_CM: { min: 20, max: 150, decimals: 1 },
+  CALF_CM: { min: 15, max: 100, decimals: 1 },
+  NECK_CM: { min: 20, max: 80, decimals: 1 },
+};
 
 export const bodyMetricSchema = z.object({
   id: z.string(),

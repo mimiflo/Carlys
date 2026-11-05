@@ -8,8 +8,9 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
-import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_chart.dart';
-import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_latest.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_metric_chart.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_metric_latest.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_first_steps.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_tiles.dart';
 import 'package:flutter/material.dart';
@@ -156,7 +157,7 @@ void main() {
 
     // Poids corporel : la dernière mesure en tête de sa courbe.
     await reveal(tester, find.text('82,5 kg'));
-    expect(find.byType(BodyWeightChart), findsOneWidget);
+    expect(find.byType(BodyMetricChart), findsOneWidget);
   });
 
   testWidgets('ouvre la liste complète des records', (tester) async {
@@ -214,9 +215,14 @@ void main() {
 
     await reveal(tester, find.text('Aucune mesure enregistrée'));
 
-    // Ajout : la feuille propose 70 kg par défaut, +0,5 → 70,5 kg.
-    await reveal(tester, find.text('AJOUTER'));
-    await tester.tap(find.text('AJOUTER'));
+    // Ajout : la feuille propose 70 kg par défaut, +0,5 → 70,5 kg. Le
+    // « Ajouter » du POIDS : les mensurations ont le leur, juste dessous.
+    final ajouter = find.descendant(
+      of: find.byType(BodyWeightSection),
+      matching: find.text('AJOUTER'),
+    );
+    await reveal(tester, ajouter);
+    await tester.tap(ajouter);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Augmenter le poids'));
     await tester.pumpAndSettle();
@@ -226,8 +232,8 @@ void main() {
     await reveal(tester, find.text('70,5 kg'));
     expect(find.text('Aucune mesure enregistrée'), findsNothing);
     // Une seule mesure : un fait et une promesse, pas un graphique vide.
-    expect(find.text(BodyWeightFirstMeasure.note), findsOneWidget);
-    expect(find.byType(BodyWeightChart), findsNothing);
+    expect(find.text(BodyMetricFirstMeasure.note), findsOneWidget);
+    expect(find.byType(BodyMetricChart), findsNothing);
 
     // La correction et le retrait vivent dans la feuille des mesures.
     await reveal(tester, find.text('Voir mes mesures'));
@@ -287,8 +293,8 @@ void main() {
     await openProgressTab(tester);
 
     await reveal(tester, find.text('82,5 kg'));
-    expect(find.byType(BodyWeightChart), findsOneWidget);
-    expect(find.text(BodyWeightFirstMeasure.note), findsNothing);
+    expect(find.byType(BodyMetricChart), findsOneWidget);
+    expect(find.text(BodyMetricFirstMeasure.note), findsNothing);
   });
 
   testWidgets('premier jour : un seul bloc d’amorçage, ni zéros ni vides', (
@@ -318,8 +324,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ProgressFirstSteps), findsNothing);
-    await reveal(tester, find.text(BodyWeightFirstMeasure.note));
-    expect(find.text(BodyWeightFirstMeasure.note), findsOneWidget);
+    await reveal(tester, find.text(BodyMetricFirstMeasure.note));
+    expect(find.text(BodyMetricFirstMeasure.note), findsOneWidget);
   });
 
   testWidgets('premier jour : « Lancer une séance » ouvre les modèles', (

@@ -82,13 +82,13 @@ corriger ou à supprimer. L'API savait faire, l'application ne demandait pas.
 
 - La page garde ses trois lignes récentes : c'est une mise en page, plus une
   limite. Sous elles, « Voir mes N mesures » ouvre
-  `body_weight_history_sheet.dart`, qui liste **tout** et rend chaque ligne
+  `body_metric_history_sheet.dart`, qui liste **tout** et rend chaque ligne
   corrigeable et supprimable.
 - La feuille LIT le provider plutôt qu'une liste figée : corriger depuis la
   feuille se voit dans la feuille, sans la refermer.
-- `WeightRow` est partagée entre la page et la feuille. Les recopier aurait
-  fait diverger la confirmation de suppression, c'est-à-dire exactement ce
-  qu'il ne faut pas voir diverger.
+- `BodyMetricRow` (ex-`WeightRow`) est partagée entre le poids et les
+  mensurations. Les recopier aurait fait diverger la confirmation de
+  suppression, c'est-à-dire exactement ce qu'il ne faut pas voir diverger.
 
 ### La suppression demande confirmation, la correction non
 
@@ -99,6 +99,82 @@ rapport métabolique** : métabolisme de base, cible calorique et macros sont
 recalculés sur la pesée précédente. La popup de confirmation
 (`showAppConfirm`, bouton « Supprimer » en rouge) dit cette conséquence, et pas seulement le geste ; elle dit autre chose quand la mesure
 n'est pas la dernière, parce que la conséquence n'est alors pas la même.
+
+## Mensurations (3 novembre 2026)
+
+Sept tours, en centimètres : cou, poitrine, bras, taille, hanches, cuisse,
+mollet. Ils vivent dans la MÊME table que le poids (`BodyMetric`), comme
+sept valeurs de plus de `BodyMetricType` (`NECK_CM`, `CHEST_CM`, `ARM_CM`,
+`WAIST_CM`, `HIPS_CM`, `THIGH_CM`, `CALF_CM` ; migration
+`20261103110000_mensurations`). Même création idempotente par UUID né sur
+l'appareil, même correction, même suppression logique, mêmes routes : rien
+de neuf à apprendre ni à sécuriser.
+
+**Les bornes sont celles d'un mètre ruban, zone par zone** — taille 40–250,
+hanches et poitrine 50–250, bras 10–100, cuisse 20–150, mollet 15–100, cou
+20–80 —, à une décimale. Elles vivent dans `BODY_METRIC_BOUNDS`
+(`@carlys/api-contracts`) et c'est le SERVICE qui les applique, pas le DTO :
+une correction ne porte pas le type, seule la ligne stockée le connaît. Le
+refus est un `VALIDATION_ERROR` sur le champ `value`, comme ceux du DTO. La
+feuille mobile applique les mêmes bornes (`BodyMetricKind.min`, `max` et
+`decimals`) avant l'envoi. `measurements_test.dart` lit `bodyMetricTypeSchema`
+et `BODY_METRIC_BOUNDS` DANS `packages/api-contracts/src/progress.ts` et
+exige, type par type, le même minimum, le même maximum et le même nombre de
+décimales : régler une borne côté API sans la régler côté appli fait rougir
+le test. La description Swagger de `value` est construite depuis la même
+constante.
+
+**Elles ne se mélangent pas au poids.** Le rapport métabolique ne lit que
+`WEIGHT_KG` : un tour de taille plus récent que la dernière pesée ne le
+déplace pas (test e2e). La suppression d'une mensuration ne parle donc pas
+de cible calorique, et la frise écrit « Tour de taille · 82,4 cm », pas
+« Pesée ». À partir de cette version, un type que l'appli installée ne
+connaît pas s'y lit « Mesure », sans unité inventée.
+
+**La limite, pour les versions d'AVANT.** Elles lisent tout type autre que
+`WEIGHT_KG` comme une masse grasse : un tour de taille de 82,5 cm s'y écrit
+« Masse grasse · 82,5 % » dans la frise. Aucune rustine serveur n'est
+posée : tant que l'appli n'est pas publiée, seules les applis de test
+(recette) sont concernées, et elles se mettent à jour.
+
+**L'écran.** Sous le poids, la section « Mensurations » liste une ligne par
+zone déjà mesurée : son nom, sa dernière valeur, et son écart depuis la
+plus ancienne des mesures CHARGÉES (« −3,6 cm depuis le 27 sept. »,
+« Stable… », ou « Première mesure · … »). Chargées : `/body-metrics` sert
+les 90 mesures les plus récentes d'une zone, donc au-delà de 90 tours,
+l'écart part de la 90ᵉ plus récente — et la date affichée est la sienne. L'écart s'écrit sans couleur : un tour de taille
+qui baisse et un tour de bras qui monte sont deux bonnes nouvelles, l'écran
+ne sait pas laquelle on cherche. Une zone jamais mesurée n'a pas de ligne ;
+sans aucune zone, un seul état vide invite à « Prendre une mesure ».
+
+- **Saisie** : `add_measurement_sheet.dart` (`showAppSheet`) — zone en
+  pastilles, tour en cm, date (aujourd'hui par défaut, la ligne de date
+  `MeasuredOnRow` est celle de la pesée). En correction, la zone est
+  verrouillée : l'API refuse de corriger le type.
+- **Historique** : toucher une zone ouvre `body_metric_history_sheet.dart`,
+  la feuille du poids, paramétrée par le type. Elle porte en plus, pour une
+  zone, la courbe du poids reprise telle quelle (`BodyMetricChart`) et
+  l'ajout pré-rempli de la dernière valeur. La section n'a pas de petite
+  courbe par ligne : le design system n'en a pas, et la feuille montre la
+  vraie.
+- **Chargement** : sept lectures `GET /body-metrics?metricType=…` en
+  parallèle (`bodyMeasurementsProvider`) ; une route groupée viendra si
+  elles pèsent. Ajouter une pesée ne relit pas les mensurations, et
+  inversement.
+- **Hors ligne** : comme le poids, les mensurations se lisent et s'écrivent
+  sur le serveur — elles ne passent PAS par la file de synchronisation, qui
+  ne porte que séances, séries et modèles. Hors ligne, la section rend
+  « Mensurations indisponibles » avec son réessai, et un ajout échoué le
+  dit (« Impossible d'enregistrer la mensuration. »). L'UUID né sur
+  l'appareil rend déjà la création rejouable le jour où les mesures
+  entreront dans la file.
+- **Premier jour** : un tour sans pesée n'est pas un compte neuf ;
+  l'amorçage tient compte des mensurations.
+- **Données personnelles** : la suppression d'un compte efface ces lignes
+  par la même cascade que le poids.
+- **Retour arrière** : la migration est irréversible (pas de `DROP VALUE`
+  dans PostgreSQL) ; voir `docs/database/schema.md`. Déployer l'API
+  d'abord, l'appli ensuite.
 
 ## Courbe par exercice
 
@@ -301,6 +377,8 @@ records ; le poids corporel.
 - **Le poids** : la dernière mesure, puis la courbe avec son échelle et ses
   dates ; la liste des pesées et leur correction vivent dans « Voir mes
   mesures ».
+- **Les mensurations** : une ligne par zone mesurée, sa dernière valeur et
+  son écart depuis la première ; voir « Mensurations » plus haut.
 
 ## Hors périmètre, et pourquoi
 
@@ -323,6 +401,14 @@ technique :
   mesure (avec confirmation ET annulation, prouvée par le compteur de
   suppressions du double), et la liste complète qui rend corrigeable une
   mesure que la page ne montrait pas.
+- `measurements_test.dart` : bornes alignées sur l'API, type inconnu qui ne
+  devient pas un poids, écart au dixième, ligne de frise, saisie refusée
+  hors des bornes de la zone ou au centième, ligne de zone, historique avec
+  courbe, suppression qui ne parle pas de cible calorique, correction zone
+  verrouillée, état d'erreur et réessai, premier jour.
+- `apps/api/test/progress.e2e-spec.ts` (« les mensurations ») : sept zones,
+  filtre par zone, rapport métabolique intact, bornes par zone à la
+  création et à la correction, frise, type inconnu refusé.
 - `exercise_progression_test.dart` : la route est réellement interrogée, la
   courbe se trace, un record du bon jour marque son point et un record d'un
   autre jour n'en marque aucun, les trois cas sans courbe, et l'état

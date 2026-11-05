@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import 'measured_on_row.dart';
 
 /// Ce qu'une saisie de poids rapporte : une valeur ET sa date.
 ///
@@ -104,24 +105,6 @@ class _AddWeightFormState extends State<_AddWeightForm> {
     });
   }
 
-  Future<void> _choisirLaDate() async {
-    final maintenant = DateTime.now();
-    final choisie = await showDatePicker(
-      context: context,
-      initialDate: _measuredAt,
-      // Deux ans en arrière : de quoi rattraper un historique, sans ouvrir un
-      // calendrier infini. Aucune date future — on ne se pèse pas demain.
-      firstDate: DateTime(maintenant.year - 2),
-      lastDate: maintenant,
-      helpText: 'Date de la pesée',
-    );
-    if (choisie != null) {
-      setState(() => _measuredAt = choisie);
-    }
-  }
-
-  String get _dateLisible => formatSpokenDay(_measuredAt, DateTime.now());
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -172,11 +155,10 @@ class _AddWeightFormState extends State<_AddWeightForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            AppListRow(
+            MeasuredOnRow(
               title: 'Date de la pesée',
-              trailingText: _dateLisible,
-              leading: AppIcons.date,
-              onTap: _choisirLaDate,
+              value: _measuredAt,
+              onChanged: (date) => setState(() => _measuredAt = date),
             ),
             if (widget.correction) ...[
               const SizedBox(height: AppSpacing.sm),

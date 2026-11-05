@@ -56,21 +56,53 @@ final bodyWeightMetricsProvider =
       return ref.watch(progressRepositoryProvider).bodyMetrics();
     });
 
-/// Actions sur les mesures corporelles, avec rafraîchissement de la liste.
+/// Les MENSURATIONS, zone par zone (chaque liste du plus ancien au plus
+/// récent). Une zone jamais mesurée a sa liste vide : c'est la section qui
+/// décide de ne pas la montrer.
+final bodyMeasurementsProvider =
+    FutureProvider.autoDispose<Map<BodyMetricKind, List<BodyMetricEntry>>>((
+      ref,
+    ) async {
+      final repository = ref.watch(progressRepositoryProvider);
+      const kinds = BodyMetricKind.measurements;
+      // ponytail: une requête par zone (sept, en parallèle, sur l'index
+      // `(userId, metricType, measuredAt)`) ; une route groupée si ça pèse.
+      final lists = await Future.wait([
+        for (final kind in kinds) repository.bodyMetrics(kind: kind),
+      ]);
+      return {for (final (i, kind) in kinds.indexed) kind: lists[i]};
+    });
+
+/// Les mesures d'UN type, telles que la feuille d'historique les liste : le
+/// poids a sa source, les mensurations la leur.
+final bodyMetricsOfKindProvider = Provider.autoDispose
+    .family<List<BodyMetricEntry>, BodyMetricKind>((ref, kind) {
+      if (kind.isMeasurement) {
+        return ref.watch(bodyMeasurementsProvider).valueOrNull?[kind] ??
+            const [];
+      }
+      return ref.watch(bodyWeightMetricsProvider).valueOrNull ?? const [];
+    });
+
+/// Actions sur les mesures corporelles, avec rafraîchissement des listes.
 class BodyMetricActions {
   const BodyMetricActions(this._ref);
 
   final Ref _ref;
 
-  Future<void> addWeight(double valueKg, {DateTime? measuredAt}) async {
+  Future<void> add(
+    BodyMetricKind kind,
+    double value, {
+    DateTime? measuredAt,
+  }) async {
     await _ref
         .read(progressRepositoryProvider)
         .addBodyMetric(
-          kind: BodyMetricKind.weightKg,
-          value: valueKg,
+          kind: kind,
+          value: value,
           measuredAt: measuredAt ?? DateTime.now().toUtc(),
         );
-    _ref.invalidate(bodyWeightMetricsProvider);
+    _refresh(kind);
   }
 
   /// Corrige une mesure déjà enregistrée.
@@ -79,25 +111,32 @@ class BodyMetricActions {
   /// (métabolisme de base, dépense, cible calorique). Corriger une valeur
   /// change donc les objectifs nutritionnels ; corriger une DATE peut changer
   /// quelle mesure fait foi. C'est voulu, et c'est pourquoi l'écran le dit.
+  /// Une mensuration, elle, ne nourrit que sa courbe.
   Future<void> correct(
-    String id, {
-    double? valueKg,
+    BodyMetricEntry entry, {
+    double? value,
     DateTime? measuredAt,
   }) async {
     await _ref
         .read(progressRepositoryProvider)
         .updateBodyMetric(
-          id: id,
-          value: valueKg,
+          id: entry.id,
+          value: value,
           measuredAt: measuredAt?.toUtc(),
         );
-    _ref.invalidate(bodyWeightMetricsProvider);
+    _refresh(entry.kind);
   }
 
-  Future<void> remove(String id) async {
-    await _ref.read(progressRepositoryProvider).deleteBodyMetric(id);
-    _ref.invalidate(bodyWeightMetricsProvider);
+  Future<void> remove(BodyMetricEntry entry) async {
+    await _ref.read(progressRepositoryProvider).deleteBodyMetric(entry.id);
+    _refresh(entry.kind);
   }
+
+  /// Seule la liste touchée se relit : une pesée ne relance pas les sept
+  /// requêtes des mensurations.
+  void _refresh(BodyMetricKind kind) => _ref.invalidate(
+    kind.isMeasurement ? bodyMeasurementsProvider : bodyWeightMetricsProvider,
+  );
 }
 
 final bodyMetricActionsProvider = Provider<BodyMetricActions>(
