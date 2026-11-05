@@ -542,11 +542,23 @@ class AppDatabase extends _$AppDatabase {
       // (même raisonnement que `from < 7`) : `from < 11` est juste. Les
       // séances déjà là reçoivent un effort nul — « pas encore évalué », ce
       // qui est exact.
+      //
+      // Gardée par `PRAGMA table_info`, pour la raison des index de la v10 :
+      // `onUpgrade` ne tourne pas en transaction, et une montée tuée après
+      // l'ALTER TABLE laissait une base en v10 qui porte déjà la colonne —
+      // la reprise levait « duplicate column name » à chaque ouverture.
       if (from < 11) {
-        await migrator.addColumn(
-          localWorkoutSessions,
-          localWorkoutSessions.perceivedEffort,
-        );
+        final columns = await customSelect(
+          "SELECT name FROM pragma_table_info('local_workout_sessions')",
+        ).get();
+        if (!columns.any(
+          (row) => row.read<String>('name') == 'perceived_effort',
+        )) {
+          await migrator.addColumn(
+            localWorkoutSessions,
+            localWorkoutSessions.perceivedEffort,
+          );
+        }
       }
     },
   );

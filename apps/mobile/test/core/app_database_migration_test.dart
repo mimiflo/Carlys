@@ -570,6 +570,28 @@ void main() {
 
     tearDown(() => db.close());
 
+    test(
+      'une montée interrompue après la colonne reprend sans erreur',
+      () async {
+        // `onUpgrade` ne tourne pas en transaction : appli tuée après
+        // l'ALTER TABLE, la base reste en v10 AVEC la colonne. La reprise ne
+        // doit pas lever « duplicate column name » à chaque ouverture.
+        final interrompue = openLegacyDatabase(
+          legacySchemaV10,
+          seed: [
+            'ALTER TABLE local_workout_sessions '
+                'ADD COLUMN perceived_effort INTEGER NULL;',
+          ],
+        );
+        addTearDown(interrompue.close);
+
+        expect(
+          await interrompue.select(interrompue.localWorkoutSessions).get(),
+          isEmpty,
+        );
+      },
+    );
+
     test('l’effort arrive nul, la séance et sa file restent', () async {
       final session = await db.select(db.localWorkoutSessions).getSingle();
       // Nul : « pas encore évalué ». Une valeur inventée serait un faux fait.
