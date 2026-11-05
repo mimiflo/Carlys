@@ -109,6 +109,10 @@ dependencies:
 
   # Utilitaires
   uuid: ^4.5.1
+  # Couper un nom sans casser un emoji (graphèmes Unicode). Déjà livré par
+  # Flutter (dépendance de `flutter`, épinglée par lui) : nommé ici pour que
+  # le domaine l'importe sans passer par `package:flutter`.
+  characters: ^1.4.0
 
   # La voix PARLÉE du Mentor : la synthèse vocale du téléphone (TextToSpeech
   # d'Android, AVSpeechSynthesizer d'iOS), sur l'appareil, hors ligne,

@@ -522,4 +522,74 @@ void main() {
       expect(detail.source.version, '2020-07-07');
     });
   });
+
+  group('un produit par son code-barres', () {
+    ResponseBody notFound(String code) => _json(404, {
+      'error': {
+        'code': code,
+        'message': 'Introuvable.',
+        'details': null,
+        'requestId': 'test',
+      },
+    });
+
+    test('trouvé : le produit et la mention ODbL', () async {
+      final adapter = record(
+        (_) => _enveloped(
+          {
+            'barcode': '3017620422003',
+            'name': 'Pâte à tartiner',
+            'brand': 'Nutella',
+            'per100g': {'kcal': 539, 'proteinG': 6.3, 'carbsG': null},
+            'liquid': false,
+            'servingQuantity': 15,
+          },
+          meta: {
+            'source': {
+              'attribution': 'Source : Open Food Facts',
+              'license': 'Open Database License (ODbL)',
+              'url': 'https://world.openfoodfacts.org/',
+            },
+          },
+        ),
+      );
+
+      final result = await repository.productByBarcode('3017620422003');
+
+      expect(adapter.requests.single.path, '/nutrition/products/3017620422003');
+      expect(result?.food.per100g.kcal, 539);
+      expect(result?.food.per100g.carbsG, isNull);
+      expect(result?.source.license, contains('ODbL'));
+    });
+
+    test(
+      'inconnu : SEUL le 404 `PRODUCT_NOT_FOUND` rend « aucun produit »',
+      () async {
+        record((_) => notFound('PRODUCT_NOT_FOUND'));
+        expect(await repository.productByBarcode('3017620422003'), isNull);
+
+        // Un 404 de routage (API plus ancienne, proxy) reste une erreur.
+        record((_) => notFound('NOT_FOUND'));
+        await expectLater(
+          repository.productByBarcode('3017620422003'),
+          throwsA(isA<ServerException>()),
+        );
+      },
+    );
+
+    test('sans énergie : une réponse illisible, jamais « 0 kcal »', () async {
+      record(
+        (_) => _enveloped({
+          'barcode': '3017620422003',
+          'name': 'Mystère',
+          'per100g': {'kcal': null},
+          'liquid': false,
+        }),
+      );
+      await expectLater(
+        repository.productByBarcode('3017620422003'),
+        throwsA(isA<AppException>()),
+      );
+    });
+  });
 }

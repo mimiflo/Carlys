@@ -1,3 +1,4 @@
+import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/nutrition.dart';
 
 /// Lecture et écriture des repas et des aliments (`/nutrition/meals`,
@@ -90,6 +91,30 @@ MealScan mealScanFromJson(Map<String, dynamic> row) {
               : null,
         ),
     ],
+  );
+}
+
+/// Un produit de `GET /nutrition/products/:barcode`. Sans énergie, ce n'est
+/// pas un produit (l'API ne le rend jamais) : la réponse est illisible,
+/// plutôt qu'un « 0 kcal » inventé.
+PackagedFood packagedFoodFromJson(Map<String, dynamic> row) {
+  final per100g = row['per100g'] as Map<String, dynamic>? ?? const {};
+  final kcal = per100g['kcal'];
+  if (kcal is! num) {
+    throw const MalformedResponseException('Produit sans énergie');
+  }
+  return PackagedFood(
+    barcode: row['barcode'] as String? ?? '',
+    name: row['name'] as String? ?? 'Produit scanné',
+    brand: row['brand'] as String?,
+    liquid: row['liquid'] as bool? ?? false,
+    servingQuantity: (row['servingQuantity'] as num?)?.toDouble(),
+    per100g: FoodPer100g(
+      kcal: kcal.toDouble(),
+      proteinG: (per100g['proteinG'] as num?)?.toDouble(),
+      carbsG: (per100g['carbsG'] as num?)?.toDouble(),
+      fatG: (per100g['fatG'] as num?)?.toDouble(),
+    ),
   );
 }
 

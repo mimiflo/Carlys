@@ -3,17 +3,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import 'scanned_product_sheet.dart';
 
-/// Les quatre gestes de la page, en tuiles, ceux de la maquette : ajouter un
-/// repas (le geste premier, mis en avant), scanner son assiette (l'IA), ouvrir
-/// les recettes, comprendre ses objectifs. L'eau se note depuis l'accueil. Chacun mène à ce qui existe — jamais une tuile vide.
+/// Les gestes de la page, en tuiles : ajouter un repas (le geste premier,
+/// mis en avant), scanner son assiette (l'IA), scanner le code-barres d'un
+/// produit emballé (Open Food Facts), ouvrir les recettes, comprendre ses
+/// objectifs. L'eau se note depuis l'accueil. Chacun mène à ce qui existe —
+/// jamais une tuile vide.
 class NutritionShortcuts extends StatelessWidget {
   const NutritionShortcuts({required this.day, super.key});
 
   /// Le jour affiché : un repas ajouté d'ici est daté de ce jour.
   final DateTime day;
 
-  static const double _tileWidth = 72;
+  // Cinq tuiles sur une rangée d'un téléphone de 393 points ; plus étroit
+  // ou au texte agrandi, la grille passe à la ligne.
+  static const double _tileWidth = 60;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +35,11 @@ class NutritionShortcuts extends StatelessWidget {
           icon: AppIcons.mealScan,
           label: 'Scanner un aliment',
           onTap: () => context.push(AppRoutes.mealScan(day: day)),
+        ),
+        _ShortcutTile(
+          icon: AppIcons.scanBarcode,
+          label: 'Code-barres',
+          onTap: () => scanFood(context, day),
         ),
         _ShortcutTile(
           icon: AppIcons.recipes,

@@ -14,8 +14,18 @@ class FakeCamera extends MobileScannerPlatform {
   /// d'autorisation encore ouverte.
   Completer<void>? hold;
 
+  final StreamController<BarcodeCapture?> _barcodes =
+      StreamController<BarcodeCapture?>.broadcast();
+
+  /// La caméra « voit » ces codes, dans une même image.
+  void show(List<String> rawValues) => _barcodes.add(
+    BarcodeCapture(
+      barcodes: [for (final raw in rawValues) Barcode(rawValue: raw)],
+    ),
+  );
+
   @override
-  Stream<BarcodeCapture?> get barcodesStream => const Stream.empty();
+  Stream<BarcodeCapture?> get barcodesStream => _barcodes.stream;
   @override
   Stream<TorchState> get torchStateStream => const Stream.empty();
   @override

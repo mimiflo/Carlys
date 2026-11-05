@@ -3,7 +3,8 @@
 Les glyphes du matériel : Material n'a ni kettlebell, ni poulie, ni banc, et
 ses approximations (des points pour une barre, une balance pour un
 kettlebell) se lisaient mal. Cinq viennent de Tabler Icons (MIT, licence
-dans assets/fonts/MIT-Tabler.txt) ; les dix autres sont dessinés dans le MÊME
+dans assets/fonts/MIT-Tabler.txt), plus le code-barres du scan d'un
+produit (`barcode` de Tabler : Material n'en a qu'un pistolet de caisse) ; les dix autres sont dessinés dans le MÊME
 style (grille de 24, trait de 2, bouts arrondis) — cinq par Codex, retenus
 contre les miens à la comparaison (machine, barre de traction, rouleau,
 tapis, élastique), cinq à la main.
@@ -58,6 +59,7 @@ GLYPHS = [
     "banc",
     "elastique",
     "ballon",
+    "code-barres",
 ]
 
 

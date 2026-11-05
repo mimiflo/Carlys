@@ -888,14 +888,61 @@ a une. La photo reste privée : routes et stockage plus haut.
 
 - **De haut en bas** : le jour (pastille), « Tes objectifs du jour » —
   l'anneau des calories et une barre par valeur, le MANGÉ du journal sur le
-  VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, quatre
-  tuiles (Ajouter un repas, Scanner un aliment, Mes recettes, Mes besoins), le journal
+  VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, cinq
+  tuiles (Ajouter un repas, Scanner un aliment — l'assiette, par l'IA —,
+  Code-barres, Mes recettes, Mes besoins), le journal
   alimentaire (photo du plat ou dessin du moment, heure, calories, quantité,
   trois macros ; toucher un repas l'ouvre, la suppression se fait dans son
   écran), puis le bandeau vers le coach. Profil incomplet : l'anneau cède la
   place à « Compléter mon profil », qui ouvre « Mon métabolisme ».
 - L'eau se suit depuis l'accueil (carte d'hydratation), plus depuis une
   tuile de l'onglet.
+- **Code-barres d'un produit** (`/nutrition/code-barres`). La tuile
+  « Code-barres », à côté du scan d'assiette qui reste, ouvre la caméra
+  (EAN-13, EAN-8, UPC-A ; l'API admet aussi le GTIN-14 tapé). Le code se
+  tape aussi (« Taper le code »), caméra refusée comprise : l'autorisation
+  et le cycle de vie de la caméra sont ceux du scan de code ami
+  (`CodeScannerView`, partagé). Le serveur cherche le produit dans **Open
+  Food Facts** (`GET /nutrition/products/:barcode`), gratuit et sans clé :
+  l'appareil ne contacte jamais le tiers, seul le code part, et la réponse
+  — trouvé comme inconnu — est gardée dans Redis (un mois, un jour) : un
+  produit déjà scanné ne rappelle pas Open Food Facts ; une valeur gardée
+  qui n'a plus la forme d'un produit se relit à la source. Un UPC-A
+  (12 chiffres) est cherché et gardé sous l'EAN-13 qui le porte (un 0 de
+  plus) : les deux écritures d'un même produit ne font qu'une clé. L'API se
+  présente (`User-Agent: Carlys/1.0`), attend 5 s au plus et refuse une
+  redirection. Elle ne lit jamais plus de 256 Kio : refusée dès l'en-tête
+  `content-length` quand il l'annonce, la réponse est comptée en OCTETS à
+  la lecture du flux, annulée au premier de trop. Le chiffre de contrôle
+  est vérifié des deux côtés : une lecture ratée ne cherche pas le produit
+  d'un autre. Base collaborative : toute valeur hors bornes est tenue pour
+  inconnue (une portion compte au moins 1 g, au centième), ses caractères
+  invisibles (contrôle, bidi) retirés, le nom coupé à 120 sans casser un
+  emoji, et un produit sans énergie lisible est « inconnu » (404
+  `PRODUCT_NOT_FOUND` : seul ce code fait proposer la saisie à la main).
+  Une fiche INEXPLOITABLE (trop lourde, JSON illisible, `status` autre que
+  1) vaut « inconnu » un jour, sans pause : elle ne punit qu'elle.
+  Open Food Facts limite chaque adresse : toutes les lectures partant du
+  serveur, un plafond COMMUN (80 par minute, dans Redis) les borne, et
+  chaque personne n'en prend que 10 par minute (codes jamais vus
+  seulement ; 429 au-delà) — un seul client ne prive pas les autres de
+  produits nouveaux. La base qui se dit saturée (429, 503), ou trois pannes
+  isolées dans la minute (délai, réseau, autre 5xx), ouvrent une pause de
+  30 s ; une panne isolée n'échoue que pour la personne qui la vit (503
+  « très sollicité » ; la feuille propose alors « Réessayer » et « Saisir à
+  la main »). Purger une fiche fausse :
+  `DEL nutrition:product:v1:<code>` dans Redis. La feuille propose une
+  portion de l'emballage (ou 100 g), recalcule les valeurs à chaque
+  chiffre et ajoute un repas SAISI (nom · marque, quantité en g ou en ml,
+  macros connues seulement), daté du jour affiché ; mention « Source : Open
+  Food Facts, Open Database License (ODbL) » sous les valeurs. Inconnu :
+  « Saisir à la main » ouvre l'écran de repas. Hors ligne : la feuille le
+  dit, et la recherche reprend avec le réseau.
+  - ponytail : le produit entre comme repas saisi, pas comme ligne d'une
+    composition CIQUAL (`MealComponent.foodCode` vise la table `Food`) ;
+    c'est pourquoi la feuille « Ajouter un aliment » de l'écran de repas
+    n'offre pas le code-barres. L'y mêler demandera une table des produits
+    et une colonne de plus.
 - Écarts à la maquette (pas de repas type) :
   `docs/product/design-conformity.md`.
 

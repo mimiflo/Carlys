@@ -74,7 +74,7 @@ premier accès, et l'App Store refuse la soumission :
 
 | Clé | Texte |
 | --- | --- |
-| `NSCameraUsageDescription` | « L’appareil photo sert à scanner le code ami d’un profil Carlys et à photographier tes repas. » |
+| `NSCameraUsageDescription` | « L’appareil photo sert à scanner le code ami d’un profil Carlys, le code-barres d’un aliment et à photographier tes repas. » |
 | `NSPhotoLibraryUsageDescription` | « Carlys n’envoie que la photo de repas que tu choisis : le reste de ta photothèque reste sur ton téléphone. » |
 
 Carlys passe `requestFullMetadata: false` : le sélecteur système (PHPicker)

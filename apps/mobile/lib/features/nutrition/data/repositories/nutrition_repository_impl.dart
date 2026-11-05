@@ -155,6 +155,32 @@ class NutritionRepositoryImpl implements NutritionRepository {
   }
 
   @override
+  Future<PackagedFoodResult?> productByBarcode(String barcode) async {
+    try {
+      return await guardDio(() async {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/nutrition/products/$barcode',
+        );
+        return (
+          food: packagedFoodFromJson(_data(response)),
+          source:
+              attributionFromMeta(response.data?['meta']) ??
+              const FoodAttribution(
+                attribution: 'Source : Open Food Facts',
+                license: 'Open Database License (ODbL)',
+                url: 'https://world.openfoodfacts.org/',
+              ),
+        );
+      });
+    } on ServerException catch (error) {
+      // Inconnu de la base : une réponse, pas une panne. Seul le code dédié
+      // le dit — un 404 de routage (API plus ancienne, proxy) reste une erreur.
+      if (error.code == 'PRODUCT_NOT_FOUND') return null;
+      rethrow;
+    }
+  }
+
+  @override
   Future<Uint8List?> mealPhoto(String id) async {
     try {
       return await guardDio(() async {

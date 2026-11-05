@@ -14,6 +14,7 @@ export 'meal_entry.dart';
 export 'meal_photo.dart';
 export 'meal_scan.dart';
 export 'meal_write.dart';
+export 'packaged_food.dart';
 
 /// Sexe biologique — requis par la formule de Mifflin-St Jeor.
 enum BiologicalSex {
