@@ -138,6 +138,20 @@ void main() {
       expect(find.textContaining('mesures corporelles'), findsOneWidget);
     });
 
+    testWidgets('la ligne « Index glycémique » ouvre le tableau embarqué', (
+      tester,
+    ) async {
+      await tester.pumpWidget(appWith(FakeNutritionRepository()));
+      await openNutritionTab(tester);
+
+      await tester.tap(find.text('Index glycémique'));
+      await tester.pumpAndSettle();
+
+      // Le vrai pack, lu dans l'appli : aucune requête, rien du dépôt.
+      expect(find.text('Ce que l’IG mesure'), findsOneWidget);
+      expect(find.text('Riz blanc bouilli *'), findsOneWidget);
+    });
+
     testWidgets('profil incomplet : le bouton du hero mène au formulaire', (
       tester,
     ) async {

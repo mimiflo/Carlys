@@ -12,8 +12,8 @@ import '../widgets/nutrition_shortcuts.dart';
 import '../widgets/today_goals.dart';
 
 /// L'onglet Nutrition (maquette d'octobre 2026) : le jour, les objectifs du
-/// jour (mangé sur visé), les quatre gestes, le journal illustré, puis le
-/// coach. Le détail du calcul — dépense, corps, profil — vit sur « Mon
+/// jour (mangé sur visé), les cinq gestes, l'entrée du tableau des index
+/// glycémiques, le journal illustré, puis le coach. Le détail du calcul — dépense, corps, profil — vit sur « Mon
 /// métabolisme ». Rien n'y est inventé : le journal vient de la saisie, les
 /// objectifs du serveur.
 class NutritionScreen extends ConsumerWidget {
@@ -47,6 +47,16 @@ class NutritionScreen extends ConsumerWidget {
           const TodayGoals(),
           const SizedBox(height: AppSpacing.md),
           NutritionShortcuts(day: day),
+          const SizedBox(height: AppSpacing.gapTile),
+          // Un repère à consulter, pas un geste du jour : une ligne sous les
+          // tuiles plutôt qu'une sixième tuile, visible sans faire défiler
+          // (le bas de l'onglet recule à chaque repas du journal).
+          AppListRow(
+            leading: AppIcons.glycemicIndex,
+            title: 'Index glycémique',
+            subtitle: 'Aliments courants, de bas à élevé',
+            onTap: () => context.push(AppRoutes.glycemicIndex),
+          ),
           const SizedBox(height: AppSpacing.gapSection),
           const MealJournalSection(),
           const SizedBox(height: AppSpacing.gapSection),
