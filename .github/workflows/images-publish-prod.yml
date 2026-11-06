@@ -45,6 +45,11 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
+  # Pas d'artefact « .dockerbuild » par construction : docker/build-push-action
+  # en déposait un à chaque image, gardé 90 jours — 1 666 artefacts au
+  # 6 novembre 2026, pris sur le stockage Actions inclus (0,5 Go) sans que
+  # personne ne les lise. Le résumé de l'étape, lui, reste.
+  DOCKER_BUILD_RECORD_UPLOAD: 'false'
 
 jobs:
   publier-production:
