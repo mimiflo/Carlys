@@ -169,6 +169,12 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
   d’elles. Ce sont des données
   saisies par des contributeurs, d’après l’emballage : vérifie-les sur le
   paquet si un chiffre te surprend.
+- **Les index glycémiques** de la page « Index glycémique » viennent de la
+  Table 1 d’Atkinson FS, Foster-Powell K, Brand-Miller JC, « International
+  Tables of Glycemic Index and Glycemic Load Values: 2008 », Diabetes Care
+  2008;31(12):2281-2283, doi:10.2337/dc08-1239, citée sur la page. Ce sont
+  des moyennes mesurées, en sélection traduite et regroupée par Carlys ;
+  elles sont un repère, pas un avis médical.
 
 ## 9. Suspension et suppression
 

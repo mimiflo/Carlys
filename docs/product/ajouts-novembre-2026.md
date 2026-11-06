@@ -131,3 +131,43 @@ chaque marque.
 
 **Hors champ.** Un index glycémique affiché sur chaque aliment du journal :
 la correspondance avec CIQUAL n'est pas fiable aliment par aliment.
+
+**Réalisé (6 novembre 2026).**
+- *Donnée.* `apps/mobile/assets/nutrition/glycemic_index.json` : les
+  62 aliments courants de la Table 1 d'Atkinson, Foster-Powell et
+  Brand-Miller (*Diabetes Care* 2008, doi:10.2337/dc08-1239), traduits,
+  dans l'ordre de la table. Pour chacun : la moyenne (glucose = 100),
+  l'erreur standard (le « ± »), la famille, et le renvoi de la source s'il
+  y en a un (* des variétés à IG bas existent, † moyenne de toutes les
+  données). Aucune valeur ajoutée ni estimée. Aucune API, aucune
+  migration.
+- *Page.* `/nutrition/index-glycemique` (`GlycemicIndexScreen`) :
+  l'explication en tête (ce que l'IG mesure, la portion et la charge
+  glycémique, la cuisson, la maturité et le repas, « pas un avis
+  médical »), une recherche sans casse ni accents avec son état vide, les
+  huit familles en pastilles (et « Tous »), le tri par famille ou par IG
+  croissant ou décroissant, puis les renvois et la source complète.
+  Vert, orange, rouge : `success`, `warning`, `danger` du design system,
+  toujours doublés du mot (bas, moyen, élevé).
+- *Entrée.* Une ligne « Index glycémique » sous les cinq tuiles de
+  l'onglet, pas une sixième tuile : c'est un repère qu'on consulte, pas un
+  geste du jour, et sous les tuiles il se voit sans défiler (le bas de
+  l'onglet recule à chaque repas noté).
+- *Accessibilité.* Chaque ligne se lit d'un trait (« Pomme crue, IG 36,
+  bas. »), avec son renvoi ; les titres de famille sont des en-têtes ; le
+  texte agrandi passe à la ligne.
+- *Point juridique à valider.* L'article est publié sous CC BY-NC-ND 3.0.
+  Nous reprenons des valeurs mesurées (des faits), dans une sélection
+  traduite et regroupée par nous, avec la source citée. Le propriétaire
+  doit faire valider ce point avant la publication commerciale (voir
+  `docs/product/nutrition.md`). Les conditions d'utilisation
+  (`docs/legal/terms.md`, § 8), où sont recensées les sources tierces,
+  citent la table.
+- *Tests.* `glycemic_index_pack_test.dart` compare chaque ligne du pack à
+  la source recopiée dans le test (62 entrées, valeur par valeur, dans
+  l'ordre) ; `glycemic_selection_test.dart` (bornes 55, 56, 69, 70,
+  recherche, filtre, tri stable) ; `glycemic_index_screen_test.dart`
+  (recherche et état vide, filtre, tri, lecture d'écran, reprise après
+  échec, texte à 200 %) ; et l'entrée depuis l'onglet dans
+  `nutrition_flow_test.dart`. Captures `nutrition-16` à `nutrition-21`
+  de `tool/screenshots/nutrition_test.dart`.

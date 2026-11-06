@@ -613,6 +613,75 @@ anatomiques de l'Academy — exiger une photo par recette reviendrait à bloquer
 l'écriture derrière la production d'images, ou à recycler des visuels sans
 rapport avec l'assiette.
 
+## Index glycémique — contenu éditorial embarqué
+
+Une page (`/nutrition/index-glycemique`) qui dit, pour 62 aliments courants,
+si leur index glycémique est **bas (≤ 55), moyen (56 à 69) ou élevé
+(≥ 70)**. Même modèle que les recettes : le tableau vit dans
+`apps/mobile/assets/nutrition/glycemic_index.json`, se lit hors ligne, et
+n'a ni route d'API, ni migration, ni ligne au manifeste routes ↔ clients.
+La table CIQUAL ne publie pas d'index glycémique : c'est pourquoi il n'est
+pas affiché sur les aliments du journal (la correspondance ne serait pas
+fiable aliment par aliment).
+
+### La source, et ce qui en est repris
+
+Atkinson FS, Foster-Powell K, Brand-Miller JC. *International Tables of
+Glycemic Index and Glycemic Load Values: 2008.* Diabetes Care
+2008;31(12):2281-2283. doi:10.2337/dc08-1239 (PMC2584181), **Table 1**
+(moyenne ± erreur standard, glucose = 100). La page la cite en entier.
+
+- Les 62 aliments de la table, traduits, dans son ordre, regroupés en huit
+  familles (pains et céréales, céréales du petit-déjeuner, fruits,
+  légumes, produits laitiers et alternatives, légumineuses, snacks,
+  sucres).
+- La moyenne s'affiche ; l'erreur standard aussi, en petit (« ± 2 »).
+- Les deux renvois de la table sont gardés, avec leur légende : * des
+  variétés à IG bas existent aussi, † moyenne de toutes les données.
+- **Aucune valeur n'est ajoutée ni estimée.** Un aliment absent de la table
+  est absent de la page.
+
+**Licence : point à faire valider avant la publication commerciale.**
+L'article est publié sous **CC BY-NC-ND 3.0** (pas d'usage commercial, pas
+d'œuvre dérivée). Notre lecture : nous reprenons des valeurs mesurées, qui
+sont des faits, dans une sélection traduite et regroupée par nous, avec la
+source citée ; nous ne reproduisons ni le texte ni la mise en forme de
+l'article. Cette lecture n'est pas un avis juridique : le propriétaire doit
+la faire valider avant que l'application soit vendue. Si elle ne tient pas,
+le pack se remplace sans toucher à l'écran.
+
+### L'explication, courte et juste
+
+En tête de page : l'IG dit à quelle vitesse un aliment fait monter la
+glycémie, comparé au glucose, pour une même quantité de glucides. Il ne
+tient pas compte de la portion (c'est le rôle de la charge glycémique) et
+varie avec la cuisson, la maturité et le repas qui l'accompagne. C'est un
+repère, pas un avis médical.
+
+### La page
+
+- Une recherche sans casse ni accents (`matchesSearch`, le même pli que la
+  Communauté), avec son état vide.
+- Les familles en pastilles qui défilent de côté (« Tous » d'abord), et le
+  tri : par famille (l'ordre de la table, un titre par famille) ou par IG,
+  croissant ou décroissant (stable à égalité ; chaque ligne dit alors sa
+  famille).
+- Les niveaux en vert, orange, rouge (`AppColors.success`, `warning`,
+  `danger`), toujours doublés du mot : la couleur seule ne dit rien à qui
+  ne la distingue pas.
+- Au lecteur d'écran, chaque ligne se lit d'un trait (« Pomme crue, IG 36,
+  bas. », puis son renvoi) et chaque famille est un en-tête.
+- **L'entrée** est une ligne sous les cinq tuiles de l'onglet, pas une
+  sixième tuile : c'est un repère qu'on consulte, pas un geste du jour, et
+  à cet endroit elle se voit sans faire défiler.
+
+### La garde : la table, rien que la table
+
+`glycemic_index_pack_test.dart` recopie la Table 1 telle qu'elle a été
+traduite, et compare le pack ligne par ligne : nom, famille, moyenne,
+erreur standard, renvoi, dans l'ordre. Une valeur changée, ajoutée ou
+perdue fait rougir la CI.
+
 ## Le POURQUOI de chaque chiffre
 
 « Carlys ne dit jamais seulement quoi faire, il explique toujours pourquoi. »
@@ -890,7 +959,8 @@ a une. La photo reste privée : routes et stockage plus haut.
   l'anneau des calories et une barre par valeur, le MANGÉ du journal sur le
   VISÉ du serveur (`dayIntake` : une macro inconnue n'ajoute rien) —, cinq
   tuiles (Ajouter un repas, Scanner un aliment — l'assiette, par l'IA —,
-  Code-barres, Mes recettes, Mes besoins), le journal
+  Code-barres, Mes recettes, Mes besoins), la ligne « Index glycémique »
+  (voir plus haut), le journal
   alimentaire (photo du plat ou dessin du moment, heure, calories, quantité,
   trois macros ; toucher un repas l'ouvre, la suppression se fait dans son
   écran), puis le bandeau vers le coach. Profil incomplet : l'anneau cède la
