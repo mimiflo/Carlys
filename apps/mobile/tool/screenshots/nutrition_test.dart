@@ -275,6 +275,66 @@ void main() {
     await purge(tester);
   });
 
+  testWidgets('index glycémique : l’entrée, le tableau, la recherche, '
+      'une famille', (tester) async {
+    telephone(tester);
+    await tester.pumpWidget(app(journee()));
+    await tester.pumpAndSettle();
+    await navigation.openNutrition(tester);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-16-entree-index-glycemique');
+
+    await tester.tap(find.text('Index glycémique'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-17-ig-tableau');
+    final list = find.byType(Scrollable).first;
+    await tester.drag(list, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-18-ig-tableau-suite');
+
+    await tester.drag(list, const Offset(0, 700));
+    await tester.pumpAndSettle();
+    final field = find.descendant(
+      of: find.byType(AppSearchField),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field, 'riz');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    // L'explication passée : le champ en haut, les résultats dessous.
+    await tester.drag(list, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-19-ig-recherche');
+    await tester.drag(list, const Offset(0, 300));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(field, 'kiwi');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-20-ig-recherche-vide');
+
+    await tester.enterText(field, '');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Fruits'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fruits'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('IG croissant'));
+    await tester.pumpAndSettle();
+    // Du haut de la page, l'explication passée : les pastilles choisies
+    // restent en vue au-dessus des fruits.
+    await tester.drag(list, const Offset(0, 2000));
+    await tester.pumpAndSettle();
+    await tester.drag(list, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await capture(tester, 'nutrition-21-ig-fruits-par-ig');
+    await purge(tester);
+  });
+
   testWidgets('onglet Nutrition : profil incomplet, journal vide', (
     tester,
   ) async {
