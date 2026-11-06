@@ -1,0 +1,385 @@
+{
+  "foods": [
+    {
+      "name": "Pain blanc de blé",
+      "category": "breadsCereals",
+      "gi": 75,
+      "sem": 2,
+      "mark": "lowGiVarieties"
+    },
+    {
+      "name": "Pain complet",
+      "category": "breadsCereals",
+      "gi": 74,
+      "sem": 2
+    },
+    {
+      "name": "Pain aux céréales spéciales",
+      "category": "breadsCereals",
+      "gi": 53,
+      "sem": 2
+    },
+    {
+      "name": "Pain de blé sans levain",
+      "category": "breadsCereals",
+      "gi": 70,
+      "sem": 5
+    },
+    {
+      "name": "Roti de blé",
+      "category": "breadsCereals",
+      "gi": 62,
+      "sem": 3
+    },
+    {
+      "name": "Chapati",
+      "category": "breadsCereals",
+      "gi": 52,
+      "sem": 4
+    },
+    {
+      "name": "Tortilla de maïs",
+      "category": "breadsCereals",
+      "gi": 46,
+      "sem": 4
+    },
+    {
+      "name": "Riz blanc bouilli",
+      "category": "breadsCereals",
+      "gi": 73,
+      "sem": 4,
+      "mark": "lowGiVarieties"
+    },
+    {
+      "name": "Riz complet bouilli",
+      "category": "breadsCereals",
+      "gi": 68,
+      "sem": 4
+    },
+    {
+      "name": "Orge",
+      "category": "breadsCereals",
+      "gi": 28,
+      "sem": 2
+    },
+    {
+      "name": "Spaghetti blancs",
+      "category": "breadsCereals",
+      "gi": 49,
+      "sem": 2
+    },
+    {
+      "name": "Spaghetti complets",
+      "category": "breadsCereals",
+      "gi": 48,
+      "sem": 5
+    },
+    {
+      "name": "Nouilles de riz",
+      "category": "breadsCereals",
+      "gi": 53,
+      "sem": 7,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Nouilles udon",
+      "category": "breadsCereals",
+      "gi": 55,
+      "sem": 7
+    },
+    {
+      "name": "Couscous",
+      "category": "breadsCereals",
+      "gi": 65,
+      "sem": 4,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Cornflakes",
+      "category": "breakfastCereals",
+      "gi": 81,
+      "sem": 6
+    },
+    {
+      "name": "Biscuits de flocons de blé",
+      "category": "breakfastCereals",
+      "gi": 69,
+      "sem": 2
+    },
+    {
+      "name": "Porridge flocons d'avoine",
+      "category": "breakfastCereals",
+      "gi": 55,
+      "sem": 2
+    },
+    {
+      "name": "Porridge d'avoine instantané",
+      "category": "breakfastCereals",
+      "gi": 79,
+      "sem": 3
+    },
+    {
+      "name": "Bouillie de riz (congee)",
+      "category": "breakfastCereals",
+      "gi": 78,
+      "sem": 9
+    },
+    {
+      "name": "Bouillie de millet",
+      "category": "breakfastCereals",
+      "gi": 67,
+      "sem": 5
+    },
+    {
+      "name": "Muesli",
+      "category": "breakfastCereals",
+      "gi": 57,
+      "sem": 2
+    },
+    {
+      "name": "Pomme crue",
+      "category": "fruits",
+      "gi": 36,
+      "sem": 2,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Orange crue",
+      "category": "fruits",
+      "gi": 43,
+      "sem": 3,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Banane crue",
+      "category": "fruits",
+      "gi": 51,
+      "sem": 3,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Ananas cru",
+      "category": "fruits",
+      "gi": 59,
+      "sem": 8
+    },
+    {
+      "name": "Mangue crue",
+      "category": "fruits",
+      "gi": 51,
+      "sem": 5,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Pastèque crue",
+      "category": "fruits",
+      "gi": 76,
+      "sem": 4
+    },
+    {
+      "name": "Dattes crues",
+      "category": "fruits",
+      "gi": 42,
+      "sem": 4
+    },
+    {
+      "name": "Pêches en conserve",
+      "category": "fruits",
+      "gi": 43,
+      "sem": 5,
+      "mark": "allDataAverage"
+    },
+    {
+      "name": "Confiture de fraise",
+      "category": "fruits",
+      "gi": 49,
+      "sem": 3
+    },
+    {
+      "name": "Jus de pomme",
+      "category": "fruits",
+      "gi": 41,
+      "sem": 2
+    },
+    {
+      "name": "Jus d'orange",
+      "category": "fruits",
+      "gi": 50,
+      "sem": 2
+    },
+    {
+      "name": "Pomme de terre bouillie",
+      "category": "vegetables",
+      "gi": 78,
+      "sem": 4
+    },
+    {
+      "name": "Purée instantanée",
+      "category": "vegetables",
+      "gi": 87,
+      "sem": 3
+    },
+    {
+      "name": "Frites",
+      "category": "vegetables",
+      "gi": 63,
+      "sem": 5
+    },
+    {
+      "name": "Carottes bouillies",
+      "category": "vegetables",
+      "gi": 39,
+      "sem": 4
+    },
+    {
+      "name": "Patate douce bouillie",
+      "category": "vegetables",
+      "gi": 63,
+      "sem": 6
+    },
+    {
+      "name": "Potiron bouilli",
+      "category": "vegetables",
+      "gi": 64,
+      "sem": 7
+    },
+    {
+      "name": "Banane plantain/verte",
+      "category": "vegetables",
+      "gi": 55,
+      "sem": 6
+    },
+    {
+      "name": "Taro bouilli",
+      "category": "vegetables",
+      "gi": 53,
+      "sem": 2
+    },
+    {
+      "name": "Soupe de légumes",
+      "category": "vegetables",
+      "gi": 48,
+      "sem": 5
+    },
+    {
+      "name": "Maïs doux",
+      "category": "vegetables",
+      "gi": 52,
+      "sem": 5
+    },
+    {
+      "name": "Lait entier",
+      "category": "dairy",
+      "gi": 39,
+      "sem": 3
+    },
+    {
+      "name": "Lait écrémé",
+      "category": "dairy",
+      "gi": 37,
+      "sem": 4
+    },
+    {
+      "name": "Glace",
+      "category": "dairy",
+      "gi": 51,
+      "sem": 3
+    },
+    {
+      "name": "Yaourt aux fruits",
+      "category": "dairy",
+      "gi": 41,
+      "sem": 2
+    },
+    {
+      "name": "Lait de soja",
+      "category": "dairy",
+      "gi": 34,
+      "sem": 4
+    },
+    {
+      "name": "Lait de riz",
+      "category": "dairy",
+      "gi": 86,
+      "sem": 7
+    },
+    {
+      "name": "Pois chiches",
+      "category": "legumes",
+      "gi": 28,
+      "sem": 9
+    },
+    {
+      "name": "Haricots rouges",
+      "category": "legumes",
+      "gi": 24,
+      "sem": 4
+    },
+    {
+      "name": "Lentilles",
+      "category": "legumes",
+      "gi": 32,
+      "sem": 5
+    },
+    {
+      "name": "Soja",
+      "category": "legumes",
+      "gi": 16,
+      "sem": 1
+    },
+    {
+      "name": "Chocolat",
+      "category": "snacks",
+      "gi": 40,
+      "sem": 3
+    },
+    {
+      "name": "Pop-corn",
+      "category": "snacks",
+      "gi": 65,
+      "sem": 5
+    },
+    {
+      "name": "Chips",
+      "category": "snacks",
+      "gi": 56,
+      "sem": 3
+    },
+    {
+      "name": "Soda",
+      "category": "snacks",
+      "gi": 59,
+      "sem": 3
+    },
+    {
+      "name": "Galettes de riz soufflé",
+      "category": "snacks",
+      "gi": 87,
+      "sem": 2
+    },
+    {
+      "name": "Fructose",
+      "category": "sugars",
+      "gi": 15,
+      "sem": 4
+    },
+    {
+      "name": "Saccharose",
+      "category": "sugars",
+      "gi": 65,
+      "sem": 4
+    },
+    {
+      "name": "Glucose",
+      "category": "sugars",
+      "gi": 103,
+      "sem": 3
+    },
+    {
+      "name": "Miel",
+      "category": "sugars",
+      "gi": 61,
+      "sem": 3
+    }
+  ]
+}
