@@ -23,8 +23,11 @@ void main() {
     test('la ligne se lit « Pomme crue, IG 36, bas. » et dit son renvoi', () {
       expect(_food('Pomme crue', 36).spoken, 'Pomme crue, IG 36, bas.');
       expect(
-        _food('Riz blanc bouilli', 73, mark: GlycemicMark.lowGiVarieties)
-            .spoken,
+        _food(
+          'Riz blanc bouilli',
+          73,
+          mark: GlycemicMark.lowGiVarieties,
+        ).spoken,
         'Riz blanc bouilli, IG 73, élevé. Des variétés à IG bas existent '
         'aussi.',
       );
@@ -41,10 +44,9 @@ void main() {
     ];
 
     test('la recherche ignore casse et accents', () {
-      expect(
-        glycemicFoodsFor(foods, query: 'PECHE').map((f) => f.name),
-        ['Pêches en conserve'],
-      );
+      expect(glycemicFoodsFor(foods, query: 'PECHE').map((f) => f.name), [
+        'Pêches en conserve',
+      ]);
       expect(glycemicFoodsFor(foods, query: '  '), hasLength(5));
       expect(glycemicFoodsFor(foods, query: 'kiwi'), isEmpty);
     });
@@ -79,10 +81,7 @@ void main() {
 
     test('par IG, croissant puis décroissant, stable à égalité', () {
       expect(
-        glycemicFoodsFor(
-          foods,
-          sort: GlycemicSort.ascending,
-        ).map((f) => f.gi),
+        glycemicFoodsFor(foods, sort: GlycemicSort.ascending).map((f) => f.gi),
         [28, 43, 43, 50, 76],
       );
       final desc = glycemicFoodsFor(foods, sort: GlycemicSort.descending);

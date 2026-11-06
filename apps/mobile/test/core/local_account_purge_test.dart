@@ -409,6 +409,7 @@ void main() {
       // Contenus EMBARQUÉS dans l'application, les mêmes pour tous.
       'academyPackProvider',
       'recipesPackProvider',
+      'glycemicIndexPackProvider',
       // La voix du Mentor et sa visite décrivent l'appareil (voir
       // `accountOwnedPreferenceKeys`).
       'mentorPrefsProvider',

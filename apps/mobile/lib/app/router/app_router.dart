@@ -24,9 +24,9 @@ import '../../features/exercises/presentation/screens/exercise_detail_screen.dar
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/mentor/presentation/screens/mentor_settings_screen.dart';
 import '../../features/nutrition/presentation/screens/food_barcode_scanner_screen.dart';
+import '../../features/nutrition/presentation/screens/glycemic_index_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_scan_screen.dart';
-import '../../features/nutrition/presentation/screens/glycemic_index_screen.dart';
 import '../../features/nutrition/presentation/screens/metabolism_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
 import '../../features/nutrition/presentation/screens/recipes_screen.dart';

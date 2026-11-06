@@ -26,9 +26,12 @@ class GlycemicFilters extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Neuf pastilles sur une rangée qui défile : en `Wrap`, elles
-        // prendraient trois lignes avant le premier aliment.
+        // prendraient trois lignes avant le premier aliment. Sans rognure :
+        // la rangée court jusqu'au bord de l'écran au lieu d'être coupée
+        // net à la marge, ce qui dit qu'elle défile.
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
           child: Row(
             children: [
               for (final choice in <GlycemicCategory?>[

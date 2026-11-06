@@ -149,6 +149,7 @@ void main() {
 
       // Le vrai pack, lu dans l'appli : aucune requête, rien du dépôt.
       expect(find.text('Ce que l’IG mesure'), findsOneWidget);
+      await reveal(tester, find.text('Riz blanc bouilli *'));
       expect(find.text('Riz blanc bouilli *'), findsOneWidget);
     });
 
@@ -369,6 +370,12 @@ void main() {
       // Le repas est écrit dans le dépôt ET rendu à l'écran ; les
       // objectifs du jour le comptent.
       expect(nutrition.meals, hasLength(1));
+      // Le message « Repas ajouté » est une carte au centre de l'écran, là
+      // où `reveal` pose son doigt : tant qu'il est là, la liste ne défile
+      // pas. Le test ne passait que parce que « Calories » restait dans la
+      // marge de pré-rendu de la liste ; on attend que le message parte.
+      await tester.pump(AppNotices.displayDuration);
+      await tester.pumpAndSettle();
       await reveal(tester, find.text('Calories'));
       expect(find.text('654 / 2 759 kcal'), findsOneWidget);
       await reveal(tester, find.text('Skyr, granola'));

@@ -13,15 +13,15 @@ const String glycemicIndexSource =
 /// Les familles d'aliments, dans l'ordre de la table source.
 enum GlycemicCategory {
   breadsCereals('Pains et céréales'),
-  breakfastCereals('Petit-déjeuner', title: 'Céréales du petit-déjeuner'),
+  breakfastCereals('Petit-déjeuner', 'Céréales du petit-déjeuner'),
   fruits('Fruits'),
   vegetables('Légumes'),
-  dairy('Laitiers', title: 'Produits laitiers et alternatives'),
+  dairy('Laitiers', 'Produits laitiers et alternatives'),
   legumes('Légumineuses'),
   snacks('Snacks'),
   sugars('Sucres');
 
-  const GlycemicCategory(this.label, {String? title}) : _title = title;
+  const GlycemicCategory(this.label, [this._title]);
 
   /// Court : la pastille du filtre.
   final String label;
