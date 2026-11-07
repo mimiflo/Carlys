@@ -22,6 +22,32 @@ class GlycemicFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enlarged = MediaQuery.textScalerOf(context).scale(1) > 1;
+    final label = Text(
+      'Trier',
+      style: AppTypography.label.copyWith(color: AppColors.darkTextSecondary),
+    );
+    final pills = AppChoicePills<GlycemicSort>(
+      choices: const [
+        AppChoice(
+          GlycemicSort.byCategory,
+          'Familles',
+          semanticLabel: 'Par famille',
+        ),
+        AppChoice(
+          GlycemicSort.ascending,
+          'IG ↑',
+          semanticLabel: 'IG croissant',
+        ),
+        AppChoice(
+          GlycemicSort.descending,
+          'IG ↓',
+          semanticLabel: 'IG décroissant',
+        ),
+      ],
+      selected: sort,
+      onSelected: onSort,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -49,40 +75,25 @@ class GlycemicFilters extends StatelessWidget {
             ],
           ),
         ),
-        Row(
-          children: [
-            Text(
-              'Trier',
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: AppChoicePills<GlycemicSort>(
-                choices: const [
-                  AppChoice(
-                    GlycemicSort.byCategory,
-                    'Familles',
-                    semanticLabel: 'Par famille',
-                  ),
-                  AppChoice(
-                    GlycemicSort.ascending,
-                    'IG ↑',
-                    semanticLabel: 'IG croissant',
-                  ),
-                  AppChoice(
-                    GlycemicSort.descending,
-                    'IG ↓',
-                    semanticLabel: 'IG décroissant',
-                  ),
-                ],
-                selected: sort,
-                onSelected: onSort,
-              ),
-            ),
-          ],
-        ),
+        // Texte agrandi, « Trier » passe AU-DESSUS des pastilles : à côté,
+        // il restait seul au milieu de pastilles repliées sur deux lignes.
+        if (enlarged)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              label,
+              const SizedBox(height: AppSpacing.xxs),
+              pills,
+            ],
+          )
+        else
+          Row(
+            children: [
+              label,
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(child: pills),
+            ],
+          ),
       ],
     );
   }

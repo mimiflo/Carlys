@@ -26,9 +26,9 @@ class GlycemicIntroCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'La vitesse à laquelle un aliment fait monter ta glycémie, '
-            'comparée au glucose pur (IG 100), pour une même quantité de '
-            'glucides.',
+            'De combien un aliment fait monter ta glycémie dans les deux '
+            'heures, comparé au glucose pur (IG 100), pour une même quantité '
+            'de glucides.',
             style: body,
           ),
           const SizedBox(height: AppSpacing.xs),

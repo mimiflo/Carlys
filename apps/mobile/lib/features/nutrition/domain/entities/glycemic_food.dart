@@ -10,7 +10,8 @@ const String glycemicIndexSource =
     '2008;31(12):2281-2283. doi:10.2337/dc08-1239. Table 1, moyenne ± '
     'erreur standard, glucose = 100.';
 
-/// Les familles d'aliments, dans l'ordre de la table source.
+/// Les familles d'aliments : une sélection regroupée par Carlys, valeurs de
+/// la Table 1. Leur ordre est celui de l'écran « par famille ».
 enum GlycemicCategory {
   breadsCereals('Pains et céréales'),
   breakfastCereals('Petit-déjeuner', 'Céréales du petit-déjeuner'),
@@ -42,8 +43,8 @@ enum GlycemicMark {
   final String meaning;
 }
 
-/// Bas (≤ 55), moyen (56 à 69) ou élevé (≥ 70) : le classement d'usage de
-/// la table source.
+/// Bas (≤ 55), moyen (56 à 69) ou élevé (≥ 70) : le classement d'usage
+/// (ISO 26642:2010), et non un découpage propre à l'article cité.
 enum GlycemicLevel {
   low('bas'),
   medium('moyen'),
@@ -82,9 +83,11 @@ class GlycemicFood {
 
   GlycemicLevel get level => GlycemicLevel.of(gi);
 
-  /// Ce que lit le lecteur d'écran : « Pomme crue, IG 36, bas ».
-  String get spoken {
+  /// Ce que lit le lecteur d'écran : « Pomme crue, IG 36, bas. » ; avec
+  /// [withCategory], la famille suit le nom (« Pomme crue, fruits, … »).
+  String spoken({bool withCategory = false}) {
+    final family = withCategory ? ', ${category.label.toLowerCase()}' : '';
     final note = mark == null ? '' : ' ${mark!.meaning}';
-    return '$name, IG $gi, ${level.label}.$note';
+    return '$name$family, IG $gi, ${level.label}.$note';
   }
 }

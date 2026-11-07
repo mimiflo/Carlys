@@ -33,13 +33,15 @@ class GlycemicFoodRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mark = food.mark;
-    final sem = '± ${food.sem}';
+    // Espace insécable : au texte agrandi, « ± » ne se sépare jamais de
+    // son nombre.
+    final sem = '±\u00a0${food.sem}';
     return Semantics(
-      label: food.spoken,
+      label: food.spoken(withCategory: showCategory),
       excludeSemantics: true,
       child: AppListRow(
         title: mark == null ? food.name : '${food.name} ${mark.symbol}',
-        subtitle: showCategory ? '${food.category.label} · $sem' : sem,
+        subtitle: showCategory ? '${food.category.label}\u00a0· $sem' : sem,
         trailing: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [

@@ -18,6 +18,10 @@ class GlycemicSourceNote extends StatelessWidget {
         for (final mark in GlycemicMark.values)
           Text('${mark.symbol} ${mark.meaning}', style: style),
         Text('± Erreur standard de la moyenne.', style: style),
+        Text(
+          'Glucose à 103 : moyenne mesurée de la référence, fixée à\u00a0100.',
+          style: style,
+        ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Source : $glycemicIndexSource Sélection traduite et regroupée '

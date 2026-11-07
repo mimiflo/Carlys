@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// LE TABLEAU EST LA TABLE PUBLIÉE, rien d'autre.
 ///
-/// Les lignes ci-dessous sont la Table 1 d'Atkinson, Foster-Powell et
-/// Brand-Miller (Diabetes Care 2008), traduite, telle qu'elle a été remise :
+/// Les lignes ci-dessous sont les valeurs de la Table 1 d'Atkinson,
+/// Foster-Powell et Brand-Miller (Diabetes Care 2008), traduites et
+/// regroupées par famille par Carlys, telles qu'elles ont été remises :
 /// moyenne ± erreur standard, * = des variétés à IG bas existent, † =
 /// moyenne de toutes les données. Le pack embarqué doit en être la copie
 /// exacte : une valeur ajoutée, estimée ou mal recopiée fait rougir la CI.
@@ -87,7 +88,7 @@ void main() {
     expect(_attendus(), hasLength(62));
   });
 
-  test('CHAQUE VALEUR EST CELLE DE LA SOURCE, dans son ordre', () async {
+  test('CHAQUE VALEUR EST CELLE DE LA SOURCE, dans l’ordre remis', () async {
     final pack = await loadGlycemicIndexPack();
     expect([
       for (final f in pack) _ligne(f.name, f.category, f.gi, f.sem, f.mark),
@@ -111,6 +112,14 @@ void main() {
       GlycemicCategory.sugars: 4,
     });
     expect(pack.map((f) => f.name).toSet(), hasLength(pack.length));
+  });
+
+  test('le pack est rangé famille par famille', () async {
+    // L'écran « par famille » ne retrie pas : il compte sur cet ordre.
+    final indices = [
+      for (final f in await loadGlycemicIndexPack()) f.category.index,
+    ];
+    expect(indices, [...indices]..sort());
   });
 
   test('les trois niveaux sont représentés', () async {

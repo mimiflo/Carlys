@@ -13,8 +13,8 @@ import '../widgets/today_goals.dart';
 
 /// L'onglet Nutrition (maquette d'octobre 2026) : le jour, les objectifs du
 /// jour (mangé sur visé), les cinq gestes, l'entrée du tableau des index
-/// glycémiques, le journal illustré, puis le coach. Le détail du calcul — dépense, corps, profil — vit sur « Mon
-/// métabolisme ». Rien n'y est inventé : le journal vient de la saisie, les
+/// glycémiques, le journal illustré, puis le coach. Le détail du calcul —
+/// dépense, corps, profil — vit sur « Mon métabolisme ». Rien n'y est inventé : le journal vient de la saisie, les
 /// objectifs du serveur.
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});

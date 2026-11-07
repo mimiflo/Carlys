@@ -172,7 +172,15 @@ void main() {
       'Riz blanc bouilli *',
     ]);
     // Les familles se mêlent : la ligne dit la sienne, les titres partent.
-    expect(find.text('FRUITS · ± 2'), findsOneWidget);
+    expect(find.text('FRUITS\u00a0· ±\u00a02'), findsOneWidget);
+    // Et le lecteur d'écran l'entend.
+    expect(
+      find.bySemanticsLabel(
+        'Pomme crue, fruits, IG 36, bas. Moyenne de toutes les données '
+        'publiées.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('PAINS ET CÉRÉALES'), findsNothing);
   });
 
@@ -198,15 +206,28 @@ void main() {
     expect(_names(tester), hasLength(4));
   });
 
-  testWidgets('au texte agrandi, rien ne déborde', (tester) async {
-    // 320 points de large, texte à 200 %.
-    tester.view.physicalSize = const Size(960, 2000);
+  testWidgets('320 points, texte à 200 % : rien ne déborde', (tester) async {
+    // 960 px à ×3 : 320 points de large ; seule la hauteur est grande.
+    tester.view.physicalSize = const Size(960, 7200);
     tester.view.devicePixelRatio = 3.0;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    _tall(tester);
-    await tester.pumpWidget(_app());
+    // Le nom le plus long de la table, à côté de l'IG le plus large.
+    const long = GlycemicFood(
+      name: 'Porridge d\'avoine instantané',
+      category: GlycemicCategory.breakfastCereals,
+      gi: 103,
+      sem: 3,
+      mark: GlycemicMark.allDataAverage,
+    );
+    await tester.pumpWidget(_app(load: () async => [..._pack, long]));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(GlycemicIndexScreen)).width, 320);
+    expect(tester.takeException(), isNull);
+
+    // La rangée « Trier », puis les lignes qui disent leur famille.
+    await tester.tap(find.bySemanticsLabel('IG décroissant'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.scrollUntilVisible(

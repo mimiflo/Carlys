@@ -21,13 +21,17 @@ void main() {
     });
 
     test('la ligne se lit « Pomme crue, IG 36, bas. » et dit son renvoi', () {
-      expect(_food('Pomme crue', 36).spoken, 'Pomme crue, IG 36, bas.');
+      expect(_food('Pomme crue', 36).spoken(), 'Pomme crue, IG 36, bas.');
+      expect(
+        _food('Pomme crue', 36).spoken(withCategory: true),
+        'Pomme crue, fruits, IG 36, bas.',
+      );
       expect(
         _food(
           'Riz blanc bouilli',
           73,
           mark: GlycemicMark.lowGiVarieties,
-        ).spoken,
+        ).spoken(),
         'Riz blanc bouilli, IG 73, élevé. Des variétés à IG bas existent '
         'aussi.',
       );
@@ -69,21 +73,28 @@ void main() {
       );
     });
 
-    test('par famille : l’ordre des familles, puis celui de la table', () {
+    test('par famille : l’ordre du pack, sans rien trier', () {
+      // Le pack est rangé famille par famille (sa garde le vérifie) : la
+      // sélection n'a pas à le retrier.
       expect(glycemicFoodsFor(foods).map((f) => f.name), [
-        'Orge',
         'Pêches en conserve',
         'Pastèque crue',
+        'Orge',
         'Jus d’orange',
         'Orange crue',
       ]);
     });
 
     test('par IG, croissant puis décroissant, stable à égalité', () {
-      expect(
-        glycemicFoodsFor(foods, sort: GlycemicSort.ascending).map((f) => f.gi),
-        [28, 43, 43, 50, 76],
-      );
+      // Pêches et Orange ont toutes deux 43 : l'ordre du pack les départage.
+      final asc = glycemicFoodsFor(foods, sort: GlycemicSort.ascending);
+      expect(asc.map((f) => f.name), [
+        'Orge',
+        'Pêches en conserve',
+        'Orange crue',
+        'Jus d’orange',
+        'Pastèque crue',
+      ]);
       final desc = glycemicFoodsFor(foods, sort: GlycemicSort.descending);
       expect(desc.map((f) => f.name), [
         'Pastèque crue',
