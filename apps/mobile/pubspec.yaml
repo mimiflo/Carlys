@@ -132,6 +132,18 @@ dependencies:
   # (36) — la recette a refusé le build le 10 octobre 2026.
   permission_handler: ^12.0.1
 
+  # Santé connectée : les pas du jour et les pesées d'une balance, LUS dans
+  # Health Connect (Android) et Apple Santé (iOS) — le point commun où
+  # Samsung Health, Withings, Xiaomi, Renpho… écrivent déjà, plutôt qu'une
+  # intégration par marque. Greffon du CARP (Université technique du
+  # Danemark, MIT), le seul maintenu qui couvre les DEUX plateformes ;
+  # comparé à `flutter_health_connect` (Android seul) et aux greffons
+  # HealthKit seuls, qui en demanderaient deux. En 13.3.1, pas 13.3.2 : la
+  # 13.3.2 tire device_info_plus 13 → win32 6, incompatible avec
+  # flutter_secure_storage 9 (win32 5). Derrière le port `HealthDataSource` :
+  # aucun test n'appelle de greffon. Voir docs/product/sante-connectee.md.
+  health: ^13.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

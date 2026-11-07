@@ -753,8 +753,14 @@ message ne suffit pas, c'est un défaut du workflow à corriger, pas à contourn
    qui met le nom du projet en camelCase sur iOS : `com.carlys.carlysMobile`
    (Android, lui, reçoit `com.carlys.carlys_mobile`). **Le job l'affiche** à
    l'étape « Identifiant de bundle », avant tout contrôle de secret, et le
-   cite dans son message d'échec : c'est lui qui fait foi. Aucune capacité
-   (Push, etc.) n'est requise pour la recette.
+   cite dans son message d'échec : c'est lui qui fait foi. **Une capacité
+   est requise : HealthKit** (case « HealthKit » de l'App ID, sans « Clinical
+   Health Records » ni accès en arrière-plan) — `android_branding.sh` pose
+   `Runner.entitlements` et la santé connectée en dépend
+   (docs/product/sante-connectee.md). Cochée APRÈS la création du profil,
+   elle impose de le régénérer : un profil sans HealthKit fait échouer la
+   signature (« Provisioning profile doesn't include the HealthKit
+   capability »). Aucune autre (Push, etc.) n'est requise pour la recette.
 3. **Le certificat** : Certificates → « + » → **Apple Distribution**. Il exige
    une demande de signature (CSR) créée sur votre Mac avec Trousseaux d'accès
    → Assistant de certification → Demander un certificat à une autorité de

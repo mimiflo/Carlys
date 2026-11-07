@@ -23,6 +23,7 @@ echo "── shellcheck ──────────────────�
 shellcheck -x -S warning \
   scripts/server/*.sh scripts/server/carlysctl scripts/server/tests/*.sh \
   scripts/ci/*.sh scripts/ci/tests/*.sh \
+  scripts/android_branding.sh scripts/mobile_platforms.sh scripts/bootstrap_mobile.sh \
   infrastructure/minio/*.sh infrastructure/nginx/tests/*.sh
 
 echo "── Dockerfile : manifestes avant sources ───────────────────────────"
@@ -36,6 +37,11 @@ bash scripts/ci/tests/secrets_connus_test.sh
 
 echo "── Migrations publiées (migrations_publiees.sh) ────────────────────"
 bash scripts/ci/tests/migrations_publiees_test.sh
+
+echo "── Configuration native mobile (android_branding.sh) ───────────────"
+# android/ et ios/ ne sont pas versionnés : ce script EST la config native
+# (Health Connect, HealthKit…). Essai sans Flutter : présence et idempotence.
+bash scripts/ci/tests/android_branding_test.sh
 
 echo "── Garde « build once » de mobile-production ───────────────────────"
 bash scripts/ci/tests/preuve_recette_test.sh

@@ -25,6 +25,8 @@ on:
       - 'scripts/server/**'
       - 'scripts/ci/**'
       - 'scripts/check_infra.sh'
+      # La config native mobile et son essai (android_branding_test.sh).
+      - 'scripts/android_branding.sh'
       - 'infrastructure/**'
       - 'apps/api/Dockerfile'
       - 'apps/admin/Dockerfile'
@@ -48,6 +50,8 @@ on:
       - 'scripts/server/**'
       - 'scripts/ci/**'
       - 'scripts/check_infra.sh'
+      # La config native mobile et son essai (android_branding_test.sh).
+      - 'scripts/android_branding.sh'
       - 'infrastructure/**'
       - 'apps/api/Dockerfile'
       - 'apps/admin/Dockerfile'
