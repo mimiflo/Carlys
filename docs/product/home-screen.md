@@ -62,6 +62,7 @@ Elle passe en tirets, comme un axe de progression sans fait.
 | Protéines | journal du jour | métabolisme | serveur |
 | Hydratation | compteur du jour | métabolisme | **local** (Drift) |
 | Volume | historique local | **semaine précédente** | local |
+| Pas (rangée sous la grille, si la santé connectée est active) | Health Connect / Apple Santé | objectif réglable, 8 000 par défaut | **local**, jamais envoyé |
 
 Trois arbitrages méritent leur explication.
 
@@ -111,6 +112,13 @@ n'existe dans le domaine, et il n'y a pas de barème universel. La seule
 référence que l'application possède — et la seule qui ait un sens — est
 soi-même la semaine d'avant. Sans semaine précédente, la cellule montre le
 volume et sa portée, sans jauge remplie.
+
+**Les pas sont une rangée, pas une cinquième cellule** (6 novembre 2026).
+Avec la santé connectée active, une rangée pleine largeur s'ajoute SOUS le
+2 × 2, même cellule et même lecture (« 6 214 / 8 000 pas · reste 1 786 »).
+Sans elle, rien ne s'affiche : une invitation quotidienne à connecter, sur
+l'écran le plus vu, serait de la réclame. Le détail (lecture au premier plan,
+objectif de 8 000) vit dans [`sante-connectee.md`](sante-connectee.md).
 
 ### Sans profil, la grille cède la place
 
@@ -196,7 +204,8 @@ eux ont dû l'apprendre d'un coup.
 | `presentation/providers/home_day_providers.dart` | Constance de la semaine, sous-titre, citation du jour, séance du jour, repos depuis la dernière séance |
 | `presentation/providers/form_reading_providers.dart` | Lecture de forme (bilan de la semaine, indice de forme) |
 | `presentation/providers/today_metrics.dart` | Les quatre mesures, prêtes à afficher |
-| `presentation/widgets/today_grid.dart` | La grille 2×2 et ses cellules |
+| `presentation/widgets/today_grid.dart` | La grille 2×2 et la rangée des pas |
+| `presentation/widgets/today_cell.dart` | Une cellule : libellé, chiffre face à sa cible, jauge, reste |
 | `presentation/widgets/today_gauge.dart` | La jauge d'une cellule (pleine, ou en tirets) |
 | `presentation/widgets/today_primer.dart` | L'amorçage, tant qu'aucune cible n'existe |
 | `presentation/widgets/today_workout_card.dart` | La séance du jour : sa composition et ses deux gestes |

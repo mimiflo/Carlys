@@ -111,6 +111,9 @@ Progrès.
   mesure source, pour qu'une même pesée ne soit jamais importée deux fois.
 - Lecture seule : Carlys n'écrit rien dans Health Connect ni dans Apple
   Santé.
+- Le détail — couches, connexion, bornes, identifiant dérivé, configuration
+  native, ce qui reste à faire côté magasins et sur un vrai téléphone — vit
+  dans [`sante-connectee.md`](sante-connectee.md).
 
 **Hors champ.** La connexion Bluetooth directe à une balance, propre à
 chaque marque.

@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 3 novembre 2026.
+Dernière mise à jour : 6 novembre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -94,6 +94,38 @@ te parler sur le bon ton et à préparer ton programme.
 ### Tes mesures corporelles
 
 Les pesées et mesures que tu saisis, avec leur date.
+
+### Santé connectée : tes pas et ta balance (facultatif)
+
+Si tu actives « Santé connectée » dans les réglages, Carlys lit trois
+données dans le service de santé de ton téléphone (Health Connect sur
+Android, Apple Santé sur iOS), et rien d’autre :
+
+- **Tes pas du jour.** Ils s’affichent sur l’accueil et **restent sur ton
+  téléphone** : ils ne sont envoyés nulle part, ni à nos serveurs ni à
+  personne. Ton objectif de pas reste lui aussi sur le téléphone.
+- **Tes pesées : poids et taux de masse grasse**, telles que ta balance
+  connectée (ou une autre application) les a écrites. Carlys les ajoute à
+  tes mesures corporelles : elles sont alors **envoyées à nos serveurs
+  exactement comme une pesée saisie à la main** (valeur et date), gardées et
+  effacées de la même façon, et tu peux les corriger ou les supprimer. Une
+  pesée supprimée n’est pas réimportée. L’application qui a écrit la pesée
+  (le nom de l’application de ta balance) sert, sur le téléphone, à écarter
+  ce que Carlys aurait écrit lui-même ; elle n’est pas envoyée.
+
+C’est de la **lecture seule** : Carlys n’écrit rien dans Health Connect ni
+dans Apple Santé. L’accès se demande au moment où tu actives la fonction,
+avec la fenêtre du système, et tu peux le refuser sans rien perdre d’autre.
+Désactiver « Santé connectée » arrête toute lecture ; l’autorisation se
+retire aussi dans Health Connect (« Autorisations des applications »), ou
+dans Réglages › Santé › Accès aux données et appareils sur iPhone. Les
+pesées déjà importées restent dans tes mesures tant que tu ne les supprimes
+pas.
+
+Comme le demandent Google et Apple, ces données ne servent qu’aux fonctions
+décrites ici : jamais à de la publicité, jamais revendues ni partagées, et
+jamais utilisées pour autre chose que te montrer tes pas et ta courbe de
+poids.
 
 ### Ton entraînement
 
@@ -318,9 +350,10 @@ dans ces journaux.
 Les pages web de Carlys ne déposent aucun cookie et n’embarquent aucun
 traceur ni outil de mesure d’audience. L’application ne lit ni tes contacts,
 ni ta position. Si tu joins une photo à un repas, la position que ton
-téléphone y a inscrite en est retirée avant tout stockage. Carlys ne lit
-rien non plus dans le service de santé de ton téléphone (Health Connect sur
-Android, Santé sur iOS) : ni pas, ni fréquence cardiaque, ni sommeil.
+téléphone y a inscrite en est retirée avant tout stockage. Dans le service
+de santé de ton téléphone, Carlys ne lit que ce que décrit « Santé connectée »
+plus haut, et seulement si tu l’as activée : ni fréquence cardiaque, ni sommeil,
+ni rien d’autre.
 
 ## 3. Pourquoi Carlys traite ces données
 
@@ -332,6 +365,7 @@ Android, Santé sur iOS) : ni pas, ni fréquence cardiaque, ni sommeil.
   de sécurité et limitation du nombre de tentatives. C’est notre intérêt
   légitime à sécuriser le service, et le tien.
 - **Pour les données de santé** (profil physique, mesures corporelles,
+  y compris les pesées importées de ta balance, pas lus sur le téléphone,
   nutrition et photos de repas, conversations avec le coach) : c’est ton
   consentement. Tu les saisis toi-même, elles sont facultatives, et tu peux
   les effacer ou cesser d’utiliser ces fonctions à tout moment.

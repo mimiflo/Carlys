@@ -176,6 +176,19 @@ sans aucune zone, un seul état vide invite à « Prendre une mesure ».
   dans PostgreSQL) ; voir `docs/database/schema.md`. Déployer l'API
   d'abord, l'appli ensuite.
 
+## Pesées importées de la balance (6 novembre 2026)
+
+Avec la santé connectée active (`sante-connectee.md`), l'écran importe à son
+ouverture et au retour au premier plan les pesées (poids, masse grasse) que la
+balance a écrites dans Health Connect ou Apple Santé. Elles passent par
+`addBodyMetric` comme une saisie, sous un identifiant **UUID v5** dérivé de la
+pesée : jamais en double, et une pesée supprimée ne revient pas (la
+suppression logique du serveur garde la ligne, l'identifiant retombe dessus).
+Elles se corrigent et se suppriment comme les autres. La version de
+l'identifiant les distingue sans champ en base (`BodyMetricEntry.imported`) :
+« Dernière mesure · 5 nov. · importée de la balance », « · IMPORTÉE » dans
+l'historique.
+
 ## Courbe par exercice
 
 `GET /progress/exercises/:id` était écrite, testée, et **sans aucun client
