@@ -135,14 +135,15 @@ la correspondance avec CIQUAL n'est pas fiable aliment par aliment.
 **Réalisé (6 novembre 2026).**
 - *Donnée.* `apps/mobile/assets/nutrition/glycemic_index.json` : les
   62 aliments courants de la Table 1 d'Atkinson, Foster-Powell et
-  Brand-Miller (*Diabetes Care* 2008, doi:10.2337/dc08-1239), traduits,
-  dans l'ordre de la table. Pour chacun : la moyenne (glucose = 100),
+  Brand-Miller (*Diabetes Care* 2008, doi:10.2337/dc08-1239), traduits :
+  sélection regroupée par Carlys, valeurs de la Table 1. Pour chacun : la moyenne (glucose = 100),
   l'erreur standard (le « ± »), la famille, et le renvoi de la source s'il
   y en a un (* des variétés à IG bas existent, † moyenne de toutes les
   données). Aucune valeur ajoutée ni estimée. Aucune API, aucune
   migration.
 - *Page.* `/nutrition/index-glycemique` (`GlycemicIndexScreen`) :
-  l'explication en tête (ce que l'IG mesure, la portion et la charge
+  l'explication en tête (de combien un aliment fait monter la glycémie
+  dans les deux heures, comparé au glucose, la portion et la charge
   glycémique, la cuisson, la maturité et le repas, « pas un avis
   médical »), une recherche sans casse ni accents avec son état vide, les
   huit familles en pastilles (et « Tous »), le tri par famille ou par IG

@@ -631,15 +631,20 @@ Glycemic Index and Glycemic Load Values: 2008.* Diabetes Care
 2008;31(12):2281-2283. doi:10.2337/dc08-1239 (PMC2584181), **Table 1**
 (moyenne ± erreur standard, glucose = 100). La page la cite en entier.
 
-- Les 62 aliments de la table, traduits, dans son ordre, regroupés en huit
-  familles (pains et céréales, céréales du petit-déjeuner, fruits,
-  légumes, produits laitiers et alternatives, légumineuses, snacks,
-  sucres).
+- Les 62 aliments de la table, traduits : une **sélection regroupée par
+  Carlys, valeurs de la Table 1**, en huit familles (pains et céréales,
+  céréales du petit-déjeuner, fruits, légumes, produits laitiers et
+  alternatives, légumineuses, snacks, sucres). Le regroupement est le
+  nôtre : il ne prétend pas suivre l'ordre de l'article.
 - La moyenne s'affiche ; l'erreur standard aussi, en petit (« ± 2 »).
 - Les deux renvois de la table sont gardés, avec leur légende : * des
   variétés à IG bas existent aussi, † moyenne de toutes les données.
+- Le glucose y vaut 103 : c'est la moyenne mesurée de la référence, fixée
+  à 100 par définition. La page le dit.
 - **Aucune valeur n'est ajoutée ni estimée.** Un aliment absent de la table
   est absent de la page.
+- Les seuils bas, moyen, élevé ne viennent pas de l'article : ce sont ceux
+  du classement d'usage (ISO 26642:2010).
 
 **Licence : point à faire valider avant la publication commerciale.**
 L'article est publié sous **CC BY-NC-ND 3.0** (pas d'usage commercial, pas
@@ -652,8 +657,10 @@ le pack se remplace sans toucher à l'écran.
 
 ### L'explication, courte et juste
 
-En tête de page : l'IG dit à quelle vitesse un aliment fait monter la
-glycémie, comparé au glucose, pour une même quantité de glucides. Il ne
+En tête de page : l'IG dit de combien un aliment fait monter la glycémie
+dans les deux heures, comparé au glucose pur, pour une même quantité de
+glucides. Il mesure une AMPLEUR (l'aire sous la courbe de la glycémie sur
+deux heures, rapportée à celle du glucose), pas une vitesse. Il ne
 tient pas compte de la portion (c'est le rôle de la charge glycémique) et
 varie avec la cuisson, la maturité et le repas qui l'accompagne. C'est un
 repère, pas un avis médical.
@@ -663,7 +670,8 @@ repère, pas un avis médical.
 - Une recherche sans casse ni accents (`matchesSearch`, le même pli que la
   Communauté), avec son état vide.
 - Les familles en pastilles qui défilent de côté (« Tous » d'abord), et le
-  tri : par famille (l'ordre de la table, un titre par famille) ou par IG,
+  tri : par famille (l'ordre du pack, sans retri, un titre par famille) ou
+  par IG,
   croissant ou décroissant (stable à égalité ; chaque ligne dit alors sa
   famille).
 - Les niveaux en vert, orange, rouge (`AppColors.success`, `warning`,
@@ -679,7 +687,7 @@ repère, pas un avis médical.
 
 `glycemic_index_pack_test.dart` recopie la Table 1 telle qu'elle a été
 traduite, et compare le pack ligne par ligne : nom, famille, moyenne,
-erreur standard, renvoi, dans l'ordre. Une valeur changée, ajoutée ou
+erreur standard, renvoi, dans l'ordre du pack (famille par famille). Une valeur changée, ajoutée ou
 perdue fait rougir la CI.
 
 ## Le POURQUOI de chaque chiffre

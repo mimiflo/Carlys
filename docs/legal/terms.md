@@ -1,6 +1,6 @@
 # Conditions d’utilisation de Carlys
 
-Dernière mise à jour : 3 novembre 2026.
+Dernière mise à jour : 7 novembre 2026.
 
 Ces conditions encadrent l’utilisation de l’application mobile Carlys et de
 ses pages web. En créant un compte, que ce soit avec ton adresse e-mail ou
