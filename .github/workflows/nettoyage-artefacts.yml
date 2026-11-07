@@ -1,0 +1,52 @@
+name: nettoyage-artefacts
+
+# Le stockage Actions inclus d'un dépôt privé est de 0,5 Go par cycle, et le
+# budget de 0 $ bloque tout dépassement : le 7 novembre 2026, « Artifact
+# storage quota has been hit » a fait échouer mobile-recette au dépôt de
+# l'APK. La cause : 1 666 artefacts « .dockerbuild » que docker/build-push-
+# action déposait à chaque image, gardés 90 jours, que personne ne lit (leur
+# dépôt est coupé depuis 27a900d8, DOCKER_BUILD_RECORD_UPLOAD). Ce workflow
+# supprime ceux qui restent ; il ne touche JAMAIS aux artefacts
+# `carlys-recette-*`, que la garde « build once » de mobile-production lit.
+#
+# Le jeton d'une session de développement n'a pas le droit de supprimer un
+# artefact ; celui de ce workflow, si (`actions: write`, ici seulement).
+# Plafond de 900 suppressions par passage : le GITHUB_TOKEN a droit à 1 000
+# requêtes par heure, le passage du lendemain finit le travail.
+on:
+  push:
+    branches: [development]
+    paths: ['.github/workflows/nettoyage-artefacts.yml']
+  schedule:
+    # Chaque jour à 05:30 UTC.
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nettoyage-artefacts
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  nettoyer:
+    name: Supprimer les enregistrements de build Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Suppression (900 au plus)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | endswith(".dockerbuild")) | .id' \
+            | head -n 900 > a-supprimer.txt
+          total=$(wc -l < a-supprimer.txt)
+          echo "Artefacts .dockerbuild à supprimer : $total"
+          while read -r id; do
+            gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null
+          done < a-supprimer.txt
+          echo "### $total artefact(s) .dockerbuild supprimé(s)" >> "$GITHUB_STEP_SUMMARY"

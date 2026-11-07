@@ -25,6 +25,7 @@ import '../../features/exercises/presentation/screens/exercise_library_screen.da
 import '../../features/health/presentation/screens/health_privacy_screen.dart';
 import '../../features/mentor/presentation/screens/mentor_settings_screen.dart';
 import '../../features/nutrition/presentation/screens/food_barcode_scanner_screen.dart';
+import '../../features/nutrition/presentation/screens/glycemic_index_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_scan_screen.dart';
 import '../../features/nutrition/presentation/screens/metabolism_screen.dart';
@@ -233,6 +234,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'recettes',
                     builder: (context, state) => const RecipesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'index-glycemique',
+                    builder: (context, state) => const GlycemicIndexScreen(),
                   ),
                   // La caméra en plein écran, sans la barre du bas ; rend le
                   // code lu à `scanFood`.

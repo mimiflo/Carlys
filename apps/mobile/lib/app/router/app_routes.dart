@@ -27,6 +27,9 @@ abstract final class AppRoutes {
   /// Recettes : poussée depuis l'onglet Nutrition, dans sa pile.
   static const String recipes = '/nutrition/recettes';
 
+  /// Le tableau des index glycémiques, contenu embarqué, dans la même pile.
+  static const String glycemicIndex = '/nutrition/index-glycemique';
+
   /// « Mon métabolisme » : la dépense, les macros calculées, le corps et le
   /// profil qui les fonde — le détail derrière les objectifs du jour.
   static const String metabolism = '/nutrition/metabolisme';

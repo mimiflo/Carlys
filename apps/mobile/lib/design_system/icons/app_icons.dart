@@ -497,6 +497,10 @@ abstract final class AppIcons {
   /// « Mon métabolisme » : la dépense du jour et ce qui la fonde.
   static const IconData metabolism = Icons.monitor_heart_rounded;
 
+  /// Le tableau des index glycémiques : une courbe qui monte, celle de la
+  /// glycémie après le repas.
+  static const IconData glycemicIndex = Icons.show_chart_rounded;
+
   /// Ouvre le choix d'une valeur dans une liste (le jour du journal).
   static const IconData choose = Icons.expand_more_rounded;
 

@@ -209,6 +209,7 @@ l'accueil (plein écran).
 | `/academy`              | `academy`         | Academy (onglet)                   |
 | `/nutrition`            | `nutrition`       | Nutrition (onglet) : objectifs du jour, tuiles, journal — voir `docs/product/nutrition.md` |
 | `/nutrition/recettes`   | `recipes`         | Recettes (branche Nutrition)       |
+| `/nutrition/index-glycemique` | `glycemicIndex` | Index glycémique (branche Nutrition) : tableau embarqué, hors ligne — voir `docs/product/nutrition.md` |
 | `/nutrition/metabolisme` | `metabolism`     | Mon métabolisme (branche Nutrition) : dépense, macros calculées, corps, profil |
 | `/nutrition/repas/nouveau` | `meal-new`     | Ajouter un repas (plein écran) ; `?jour=AAAA-MM-JJ` le date du jour qu'affiche le journal (`AppRoutes.newMeal`) — déclarée AVANT `repas/:mealId` |
 | `/nutrition/repas/:mealId` | `meal-edit`    | Modifier un repas (plein écran) : relu par `GET /nutrition/meals/:id` (`AppRoutes.meal`) — voir `docs/product/nutrition.md` |
