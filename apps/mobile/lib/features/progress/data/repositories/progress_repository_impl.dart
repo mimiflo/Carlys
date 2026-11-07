@@ -59,6 +59,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
   @override
   Future<BodyMetricEntry> addBodyMetric({
+    String? id,
     required BodyMetricKind kind,
     required double value,
     required DateTime measuredAt,
@@ -74,7 +75,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
           // autre geste, avec un autre identifiant — aucun appelant ne
           // conserve le précédent, et aucun rejeu automatique n'existe sur
           // ce chemin (les mesures ne passent pas par la file hors ligne).
-          'id': _uuid.v4(),
+          'id': id ?? _uuid.v4(),
           'metricType': kind.apiValue,
           'value': value,
           'measuredAt': measuredAt.toUtc().toIso8601String(),

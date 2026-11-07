@@ -86,6 +86,23 @@ void main() {
     expect(camera, 1);
   });
 
+  testWidgets('ouverte par Health Connect (justification des permissions) : '
+      'l’écran de santé connectée, même sans session', (tester) async {
+    // La route initiale que MainActivity rend pour l'intention de
+    // justification (scripts/android_branding.sh).
+    tester.binding.platformDispatcher.defaultRouteNameTestValue =
+        '/sante-connectee';
+    addTearDown(
+      tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
+    );
+    await tester.pumpWidget(buildApp(FakeAuthRepository()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tes pas du jour'), findsOneWidget);
+    expect(find.text('Lire la politique de confidentialité'), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
+  });
+
   testWidgets('sans session locale : splash puis écran de connexion', (
     tester,
   ) async {

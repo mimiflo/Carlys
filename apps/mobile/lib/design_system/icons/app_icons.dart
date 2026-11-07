@@ -85,6 +85,18 @@ abstract final class AppIcons {
   /// L'eau bue dans la journée.
   static const IconData water = Icons.water_drop_rounded;
 
+  /// Les pas du jour, lus dans Health Connect ou Apple Santé.
+  static const IconData steps = Icons.directions_walk_rounded;
+
+  /// La santé connectée (Health Connect, Apple Santé) : la ligne de réglage.
+  static const IconData connectedHealth = Icons.monitor_heart_outlined;
+
+  /// Une lecture que le téléphone refuse ou ne sait pas faire.
+  static const IconData healthBlocked = Icons.block_rounded;
+
+  /// Une pesée venue de la balance, pas saisie à la main.
+  static const IconData imported = Icons.sync_alt_rounded;
+
   /// La séance à lancer : ce qui met en marche, pas ce qui s'entraîne.
   static const IconData spark = Icons.bolt_rounded;
 

@@ -192,6 +192,14 @@ class BodyMetricEntry {
   final BodyMetricKind kind;
   final double value;
   final DateTime measuredAt;
+
+  /// Importée d'une balance (Health Connect, Apple Santé), pas saisie.
+  ///
+  /// Lue dans l'identifiant, sans champ en base : une saisie naît sous un
+  /// UUID v4, une pesée importée sous un UUID v5 dérivé d'elle
+  /// (`weighingMetricId`). Le 15e caractère d'un UUID en porte la version —
+  /// et elle ne se perd ni d'un appareil à l'autre, ni à la réinstallation.
+  bool get imported => id.length == 36 && id[14] == '5';
 }
 
 /// Un point de la progression sur UN exercice : une séance, sa meilleure

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../health/presentation/widgets/health_import_trigger.dart';
 import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/progress_providers.dart';
@@ -39,48 +40,52 @@ class ProgressScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            AppSpacing.gutter,
-            AppSpacing.gutter,
-            AppSpacing.gutter + bottomInset,
-          ),
-          children: [
-            const ProgressHeader(),
-            const SizedBox(height: AppSpacing.md),
-            if (firstDay) ...[
-              const ProgressFirstSteps(),
+    // Les pesées de la balance arrivent à l'ouverture et au retour au
+    // premier plan (santé connectée, si elle est active).
+    return HealthImportTrigger(
+      child: Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+              AppSpacing.gutter,
+              AppSpacing.gutter + bottomInset,
+            ),
+            children: [
+              const ProgressHeader(),
               const SizedBox(height: AppSpacing.md),
-              // Le parcours a quelque chose à dire même le premier jour.
-              const ProgressionEntryCard(),
-            ] else ...[
-              overview.when(
-                loading: () => const AppLoadingIndicator(
-                  label: 'Chargement des statistiques',
+              if (firstDay) ...[
+                const ProgressFirstSteps(),
+                const SizedBox(height: AppSpacing.md),
+                // Le parcours a quelque chose à dire même le premier jour.
+                const ProgressionEntryCard(),
+              ] else ...[
+                overview.when(
+                  loading: () => const AppLoadingIndicator(
+                    label: 'Chargement des statistiques',
+                  ),
+                  error: (_, __) => AppErrorState(
+                    title: 'Statistiques indisponibles',
+                    message: AppErrorState.retryConnectionMessage,
+                    onRetry: () => ref.invalidate(overviewForPeriodProvider),
+                  ),
+                  data: (data) => _OverviewBlock(overview: data),
                 ),
-                error: (_, __) => AppErrorState(
-                  title: 'Statistiques indisponibles',
-                  message: AppErrorState.retryConnectionMessage,
-                  onRetry: () => ref.invalidate(overviewForPeriodProvider),
-                ),
-                data: (data) => _OverviewBlock(overview: data),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              // La porte du parcours ne lit aucune donnée : elle s'affiche
-              // même quand les statistiques, juste au-dessus, sont en erreur.
-              const ProgressionEntryCard(),
-              const SizedBox(height: AppSpacing.gapSection),
-              const RecordsSection(),
-              const SizedBox(height: AppSpacing.gapSection),
-              const BodyWeightSection(),
-              const SizedBox(height: AppSpacing.gapSection),
-              const BodyMeasurementsSection(),
+                const SizedBox(height: AppSpacing.md),
+                // La porte du parcours ne lit aucune donnée : elle s'affiche
+                // même quand les statistiques, juste au-dessus, sont en erreur.
+                const ProgressionEntryCard(),
+                const SizedBox(height: AppSpacing.gapSection),
+                const RecordsSection(),
+                const SizedBox(height: AppSpacing.gapSection),
+                const BodyWeightSection(),
+                const SizedBox(height: AppSpacing.gapSection),
+                const BodyMeasurementsSection(),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -22,6 +22,7 @@ import '../../features/community/presentation/screens/friend_challenge_screen.da
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
+import '../../features/health/presentation/screens/health_privacy_screen.dart';
 import '../../features/mentor/presentation/screens/mentor_settings_screen.dart';
 import '../../features/nutrition/presentation/screens/food_barcode_scanner_screen.dart';
 import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
@@ -114,6 +115,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refreshListenable,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      // Ouvert par Health Connect, avec ou sans session : ni l'écran de
+      // démarrage ni la connexion ne s'interposent (Google Play l'exige).
+      if (location == AppRoutes.healthPrivacy) return null;
       final firstRunStep = ref.read(firstRunStepProvider);
 
       // Étape du parcours ou session encore inconnue : on patiente. Le
@@ -479,6 +483,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.manifesto,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ManifestoScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.healthPrivacy,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const HealthPrivacyScreen(),
       ),
       GoRoute(
         path: AppRoutes.mentor,

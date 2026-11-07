@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
+import '../../../health/presentation/widgets/health_settings_section.dart';
 import '../../../mentor/presentation/widgets/mentor_settings_section.dart';
 import '../../../nutrition/presentation/providers/nutrition_providers.dart';
 import '../../../progression/presentation/providers/progression_providers.dart';
@@ -78,6 +79,10 @@ class ProfileSettingsScreen extends ConsumerWidget {
               onHistory: () => context.push(AppRoutes.history),
               onBodyMetrics: () => context.go(AppRoutes.progress),
             ),
+            const SizedBox(height: AppSpacing.md),
+            // Pas et pesées : lus sur l'appareil, réglés ici, juste sous les
+            // mesures corporelles qu'ils alimentent.
+            const HealthSettingsSection(),
             const SizedBox(height: AppSpacing.md),
             ProfileNutritionSettings(
               goalLabel: profile?.goal?.label,

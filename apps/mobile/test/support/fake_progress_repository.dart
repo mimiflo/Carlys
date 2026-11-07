@@ -106,14 +106,36 @@ class FakeProgressRepository implements ProgressRepository {
       ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
   }
 
+  /// Levée à chaque ajout quand non nulle : hors ligne, refus du serveur.
+  Object? addError;
+
+  /// Identifiants reçus par `addBodyMetric`, rejeux compris.
+  final List<String> addedIds = [];
+
   @override
   Future<BodyMetricEntry> addBodyMetric({
+    String? id,
     required BodyMetricKind kind,
     required double value,
     required DateTime measuredAt,
   }) async {
+    if (addError case final error?) throw error;
+    final metricId = id ?? 'metric-${_nextId++}';
+    addedIds.add(metricId);
+    // Comme le serveur : un identifiant déjà vu — vivant OU supprimé — ne
+    // crée rien. C'est ce qui empêche une pesée supprimée de revenir.
+    final existing = _bodyMetrics.where((metric) => metric.id == metricId);
+    if (existing.isNotEmpty || removedMetricIds.contains(metricId)) {
+      return existing.firstOrNull ??
+          BodyMetricEntry(
+            id: metricId,
+            kind: kind,
+            value: value,
+            measuredAt: measuredAt,
+          );
+    }
     final metric = BodyMetricEntry(
-      id: 'metric-${_nextId++}',
+      id: metricId,
       kind: kind,
       value: value,
       measuredAt: measuredAt,

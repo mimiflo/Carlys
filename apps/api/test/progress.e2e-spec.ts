@@ -373,6 +373,15 @@ describe('Progression (e2e)', () => {
     // Le même id revendiqué par un autre utilisateur est un conflit.
     await authed(otherAccessToken).post('/api/v1/body-metrics').send(payload).expect(409);
 
+    // Une pesée importée d'Health Connect / Apple Santé arrive sous un UUID
+    // v5 (dérivé de la pesée) : il est accepté comme un v4.
+    const derived = randomUUID().replace(/^(.{14})4/, '$15');
+    await authed(accessToken)
+      .post('/api/v1/body-metrics')
+      .send({ ...payload, id: derived, measuredAt: at(30) })
+      .expect(201);
+    await authed(accessToken).delete(`/api/v1/body-metrics/${derived}`).expect(204);
+
     // Valeur hors bornes refusée.
     await authed(accessToken)
       .post('/api/v1/body-metrics')
@@ -420,6 +429,19 @@ describe('Progression (e2e)', () => {
       (await authed(accessToken).get('/api/v1/body-metrics').expect(200)).body,
     );
     expect(metrics.map((metric) => metric.id)).toEqual([metricId]);
+
+    // Recréer l'identifiant d'une mesure supprimée ne la RESSUSCITE pas :
+    // c'est ce qui empêche une pesée importée de la balance (identifiant
+    // dérivé de la pesée, docs/product/sante-connectee.md), supprimée puis
+    // relue au prochain import — sur ce téléphone ou un autre — de revenir.
+    await authed(accessToken)
+      .post('/api/v1/body-metrics')
+      .send({ id: oldMetricId, metricType: 'WEIGHT_KG', value: 84, measuredAt: at(60 * 24 * 10) })
+      .expect(201);
+    const afterReplay = data<BodyMetric[]>(
+      (await authed(accessToken).get('/api/v1/body-metrics').expect(200)).body,
+    );
+    expect(afterReplay.map((metric) => metric.id)).toEqual([metricId]);
 
     // La mesure d'autrui reste invisible, même à la suppression.
     await authed(otherAccessToken).delete(`/api/v1/body-metrics/${metricId}`).expect(404);

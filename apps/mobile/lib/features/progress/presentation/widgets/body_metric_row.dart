@@ -33,7 +33,9 @@ class BodyMetricRow extends ConsumerWidget {
     final value = formatDecimal(entry.value);
 
     return Semantics(
-      label: '${entry.kind.label} du $date : $value ${entry.kind.unit}',
+      label:
+          '${entry.kind.label} du $date : $value ${entry.kind.unit}'
+          '${entry.imported ? ', importée de la balance' : ''}',
       child: Container(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -73,7 +75,12 @@ class BodyMetricRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    formatRelativeDayMono(entry.measuredAt),
+                    // Une pesée venue de la balance le dit : la personne
+                    // ne se souvient pas de l'avoir saisie, et la
+                    // supprimer ici ne la fera pas revenir.
+                    entry.imported
+                        ? '${formatRelativeDayMono(entry.measuredAt)} · IMPORTÉE'
+                        : formatRelativeDayMono(entry.measuredAt),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.resized(

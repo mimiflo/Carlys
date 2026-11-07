@@ -26,7 +26,9 @@ class BodyMetricLatest extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
           child: Text(
-            'Dernière mesure · ${formatDayMonth(entry.measuredAt)}',
+            'Dernière mesure · ${formatDayMonth(entry.measuredAt)}'
+            // Venue de la balance (santé connectée), elle le dit.
+            '${entry.imported ? ' · importée de la balance' : ''}',
             style: AppTypography.body.copyWith(
               color: AppColors.darkTextSecondary,
             ),

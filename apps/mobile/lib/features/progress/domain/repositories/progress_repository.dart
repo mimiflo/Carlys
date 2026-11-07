@@ -13,7 +13,11 @@ abstract interface class ProgressRepository {
   });
 
   /// L'identifiant est généré côté client : la création est idempotente.
+  ///
+  /// [id] : celui de l'appelant quand il le DÉRIVE de la mesure (import
+  /// d'une pesée, `weighingMetricId`) ; à défaut, un UUID v4 neuf.
   Future<BodyMetricEntry> addBodyMetric({
+    String? id,
     required BodyMetricKind kind,
     required double value,
     required DateTime measuredAt,
