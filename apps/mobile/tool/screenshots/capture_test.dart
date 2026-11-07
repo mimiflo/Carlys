@@ -46,6 +46,10 @@ import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_d
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_grid.dart';
+import 'package:carlys_mobile/features/health/data/health_prefs_store.dart';
+import 'package:carlys_mobile/features/health/domain/health_data_source.dart';
+import 'package:carlys_mobile/features/health/presentation/providers/health_providers.dart';
+import 'package:carlys_mobile/features/health/presentation/widgets/health_settings_section.dart';
 import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
 import 'package:carlys_mobile/features/notifications/domain/entities/push_destination.dart';
@@ -108,6 +112,7 @@ import '../../test/support/enlarged_text.dart';
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_coach_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_health_data_source.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_push_messenger.dart';
@@ -756,6 +761,10 @@ void main() {
     /// La progression, quand la scène en montre une autre que la vitrine
     /// (les mensurations encore vides, par exemple).
     FakeProgressRepository? progress,
+
+    /// Health Connect / Apple Santé : TOUJOURS la doublure (le greffon ne
+    /// tourne pas en test), non connectée tant que la scène ne l'active pas.
+    FakeHealthDataSource? health,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -852,6 +861,9 @@ void main() {
               CoachSuggestionKind.progress,
             ),
           ]),
+          healthDataSourceProvider.overrideWithValue(
+            health ?? FakeHealthDataSource(),
+          ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
           // Supprimer le compte oublie l'appareil : la vraie purge ouvrait
@@ -1244,6 +1256,135 @@ void main() {
         ]),
     );
     await capture(tester, '02-accueil', shows: find.byType(HomeScreen));
+  });
+
+  // ── Santé connectée : les pas, le réglage, la pesée importée ──────────
+
+  /// Hier matin, sur la balance : 82,1 kg et 18,6 % de masse grasse — dans
+  /// le fil de la courbe d'exemple, qui finit à 82,5.
+  List<HealthWeighing> peseesDeLaBalance() {
+    final hier = startOfToday().subtract(const Duration(hours: 17)).toUtc();
+    return [
+      HealthWeighing(
+        kind: BodyMetricKind.weightKg,
+        value: 82.1,
+        measuredAt: hier,
+        sourceApp: 'com.withings.wiscale2',
+      ),
+      HealthWeighing(
+        kind: BodyMetricKind.bodyFatPercent,
+        value: 18.6,
+        measuredAt: hier,
+        sourceApp: 'com.withings.wiscale2',
+      ),
+    ];
+  }
+
+  testWidgets('accueil — les pas du jour', (tester) async {
+    await const HealthPrefsStore().setConnected(fakeUser.id, connected: true);
+    await pumpApp(
+      tester,
+      health: FakeHealthDataSource(steps: 6214),
+      workouts: FakeWorkoutRepository()..history = historyOf(),
+      nutrition: nutritionOf()
+        ..meals.add(
+          MealEntry(
+            id: 'capture-repas-pas',
+            name: 'Skyr, granola',
+            kcal: 654,
+            proteinG: 59,
+            carbsG: 70,
+            fatG: 14,
+            eatenAt: startOfToday().add(const Duration(hours: 8)),
+          ),
+        ),
+    );
+    await tester.scrollUntilVisible(
+      find.text('PAS'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // La grille ENTIÈRE à l'écran, sa rangée de pas en bas.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 420));
+    await settle(tester);
+    await capture(tester, '02c-accueil-pas', shows: find.text('PAS'));
+  });
+
+  Future<void> openHealthSettings(WidgetTester tester) async {
+    await openProfileSettings(tester);
+    await tester.scrollUntilVisible(
+      find.text('SANTÉ CONNECTÉE'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    // Le groupe au tiers de l'écran : ses voisins (entraînement, nutrition)
+    // autour, comme on le trouve en faisant défiler.
+    await Scrollable.ensureVisible(
+      tester.element(find.byType(HealthSettingsSection)),
+      alignment: 0.4,
+    );
+    await settle(tester);
+    await settle(tester);
+  }
+
+  testWidgets('réglages — santé connectée', (tester) async {
+    await const HealthPrefsStore().setConnected(fakeUser.id, connected: true);
+    await pumpApp(tester, health: FakeHealthDataSource(steps: 6214));
+    await openHealthSettings(tester);
+    await capture(
+      tester,
+      '13c-reglages-sante-connectee',
+      shows: find.text('Objectif de pas'),
+    );
+  });
+
+  testWidgets('réglages — santé connectée refusée', (tester) async {
+    await pumpApp(tester, health: FakeHealthDataSource(grants: false));
+    await openHealthSettings(tester);
+    final bascule = find.descendant(
+      of: find.byType(HealthSettingsSection),
+      matching: find.byType(Switch),
+    );
+    await tester.ensureVisible(bascule);
+    await settle(tester);
+    await tester.tap(bascule);
+    await settle(tester);
+    await capture(
+      tester,
+      '13d-reglages-sante-refusee',
+      shows: find.text('Accès refusé'),
+    );
+  });
+
+  testWidgets('progrès — une pesée importée de la balance', (tester) async {
+    await const HealthPrefsStore().setConnected(fakeUser.id, connected: true);
+    await pumpApp(
+      tester,
+      health: FakeHealthDataSource(weighings: peseesDeLaBalance()),
+    );
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(
+      find.textContaining('importée de la balance'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+    await settle(tester);
+    await capture(
+      tester,
+      '07d-progression-pesee-importee',
+      shows: find.textContaining('importée de la balance'),
+    );
+
+    await tester.tap(find.textContaining('Voir mes'));
+    await settle(tester);
+    await tester.pump(AppMotion.deliberate);
+    await tester.pump();
+    await capture(
+      tester,
+      '07e-poids-historique-importee',
+      shows: find.textContaining('IMPORTÉE'),
+    );
   });
 
   testWidgets('accueil, prénom long, 320 points', (tester) async {

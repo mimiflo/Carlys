@@ -75,6 +75,7 @@ class TodaySection extends ConsumerWidget {
                   label: 'Aujourd’hui',
                   child: TodayGrid(
                     metrics: ref.watch(todayMetricsProvider),
+                    steps: ref.watch(todayStepsMetricProvider),
                     onOpenHydration: onOpenHydration,
                     onAddMeal: onAddMeal,
                   ),

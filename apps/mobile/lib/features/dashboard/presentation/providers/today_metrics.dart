@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
+import '../../../health/presentation/controllers/health_connection_controller.dart';
+import '../../../health/presentation/providers/health_providers.dart';
 import '../../../nutrition/presentation/providers/nutrition_providers.dart';
 import '../../../nutrition/presentation/providers/water_providers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
@@ -16,7 +18,7 @@ import '../../../workout_session/presentation/controllers/workout_controllers.da
 /// D'où la règle tenue ici : une mesure sans cible connue n'affiche PAS de
 /// jauge remplie. Elle passe en attente, comme un axe de progression sans
 /// fait, plutôt que de laisser croire à un objectif qui n'existe pas.
-enum TodayMetricKind { calories, proteines, hydratation, volume }
+enum TodayMetricKind { calories, proteines, hydratation, volume, pas }
 
 /// Une mesure prête à afficher : l'écran ne calcule ni ne formate rien.
 class TodayMetric {
@@ -98,6 +100,30 @@ final todayMetricsProvider = Provider.autoDispose<List<TodayMetric>>((ref) {
       fallbackNote: 'cette semaine',
     ),
   ];
+});
+
+/// Les pas du jour, face à l'objectif réglé — ou `null` : sans santé
+/// connectée, l'accueil ne montre PAS de cellule. Une invitation à
+/// connecter, sur l'écran le plus vu, ferait chaque jour la réclame d'une
+/// option qu'on a peut-être déjà écartée ; l'entrée est dans les réglages.
+final todayStepsMetricProvider = Provider.autoDispose<TodayMetric?>((ref) {
+  final settings = ref.watch(healthConnectionProvider).valueOrNull;
+  if (settings == null || !settings.connected) return null;
+  final steps = ref.watch(todayStepsProvider);
+  return _counted(
+    kind: TodayMetricKind.pas,
+    label: 'Pas',
+    done: steps.valueOrNull?.toDouble(),
+    target: settings.stepsGoal.toDouble(),
+    unit: 'pas',
+    // Lecture ratée : on le dit, plutôt qu'un « pas encore noté » qui
+    // accuserait la personne d'un oubli.
+    fallbackNote: switch (steps) {
+      AsyncValue(hasValue: false, hasError: false) => 'lecture en cours',
+      AsyncValue(valueOrNull: null) => 'lecture impossible',
+      _ => null,
+    },
+  );
 });
 
 /// Une mesure « fait sur visé ». Sans cible, elle reste en attente.
