@@ -376,17 +376,82 @@ describe('Progression (e2e)', () => {
     // Une pesée importée d'Health Connect / Apple Santé arrive sous un UUID
     // v5 (dérivé de la pesée) : il est accepté comme un v4.
     const derived = randomUUID().replace(/^(.{14})4/, '$15');
-    await authed(accessToken)
-      .post('/api/v1/body-metrics')
-      .send({ ...payload, id: derived, measuredAt: at(30) })
-      .expect(201);
-    await authed(accessToken).delete(`/api/v1/body-metrics/${derived}`).expect(204);
+    const imported = data<BodyMetric>(
+      (
+        await authed(accessToken)
+          .post('/api/v1/body-metrics')
+          .send({ ...payload, id: derived, measuredAt: at(30) })
+          .expect(201)
+      ).body,
+    );
+    // Rangé dans l'espace du compte, et toujours en version 5 (« importée »).
+    expect(imported.id).not.toBe(derived);
+    expect(imported.id[14]).toBe('5');
+    await authed(accessToken).delete(`/api/v1/body-metrics/${imported.id}`).expect(204);
 
     // Valeur hors bornes refusée.
     await authed(accessToken)
       .post('/api/v1/body-metrics')
       .send({ ...payload, id: randomUUID(), value: 5_000 })
       .expect(400);
+  });
+
+  it('une pesée importée (UUID v5) : A ne peut ni réserver ni sonder celle de B', async () => {
+    // L'identifiant d'une pesée importée se DÉRIVE de la pesée : quiconque
+    // connaît le compte et l'heure peut le recalculer. Le serveur le range
+    // donc dans l'espace de chaque compte.
+    const derived = randomUUID().replace(/^(.{14})4/, '$15');
+    const weighing = { id: derived, metricType: 'WEIGHT_KG', measuredAt: at(90) };
+
+    // A le dépose AVANT B : ni conflit, ni réservation.
+    const byA = data<BodyMetric>(
+      (
+        await authed(otherAccessToken)
+          .post('/api/v1/body-metrics')
+          .send({ ...weighing, value: 60 })
+          .expect(201)
+      ).body,
+    );
+    const byB = data<BodyMetric>(
+      (
+        await authed(accessToken)
+          .post('/api/v1/body-metrics')
+          .send({ ...weighing, value: 80 })
+          .expect(201)
+      ).body,
+    );
+    expect(byB.id).not.toBe(byA.id);
+    expect(byB.value).toBe(80);
+
+    // Le rejeu de B retombe sur SA ligne, sans doublon.
+    const replay = data<BodyMetric>(
+      (
+        await authed(accessToken)
+          .post('/api/v1/body-metrics')
+          .send({ ...weighing, value: 80 })
+          .expect(201)
+      ).body,
+    );
+    expect(replay.id).toBe(byB.id);
+    expect(await prisma.bodyMetric.count({ where: { id: byB.id } })).toBe(1);
+
+    // Sonder l'identifiant STOCKÉ de B ne révèle rien non plus : 201, une
+    // ligne à soi, jamais un 409.
+    const probe = data<BodyMetric>(
+      (
+        await authed(otherAccessToken)
+          .post('/api/v1/body-metrics')
+          .send({ ...weighing, id: byB.id, value: 61 })
+          .expect(201)
+      ).body,
+    );
+    expect(probe.id).not.toBe(byB.id);
+
+    // Ménage : la suite liste les poids des deux comptes.
+    await authed(accessToken).delete(`/api/v1/body-metrics/${byB.id}`).expect(204);
+    for (const id of [byA.id, probe.id]) {
+      await authed(otherAccessToken).delete(`/api/v1/body-metrics/${id}`).expect(204);
+    }
   });
 
   it('liste les mesures du plus ancien au plus récent, par type', async () => {

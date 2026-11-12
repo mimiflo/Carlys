@@ -10,6 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ProgressRepository } from '../infrastructure/progress.repository';
+import { storedBodyMetricId } from './body-metric-id';
 import { presentBodyMetric } from './progress.presenter';
 
 /**
@@ -25,14 +26,21 @@ import { presentBodyMetric } from './progress.presenter';
 export class BodyMetricsService {
   constructor(private readonly progress: ProgressRepository) {}
 
-  /** Création idempotente (id généré côté client). */
+  /**
+   * Création idempotente (id généré côté client).
+   *
+   * Un id v5 (pesée importée, recalculable) est rangé dans l'espace du compte
+   * (`storedBodyMetricId`) : la réponse porte l'id STOCKÉ, celui que la
+   * correction, la suppression et la frise utilisent ensuite.
+   */
   async addBodyMetric(
     userId: string,
     input: { id: string; metricType: BodyMetricType; value: number; measuredAt: Date },
   ): Promise<BodyMetricContract> {
     assertPlausible(input.metricType, input.value);
-    const created = await this.progress.createBodyMetric({ userId, ...input });
-    const stored = await this.progress.findBodyMetricById(input.id);
+    const id = storedBodyMetricId(userId, input.id);
+    const created = await this.progress.createBodyMetric({ userId, ...input, id });
+    const stored = await this.progress.findBodyMetricById(id);
     if (stored === null || stored.userId !== userId) {
       if (!created && stored !== null) {
         throw new ConflictException('Identifiant de mesure déjà utilisé.');

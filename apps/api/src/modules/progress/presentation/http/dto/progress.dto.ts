@@ -51,7 +51,10 @@ export const BODY_METRIC_VALUE_DESCRIPTION =
   '.';
 
 export class CreateBodyMetricDto {
-  @ApiProperty({ description: 'UUID généré côté client (création idempotente)' })
+  @ApiProperty({
+    description:
+      'UUID généré côté client (création idempotente). Un UUID v5 (pesée importée, dérivée donc recalculable) est rangé dans l’espace du compte : la réponse porte l’identifiant STOCKÉ.',
+  })
   @IsUUID()
   id!: string;
 
