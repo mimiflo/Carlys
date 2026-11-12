@@ -111,6 +111,11 @@ Progrès.
   mesure source, pour qu'une même pesée ne soit jamais importée deux fois.
 - Lecture seule : Carlys n'écrit rien dans Health Connect ni dans Apple
   Santé.
+- **Changements visibles hors de l'écran** : Android 8.0 au minimum
+  (`minSdk` 26) — **Android 7 ne reçoit plus de mise à jour** — et une
+  dépendance alpha tirée par le greffon (`connect-client` 1.2.0-alpha02) ;
+  sur iOS, la capacité HealthKit à cocher dans l'App ID et le profil
+  (`docs/deployment/builds-mobiles.md`).
 - Le détail — couches, connexion, bornes, identifiant dérivé, configuration
   native, ce qui reste à faire côté magasins et sur un vrai téléphone — vit
   dans [`sante-connectee.md`](sante-connectee.md).

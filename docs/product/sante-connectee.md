@@ -54,7 +54,8 @@ HealthConnectionController (connexion, objectif)   todayStepsProvider   HealthWe
 - `data/` — l'adaptateur du greffon et `HealthPrefsStore`
   (`SharedPreferences`, par compte : connexion, objectif, dernier import).
 - `presentation/` — le contrôleur, les providers, le groupe de réglages,
-  l'enrobage d'import de Progrès et l'écran de justification.
+  et l'enrobage d'import de Progrès. La justification des permissions est
+  native (`HealthPrivacyActivity`, plus bas).
 
 ## La connexion, dans les réglages
 
@@ -68,7 +69,7 @@ interrupteur.
 | Les trois lectures accordées | connecté ; la ligne « Objectif de pas » apparaît |
 | Refus (ou une lecture sur trois manquante) | popup « Accès refusé » : ce que Carlys lit, la marche à suivre (Health Connect › Autorisations des applications › Carlys ; sur iPhone, Réglages › Santé › Accès aux données et appareils), « Réessayer » ; puis une ligne qui y ramène |
 | Android 9 à 13 sans Health Connect | popup « Health Connect à installer », bouton vers le Play Store ; puis une ligne « Installer » |
-| Téléphone qui ne le permet pas | ligne « Indisponible sur ce téléphone » |
+| Téléphone que Health Connect ne prend pas en charge (Android 8, certains profils et appareils) | ligne « Health Connect ne fonctionne pas sur ce téléphone » : exact, sans deviner la cause, que Health Connect ne donne pas |
 | Autorisation retirée APRÈS coup dans Health Connect | à la relecture, la connexion passe en refusée (même ligne) au lieu d'afficher zéro pas |
 
 - **Mémorisée sur l'appareil, par compte** (`health.connected.<id>`) :
@@ -120,7 +121,9 @@ adultes. Constante : `HealthSettings.defaultStepsGoal`.
 
 `ImportHealthWeighings`, déclenché par `HealthImportTrigger` autour de l'écran
 Progrès : à son **ouverture**, au **retour au premier plan**, et dès que la
-connexion **s'active**. Au plus une fois par quart d'heure.
+connexion **s'active**. Au plus une fois par quart d'heure, et **un seul à la
+fois** : ouverture et retour au premier plan qui se croisent attendent le même
+import. La courbe ne se relit que si un poids qu'elle n'a pas est arrivé.
 
 - **Par le chemin d'une saisie** : `ProgressRepository.addBodyMetric`
   (`POST /body-metrics`), qui accepte désormais un `id` fourni. Mêmes bornes
@@ -133,9 +136,10 @@ connexion **s'active**. Au plus une fois par quart d'heure.
   (horloge de la balance) non plus. Un refus du serveur (400) écarte la pesée
   sans bloquer les suivantes ; une panne réseau, elle, arrête l'import et le
   curseur ne bouge pas.
-- **Depuis le dernier import**, avec deux jours de recouvrement : une pesée
-  de 7 h synchronisée à 9 h par l'application de la balance arrive datée de
-  7 h. Le premier import remonte 30 jours (Health Connect ne sert de toute
+- **Depuis le dernier import**, avec **sept jours** de recouvrement : une
+  pesée de 7 h synchronisée à 9 h par l'application de la balance arrive
+  datée de 7 h, et une balance restée hors réseau un week-end livre ses
+  pesées le lundi. Relire ne coûte rien : même identifiant, aucune ligne. Le premier import remonte 30 jours (Health Connect ne sert de toute
   façon que les 30 jours qui précèdent l'autorisation). Le curseur est par
   compte, sur l'appareil.
 - **Rien de Carlys** : une mesure dont la source est une application
@@ -158,9 +162,31 @@ d'abord envisagé : Health Connect numérote ses enregistrements **par
 téléphone**. La même pesée, écrite par l'application de la balance sur deux
 téléphones, y porte deux identifiants, et serait importée deux fois. La seconde
 de mesure, elle, est la même partout ; deux pesées distinctes d'une même
-personne à la même seconde n'existent pas. Le compte fait partie du nom : deux
-comptes sur un même téléphone ne se disputent pas un identifiant (le serveur
-refuserait le second par un 409).
+personne à la même seconde n'existent pas.
+
+### Un identifiant recalculable, rangé par le SERVEUR dans l'espace du compte
+
+Cet identifiant n'est pas un secret : qui connaît le compte et l'heure le
+recalcule. Gardé tel quel, il laissait un compte A déposer AVANT B la pesée
+de B (la vraie, ensuite, retombait en silence sur la ligne de A, refusée par
+un 409) et sonder les heures de pesée de B (un 409 disait « elle existe »).
+La frontière de confiance est le serveur : `storedBodyMetricId`
+(`apps/api/src/modules/progress/application/body-metric-id.ts`) range tout
+identifiant **v5** reçu dans l'espace du compte, `uuidv5(userId, id)`.
+
+- Deux comptes qui envoient le même identifiant obtiennent deux lignes, deux
+  201 : rien à réserver, rien à sonder.
+- Le rejeu d'un même compte retombe sur SA ligne : idempotence intacte.
+- Le résultat reste un v5 : l'application le lit toujours « importée ».
+- La réponse porte l'identifiant **stocké**, que la liste, la correction
+  (`PATCH`), la suppression (`DELETE`), la frise et le coach utilisent
+  ensuite : aucun de ces chemins ne revoit l'identifiant envoyé.
+- Un v4 (saisie à la main) est gardé tel quel : tiré au hasard, il ne se
+  devine pas, et son 409 entre comptes reste le garde-fou d'avant.
+
+Tenu par l'e2e « une pesée importée (UUID v5) : A ne peut ni réserver ni
+sonder celle de B ». Côté appli, un 409 resté possible (serveur d'avant)
+écarte la pesée sans bloquer les suivantes (`import_health_weighings_test`).
 
 ### Une pesée supprimée ne revient pas — sans liste locale
 
@@ -176,7 +202,7 @@ l'autre téléphone.
 ### « Importée », sans champ en base
 
 Une mesure saisie naît sous un **UUID v4**, une pesée importée sous un
-**UUID v5** : la version, inscrite dans l'identifiant (sa 15ᵉ lettre), suffit
+**UUID v5** : la version, inscrite dans l'identifiant (son 15e caractère), suffit
 à les distinguer (`BodyMetricEntry.imported`), sur tous les appareils, sans
 migration. La dernière mesure écrit « · importée de la balance », la ligne de
 l'historique « · IMPORTÉE » (et son libellé d'accessibilité le dit). Un champ
@@ -197,29 +223,43 @@ pose :
 - dans `<queries>` : le paquet `com.google.android.apps.healthdata` (Health
   Connect est une application à part sur Android 9 à 13) et l'intention
   `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` ;
-- la **justification des permissions**, exigée par Google Play : le filtre
-  `ACTION_SHOW_PERMISSIONS_RATIONALE` sur l'activité (Android 13 et moins), et
-  l'alias `ViewPermissionUsageActivity` (`VIEW_PERMISSION_USAGE`, catégorie
-  `HEALTH_PERMISSIONS`, protégé par `START_VIEW_PERMISSION_USAGE`) pour
-  Android 14 et plus ;
-- `MainActivity` **réécrite** : `FlutterFragmentActivity` (la demande de
-  permissions de Health Connect passe par `registerForActivityResult`), et
-  les deux intentions de justification ouvrent la route `/sante-connectee`
-  (au lancement par la route initiale, que go_router lit ; par-dessus
-  l'application ouverte par `onNewIntent`). Cet écran (`HealthPrivacyScreen`)
-  dit ce qui est lu et où ça va, et mène à la politique de confidentialité ;
-  il est joignable **sans session** (le routeur ne le redirige pas) ;
+- la **justification des permissions**, exigée par Google Play : une petite
+  activité NATIVE, `HealthPrivacyActivity` (`Theme.NoDisplay`), qui ouvre la
+  politique de confidentialité dans le navigateur puis se ferme, comme
+  l'exemple officiel de Health Connect. Elle porte le filtre
+  `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 13 et moins), et l'alias
+  `ViewPermissionUsageActivity` (`VIEW_PERMISSION_USAGE`, catégorie
+  `HEALTH_PERMISSIONS`, protégé par `START_VIEW_PERMISSION_USAGE`) la vise
+  pour Android 14 et plus. L'adresse est celle de l'application
+  (`CARLYS_PUBLIC_WEB_BASE_URL` + `/privacy`), lue par Gradle dans les
+  `--dart-define` et posée en `manifestPlaceholders` ; défaut de
+  développement `http://localhost:3001`, comme `AppEnvironment`. La première
+  version passait par l'activité Flutter et une route `/sante-connectee` :
+  un second moteur Flutter possible, une exception au routeur. Retirées ;
+- `MainActivity` **réécrite**, en `FlutterFragmentActivity` et rien
+  d'autre : le greffon `health` demande les permissions par
+  `registerForActivityResult`, qu'il obtient en convertissant l'activité
+  en `ComponentActivity` ; une `FlutterActivity` ferait échouer cette
+  conversion ;
 - `minSdk = maxOf(flutter.minSdkVersion, 26)` : `connect-client` exige
-  l'API 26, le gabarit de Flutter 3.44 descend à 24.
+  l'API 26, le gabarit de Flutter 3.44 descend à 24. **Changement visible** :
+  Android 7 (API 24, 25) ne reçoit plus de mise à jour.
+- **Dépendance alpha** : le greffon tire `androidx.health.connect:connect-client`
+  en `1.2.0-alpha02` (sa propre version, non choisie ici). À surveiller à
+  chaque montée du greffon ; consigné dans `builds-mobiles.md`.
 
 **iOS**
 
 - `NSHealthShareUsageDescription`, en français ; **pas**
   `NSHealthUpdateUsageDescription` (sans lui, iOS refuse toute demande
   d'écriture) ;
-- la capacité HealthKit : `ios/Runner/Runner.entitlements`
+- la capacité HealthKit, SANS condition : `ios/Runner/Runner.entitlements`
   (`com.apple.developer.healthkit`, `healthkit.access` vide) et
   `CODE_SIGN_ENTITLEMENTS` sur les trois configurations de la cible Runner.
+  La recette iOS (`mobile-recette.yml`, étape « Profil de provisionnement »)
+  refuse AVANT l'archive un profil sans `com.apple.developer.healthkit`
+  (« régénère le profil après avoir coché HealthKit ») et un App ID
+  générique, qui ne peut porter aucune capacité.
 
 Le script reste **idempotent** : relancé, il ne change plus un octet.
 `scripts/ci/tests/android_branding_test.sh` le prouve sur un arbre factice à
@@ -232,26 +272,42 @@ couvre le code Dart, pas la configuration native.
 
 ## Ce qui reste à faire hors du dépôt
 
-**Rien de cette tranche ne se vérifie dans le conteneur de développement** :
-pas de téléphone, pas de SDK Android ni de Xcode. Les tests passent par la
-source factice ; le manifeste et l'Info.plist engendrés ont été relus, pas
-compilés.
+**Rien de cette tranche ne s'EXÉCUTE dans le conteneur de développement** :
+pas de téléphone, pas de Xcode. Les tests passent par la source factice.
+Côté Android, l'APK de debug a été COMPILÉ dans le conteneur (SDK en ligne
+de commande, `bootstrap_mobile.sh` puis `flutter build apk --debug`) :
+manifeste fusionné, Kotlin des deux activités et Gradle passent (le
+12 novembre 2026). Cette compilation a d'ailleurs attrapé un vrai défaut :
+`java.util.Base64` écrit dans le corps du `build.gradle.kts` ne compile pas
+(`java` y désigne l'extension Gradle) ; d'où l'import en tête. Le manifeste de
+l'APK relu par `aapt2` : `minSdkVersion` 26, les trois `READ_*` et aucune
+écriture, `HealthPrivacyActivity` avec son adresse résolue
+(`--dart-define=CARLYS_PUBLIC_WEB_BASE_URL=https://carlys.example` →
+`https://carlys.example/privacy`), l'alias qui la vise. iOS n'a été que relu.
 
 ### Google Play Console
 
 1. **Déclaration Health Connect** (Contenu de l'application › Health
    Connect) : déclarer les trois types lus (Pas, Poids, Masse grasse), en
-   lecture seule, l'usage de chacun (pas : affichage du jour sur l'appareil ;
-   poids et masse grasse : suivi de progression, envoyés au serveur), et
-   l'URL de la politique de confidentialité. Google relit la déclaration
+   lecture seule, l'usage de chacun, et l'URL de la politique de
+   confidentialité. Les usages, TOUS :
+   - pas : affichage du jour face à l'objectif, sur l'appareil, jamais
+     envoyés ;
+   - poids et masse grasse : envoyés au serveur comme une saisie, pour la
+     courbe et la frise de Progrès, le rapport métabolique (métabolisme de
+     base, dépense, cible calorique, macros, eau, IMC, sur la dernière
+     pesée) et les réponses du coach, qui tourne sur le serveur de Carlys ;
+   - jamais de publicité, jamais revendus, jamais partagés.
+ Google relit la déclaration
    avant la mise en production ; sans elle, la piste de production refuse
    l'application.
 2. **Sécurité des données** : ajouter « Santé et remise en forme » (pas,
    poids, masse grasse), collectées pour les fonctionnalités de
    l'application, non partagées, chiffrées en transit, supprimables.
 3. Vérifier, sur la piste interne, que le lien « Règles de confidentialité »
-   de la page d'autorisations de Health Connect ouvre bien l'écran
-   `/sante-connectee`.
+   de la page d'autorisations de Health Connect ouvre bien la politique
+   dans le navigateur (`HealthPrivacyActivity`), application fermée puis
+   ouverte.
 
 ### App Store
 
@@ -286,6 +342,27 @@ compilés.
 - Le lien de justification depuis Health Connect, application fermée puis
   ouverte.
 
+## Cas limites, et ce que Carlys en fait
+
+- **Pesée corrigée ou réattribuée dans l'application de la balance** (le
+  poids d'un enfant rangé ensuite sur son propre profil, par exemple) : elle
+  garde son heure, donc son identifiant, et le serveur rend la ligne déjà là
+  sans la toucher. **Elle n'est pas reprise** : la personne la corrige ou
+  supprime la pesée dans Carlys. Pas de correction automatique : elle
+  écraserait aussi une correction faite à la main dans Carlys.
+- **iOS ne dit jamais un refus de lecture** : un refus s'y voit comme zéro
+  pas et aucune pesée ; la popup donne la marche à suivre dans Réglages.
+- **Health Connect désinstallé après la connexion** : la relecture des
+  autorisations répond « non », la connexion passe en refusée.
+- **Une seule lecture sur trois accordée** : vu comme un refus (les trois
+  ou aucune).
+- **Pesée supprimée relue dans la fenêtre de recouvrement** : le serveur ne
+  la ressuscite pas, mais la renvoie ; la courbe se relit alors une fois de
+  trop (au plus une par quart d'heure).
+- **Déconnexion ou suppression du compte** : la purge locale efface toute
+  clé `health.` (connexion, objectif, curseur d'import, qui dit quand la
+  personne s'est pesée pour la dernière fois).
+
 ## Tests
 
 | Fichier | Ce qu'il tient |
@@ -294,6 +371,8 @@ compilés.
 | `test/features/health/health_settings_section_test.dart` | non connecté, accordé, refusé (popup, marche à suivre, réessai), Health Connect à installer, téléphone non pris en charge, autorisation retirée, objectif borné, désactivation |
 | `test/features/health/today_steps_test.dart` | pas de cellule sans connexion ; « fait / visé / reste » ; objectif réglé ; relecture au premier plan et toutes les cinq minutes ; lecture impossible |
 | `test/features/health/weighing_import_screen_test.dart` | import à l'ouverture de Progrès, rien sans connexion, mention « importée » (ligne et accessibilité) |
-| `test/app/app_test.dart` | `/sante-connectee` s'ouvre sans session |
-| `apps/api/test/progress.e2e-spec.ts` | un UUID v5 est accepté ; recréer une mesure supprimée ne la ressuscite pas |
-| `scripts/ci/tests/android_branding_test.sh` | la configuration native, en lecture seule, idempotente |
+| `test/features/health/health_weighing_import_test.dart` | un seul import à la fois ; la courbe ne se relit que pour un poids nouveau |
+| `test/core/local_account_purge_test.dart` | toute clé `health.` part avec le compte |
+| `apps/api/test/progress.e2e-spec.ts` | un UUID v5 est rangé dans l'espace du compte ; A ne peut ni réserver ni sonder la pesée de B ; recréer une mesure supprimée ne la ressuscite pas |
+| `apps/api/src/modules/progress/application/body-metric-id.spec.ts` | UUID v5 conforme à la RFC ; v5 par compte, v4 intact |
+| `scripts/ci/tests/android_branding_test.sh` | la configuration native, en lecture seule, idempotente ; justification par l'activité native ; la recette iOS vérifie HealthKit |

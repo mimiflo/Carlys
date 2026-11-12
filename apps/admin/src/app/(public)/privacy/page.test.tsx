@@ -19,6 +19,18 @@ describe('Page /privacy', () => {
     expect(container).toHaveTextContent('Firebase Cloud Messaging');
   });
 
+  it('santé connectée : TOUS les usages des pesées importées sont dits', async () => {
+    const { container } = render(await PrivacyPage());
+
+    // Une pesée importée nourrit, comme une saisie, le rapport métabolique
+    // et le coach : la page ne peut pas promettre « seulement la courbe ».
+    expect(container).toHaveTextContent('ton rapport métabolique');
+    expect(container).toHaveTextContent('les réponses du coach');
+    expect(container).toHaveTextContent('jamais partagées avec qui que ce soit');
+    expect(container).toHaveTextContent('supprime la pesée dans Carlys');
+    expect(container).not.toHaveTextContent('te montrer tes pas et ta courbe de poids');
+  });
+
   it('respecte le ton du produit : tutoiement, sans tiret cadratin', async () => {
     const { container } = render(await PrivacyPage());
 

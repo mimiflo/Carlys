@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 6 novembre 2026.
+Dernière mise à jour : 7 novembre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -109,7 +109,10 @@ Android, Apple Santé sur iOS), et rien d’autre :
   tes mesures corporelles : elles sont alors **envoyées à nos serveurs
   exactement comme une pesée saisie à la main** (valeur et date), gardées et
   effacées de la même façon, et tu peux les corriger ou les supprimer. Une
-  pesée supprimée n’est pas réimportée. L’application qui a écrit la pesée
+  pesée supprimée n’est pas réimportée. Une pesée importée puis corrigée ou
+  réattribuée à quelqu’un d’autre dans l’application de ta balance n’est pas
+  mise à jour dans Carlys : corrige-la ou supprime la pesée dans Carlys.
+  L’application qui a écrit la pesée
   (le nom de l’application de ta balance) sert, sur le téléphone, à écarter
   ce que Carlys aurait écrit lui-même ; elle n’est pas envoyée.
 
@@ -122,10 +125,17 @@ dans Réglages › Santé › Accès aux données et appareils sur iPhone. Les
 pesées déjà importées restent dans tes mesures tant que tu ne les supprimes
 pas.
 
-Comme le demandent Google et Apple, ces données ne servent qu’aux fonctions
-décrites ici : jamais à de la publicité, jamais revendues ni partagées, et
-jamais utilisées pour autre chose que te montrer tes pas et ta courbe de
-poids.
+À quoi elles servent, toutes, comme le demandent Google et Apple :
+
+- les pas : t’afficher, sur ton téléphone, ceux du jour face à ton objectif ;
+- les pesées, comme toute pesée saisie à la main : ta courbe de poids et ta
+  frise dans Progrès, ton rapport métabolique (métabolisme de base, dépense,
+  cible calorique, macros, eau, IMC, calculés sur ta dernière pesée) et les
+  réponses du coach, qui tourne sur le propre serveur de Carlys (voir « Tes
+  conversations avec le coach »).
+
+Rien d’autre : jamais de publicité ni de profilage publicitaire, jamais
+revendues, et jamais partagées avec qui que ce soit.
 
 ### Ton entraînement
 
@@ -367,8 +377,10 @@ ni rien d’autre.
 - **Pour les données de santé** (profil physique, mesures corporelles,
   y compris les pesées importées de ta balance, pas lus sur le téléphone,
   nutrition et photos de repas, conversations avec le coach) : c’est ton
-  consentement. Tu les saisis toi-même, elles sont facultatives, et tu peux
-  les effacer ou cesser d’utiliser ces fonctions à tout moment.
+  consentement. Tu les saisis toi-même, ou tu actives toi-même leur lecture
+  dans le service de santé du téléphone (« Santé connectée ») ; elles sont
+  facultatives, et tu peux les effacer ou cesser d’utiliser ces fonctions à
+  tout moment.
 - **Pour la communauté** : faire fonctionner les amis, les encouragements,
   les défis et la ligue que tu choisis d’utiliser. Ce que chacun y voit de
   toi est détaillé plus haut (« Ta communauté », « Qui voit quoi ») : ta

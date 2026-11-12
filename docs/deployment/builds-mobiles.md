@@ -150,6 +150,22 @@ le prix : une minute de runner macOS est facturée **dix fois** une minute de
 runner Linux sur un dépôt privé. Ce qu'il faut créer chez Apple, et comment le
 job vérifie chaque pièce avant de compiler, est au §10.
 
+### Changements visibles de novembre 2026 (santé connectée)
+
+- **Android 8.0 au minimum** (`minSdk` 26, au lieu des 24 du gabarit
+  Flutter) : la bibliothèque Health Connect l'exige. **Android 7 (7.0 et
+  7.1) ne reçoit plus de mise à jour** : la Play Console cesse de proposer
+  l'application à ces téléphones, et une version déjà installée y reste
+  figée. Posé par `scripts/android_branding.sh`.
+- **Une dépendance ALPHA** : le greffon `health` 13.3.1 tire
+  `androidx.health.connect:connect-client:1.2.0-alpha02` — choisi par le
+  greffon, pas par nous. Une alpha peut changer d'API ou de comportement d'une
+  version à l'autre : relire son journal à chaque montée du greffon, et
+  repasser la santé connectée sur un vrai téléphone.
+- **iOS : la capacité HealthKit** est requise dans l'App ID et dans le profil
+  (§10.1) ; la recette refuse un profil qui ne la porte pas.
+- Le détail : `docs/product/sante-connectee.md`.
+
 ---
 
 ## 3. Aujourd'hui, sans rien configurer : la recette
