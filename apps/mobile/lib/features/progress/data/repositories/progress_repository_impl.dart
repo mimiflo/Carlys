@@ -69,12 +69,14 @@ class ProgressRepositoryImpl implements ProgressRepository {
         '/body-metrics',
         data: {
           // Id né sur l'appareil : le serveur déduplique sur CET identifiant,
-          // donc une même requête REJOUÉE telle quelle ne crée pas de
-          // doublon. À ne pas confondre avec un nouvel essai de
-          // l'utilisateur : il rouvre la feuille et resaisit, ce qui est un
-          // autre geste, avec un autre identifiant — aucun appelant ne
-          // conserve le précédent, et aucun rejeu automatique n'existe sur
-          // ce chemin (les mesures ne passent pas par la file hors ligne).
+          // donc une même requête REJOUÉE ne crée pas de doublon.
+          //  - Saisie : un v4 neuf à chaque geste. Resaisir après un échec
+          //    est un autre geste, sous un autre identifiant ; aucun rejeu
+          //    automatique (les mesures ne passent pas par la file hors
+          //    ligne).
+          //  - Import d'une pesée : le v5 DÉRIVÉ de la pesée (`id`), rejoué
+          //    à chaque relecture. Le serveur le range dans l'espace du
+          //    compte : l'id RENDU (stocké) n'est pas celui-ci.
           'id': id ?? _uuid.v4(),
           'metricType': kind.apiValue,
           'value': value,

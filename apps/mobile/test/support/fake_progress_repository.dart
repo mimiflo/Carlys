@@ -97,17 +97,24 @@ class FakeProgressRepository implements ProgressRepository {
   @override
   Future<List<PersonalRecordEntry>> records() async => _records;
 
+  /// Lectures de `bodyMetrics` : prouve qu'une liste ne se relit pas pour rien.
+  int bodyMetricReads = 0;
+
   @override
   Future<List<BodyMetricEntry>> bodyMetrics({
     BodyMetricKind kind = BodyMetricKind.weightKg,
     int limit = 90,
   }) async {
+    bodyMetricReads++;
     return _bodyMetrics.where((metric) => metric.kind == kind).toList()
       ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
   }
 
   /// Levée à chaque ajout quand non nulle : hors ligne, refus du serveur.
   Object? addError;
+
+  /// Refus du « serveur » pour UN identifiant (un 409, par exemple).
+  final Map<String, Object> rejectIds = {};
 
   /// Identifiants reçus par `addBodyMetric`, rejeux compris.
   final List<String> addedIds = [];
@@ -121,6 +128,7 @@ class FakeProgressRepository implements ProgressRepository {
   }) async {
     if (addError case final error?) throw error;
     final metricId = id ?? 'metric-${_nextId++}';
+    if (rejectIds[metricId] case final error?) throw error;
     addedIds.add(metricId);
     // Comme le serveur : un identifiant déjà vu — vivant OU supprimé — ne
     // crée rien. C'est ce qui empêche une pesée supprimée de revenir.

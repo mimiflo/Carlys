@@ -128,7 +128,7 @@ void main() {
     expect(source.accessRequests, 0);
     expect(bascule(tester), isFalse);
     expect(
-      find.textContaining('Indisponible sur ce téléphone'),
+      find.text('Health Connect ne fonctionne pas sur ce téléphone'),
       findsOneWidget,
     );
   });

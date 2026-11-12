@@ -81,7 +81,9 @@ class HealthSettingsSection extends ConsumerWidget {
           HealthConnectionStatus.unsupported => [
             const AppSettingsRow(
               icon: AppIcons.healthBlocked,
-              label: 'Indisponible sur ce téléphone (Android 9 au minimum)',
+              // Exact, sans plus : Health Connect répond « non pris en charge »
+              // (Android 8, certains profils et appareils) sans dire pourquoi.
+              label: 'Health Connect ne fonctionne pas sur ce téléphone',
             ),
           ],
           HealthConnectionStatus.off => const <AppSettingsRow>[],

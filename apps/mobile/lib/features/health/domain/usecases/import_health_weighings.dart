@@ -28,6 +28,13 @@ import '../health_data_source.dart';
 ///    ignorée (Carlys n'écrit rien aujourd'hui, la règle tient pour demain) ;
 ///  - **depuis le dernier import**, avec un recouvrement : une balance
 ///    synchronise souvent APRÈS coup, sous l'heure de la pesée.
+///
+/// Ce qu'il NE fait PAS : reprendre une pesée corrigée, ou réattribuée à une
+/// autre personne, dans l'application de la balance. Elle garde son heure,
+/// donc son identifiant, et le serveur rend la ligne déjà là sans la toucher.
+/// La personne la corrige ou la supprime dans Carlys (`sante-connectee.md`,
+/// « Cas limites »). Pas de correction automatique : elle écraserait aussi
+/// une correction faite à la main dans Carlys.
 class ImportHealthWeighings {
   const ImportHealthWeighings({
     required this._source,
@@ -44,27 +51,33 @@ class ImportHealthWeighings {
   static const Duration firstWindow = Duration(days: 30);
 
   /// Relu à chaque import : une pesée de 7 h synchronisée à 9 h par
-  /// l'application de la balance arrive datée de 7 h.
-  static const Duration overlap = Duration(days: 2);
+  /// l'application de la balance arrive datée de 7 h — et une balance restée
+  /// hors réseau un week-end livre ses pesées le lundi. Sept jours : relire
+  /// ne coûte rien (même identifiant, aucune ligne créée).
+  static const Duration overlap = Duration(days: 7);
 
   /// Ouvrir Progrès trois fois en dix minutes n'importe qu'une fois.
   static const Duration minInterval = Duration(minutes: 15);
 
   static const _log = AppLogger('ImportHealthWeighings');
 
-  /// Rend le nombre de pesées envoyées. Hors ligne, l'erreur remonte et le
-  /// curseur ne bouge pas : le prochain import reprend au même endroit.
-  Future<int> call({required String userId, required DateTime now}) async {
+  /// Rend les mesures que le serveur a renvoyées — créées OU déjà là : le
+  /// rejeu est idempotent et répond pareil. Hors ligne, l'erreur remonte et
+  /// le curseur ne bouge pas : le prochain import reprend au même endroit.
+  Future<List<BodyMetricEntry>> call({
+    required String userId,
+    required DateTime now,
+  }) async {
     final last = await _ledger.lastImportAt(userId);
     if (last != null && now.difference(last) < minInterval) {
-      return 0;
+      return const [];
     }
     final since = last == null
         ? now.subtract(firstWindow)
         : last.subtract(overlap);
     final weighings = await _source.weighingsBetween(since, now);
 
-    var sent = 0;
+    final stored = <BodyMetricEntry>[];
     for (final weighing in weighings) {
       final value = plausibleWeighing(weighing);
       if (value == null ||
@@ -73,13 +86,14 @@ class ImportHealthWeighings {
         continue;
       }
       try {
-        await _metrics.addBodyMetric(
-          id: weighingMetricId(userId, weighing),
-          kind: weighing.kind,
-          value: value,
-          measuredAt: weighing.measuredAt,
+        stored.add(
+          await _metrics.addBodyMetric(
+            id: weighingMetricId(userId, weighing),
+            kind: weighing.kind,
+            value: value,
+            measuredAt: weighing.measuredAt,
+          ),
         );
-        sent++;
       } on ValidationException catch (error) {
         // Refusée par le serveur (et pas par le réseau) : la renvoyer ne
         // changerait rien, et bloquer le curseur sur elle bloquerait toutes
@@ -88,7 +102,7 @@ class ImportHealthWeighings {
       }
     }
     await _ledger.markImported(userId, now);
-    return sent;
+    return stored;
   }
 }
 
@@ -105,8 +119,12 @@ const String healthWeighingNamespace = '5d29b8e9-c611-4505-8f1d-9d5517250899';
 /// porte deux identifiants. Deux pesées distinctes d'une même personne à la
 /// même seconde n'existent pas ; un même enregistrement relu, si.
 ///
-/// Le compte en fait partie : deux comptes sur un même téléphone ne se
-/// disputent pas un identifiant (le serveur refuserait le second, 409).
+/// Recalculable par quiconque connaît le compte et l'heure : ce n'est PAS un
+/// secret. Le serveur le range donc dans l'espace du compte
+/// (`storedBodyMetricId` : `uuidv5(userId, id)`), si bien qu'un autre compte
+/// ne peut ni réserver cette pesée ni sonder ses heures. L'identifiant
+/// STOCKÉ — celui que la réponse, la correction et la suppression portent —
+/// diffère donc de celui-ci, et reste un v5.
 ///
 /// Une mesure saisie à la main est un UUID v4 : la version suffit donc à
 /// reconnaître une mesure importée ([BodyMetricEntry.imported]).

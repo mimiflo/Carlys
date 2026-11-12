@@ -120,7 +120,7 @@ void main() {
       _pesee(79, joursAvant: -1), // horloge de la balance en avance
     ]);
 
-    expect(await import(userId: _user, now: _now), 2);
+    expect(await import(userId: _user, now: _now), hasLength(2));
 
     expect(
       source.weighingWindows.single.$1,
@@ -142,7 +142,7 @@ void main() {
 
     expect(
       await import(userId: _user, now: _now.add(const Duration(minutes: 10))),
-      0,
+      isEmpty,
     );
     expect(source.weighingWindows, hasLength(1));
 
@@ -196,10 +196,40 @@ void main() {
       source.weighings.add(_pesee(80.2));
       metrics.addError = const ValidationException('refusée', statusCode: 400);
 
-      expect(await import(userId: _user, now: _now), 0);
+      expect(await import(userId: _user, now: _now), isEmpty);
       expect(await ledger.lastImportAt(_user), _now);
     },
   );
+
+  test('conflit d’identifiant (409, rendu en ValidationException par '
+      'guardDio) : une pesée écartée, les autres passent', () async {
+    // Le serveur range désormais les v5 dans l'espace du compte : ce 409 ne
+    // devrait plus arriver. S'il arrive (serveur d'avant, rejeu croisé), il
+    // ne doit ni bloquer le curseur ni arrêter les pesées suivantes.
+    source.weighings.addAll([_pesee(80.2), _pesee(80.6, joursAvant: 2)]);
+    final conflit = weighingMetricId(_user, source.weighings.first);
+    metrics.rejectIds[conflit] = const ValidationException(
+      'Identifiant de mesure déjà utilisé.',
+      statusCode: 409,
+      code: 'IDENTIFIER_CONFLICT',
+    );
+
+    final stored = await import(userId: _user, now: _now);
+
+    expect(stored.map((m) => m.value), [80.6]);
+    expect(await ledger.lastImportAt(_user), _now);
+  });
+
+  test('rend les mesures STOCKÉES, rejeu compris', () async {
+    source.weighings.add(_pesee(80.2));
+    final premier = await import(userId: _user, now: _now);
+    SharedPreferences.setMockInitialValues({});
+    final rejeu = await import(
+      userId: _user,
+      now: _now.add(const Duration(hours: 1)),
+    );
+    expect(rejeu.single.id, premier.single.id);
+  });
 
   test('chaque compte a son curseur', () async {
     await import(userId: _user, now: _now);

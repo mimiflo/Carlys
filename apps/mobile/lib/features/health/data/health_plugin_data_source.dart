@@ -19,6 +19,14 @@ class HealthPluginDataSource implements HealthDataSource {
 
   static const _log = AppLogger('HealthPluginDataSource');
 
+  /// LECTURE, dit explicitement : le défaut du greffon l'est aussi, mais
+  /// une version qui en changerait ne doit pas faire demander l'écriture.
+  static const _readOnly = [
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+  ];
+
   static const _types = [
     HealthDataType.STEPS,
     HealthDataType.WEIGHT,
@@ -46,7 +54,10 @@ class HealthPluginDataSource implements HealthDataSource {
   @override
   Future<bool> requestReadAccess() async {
     await _ready();
-    final shown = await _health.requestAuthorization(_types);
+    final shown = await _health.requestAuthorization(
+      _types,
+      permissions: _readOnly,
+    );
     // Android rend `true` dès qu'UNE lecture est accordée : on vérifie les
     // trois. iOS ne dit rien (null) : la demande montrée vaut accord.
     return shown && await hasReadAccess();
@@ -56,7 +67,8 @@ class HealthPluginDataSource implements HealthDataSource {
   Future<bool> hasReadAccess() async {
     await _ready();
     try {
-      return await _health.hasPermissions(_types) ?? true;
+      return await _health.hasPermissions(_types, permissions: _readOnly) ??
+          true;
     } on UnsupportedError catch (error) {
       // Health Connect désinstallé depuis la connexion : le greffon lève au
       // lieu de répondre. Plus rien n'est lisible, c'est un « non ».
