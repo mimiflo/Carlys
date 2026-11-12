@@ -194,11 +194,13 @@ fi
 #  - trois permissions de LECTURE, et aucune d'écriture : Carlys n'écrit rien ;
 #  - la visibilité du paquet Health Connect (Android 9 à 13, où c'est une
 #    application à installer) et de son intention de justification ;
-#  - la JUSTIFICATION des permissions, exigée par Google Play : l'intention
-#    ACTION_SHOW_PERMISSIONS_RATIONALE (Android 13 et moins) sur l'activité,
-#    VIEW_PERMISSION_USAGE (Android 14+) sur un alias. Les deux ouvrent
-#    l'écran « /sante-connectee » (MainActivity, plus bas), qui dit ce que
-#    Carlys lit et mène à la politique de confidentialité.
+#  - la JUSTIFICATION des permissions, exigée par Google Play : une petite
+#    activité NATIVE, `HealthPrivacyActivity`, qui ouvre la politique de
+#    confidentialité dans le navigateur et se ferme — le schéma de l'exemple
+#    officiel de Health Connect. Elle reçoit ACTION_SHOW_PERMISSIONS_RATIONALE
+#    (Android 13 et moins) et, par un alias, VIEW_PERMISSION_USAGE (Android
+#    14+). Passer par l'activité Flutter démarrait un second moteur Flutter
+#    sur une route à part : rien de cela ici.
 for permission in READ_STEPS READ_WEIGHT READ_BODY_FAT; do
   if ! grep -q "android.permission.health.$permission\"" "$MANIFEST"; then
     sed -i.bak "s|<application|<uses-permission android:name=\"android.permission.health.$permission\"/>\\
@@ -216,23 +218,22 @@ if ! grep -q 'com.google.android.apps.healthdata' "$MANIFEST"; then
         </intent>|' "$MANIFEST"
   rm -f "$MANIFEST.bak"
 fi
-# `</activity>` n'apparaît qu'UNE fois : le gabarit n'a qu'une activité, et
-# l'alias ci-dessous se ferme sur `</activity-alias>`.
-# Le commentaire posé avec le filtre sert de marque : l'action, elle, figure
-# déjà dans <queries>.
-if ! grep -q 'ShowPermissionsRationale' "$MANIFEST"; then
-  sed -i.bak 's|</activity>|    <!-- ShowPermissionsRationale : Health Connect, Android 13 et moins -->\
+# L'adresse de la politique arrive par `${carlysPrivacyUrl}`, posé dans le
+# Gradle plus bas depuis le même --dart-define que l'application.
+if ! grep -q 'HealthPrivacyActivity' "$MANIFEST"; then
+  sed -i.bak 's|</application>|    <activity\
+            android:name=".HealthPrivacyActivity"\
+            android:exported="true"\
+            android:theme="@android:style/Theme.NoDisplay">\
+            <meta-data android:name="carlys.privacy_url" android:value="${carlysPrivacyUrl}"/>\
             <intent-filter>\
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>\
             </intent-filter>\
-        </activity>|' "$MANIFEST"
-  rm -f "$MANIFEST.bak"
-fi
-if ! grep -q 'ViewPermissionUsageActivity' "$MANIFEST"; then
-  sed -i.bak 's|</application>|    <activity-alias\
+        </activity>\
+        <activity-alias\
             android:name="ViewPermissionUsageActivity"\
             android:exported="true"\
-            android:targetActivity=".MainActivity"\
+            android:targetActivity=".HealthPrivacyActivity"\
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">\
             <intent-filter>\
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>\
@@ -243,13 +244,15 @@ if ! grep -q 'ViewPermissionUsageActivity' "$MANIFEST"; then
   rm -f "$MANIFEST.bak"
 fi
 
-# L'activité RÉÉCRITE, pas retouchée : le gabarit n'en livre qu'une ligne.
-#  - FlutterFragmentActivity : la demande de permissions de Health Connect
-#    passe par `registerForActivityResult`, qu'une FlutterActivity n'a pas
-#    (README du greffon, « Android 14 ») ;
-#  - les deux intentions de justification ouvrent « /sante-connectee » :
-#    au lancement (route initiale, que go_router lit), ou par-dessus
-#    l'application déjà ouverte (onNewIntent).
+# Les deux activités, RÉÉCRITES à chaque passage (idempotent par
+# construction), dans le paquet du gabarit.
+#  - MainActivity : FlutterFragmentActivity et rien d'autre. Le greffon
+#    `health` demande les permissions par `registerForActivityResult`, qu'il
+#    obtient en convertissant l'activité en ComponentActivity : une
+#    FlutterActivity (simple Activity) ferait échouer cette conversion
+#    (README du greffon, « Android 14 »).
+#  - HealthPrivacyActivity : lit l'adresse dans son meta-data, ouvre le
+#    navigateur, se ferme. `Theme.NoDisplay` : elle ne montre jamais rien.
 ACTIVITY="$(find android/app/src/main/kotlin -name MainActivity.kt | head -n 1)"
 if [ -z "$ACTIVITY" ]; then
   echo "MainActivity.kt introuvable sous android/app/src/main/kotlin" >&2
@@ -259,37 +262,54 @@ PACKAGE="$(sed -n 's/^package \(.*\)$/\1/p' "$ACTIVITY")"
 cat > "$ACTIVITY" <<KOTLIN
 package $PACKAGE
 
-import android.content.Intent
 import io.flutter.embedding.android.FlutterFragmentActivity
 
 // ENGENDRÉ par scripts/android_branding.sh : modifier le script, pas ce
 // fichier (android/ n'est pas versionné).
-class MainActivity : FlutterFragmentActivity() {
-    override fun getInitialRoute(): String? =
-        if (isHealthRationale(intent)) HEALTH_ROUTE else super.getInitialRoute()
+class MainActivity : FlutterFragmentActivity()
+KOTLIN
+cat > "$(dirname "$ACTIVITY")/HealthPrivacyActivity.kt" <<KOTLIN
+package $PACKAGE
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        if (isHealthRationale(intent)) {
-            flutterEngine?.navigationChannel?.pushRouteInformation(HEALTH_ROUTE)
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.util.Log
+
+// ENGENDRÉ par scripts/android_branding.sh : modifier le script, pas ce
+// fichier (android/ n'est pas versionné).
+//
+// La justification des permissions de Health Connect : ouvre la politique de
+// confidentialité de Carlys dans le navigateur, puis se ferme.
+class HealthPrivacyActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val url = packageManager
+            .getActivityInfo(ComponentName(this, HealthPrivacyActivity::class.java), PackageManager.GET_META_DATA)
+            .metaData
+            ?.getString("carlys.privacy_url")
+        if (url.isNullOrBlank()) {
+            Log.w("HealthPrivacyActivity", "adresse de la politique absente")
+        } else {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (error: ActivityNotFoundException) {
+                Log.w("HealthPrivacyActivity", "aucun navigateur pour ouvrir la politique", error)
+            }
         }
-    }
-
-    private fun isHealthRationale(intent: Intent?) = intent?.action in RATIONALE_ACTIONS
-
-    private companion object {
-        const val HEALTH_ROUTE = "/sante-connectee"
-        val RATIONALE_ACTIONS = setOf(
-            "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE",
-            "android.intent.action.VIEW_PERMISSION_USAGE",
-        )
+        finish()
     }
 }
 KOTLIN
 
 # Health Connect (connect-client 1.2) exige l'API 26 ; le gabarit de Flutter
 # 3.44 descend à 24. On prend le plus haut des deux, pour qu'un Flutter qui
-# monterait son plancher ne soit jamais rabaissé ici.
+# monterait son plancher ne soit jamais rabaissé ici. Android 7 (API 24, 25)
+# ne reçoit donc plus de mise à jour (docs/deployment/builds-mobiles.md).
 if ! grep -q 'minSdk = maxOf(flutter.minSdkVersion, 26)' "$GRADLE"; then
   sed -i.bak 's|minSdk = flutter.minSdkVersion|minSdk = maxOf(flutter.minSdkVersion, 26)|' "$GRADLE"
   rm -f "$GRADLE.bak"
@@ -297,6 +317,35 @@ if ! grep -q 'minSdk = maxOf(flutter.minSdkVersion, 26)' "$GRADLE"; then
     echo "$GRADLE : ligne « minSdk = flutter.minSdkVersion » introuvable" >&2
     exit 1
   }
+fi
+
+# L'adresse de la politique de confidentialité, pour HealthPrivacyActivity :
+# la MÊME que celle de l'application (`AppEnvironment.privacyPolicyUrl`),
+# lue dans les --dart-define que Flutter passe à Gradle (`dart-defines`,
+# chacun en base64), avec le même défaut de développement.
+#
+# `Base64` par un import EN TÊTE de fichier : écrit `java.util.Base64` dans le
+# script, `java` y désigne l'extension Gradle du même nom, pas le paquet — la
+# compilation l'a refusé (« Unresolved reference 'util' »).
+if ! grep -q 'carlysPrivacyUrl' "$GRADLE"; then
+  { printf 'import java.util.Base64\n\n'; cat "$GRADLE"; } > "$GRADLE.tmp" && mv "$GRADLE.tmp" "$GRADLE"
+  cat >> "$GRADLE" <<'KTS'
+
+// Engendré par scripts/android_branding.sh : l'adresse de la politique de
+// confidentialité, ouverte par HealthPrivacyActivity (Health Connect).
+val carlysPublicWebBaseUrl: String =
+    (project.findProperty("dart-defines") as String?)
+        ?.split(",")
+        ?.map { encoded: String -> String(Base64.getDecoder().decode(encoded)) }
+        ?.firstOrNull { it.startsWith("CARLYS_PUBLIC_WEB_BASE_URL=") }
+        ?.substringAfter("=")
+        ?: "http://localhost:3001"
+android {
+    defaultConfig {
+        manifestPlaceholders["carlysPrivacyUrl"] = "$carlysPublicWebBaseUrl/privacy"
+    }
+}
+KTS
 fi
 
 # iOS, si le dossier a été généré : même nom sous l'icône.

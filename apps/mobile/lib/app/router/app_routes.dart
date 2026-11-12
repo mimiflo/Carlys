@@ -82,11 +82,6 @@ abstract final class AppRoutes {
   /// « Mentor Carlys » : sa voix, ses interventions, leur fréquence.
   static const String mentor = '/mentor';
 
-  /// « Ce que Carlys lit, et pourquoi » : ouvert par Health Connect depuis
-  /// sa page d'autorisations (MainActivity, engendrée par
-  /// scripts/android_branding.sh). Joignable sans session.
-  static const String healthPrivacy = '/sante-connectee';
-
   /// Le profil de progression : cinq axes, des points, un titre.
   static const String progression = '/progression';
 

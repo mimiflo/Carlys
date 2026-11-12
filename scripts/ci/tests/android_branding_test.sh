@@ -100,19 +100,58 @@ grep -q '<package android:name="com.google.android.apps.healthdata"/>' "$MANIFES
 grep -q 'android.intent.action.VIEW_PERMISSION_USAGE' "$MANIFEST" || echec "alias VIEW_PERMISSION_USAGE absent"
 grep -q 'android:permission="android.permission.START_VIEW_PERMISSION_USAGE"' "$MANIFEST" ||
   echec "l'alias doit être protégé par START_VIEW_PERMISSION_USAGE"
-python3 -c 'import sys, xml.dom.minidom; xml.dom.minidom.parse(sys.argv[1])' "$MANIFEST" ||
-  echec "manifeste XML mal formé"
+# La justification passe par une activité NATIVE dédiée, jamais par
+# l'activité Flutter (un second moteur Flutter, une route à garder).
+python3 - "$MANIFEST" <<'PY' || echec "justification : activité dédiée, alias et adresse mal câblés"
+import sys
+import xml.etree.ElementTree as ET
+
+A = '{http://schemas.android.com/apk/res/android}'
+RATIONALE = 'androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE'
+application = ET.parse(sys.argv[1]).getroot().find('application')
+activities = {a.get(A + 'name'): a for a in application.findall('activity')}
+
+def actions(node):
+    return {a.get(A + 'name') for a in node.iter('action')}
+
+dediee = activities['.HealthPrivacyActivity']
+assert RATIONALE in actions(dediee), 'filtre absent de HealthPrivacyActivity'
+assert dediee.get(A + 'exported') == 'true'
+assert RATIONALE not in actions(activities['.MainActivity']), 'MainActivity justifie encore'
+meta = {m.get(A + 'name'): m.get(A + 'value') for m in dediee.findall('meta-data')}
+assert meta.get('carlys.privacy_url') == '${carlysPrivacyUrl}', 'adresse de la politique absente'
+alias = application.find('activity-alias')
+assert alias.get(A + 'targetActivity') == '.HealthPrivacyActivity', 'alias mal ciblé'
+PY
 
 ACTIVITY=android/app/src/main/kotlin/com/carlys/carlys_mobile/MainActivity.kt
 grep -q '^package com.carlys.carlys_mobile$' "$ACTIVITY" || echec "paquet de MainActivity perdu"
 grep -q 'class MainActivity : FlutterFragmentActivity()' "$ACTIVITY" || echec "MainActivity n'étend pas FlutterFragmentActivity"
-grep -q '"/sante-connectee"' "$ACTIVITY" || echec "la justification n'ouvre pas /sante-connectee"
-grep -q 'minSdk = maxOf(flutter.minSdkVersion, 26)' android/app/build.gradle.kts || echec "minSdk < 26"
+! grep -q 'getInitialRoute\|onNewIntent' "$ACTIVITY" || echec "MainActivity détourne encore les intentions de justification"
+RATIONALE_KT=android/app/src/main/kotlin/com/carlys/carlys_mobile/HealthPrivacyActivity.kt
+grep -q '^package com.carlys.carlys_mobile$' "$RATIONALE_KT" || echec "HealthPrivacyActivity absente ou hors du paquet"
+grep -q 'finish()' "$RATIONALE_KT" || echec "HealthPrivacyActivity doit se fermer"
+GRADLE=android/app/build.gradle.kts
+grep -q 'minSdk = maxOf(flutter.minSdkVersion, 26)' "$GRADLE" || echec "minSdk < 26"
+[ "$(grep -c 'manifestPlaceholders\["carlysPrivacyUrl"\]' "$GRADLE")" -eq 1 ] ||
+  echec "l'adresse de la politique n'est pas posée (ou posée deux fois) dans le Gradle"
+# En tête, et une seule fois : `java.util.Base64` écrit en clair dans le corps
+# ne compile pas (`java` y est l'extension Gradle).
+[ "$(head -n 1 "$GRADLE")" = 'import java.util.Base64' ] &&
+  [ "$(grep -c '^import java.util.Base64$' "$GRADLE")" -eq 1 ] ||
+  echec "import java.util.Base64 absent de la tête du Gradle, ou en double"
 
 grep -q '<key>NSHealthShareUsageDescription</key>' ios/Runner/Info.plist || echec "motif de lecture Santé absent"
 ! grep -q 'NSHealthUpdateUsageDescription' ios/Runner/Info.plist || echec "motif d'ÉCRITURE Santé déclaré"
 grep -q '<key>com.apple.developer.healthkit</key>' ios/Runner/Runner.entitlements || echec "droits HealthKit absents"
 [ "$(grep -c 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;' ios/Runner.xcodeproj/project.pbxproj)" -eq 3 ] ||
   echec "les trois configurations de Runner doivent désigner Runner.entitlements"
+
+# Le droit HealthKit est posé sans condition : la recette iOS doit refuser,
+# AVANT l'archive, un profil qui ne le porte pas ou un App ID générique.
+RECETTE="$RACINE/.github/workflows/mobile-recette.yml"
+grep -q "Print :Entitlements:com.apple.developer.healthkit" "$RECETTE" ||
+  echec "mobile-recette ne vérifie pas la capacité HealthKit du profil"
+grep -q 'title=App ID générique' "$RECETTE" || echec "mobile-recette accepte un App ID générique"
 
 echo "✓ android_branding.sh : Health Connect et HealthKit en lecture, idempotent"

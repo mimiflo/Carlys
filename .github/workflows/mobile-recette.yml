@@ -1630,12 +1630,27 @@ jobs:
             exit 1
           fi
           prefixe="$(lire ApplicationIdentifierPrefix.0)"; [ -n "$prefixe" ] || prefixe="$equipe"
+          # Un App ID GÉNÉRIQUE (« équipe.* ») est refusé : il ne peut porter
+          # aucune capacité, HealthKit compris, alors que l'application la
+          # demande (Runner.entitlements, posé par android_branding.sh).
           case "$appid" in
-            "$prefixe.$BUNDLE"|"$prefixe.*") ;;
+            "$prefixe.$BUNDLE") ;;
+            "$prefixe.*")
+              echo "::error title=App ID générique — HealthKit impossible::« $nom » vise l'App ID générique « $appid ». Un App ID générique ne porte aucune capacité, et Carlys demande HealthKit (santé connectée). Enregistre l'App ID explicite « $BUNDLE » chez Apple (Identifiers), coche HealthKit, crée-lui un profil App Store Connect et remplace le secret IOS_PROVISIONING_PROFILE_BASE64."
+              exit 1 ;;
             *)
               echo "::error title=Le profil ne vise pas cette application::« $nom » est fait pour l'App ID « ${appid#"$prefixe".} » ; l'application engendrée par flutter create s'appelle « $BUNDLE ». Enregistre cet App ID exact chez Apple (Identifiers), crée-lui un profil App Store Connect, et remplace le secret IOS_PROVISIONING_PROFILE_BASE64."
               exit 1 ;;
           esac
+          # La capacité HealthKit DANS le profil : l'archive la demande sans
+          # condition (Runner.entitlements). Sans elle, xcodebuild échoue vingt
+          # minutes plus tard sur « Provisioning profile doesn't include the
+          # HealthKit capability ». PlistBuddy, parce que la clé contient des
+          # points, que plutil prendrait pour des niveaux.
+          if [ "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.healthkit' "$plist" 2>/dev/null)" != "true" ]; then
+            echo "::error title=Le profil n'a pas la capacité HealthKit::« $nom » ne porte pas com.apple.developer.healthkit, que Carlys demande (santé connectée : pas et pesées). Sur developer.apple.com → Identifiers → « $BUNDLE », coche HealthKit et enregistre ; PUIS régénère le profil après avoir coché HealthKit (Profiles → le profil → Edit → Save), télécharge-le et remplace le secret IOS_PROVISIONING_PROFILE_BASE64. Voir docs/deployment/builds-mobiles.md, § 10.1."
+            exit 1
+          fi
           # plutil rend les dates en ISO 8601 UTC ; si la forme n'était pas
           # celle-là, mieux vaut le dire que comparer deux chaînes au hasard.
           case "$expire" in
