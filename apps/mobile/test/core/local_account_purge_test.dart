@@ -10,6 +10,7 @@ import 'package:carlys_mobile/features/authentication/presentation/controllers/a
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/presentation/providers/community_providers.dart';
 import 'package:carlys_mobile/features/community/presentation/providers/community_tab_state.dart';
+import 'package:carlys_mobile/features/health/data/health_prefs_store.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
 import 'package:carlys_mobile/features/notifications/presentation/providers/notification_preferences.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/meal_photo_cache.dart';
@@ -211,6 +212,27 @@ void main() {
       expect(preferences.getString('apparence.theme'), 'sombre');
     },
   );
+
+  test('la santé connectée ne suit pas le compte : toute clé « health. » '
+      'part', () async {
+    final preferences = await SharedPreferences.getInstance();
+    await const HealthPrefsStore().setConnected('compte-a', connected: true);
+    await const HealthPrefsStore().setStepsGoal('compte-a', 9000);
+    await const HealthPrefsStore().markImported(
+      'compte-a',
+      DateTime.utc(2026, 11, 6),
+    );
+    // Une clé d'une future version, inconnue d'ici : le préfixe la couvre.
+    await preferences.setString('health.autre.compte-a', 'x');
+
+    await container.read(localAccountPurgeProvider).run();
+
+    expect(
+      preferences.getKeys().where((key) => key.startsWith('health.')),
+      isEmpty,
+    );
+    expect(preferences.getString('apparence.theme'), 'sombre');
+  });
 
   test('les caches mémoire du compte sont renouvelés', () async {
     // Ces trois providers ne sont pas auto-disposés : sans invalidation, ils

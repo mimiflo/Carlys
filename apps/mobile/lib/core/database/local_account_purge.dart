@@ -9,6 +9,8 @@ import '../../features/coaching/data/coach_pending_store.dart';
 import '../../features/coaching/data/coach_thread_cache.dart';
 import '../../features/community/presentation/providers/community_providers.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
+import '../../features/health/data/health_prefs_store.dart';
+import '../../features/health/presentation/controllers/health_connection_controller.dart';
 import '../../features/mentor/data/mentor_prefs_store.dart';
 import '../../features/mentor/presentation/providers/mentor_providers.dart';
 import '../../features/notifications/presentation/providers/notification_preferences.dart';
@@ -166,6 +168,9 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // Le dernier journal de récompenses que le serveur a accepté : le compte
     // suivant remonte le sien sans le comparer à celui d'un autre.
     milestonePushProvider,
+    // La connexion à Health Connect / Apple Santé, et l'objectif de pas :
+    // relus depuis les préférences effacées ci-dessus.
+    healthConnectionProvider,
   ];
 
   final Ref _ref;
@@ -189,6 +194,15 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // 3. Les préférences du compte.
     final preferences = await SharedPreferences.getInstance();
     for (final key in accountOwnedPreferenceKeys) {
+      await preferences.remove(key);
+    }
+    // La santé connectée, par PRÉFIXE : la connexion, l'objectif de pas et
+    // le curseur d'import sont rangés par compte, et une heure d'import dit
+    // quand la personne s'est pesée pour la dernière fois.
+    final health = preferences.getKeys().where(
+      (key) => key.startsWith(HealthPrefsStore.keyPrefix),
+    );
+    for (final key in health.toList()) {
       await preferences.remove(key);
     }
 

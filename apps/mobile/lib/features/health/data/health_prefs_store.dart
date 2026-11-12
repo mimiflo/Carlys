@@ -13,9 +13,14 @@ import '../domain/health_data_source.dart';
 class HealthPrefsStore implements HealthImportLedger {
   const HealthPrefsStore();
 
-  static String connectedKey(String userId) => 'health.connected.$userId';
-  static String stepsGoalKey(String userId) => 'health.steps.goal.$userId';
-  static String importedAtKey(String userId) => 'health.weighings.at.$userId';
+  /// Le préfixe de TOUTES les clés : la purge de compte les efface par lui
+  /// (`DriftLocalAccountPurge`), celles d'aujourd'hui comme celles à venir.
+  static const String keyPrefix = 'health.';
+
+  static String connectedKey(String userId) => '${keyPrefix}connected.$userId';
+  static String stepsGoalKey(String userId) => '${keyPrefix}steps.goal.$userId';
+  static String importedAtKey(String userId) =>
+      '${keyPrefix}weighings.at.$userId';
 
   Future<bool> isConnected(String userId) async {
     final prefs = await SharedPreferences.getInstance();
