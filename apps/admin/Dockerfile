@@ -9,7 +9,7 @@
 # leur image). Dependabot (.github/dependabot.yml, écosystème docker) ouvre
 # la montée de version ; scripts/ci/verifier_dockerfiles.py refuse un FROM
 # externe sans empreinte. Les deux FROM de ce fichier portent la même.
-FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
+FROM node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -58,7 +58,7 @@ ENV LEGAL_PLACEHOLDERS=$LEGAL_PLACEHOLDERS
 RUN pnpm --filter "@carlys/admin..." run build
 
 # ── Image d'exécution ─────────────────────────────────────────────────────────
-FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runtime
+FROM node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS runtime
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3001
